@@ -1,0 +1,37 @@
+name: Dashboard UNIASSELVI
+
+on:
+  push:
+    paths:
+      - 'planilhas/**'
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Dependencias
+        run: pip install pandas openpyxl xlrd --quiet
+
+      - name: Processar
+        run: python processar.py --sem-browser
+
+      - name: Publicar
+        run: |
+          cp saida/dashboard.html index.html
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Auto $(date '+%d/%m/%Y %H:%M')"
+          git push
