@@ -713,7 +713,7 @@ if __name__ == '__main__':
         print(" Coloque as planilhas na pasta planilhas\\")
         print(" e tente novamente.")
         print()
-        input(" Pressione Enter para sair...")
+        sys.exit(1)
         sys.exit(1)
 
     print()

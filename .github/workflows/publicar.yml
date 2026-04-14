@@ -19,11 +19,16 @@ jobs:
       - name: Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Dependencias
         run: pip install pandas openpyxl xlrd --quiet
 
+      - name: Verificar planilhas
+        run: |
+          echo "Planilhas disponiveis:"
+          ls -la planilhas/ 2>/dev/null || echo "(pasta vazia)"
+          
       - name: Processar
         run: python processar.py --sem-browser
 
