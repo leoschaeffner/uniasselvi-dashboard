@@ -506,10 +506,17 @@ def processar(p1, p2):
         'Ordem 1': '14/03/2026', 'Ordem 2': '11/04/2026',
         'Ordem 3': '09/05/2026', 'Ordem 4': '06/06/2026', 'Ordem 5': '04/07/2026',
     }
-    status_ordem = {
-        'Ordem 1': 'VENCIDO', 'Ordem 2': 'ABERTA',
-        'Ordem 3': 'FUTURA',  'Ordem 4': 'FUTURA',  'Ordem 5': 'FUTURA',
-    }
+    # Calcula status dinamicamente baseado na data atual
+    hoje = datetime.now()
+    status_ordem = {}
+    for ordem, prazo_str in prazos.items():
+        prazo_date = datetime.strptime(prazo_str, '%d/%m/%Y')
+        if hoje > prazo_date:
+            status_ordem[ordem] = 'VENCIDO'
+        elif hoje >= prazo_date.replace(day=1):
+            status_ordem[ordem] = 'ABERTA'
+        else:
+            status_ordem[ordem] = 'FUTURA'
 
     tutores_out = []
     for t in tutores:
@@ -517,9 +524,18 @@ def processar(p1, p2):
         for h in t['hist']:
             o = h.get('o', 'Ordem 1') or 'Ordem 1'
             por_ordem[o] = por_ordem.get(o, 0) + 1
-        enviou_o1 = por_ordem.get('Ordem 1', 0) > 0
-        enviou_o2 = por_ordem.get('Ordem 2', 0) > 0
-        sit = 'ok' if enviou_o1 else ('urgente' if not enviou_o2 else 'atrasado')
+        
+        # Calcula situação dinâmica: quantas ordens vencidas o tutor enviou?
+        ordens_vencidas = [o for o, s in status_ordem.items() if s == 'VENCIDO']
+        enviou_todas_vencidas = all(por_ordem.get(o, 0) > 0 for o in ordens_vencidas) if ordens_vencidas else False
+        enviou_alguma = any(por_ordem.get(o, 0) > 0 for o in ordens_vencidas) if ordens_vencidas else False
+        
+        if enviou_todas_vencidas:
+            sit = 'ok'
+        elif enviou_alguma:
+            sit = 'atrasado'  # enviou algumas mas não todas
+        else:
+            sit = 'urgente'   # não enviou nenhuma ordem vencida
         tutores_out.append({
             **t,
             'nome':      t.get('n', ''),
@@ -713,7 +729,7 @@ if __name__ == '__main__':
         print(" Coloque as planilhas na pasta planilhas\\")
         print(" e tente novamente.")
         print()
-        sys.exit(1)
+        input(" Pressione Enter para sair...")
         sys.exit(1)
 
     print()
