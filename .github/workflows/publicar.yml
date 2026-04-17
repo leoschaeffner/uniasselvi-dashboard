@@ -25,22 +25,30 @@ jobs:
       - name: Baixar planilhas do OneDrive
         run: |
           mkdir -p planilhas
-          echo "Baixando PORTIFOLIO_TUTOR.xlsx..."
-          curl -L -o planilhas/PORTIFOLIO_TUTOR.xlsx "https://uniasselvi01-my.sharepoint.com/:x:/g/personal/leonardo_camargo_uniasselvi_com_br/IQAzXkKdX-d4RLvcWWfFPFnAAcW2md2Hd2hUoyeQEHVCrmQ?e=O4N8ve&download=1"
-          echo "Baixando 01_CONTROLE_TUTORIA.xlsx..."
-          curl -L -o planilhas/01_CONTROLE_TUTORIA.xlsx "https://uniasselvi01-my.sharepoint.com/:x:/g/personal/leonardo_camargo_uniasselvi_com_br/IQDD_AnC4zM3TJXM6lU1F6hvAY7Wx5-ILtt6SvVzK3ksYjE?e=BBHMeg&download=1"
+          
+          echo "=== Tentativa 1: download.aspx ==="
+          curl -L -o planilhas/PORTIFOLIO_TUTOR.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQAzXkKdX-d4RLvcWWfFPFnAAcW2md2Hd2hUoyeQEHVCrmQ"
+          curl -L -o planilhas/01_CONTROLE_TUTORIA.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQDD_AnC4zM3TJXM6lU1F6hvAY7Wx5-ILtt6SvVzK3ksYjE"
+          
           echo "=== Verificacao ==="
           ls -la planilhas/
           for f in planilhas/*.xlsx; do
             SIZE=$(stat --format=%s "$f")
             echo "$f: ${SIZE} bytes"
             if [ "$SIZE" -lt 5000 ]; then
-              echo "ERRO: Arquivo muito pequeno"
-              cat "$f"
-              exit 1
+              echo "Tentativa 1 falhou, tentando com cookies..."
+              curl -c /tmp/ck -L "https://uniasselvi01-my.sharepoint.com/:x:/g/personal/leonardo_camargo_uniasselvi_com_br/IQAzXkKdX-d4RLvcWWfFPFnAAcW2md2Hd2hUoyeQEHVCrmQ?e=O4N8ve" -o /dev/null -s
+              curl -b /tmp/ck -L -o planilhas/PORTIFOLIO_TUTOR.xlsx "https://uniasselvi01-my.sharepoint.com/:x:/g/personal/leonardo_camargo_uniasselvi_com_br/IQAzXkKdX-d4RLvcWWfFPFnAAcW2md2Hd2hUoyeQEHVCrmQ?e=O4N8ve&download=1"
+              curl -c /tmp/ck2 -L "https://uniasselvi01-my.sharepoint.com/:x:/g/personal/leonardo_camargo_uniasselvi_com_br/IQDD_AnC4zM3TJXM6lU1F6hvAY7Wx5-ILtt6SvVzK3ksYjE?e=BBHMeg" -o /dev/null -s
+              curl -b /tmp/ck2 -L -o planilhas/01_CONTROLE_TUTORIA.xlsx "https://uniasselvi01-my.sharepoint.com/:x:/g/personal/leonardo_camargo_uniasselvi_com_br/IQDD_AnC4zM3TJXM6lU1F6hvAY7Wx5-ILtt6SvVzK3ksYjE?e=BBHMeg&download=1"
+              break
             fi
           done
-          echo "=== Downloads OK ==="
+          
+          echo "=== Resultado final ==="
+          ls -la planilhas/
+          head -c 100 planilhas/PORTIFOLIO_TUTOR.xlsx | xxd | head -3
+          head -c 100 planilhas/01_CONTROLE_TUTORIA.xlsx | xxd | head -3
 
       - name: Processar
         run: python processar.py --sem-browser
