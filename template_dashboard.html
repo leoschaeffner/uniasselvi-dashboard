@@ -1080,21 +1080,65 @@ function openTutorModal(nome){
       }).join('');
     }
 
-    // Pendentes com prazo
+    // Pendentes com prazo — agrupados por próxima ordem disponível
     if(t.pend.length){
       html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;
-      // Find next pending order for this tutor
-      const nextOrdem = ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5']
-        .find(o=>(t.por_ordem||{})[o]===undefined||(t.por_ordem||{})[o]===0) || 'Ordem 3';
-      html+=t.pend.map(p=>`
-        <div class="prac-item">
-          <div class="prac-icon miss">!</div>
-          <div style="flex:1">
-            <div style="font-size:9px;font-weight:700;color:var(--orange);margin-bottom:1px">${nextOrdem}</div>
-            <div class="prac-name" style="color:var(--red)">${p}</div>
-          </div>
-          <div class="prac-date" style="color:var(--red)">Prazo: ${DB.prazos[nextOrdem]||'—'}</div>
-        </div>`).join('');
+      // Determina a ordem atual baseada na data de hoje
+      const hoje = new Date();
+      const ordensInfo = ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'].map(o => {
+        const prazoStr = DB.prazos[o] || '';
+        const parts = prazoStr.split('/');
+        const prazoDate = parts.length === 3 ? new Date(parts[2], parts[1]-1, parts[0]) : null;
+        const vencido = prazoDate ? hoje > prazoDate : false;
+        const enviou = ((t.por_ordem||t.porOrdem||{})[o] || 0) > 0;
+        return { nome: o, prazo: prazoStr, prazoDate, vencido, enviou };
+      });
+      
+      // Ordens futuras/abertas onde o tutor ainda pode enviar
+      const ordensPendentes = ordensInfo.filter(o => !o.vencido && !o.enviou);
+      // Ordens vencidas sem envio
+      const ordensVencidas = ordensInfo.filter(o => o.vencido && !o.enviou);
+      
+      // Distribui práticas entre as ordens pendentes
+      const totalOrdens = ordensPendentes.length || 1;
+      const porOrdem = Math.ceil(t.pend.length / totalOrdens);
+      
+      let idx = 0;
+      // Primeiro mostra as vencidas (se existem práticas pendentes de ordens vencidas)
+      if(ordensVencidas.length > 0){
+        ordensVencidas.forEach(o => {
+          html += `<div style="font-size:10px;font-weight:700;color:#dc2626;margin:8px 0 4px;padding:4px 8px;background:rgba(220,38,38,.08);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;
+        });
+      }
+      
+      // Depois distribui pelas ordens abertas/futuras
+      if(ordensPendentes.length > 0){
+        ordensPendentes.forEach((o, oi) => {
+          const start = oi * porOrdem;
+          const end = Math.min(start + porOrdem, t.pend.length);
+          if(start >= t.pend.length) return;
+          const pracs = t.pend.slice(start, end);
+          html += `<div style="font-size:10px;font-weight:700;color:var(--orange);margin:8px 0 4px;padding:4px 8px;background:var(--orange-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;
+          html += pracs.map(p => `
+            <div class="prac-item">
+              <div class="prac-icon miss">!</div>
+              <div style="flex:1">
+                <div class="prac-name">${p}</div>
+              </div>
+              <div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div>
+            </div>`).join('');
+        });
+      } else {
+        // Todas as ordens venceram — mostra tudo como atrasado
+        html += t.pend.map(p => `
+          <div class="prac-item">
+            <div class="prac-icon miss">!</div>
+            <div style="flex:1">
+              <div class="prac-name" style="color:#dc2626">${p}</div>
+            </div>
+            <div class="prac-date" style="color:#dc2626">Atrasado</div>
+          </div>`).join('');
+      }
     }
   }
 
