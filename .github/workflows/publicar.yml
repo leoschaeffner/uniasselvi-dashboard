@@ -34,6 +34,9 @@ jobs:
       - name: Processar
         run: python processar.py --sem-browser
 
+      - name: Preparar deploy
+        run: cp saida/dashboard.html index.html
+
       - name: Deploy GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
