@@ -1,0 +1,43 @@
+name: Atualizar Dashboard
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Sao_Paulo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install pandas openpyxl
+
+      - name: Baixar planilhas do OneDrive
+        run: |
+          mkdir -p planilhas
+          curl -L -o planilhas/PORTIFOLIO_TUTOR.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQAzXkKdX-d4RLvcWWfFPFnAAcW2md2Hd2hUoyeQEHVCrmQ"
+          curl -L -o planilhas/01_CONTROLE_TUTORIA.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQDD_AnC4zM3TJXM6lU1F6hvAY7Wx5-ILtt6SvVzK3ksYjE"
+          ls -la planilhas/
+
+      - name: Processar
+        run: python processar.py --sem-browser
+
+      - name: Deploy GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          force_orphan: true
