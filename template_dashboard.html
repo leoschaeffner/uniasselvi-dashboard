@@ -383,6 +383,7 @@ body.dark input,body.dark select{color-scheme:dark}
     <button class="nav-btn" onclick="nav('praticas')">🔬 Práticas</button>
     <button class="nav-btn" onclick="nav('polos')">🏛️ Polos</button>
     <button class="nav-btn" onclick="nav('tutores')">👤 Tutores</button>
+    <button class="nav-btn" onclick="nav('gerenciamento')" id="nav-ger" style="display:none">📋 Gerenciamento</button>
     
   </nav>
   <button id="dk" onclick="toggleDark()">🌙</button>
@@ -616,10 +617,100 @@ body.dark input,body.dark select{color-scheme:dark}
 </div>
 </div>
 
+<!-- ══ GERENCIAMENTO PAGE ══════════════════════════════════════════════════ -->
+<div class="page" id="page-gerenciamento">
+<div class="container">
+  <div class="ph">
+    <div><div class="ph-title">Gerenciamento de Ofertas</div><div class="ph-sub" id="ger-sub">—</div></div>
+  </div>
+  <!-- KPIs -->
+  <div class="kpi-grid" id="ger-kpis"></div>
+  
+  <!-- Sub-navegação -->
+  <div style="display:flex;gap:6px;margin:16px 0;flex-wrap:wrap">
+    <button class="nav-btn active" onclick="gerNav('ofertas')" id="ger-nav-ofertas" style="font-size:12px;padding:5px 12px;background:var(--blue-dim);color:var(--blue)">📊 Ofertas por Polo</button>
+    <button class="nav-btn" onclick="gerNav('categorias')" id="ger-nav-categorias" style="font-size:12px;padding:5px 12px">🔬 Por Categoria</button>
+    <button class="nav-btn" onclick="gerNav('ordens')" id="ger-nav-ordens" style="font-size:12px;padding:5px 12px">📅 Por Ordem</button>
+    <button class="nav-btn" onclick="gerNav('contratacao')" id="ger-nav-contratacao" style="font-size:12px;padding:5px 12px">👤 Contratação</button>
+    <button class="nav-btn" onclick="gerNav('agendas')" id="ger-nav-agendas" style="font-size:12px;padding:5px 12px">📆 Agendas</button>
+    <button class="nav-btn" onclick="gerNav('detalhe')" id="ger-nav-detalhe" style="font-size:12px;padding:5px 12px">🔍 Detalhe</button>
+  </div>
 
+  <!-- Sub-páginas -->
+  <div id="ger-ofertas" class="ger-sub-page">
+    <div class="card"><div class="card-header"><div class="card-title">Ofertas por Polo</div><span class="tbl-count" id="ger-polo-count">—</span></div>
+    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerPolo(this.value)" id="ger-polo-search"/></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Ofertas</th><th style="text-align:right">Gerenciadas</th><th>% Ger.</th>
+      <th style="text-align:right">Com Tutor</th><th style="text-align:right">Sem Tutor</th>
+      <th style="text-align:right">Alunos Mat.</th><th style="text-align:right">Alunos Agend.</th>
+    </tr></thead><tbody id="ger-polo-tbody"></tbody></table></div></div>
+  </div>
+
+  <div id="ger-categorias" class="ger-sub-page" style="display:none">
+    <div class="card"><div class="card-header"><div class="card-title">Ofertas por Categoria</div></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Categoria</th><th style="text-align:right">Ofertas</th><th style="text-align:right">Gerenciadas</th><th>% Ger.</th>
+      <th style="text-align:right">Com Tutor</th><th style="text-align:right">Sem Tutor</th>
+      <th style="text-align:right">Alunos Mat.</th><th style="text-align:right">Alunos Agend.</th>
+    </tr></thead><tbody id="ger-cat-tbody"></tbody></table></div></div>
+  </div>
+
+  <div id="ger-ordens" class="ger-sub-page" style="display:none">
+    <div class="card"><div class="card-header"><div class="card-title">Ofertas por Ordem</div></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Ordem</th><th style="text-align:right">Ofertas</th><th style="text-align:right">Gerenciadas</th><th>% Ger.</th>
+      <th style="text-align:right">Com Tutor</th><th style="text-align:right">Alunos Mat.</th>
+      <th style="text-align:right">Alunos Agend.</th><th>Período</th>
+    </tr></thead><tbody id="ger-ordem-tbody"></tbody></table></div></div>
+  </div>
+
+  <div id="ger-contratacao" class="ger-sub-page" style="display:none">
+    <div class="card"><div class="card-header"><div class="card-title">Status de Contratação por Polo</div><span class="tbl-count" id="ger-contr-count">—</span></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo ou categoria…" oninput="filterGerContr(this.value)" id="ger-contr-search"/>
+      <select class="sel" onchange="filterGerContr(document.getElementById('ger-contr-search').value)" id="ger-contr-status">
+        <option value="">Todos</option><option value="sem">Sem tutor</option><option value="com">Contratado</option>
+      </select>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th>Categoria</th><th style="text-align:right">Ofertas</th><th>Status</th><th>Tutor(es)</th>
+    </tr></thead><tbody id="ger-contr-tbody"></tbody></table></div></div>
+  </div>
+
+  <div id="ger-agendas" class="ger-sub-page" style="display:none">
+    <div class="card"><div class="card-header"><div class="card-title">Agendas por Polo</div></div>
+    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Total</th><th style="text-align:right">Com Agenda</th>
+      <th style="text-align:right">Sem Agenda</th><th>% Agendado</th>
+    </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div></div>
+  </div>
+
+  <div id="ger-detalhe" class="ger-sub-page" style="display:none">
+    <div class="card"><div class="card-header"><div class="card-title">Detalhe de Ofertas</div><span class="tbl-count" id="ger-det-count">—</span></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo, prática, tutor…" oninput="filterGerDetalhe(this.value)" id="ger-det-search"/>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat">
+        <option value="">Todas categorias</option>
+      </select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem">
+        <option value="">Todas ordens</option>
+      </select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status">
+        <option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option><option value="tutor">Com tutor</option><option value="ntutor">Sem tutor</option>
+      </select>
+    </div>
+    <div class="tbl-wrap" style="max-height:600px"><table><thead><tr>
+      <th>Polo</th><th>Categoria</th><th>Ordem</th><th>Prática</th><th>Tutor</th>
+      <th style="text-align:right">Alunos Mat.</th><th style="text-align:right">Agend.</th><th>Status</th>
+    </tr></thead><tbody id="ger-det-tbody"></tbody></table></div></div>
+  </div>
+</div>
 </div>
 
-<!-- VALIDATION PANEL -->
+
+</div>
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-header">
@@ -1189,6 +1280,152 @@ function closeModal(){document.getElementById('modal-overlay').classList.remove(
 // ════════════════════════════════════════════════════════════════════════════
 // DADOS NECESSÁRIOS PAGE
 // ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+// GERENCIAMENTO
+// ════════════════════════════════════════════════════════════════════════════
+let gerPoloData=[], gerContrData=[], gerAgendaData=[], gerDetData=[];
+
+function gerNav(tab){
+  document.querySelectorAll('.ger-sub-page').forEach(p=>p.style.display='none');
+  document.querySelectorAll('[id^="ger-nav-"]').forEach(b=>{b.classList.remove('active');b.style.background='';b.style.color=''});
+  document.getElementById('ger-'+tab).style.display='block';
+  const btn=document.getElementById('ger-nav-'+tab);
+  btn.classList.add('active');btn.style.background='var(--blue-dim)';btn.style.color='var(--blue)';
+}
+
+function renderGerenciamento(){
+  if(!DB.tem_gerenciamento) return;
+  document.getElementById('nav-ger').style.display='';
+  const k=DB.ger_kpis;
+  document.getElementById('ger-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
+
+  // KPIs
+  document.getElementById('ger-kpis').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">Total Ofertas</div><div class="kpi-value" style="color:var(--blue)">${fmtNum(k.total_ofertas)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Gerenciadas</div><div class="kpi-value" style="color:var(--green)">${fmtNum(k.ofertas_gerenciadas)}<small style="font-size:12px;color:var(--muted)"> (${k.pct_gerenciado}%)</small></div></div>
+    <div class="kpi-card"><div class="kpi-label">Sem Tutor</div><div class="kpi-value" style="color:#dc2626">${fmtNum(k.ofertas_sem_tutor)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Alunos Matriculados</div><div class="kpi-value" style="color:var(--blue)">${fmtNum(k.total_alunos_matriculados)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value" style="color:var(--orange)">${fmtNum(k.total_alunos_agendados)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ocupação</div><div class="kpi-value" style="color:var(--blue-m)">${k.pct_ocupacao}%</div></div>
+  `;
+
+  // Polo table
+  gerPoloData=DB.ger_polo||[];
+  renderGerPoloTbl(gerPoloData);
+
+  // Cat table
+  const catTb=document.getElementById('ger-cat-tbody');
+  catTb.innerHTML=(DB.ger_cat||[]).map(c=>`<tr>
+    <td><strong>${c.categoria}</strong></td><td style="text-align:right">${fmtNum(c.total_ofertas)}</td>
+    <td style="text-align:right">${fmtNum(c.gerenciadas)}</td><td>${progCell(c.pct_gerenciado)}</td>
+    <td style="text-align:right">${fmtNum(c.com_tutor)}</td><td style="text-align:right;color:#dc2626">${fmtNum(c.sem_tutor)}</td>
+    <td style="text-align:right">${fmtNum(c.alunos_matriculados)}</td><td style="text-align:right">${fmtNum(c.alunos_agendados)}</td>
+  </tr>`).join('');
+
+  // Ordem table
+  const ordTb=document.getElementById('ger-ordem-tbody');
+  ordTb.innerHTML=(DB.ger_ordem||[]).map(o=>`<tr>
+    <td><strong>${o.ordem}</strong></td><td style="text-align:right">${fmtNum(o.total_ofertas)}</td>
+    <td style="text-align:right">${fmtNum(o.gerenciadas)}</td><td>${progCell(o.pct_gerenciado)}</td>
+    <td style="text-align:right">${fmtNum(o.com_tutor)}</td><td style="text-align:right">${fmtNum(o.alunos_matriculados)}</td>
+    <td style="text-align:right">${fmtNum(o.alunos_agendados)}</td><td style="font-size:11px;color:var(--muted)">${o.dt_inicio} → ${o.dt_fim}</td>
+  </tr>`).join('');
+
+  // Contratação
+  gerContrData=DB.ger_contratacao||[];
+  renderGerContrTbl(gerContrData);
+
+  // Agendas
+  gerAgendaData=DB.ger_agendas||[];
+  renderGerAgendaTbl(gerAgendaData);
+
+  // Detalhe
+  gerDetData=DB.ger_ofertas||[];
+  // Populate filters
+  const cats=[...new Set(gerDetData.map(d=>d.categoria))].sort();
+  const ordens=[...new Set(gerDetData.map(d=>d.ordem))].filter(Boolean).sort();
+  const catSel=document.getElementById('ger-det-cat');
+  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o)});
+  const ordSel=document.getElementById('ger-det-ordem');
+  ordens.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;ordSel.appendChild(op)});
+  filterGerDetalhe('');
+}
+
+function renderGerPoloTbl(data){
+  const tb=document.getElementById('ger-polo-tbody');
+  tb.innerHTML=data.map(p=>`<tr>
+    <td><strong>${p.polo}</strong></td><td style="text-align:right">${fmtNum(p.total_ofertas)}</td>
+    <td style="text-align:right">${fmtNum(p.gerenciadas)}</td><td>${progCell(p.pct_gerenciado)}</td>
+    <td style="text-align:right">${fmtNum(p.com_tutor)}</td>
+    <td style="text-align:right;color:${p.sem_tutor>0?'#dc2626':'var(--green)'}">${fmtNum(p.sem_tutor)}</td>
+    <td style="text-align:right">${fmtNum(p.alunos_matriculados)}</td><td style="text-align:right">${fmtNum(p.alunos_agendados)}</td>
+  </tr>`).join('');
+  document.getElementById('ger-polo-count').textContent=data.length+' polos';
+}
+function filterGerPolo(q){
+  q=q.toLowerCase();
+  renderGerPoloTbl(q?gerPoloData.filter(p=>p.polo.toLowerCase().includes(q)):gerPoloData);
+}
+
+function renderGerContrTbl(data){
+  const tb=document.getElementById('ger-contr-tbody');
+  tb.innerHTML=data.map(c=>`<tr class="${c.tem_tutor?'':'tr-pend'}">
+    <td>${c.polo}</td><td>${c.categoria}</td><td style="text-align:right">${c.total_ofertas}</td>
+    <td><span class="badge ${c.tem_tutor?'ok':'pend'}">${c.status}</span></td>
+    <td style="font-size:11px">${c.tutores.join(', ')||'—'}</td>
+  </tr>`).join('');
+  document.getElementById('ger-contr-count').textContent=data.length+' registros';
+}
+function filterGerContr(q){
+  q=q.toLowerCase();
+  const st=document.getElementById('ger-contr-status').value;
+  let d=gerContrData;
+  if(q) d=d.filter(c=>(c.polo+c.categoria+c.tutores.join('')).toLowerCase().includes(q));
+  if(st==='sem') d=d.filter(c=>!c.tem_tutor);
+  if(st==='com') d=d.filter(c=>c.tem_tutor);
+  renderGerContrTbl(d);
+}
+
+function renderGerAgendaTbl(data){
+  const tb=document.getElementById('ger-agenda-tbody');
+  tb.innerHTML=data.map(a=>`<tr>
+    <td><strong>${a.polo}</strong></td><td style="text-align:right">${a.total}</td>
+    <td style="text-align:right">${a.com_agenda}</td>
+    <td style="text-align:right;color:${a.sem_agenda>0?'#dc2626':'var(--green)'}">${a.sem_agenda}</td>
+    <td>${progCell(a.pct_agendado)}</td>
+  </tr>`).join('');
+}
+function filterGerAgenda(q){
+  q=q.toLowerCase();
+  renderGerAgendaTbl(q?gerAgendaData.filter(a=>a.polo.toLowerCase().includes(q)):gerAgendaData);
+}
+
+function filterGerDetalhe(q){
+  q=q.toLowerCase();
+  const cat=document.getElementById('ger-det-cat').value;
+  const ord=document.getElementById('ger-det-ordem').value;
+  const st=document.getElementById('ger-det-status').value;
+  let d=gerDetData;
+  if(q) d=d.filter(r=>(r.polo+r.pratica+r.tutor+r.categoria).toLowerCase().includes(q));
+  if(cat) d=d.filter(r=>r.categoria===cat);
+  if(ord) d=d.filter(r=>r.ordem===ord);
+  if(st==='ger') d=d.filter(r=>r.gerenciado);
+  if(st==='nger') d=d.filter(r=>!r.gerenciado);
+  if(st==='tutor') d=d.filter(r=>r.tutor);
+  if(st==='ntutor') d=d.filter(r=>!r.tutor);
+  const show=d.slice(0,500);
+  const tb=document.getElementById('ger-det-tbody');
+  tb.innerHTML=show.map(r=>`<tr class="${r.tutor?'':'tr-pend'}">
+    <td style="font-size:11px">${r.polo}</td><td style="font-size:11px">${r.categoria}</td>
+    <td>${r.ordem}</td><td style="font-size:11px">${r.pratica}</td>
+    <td style="font-size:11px">${r.tutor||'<span style="color:#dc2626">—</span>'}</td>
+    <td style="text-align:right">${fmtNum(r.alunos_mat)}</td><td style="text-align:right">${fmtNum(r.alunos_agend)}</td>
+    <td><span class="badge ${r.gerenciado?'ok':'pend'}">${r.gerenciado?'Gerenciada':'Pendente'}</span></td>
+  </tr>`).join('');
+  document.getElementById('ger-det-count').textContent=d.length+' ofertas'+(d.length>500?' (mostrando 500)':'');
+}
+
+
 function renderDados(){
   const items=[
     {
@@ -1347,6 +1584,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   filterPolos('');
   filterTutores('');
   renderDados();
+  renderGerenciamento();
   populateFilters();
 });
 </script>
