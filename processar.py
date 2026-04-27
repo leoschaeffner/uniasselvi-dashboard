@@ -103,6 +103,7 @@ def forcar_download_onedrive(path_url_file, destino, label):
 _KEYWORDS = {
     '01_CONTROLE_TUTORIA.xlsx': ['CONTROLE'],
     'PORTFOLIO_TUTOR.xlsx':     ['PORTFOLIO', 'PORTIFOLIO', 'PORTF'],
+    'REL_GERAL_DE_GERENCIAMENTO.xlsx': ['GERENCIAMENTO', 'REL_GERAL'],
 }
 
 # Nomes reais no OneDrive (para busca por .url)
@@ -258,7 +259,12 @@ def verificar_e_localizar():
     if os.path.isfile(tmpl): print(f"  [OK] template_dashboard.html")
     else:                    print(f"  [FALTA] template_dashboard.html")
 
-    return p1, p2, tmpl
+    # Planilha de gerenciamento (opcional)
+    p3 = achar_arquivo(SCRIPT_DIR, "REL_GERAL_DE_GERENCIAMENTO.xlsx")
+    if p3: print(f"  [OK] {os.path.basename(p3)}")
+    else:  print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO.xlsx não encontrada (módulo gerenciamento desativado)")
+
+    return p1, p2, tmpl, p3
 
 
 def processar(p1, p2):
@@ -673,6 +679,223 @@ def processar(p1, p2):
     })
 
 
+def processar_gerenciamento(p3):
+    """Processa a planilha REL_GERAL_DE_GERENCIAMENTO.xlsx e retorna dados de gerenciamento."""
+    print(f"[{ts()}] Lendo gerenciamento...")
+    df_g = pd.read_excel(p3)
+    print(f"[{ts()}] Gerenciamento: {len(df_g)} linhas, {len(df_g.columns)} colunas")
+
+    # ── Identificar colunas ───────────────────────────────────────────────────
+    def gcol(df, *partes):
+        for c in df.columns:
+            cu = str(c).upper()
+            if all(p.upper() in cu for p in partes):
+                return c
+        return None
+
+    c_polo     = gcol(df_g, 'CEEM', 'RSOC') or 'CEEM_RSOC'
+    c_cat      = gcol(df_g, 'CATP', 'NOME') or 'CATP_NOME'
+    c_lab      = gcol(df_g, 'LABE', 'NOME') or 'LABE_NOME'
+    c_curso    = gcol(df_g, 'NOME', 'CURS') or 'NOME_CURS'
+    c_situ     = gcol(df_g, 'SITU') or 'SITU'
+    c_alunos   = gcol(df_g, 'ALUNOS', 'MATRIC') or 'ALUNOS_MATRICULADOS'
+    c_capa     = 'CAPA' if 'CAPA' in df_g.columns else gcol(df_g, 'CAPA')
+    c_capa_exp = gcol(df_g, 'CAPA', 'EXP') or 'CAPA_EXP'
+    c_ofe_cad  = gcol(df_g, 'OFE', 'CAD') or 'OFE_CAD'
+    c_qtd_alun = gcol(df_g, 'QTD', 'ALUN') or 'QTD_ALUN'
+    c_tutor    = gcol(df_g, 'TUTOR') or 'TUTOR'
+    c_dt_ger   = gcol(df_g, 'DT', 'GERENCIAMENTO') or 'DT_GERENCIAMENTO'
+    c_dt_agenda = gcol(df_g, 'DT', 'GERENCIADA') or 'DT_GERENCIADA'
+    c_hr_agenda = gcol(df_g, 'HR', 'GERENCIADA') or 'HR_GERENCIADA'
+    c_ofex_dtin = gcol(df_g, 'OFEX', 'DTIN') or 'OFEX_DTIN'
+    c_ofex_dtfi = gcol(df_g, 'OFEX', 'DTFI') or 'OFEX_DTFI'
+
+    # ── Filtrar apenas ativos ─────────────────────────────────────────────────
+    if c_situ in df_g.columns:
+        df_g = df_g[df_g[c_situ].astype(str).str.strip().str.upper() == 'ATIVO'].copy()
+    print(f"[{ts()}] Gerenciamento após filtro ativos: {len(df_g)} linhas")
+
+    # ── Extrair ordem e nome da prática do LABE_NOME ──────────────────────────
+    # Formato: "O.1: Nome da Prática" ou "O.2: Nome da Prática"
+    df_g['_ORDEM_G'] = ''
+    df_g['_PRATICA_G'] = ''
+    if c_lab in df_g.columns:
+        import re
+        def extrair_ordem(val):
+            val = str(val or '')
+            m = re.match(r'O\.(\d+):\s*(.*)', val)
+            if m:
+                return f'Ordem {m.group(1)}', m.group(2).strip()
+            return '', val.strip()
+        parsed = df_g[c_lab].apply(extrair_ordem)
+        df_g['_ORDEM_G'] = parsed.apply(lambda x: x[0])
+        df_g['_PRATICA_G'] = parsed.apply(lambda x: x[1])
+
+    # ── Campos calculados ─────────────────────────────────────────────────────
+    df_g['_GERENCIADO'] = pd.to_numeric(df_g.get(c_ofe_cad, 0), errors='coerce').fillna(0) > 0
+    df_g['_TEM_TUTOR'] = df_g[c_tutor].notna() & (df_g[c_tutor].astype(str).str.strip() != '') & (df_g[c_tutor].astype(str).str.strip().str.upper() != 'NAN')
+    df_g['_TEM_AGENDA'] = df_g.get(c_dt_agenda, pd.Series(dtype='object')).notna()
+    df_g['_ALUNOS_MAT'] = pd.to_numeric(df_g.get(c_alunos, 0), errors='coerce').fillna(0).astype(int)
+    df_g['_QTD_ALUN'] = pd.to_numeric(df_g.get(c_qtd_alun, 0), errors='coerce').fillna(0).astype(int)
+    df_g['_CAPA'] = pd.to_numeric(df_g.get(c_capa, 0), errors='coerce').fillna(0).astype(int)
+
+    # ── KPIs Globais de Gerenciamento ─────────────────────────────────────────
+    total_ofertas = len(df_g)
+    ofertas_gerenciadas = int(df_g['_GERENCIADO'].sum())
+    ofertas_com_tutor = int(df_g['_TEM_TUTOR'].sum())
+    ofertas_sem_tutor = total_ofertas - ofertas_com_tutor
+    ofertas_com_agenda = int(df_g['_TEM_AGENDA'].sum())
+    total_alunos_mat = int(df_g['_ALUNOS_MAT'].sum())
+    total_alunos_agend = int(df_g['_QTD_ALUN'].sum())
+    total_capacidade = int(df_g['_CAPA'].sum())
+    polos_total = df_g[c_polo].nunique() if c_polo in df_g.columns else 0
+    polos_sem_tutor_count = 0
+    if c_polo in df_g.columns:
+        polos_sem_tutor_count = int(df_g[~df_g['_TEM_TUTOR']].groupby(c_polo).ngroups)
+
+    ger_kpis = {
+        'total_ofertas': total_ofertas,
+        'ofertas_gerenciadas': ofertas_gerenciadas,
+        'ofertas_nao_gerenciadas': total_ofertas - ofertas_gerenciadas,
+        'pct_gerenciado': round(ofertas_gerenciadas / total_ofertas * 100, 1) if total_ofertas else 0,
+        'ofertas_com_tutor': ofertas_com_tutor,
+        'ofertas_sem_tutor': ofertas_sem_tutor,
+        'pct_com_tutor': round(ofertas_com_tutor / total_ofertas * 100, 1) if total_ofertas else 0,
+        'ofertas_com_agenda': ofertas_com_agenda,
+        'total_alunos_matriculados': total_alunos_mat,
+        'total_alunos_agendados': total_alunos_agend,
+        'total_capacidade': total_capacidade,
+        'pct_ocupacao': round(total_alunos_agend / total_capacidade * 100, 1) if total_capacidade else 0,
+        'polos_total': polos_total,
+        'polos_sem_tutor': polos_sem_tutor_count,
+    }
+
+    print(f"[{ts()}] Gerenciamento: {total_ofertas} ofertas, {ofertas_gerenciadas} gerenciadas, {ofertas_sem_tutor} sem tutor")
+
+    # ── Stats por Polo (gerenciamento) ────────────────────────────────────────
+    ger_polo = []
+    if c_polo in df_g.columns:
+        for polo, grp in df_g.groupby(c_polo):
+            ger_polo.append({
+                'polo': str(polo),
+                'total_ofertas': len(grp),
+                'gerenciadas': int(grp['_GERENCIADO'].sum()),
+                'pct_gerenciado': round(grp['_GERENCIADO'].sum() / len(grp) * 100, 1) if len(grp) else 0,
+                'com_tutor': int(grp['_TEM_TUTOR'].sum()),
+                'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+                'com_agenda': int(grp['_TEM_AGENDA'].sum()),
+                'alunos_matriculados': int(grp['_ALUNOS_MAT'].sum()),
+                'alunos_agendados': int(grp['_QTD_ALUN'].sum()),
+                'capacidade': int(grp['_CAPA'].sum()),
+                'tutores_unicos': list(grp[grp['_TEM_TUTOR']][c_tutor].dropna().unique()),
+            })
+        ger_polo.sort(key=lambda x: -x['sem_tutor'])
+
+    # ── Stats por Categoria (gerenciamento) ───────────────────────────────────
+    ger_cat = []
+    if c_cat in df_g.columns:
+        for cat, grp in df_g.groupby(c_cat):
+            ger_cat.append({
+                'categoria': str(cat),
+                'total_ofertas': len(grp),
+                'gerenciadas': int(grp['_GERENCIADO'].sum()),
+                'pct_gerenciado': round(grp['_GERENCIADO'].sum() / len(grp) * 100, 1) if len(grp) else 0,
+                'com_tutor': int(grp['_TEM_TUTOR'].sum()),
+                'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+                'alunos_matriculados': int(grp['_ALUNOS_MAT'].sum()),
+                'alunos_agendados': int(grp['_QTD_ALUN'].sum()),
+            })
+        ger_cat.sort(key=lambda x: -x['total_ofertas'])
+
+    # ── Stats por Ordem (gerenciamento) ───────────────────────────────────────
+    ger_ordem = []
+    ordens_encontradas = df_g['_ORDEM_G'].unique()
+    ordens_validas = [o for o in sorted(ordens_encontradas) if o and 'Ordem' in str(o)]
+    for ordem in ordens_validas:
+        grp = df_g[df_g['_ORDEM_G'] == ordem]
+        # Datas da oferta
+        datas_inicio = pd.to_datetime(grp.get(c_ofex_dtin, pd.Series(dtype='object')), errors='coerce').dropna()
+        datas_fim = pd.to_datetime(grp.get(c_ofex_dtfi, pd.Series(dtype='object')), errors='coerce').dropna()
+        dt_inicio = datas_inicio.min().strftime('%d/%m/%Y') if len(datas_inicio) > 0 else ''
+        dt_fim = datas_fim.max().strftime('%d/%m/%Y') if len(datas_fim) > 0 else ''
+
+        ger_ordem.append({
+            'ordem': ordem,
+            'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum() / len(grp) * 100, 1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()),
+            'alunos_matriculados': int(grp['_ALUNOS_MAT'].sum()),
+            'alunos_agendados': int(grp['_QTD_ALUN'].sum()),
+            'dt_inicio': dt_inicio,
+            'dt_fim': dt_fim,
+        })
+
+    # ── Contratação: tutores por polo e categoria ─────────────────────────────
+    ger_contratacao = []
+    if c_polo in df_g.columns and c_cat in df_g.columns:
+        for (polo, cat), grp in df_g.groupby([c_polo, c_cat]):
+            tutores_list = list(grp[grp['_TEM_TUTOR']][c_tutor].dropna().unique())
+            tem_tutor = len(tutores_list) > 0
+            ger_contratacao.append({
+                'polo': str(polo),
+                'categoria': str(cat),
+                'total_ofertas': len(grp),
+                'tem_tutor': tem_tutor,
+                'tutores': [str(t) for t in tutores_list],
+                'status': 'Contratado' if tem_tutor else 'Sem tutor',
+            })
+        ger_contratacao.sort(key=lambda x: (0 if x['tem_tutor'] else 1, x['polo']))
+
+    # ── Agendas: ofertas com e sem agenda ─────────────────────────────────────
+    ger_agendas = []
+    if c_polo in df_g.columns:
+        for polo, grp in df_g.groupby(c_polo):
+            total = len(grp)
+            com_agenda = int(grp['_TEM_AGENDA'].sum())
+            sem_agenda = total - com_agenda
+            ger_agendas.append({
+                'polo': str(polo),
+                'total': total,
+                'com_agenda': com_agenda,
+                'sem_agenda': sem_agenda,
+                'pct_agendado': round(com_agenda / total * 100, 1) if total else 0,
+            })
+        ger_agendas.sort(key=lambda x: -x['sem_agenda'])
+
+    # ── Tabela detalhada de ofertas (top 500 para não sobrecarregar o HTML) ───
+    ger_ofertas_detalhe = []
+    cols_detalhe = [c_polo, c_cat, '_ORDEM_G', '_PRATICA_G', c_curso, c_tutor,
+                    '_GERENCIADO', '_TEM_AGENDA', '_ALUNOS_MAT', '_QTD_ALUN', '_CAPA']
+    for _, row in df_g.head(5000).iterrows():
+        ger_ofertas_detalhe.append({
+            'polo': str(row.get(c_polo, '')),
+            'categoria': str(row.get(c_cat, '')),
+            'ordem': str(row.get('_ORDEM_G', '')),
+            'pratica': str(row.get('_PRATICA_G', '')),
+            'curso': str(row.get(c_curso, '')),
+            'tutor': str(row.get(c_tutor, '')) if pd.notna(row.get(c_tutor)) else '',
+            'gerenciado': bool(row.get('_GERENCIADO', False)),
+            'tem_agenda': bool(row.get('_TEM_AGENDA', False)),
+            'alunos_mat': int(row.get('_ALUNOS_MAT', 0)),
+            'alunos_agend': int(row.get('_QTD_ALUN', 0)),
+            'capacidade': int(row.get('_CAPA', 0)),
+        })
+
+    resultado = {
+        'ger_kpis': ger_kpis,
+        'ger_polo': ger_polo,
+        'ger_cat': ger_cat,
+        'ger_ordem': ger_ordem,
+        'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas,
+        'ger_ofertas': ger_ofertas_detalhe,
+    }
+
+    print(f"[{ts()}] Gerenciamento processado: {len(ger_polo)} polos, {len(ger_cat)} categorias, {len(ger_ordem)} ordens")
+    return resultado
+
+
 def gerar_html(dados):
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
@@ -722,22 +945,38 @@ if __name__ == '__main__':
     print(" Verificando arquivos...")
     print()
 
-    p1, p2, tmpl = verificar_e_localizar()
+    p1, p2, tmpl, p3 = verificar_e_localizar()
 
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
         print(" e tente novamente.")
         print()
-        input(" Pressione Enter para sair...")
+        if '--sem-browser' not in sys.argv:
+            input(" Pressione Enter para sair...")
         sys.exit(1)
 
     print()
     dados  = processar(p1, p2)
+
+    # Integra dados de gerenciamento se a planilha existir
+    if p3:
+        try:
+            ger_dados = processar_gerenciamento(p3)
+            dados.update(ger_dados)
+            dados['tem_gerenciamento'] = True
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar gerenciamento: {e}")
+            import traceback; traceback.print_exc()
+            dados['tem_gerenciamento'] = False
+    else:
+        dados['tem_gerenciamento'] = False
+
     html   = gerar_html(dados)
 
-    print(f"[{ts()}] Abrindo navegador...")
-    webbrowser.open(Path(html).as_uri())
+    if '--sem-browser' not in sys.argv:
+        print(f"[{ts()}] Abrindo navegador...")
+        webbrowser.open(Path(html).as_uri())
 
     if WATCH_MODE:
         modo_watch(p1, p2)
