@@ -29,6 +29,7 @@ jobs:
           mkdir -p planilhas
           curl -L -o planilhas/PORTIFOLIO_TUTOR.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQAzXkKdX-d4RLvcWWfFPFnAAcW2md2Hd2hUoyeQEHVCrmQ"
           curl -L -o planilhas/01_CONTROLE_TUTORIA.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQDD_AnC4zM3TJXM6lU1F6hvAY7Wx5-ILtt6SvVzK3ksYjE"
+          curl -L -o planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQA7ujbXsrepQoBHD_LUAxL-AcEH6mUBWA7UeTimfWppbqs"
           ls -la planilhas/
 
       - name: Processar
