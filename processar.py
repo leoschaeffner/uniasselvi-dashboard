@@ -493,7 +493,8 @@ def processar(p1, p2):
     for t in tutores:
         for p in t['real']: ps[p]['enviou'] += 1; ps[p]['categoria'] = t['cf']
         for p in t['pend']: ps[p]['nao_enviou'] += 1; ps[p]['categoria'] = t['cf']
-    ps_list = sorted([{'nome': k, **v} for k, v in ps.items()], key=lambda x: -x['nao_enviou'])[:30]
+    ps_all = sorted([{'nome': k, **v} for k, v in ps.items()], key=lambda x: -x['nao_enviou'])
+    ps_list = ps_all[:30]  # top 30 for ranking
 
     # Stats categoria
     cs = defaultdict(lambda: {'total_tutores': 0, 'com_100pct': 0, 'total_previstas': 0, 'total_enviadas': 0})
@@ -656,6 +657,34 @@ def processar(p1, p2):
             mes_map[mes]['alunos'] += h.get('a', 0)
     por_mes = sorted(mes_map.values(), key=lambda x: x['mes'])
 
+    # ── Convenience dicts for template ────────────────────────────────────────
+    por_ordem_dict = {o: ordem_map[o]['envios'] for o in prazos}
+    alunos_por_ordem = {o: ordem_map[o]['alunos'] for o in prazos}
+
+    # Add short keys to polo_stats for template compatibility
+    for p in polo_stats:
+        p['n'] = p.get('polo', p.get('POLO', ''))
+        p['t'] = p.get('total', 0)
+        p['e'] = p.get('enviaram', 0)
+        p['a'] = p.get('alunos', 0)
+
+    # Add sit shortcut and al (total alunos) to tutores
+    for t in tutores_out:
+        t['sit'] = t.get('situacao', 'urgente')
+        t['al'] = sum(h.get('a', 0) for h in t.get('hist', []))
+        t['email'] = nome_to_email.get(t.get('n', ''), '')
+
+    # pratica_stats with template-compatible keys (ALL practices)
+    praticas_template = []
+    for p in ps_all:
+        total_p = p['enviou'] + p['nao_enviou']
+        praticas_template.append({
+            'n': p['nome'], 'c': p['categoria'],
+            'env_n': p['enviou'], 'pend_n': p['nao_enviou'],
+            'pct': round(p['enviou'] / total_p * 100, 1) if total_p else 0,
+            'nome': p['nome'], 'enviou': p['enviou'], 'nao_enviou': p['nao_enviou'], 'categoria': p['categoria'],
+        })
+
     gerado = datetime.now().strftime('%d/%m/%Y %H:%M')
     print(f"[{ts()}] {total} tutores · {enviaram} enviaram · {atrasados} atrasados · {urgentes} urgentes")
 
@@ -669,9 +698,13 @@ def processar(p1, p2):
         },
         'tutores':      tutores_out,
         'polo_stats':   polo_stats,
-        'por_ordem':    por_ordem,
+        'por_ordem':    por_ordem_dict,
+        'por_ordem_lista': por_ordem,
+        'alunos_por_ordem': alunos_por_ordem,
+        'status_ordem': status_ordem,
         'cat_stats':    [{'categoria': k, **v} for k, v in cs.items()],
         'pratica_stats': ps_list,
+        'praticas':     praticas_template,
         'catalogo':     catalogo,
         'prazos':       prazos,
         'por_mes':      por_mes,
