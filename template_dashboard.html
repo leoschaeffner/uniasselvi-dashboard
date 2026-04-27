@@ -386,6 +386,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-sel">
         <option value="">Todas ordens</option>
       </select>
+      </select>
       <span class="tbl-count" id="ordem-count">—</span>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
@@ -757,6 +758,12 @@ function filterOrdemTbl(q){
   const selO=document.getElementById('ordem-sel').value;
   let d=DB.tutores||[];
   if(q) d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));
+  if(selO){
+    d=d.filter(t=>{
+      const po=t.por_ordem||t.porOrdem||{};
+      return (po[selO]||0)>0;
+    });
+  }
   ordemData=d; renderOrdemTbl(d);
 }
 function sortOrdem(k){if(ordemSortK===k)ordemSortA=!ordemSortA;else{ordemSortK=k;ordemSortA=k==='n'}filterOrdemTbl(document.getElementById('ordem-search').value)}
@@ -990,7 +997,7 @@ function openTutorModal(nome){
     html+=`<div class="sec-label">📋 Histórico de Envios</div>`;
     html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`
       <div class="prac-item"><div class="prac-icon done">📄</div>
-        <div style="flex:1"><div class="prac-name">${h.n||'—'}</div>
+        <div style="flex:1"><div class="prac-name">${h.p||'—'}</div>
         <div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.al||0} alunos</div></div>
         <div class="prac-date">${h.d||'—'}</div></div>`).join('');
   }
