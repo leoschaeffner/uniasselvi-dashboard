@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Painel de Gestão · UNIASSELVI</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#006B5E; --green-l:#00A88F; --green-dim:rgba(0,107,94,.1);
+  --yellow:#FFD100; --yellow-d:#E5BC00; --yellow-dim:rgba(255,209,0,.12);
+  --teal:#00C9A7; --teal-dim:rgba(0,201,167,.1);
+  --red:#dc2626; --red-dim:rgba(220,38,38,.08);
+  --ok:#16a34a; --ok-dim:rgba(22,163,74,.1);
+  --bg:#f4f6f8; --surface:#fff; --card:#fff; --border:#e5e7eb;
+  --text:#111827; --muted:#6b7280; --dim:#9ca3af;
+  --shadow:0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --radius:10px;
+  --font:'Plus Jakarta Sans','Segoe UI',sans-serif;
+  --mono:'Cascadia Code','Consolas',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh}
+body.dark{
+  --bg:#0f1419;--surface:#1a2028;--card:#1e2530;--border:#2d3748;
+  --text:#e5e7eb;--muted:#9ca3af;--dim:#6b7280;
+  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 12px rgba(0,0,0,.4);
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar{
+  width:240px;min-height:100vh;background:var(--green);
+  display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:300;
+  transition:width .2s;overflow:hidden;
+}
+.sidebar-brand{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo{
+  background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;
+  letter-spacing:1.5px;padding:5px 10px;border-radius:5px;display:inline-block;
+}
+.sidebar-title{color:#fff;font-size:14px;font-weight:700;margin-top:8px}
+.sidebar-sub{color:rgba(255,255,255,.5);font-size:10px;margin-top:2px}
+
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.sidebar-section{margin-bottom:16px}
+.sidebar-section-label{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+  color:rgba(255,255,255,.35);padding:0 12px;margin-bottom:6px;
+}
+.sidebar-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+  color:rgba(255,255,255,.7);font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left;
+}
+.sidebar-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.sidebar-item.active{background:var(--yellow);color:#1a1d23;font-weight:700}
+.sidebar-item .si-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sidebar-item .si-badge{
+  margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+  background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);
+}
+.sidebar-item.active .si-badge{background:rgba(0,0,0,.12);color:#1a1d23}
+
+.sidebar-footer{
+  padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;gap:8px;
+}
+.sidebar-ts{font-size:10px;color:rgba(255,255,255,.4);font-family:var(--mono)}
+.sidebar-dark{
+  background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;
+  font-size:18px;margin-left:auto;padding:4px;
+}
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.main{margin-left:240px;flex:1;min-width:0}
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  height:52px;display:flex;align-items:center;padding:0 24px;gap:12px;
+  position:sticky;top:0;z-index:200;
+}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text)}
+.topbar-breadcrumb{font-size:12px;color:var(--muted)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+
+.container{max-width:1400px;margin:0 auto;padding:20px 24px}
+.page{display:none}
+.page.active{display:block}
+
+/* ── PAGE HEADER ─────────────────────────────────────────── */
+.ph{margin-bottom:20px}
+.ph-title{font-size:22px;font-weight:800;color:var(--text)}
+.ph-sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* ── SUB TABS ────────────────────────────────────────────── */
+.sub-tabs{display:flex;gap:4px;margin-bottom:18px;flex-wrap:wrap;border-bottom:2px solid var(--border);padding-bottom:0}
+.sub-tab{
+  padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;
+  border:none;background:none;color:var(--muted);font-family:var(--font);
+  border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;
+}
+.sub-tab:hover{color:var(--text)}
+.sub-tab.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* ── KPI CARDS ───────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi{
+  background:var(--card);border-radius:var(--radius);padding:16px 18px;
+  border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.kpi.kpi-green::before{background:var(--green)}
+.kpi.kpi-yellow::before{background:var(--yellow)}
+.kpi.kpi-teal::before{background:var(--teal)}
+.kpi.kpi-red::before{background:var(--red)}
+.kpi.kpi-ok::before{background:var(--ok)}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-detail{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ── CARDS ───────────────────────────────────────────────── */
+.card{
+  background:var(--card);border-radius:var(--radius);border:1px solid var(--border);
+  box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;
+}
+.card-hdr{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{font-size:14px;font-weight:700}
+.card-badge{font-size:11px;color:var(--muted);font-weight:500}
+.card-body{padding:16px 18px}
+
+/* ── TOOLBAR / SEARCH ────────────────────────────────────── */
+.toolbar{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.search{
+  padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:12px;
+  background:var(--bg);color:var(--text);font-family:var(--font);min-width:200px;flex:1;max-width:320px;
+}
+.search:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
+.sel{
+  padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;
+  background:var(--bg);color:var(--text);font-family:var(--font);cursor:pointer;
+}
+.tbl-count{font-size:11px;color:var(--muted);margin-left:auto;font-weight:600}
+
+/* ── TABLES ──────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;max-height:500px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{
+  position:sticky;top:0;background:var(--bg);padding:10px 14px;text-align:left;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;z-index:5;
+}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,107,94,.02)}
+.tr-pend td{background:var(--red-dim)}
+.tr-ok td{background:var(--ok-dim)}
+
+/* ── BADGES ──────────────────────────────────────────────── */
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap}
+.badge.ok{background:var(--ok-dim);color:var(--ok)}
+.badge.pend{background:var(--red-dim);color:var(--red)}
+.badge.parcial{background:var(--yellow-dim);color:#b45309}
+.badge.info{background:var(--green-dim);color:var(--green)}
+
+/* ── PROGRESS BARS ───────────────────────────────────────── */
+.prog{display:flex;align-items:center;gap:8px}
+.prog-track{flex:1;height:6px;background:var(--bg);border-radius:3px;min-width:60px}
+.prog-fill{height:100%;border-radius:3px;transition:width .3s}
+.prog-txt{font-size:11px;font-weight:700;min-width:36px;text-align:right}
+
+/* ── HEAT MAP ────────────────────────────────────────────── */
+.heatmap{display:grid;gap:3px;margin:16px 0}
+.hm-cell{
+  padding:6px;border-radius:5px;font-size:9px;text-align:center;font-weight:600;
+  min-height:36px;display:flex;align-items:center;justify-content:center;
+  cursor:default;transition:transform .1s;
+}
+.hm-cell:hover{transform:scale(1.05);z-index:1}
+.hm-label{font-size:9px;font-weight:700;color:var(--muted);padding:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── RANKING BARS ────────────────────────────────────────── */
+.rank-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.rank-item:last-child{border:none}
+.rank-pos{font-size:11px;font-weight:800;color:var(--muted);min-width:22px;text-align:center}
+.rank-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-bar-wrap{width:120px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.rank-bar{height:100%;border-radius:4px}
+.rank-val{font-size:12px;font-weight:700;min-width:40px;text-align:right}
+
+/* ── STAT BAR ────────────────────────────────────────────── */
+.stat-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:0 18px 12px;background:var(--bg)}
+.stat-bar div{height:100%;transition:width .5s}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+  z-index:500;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--card);border-radius:12px;width:100%;max-width:700px;
+  box-shadow:0 20px 40px rgba(0,0,0,.2);animation:slideUp .2s;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{
+  padding:18px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-title{font-size:16px;font-weight:700}
+.modal-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.modal-close{
+  background:none;border:1px solid var(--border);border-radius:6px;
+  padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;
+  color:var(--muted);font-family:var(--font);
+}
+.modal-close:hover{background:var(--bg)}
+.modal-body{padding:18px 20px;max-height:65vh;overflow-y:auto}
+.prac-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.prac-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.prac-icon.done{background:var(--ok-dim);color:var(--ok)}
+.prac-icon.miss{background:var(--red-dim);color:var(--red)}
+.prac-name{font-size:12px;font-weight:500}
+.prac-date{font-size:10px;color:var(--muted);text-align:right;min-width:80px}
+.sec-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:12px 0 6px}
+.vp-section{margin-bottom:14px}
+.vp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+
+/* ── DARK MODE ───────────────────────────────────────────── */
+body.dark .sidebar{background:#0a1f1c}
+body.dark .topbar{background:var(--surface)}
+body.dark th{background:var(--surface)}
+body.dark .search,body.dark .sel{background:var(--surface)}
+
+/* ── LGPD BAR ────────────────────────────────────────────── */
+#lgpd-bar{
+  position:fixed;bottom:0;left:240px;right:0;background:var(--surface);
+  border-top:1px solid var(--border);padding:6px 20px;
+  font-size:10px;color:var(--dim);display:flex;justify-content:space-between;z-index:100;
+}
+
+/* ── SENHA OVERLAY ───────────────────────────────────────── */
+#senha-overlay{
+  position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--green) 0%,#0d2b25 100%);
+}
+.senha-box{
+  background:var(--card);border-radius:16px;padding:40px;width:360px;text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.senha-logo{
+  background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;
+  letter-spacing:2px;padding:6px 16px;border-radius:6px;display:inline-block;margin-bottom:16px;
+}
+.senha-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.senha-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.senha-input{
+  width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:8px;
+  font-size:14px;text-align:center;font-family:var(--font);background:var(--bg);color:var(--text);
+}
+.senha-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-dim)}
+.senha-btn{
+  width:100%;padding:12px;border:none;border-radius:8px;margin-top:12px;
+  background:var(--green);color:#fff;font-weight:700;font-size:14px;cursor:pointer;
+  font-family:var(--font);transition:background .15s;
+}
+.senha-btn:hover{background:var(--green-l)}
+.senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+.senha-lgpd{font-size:10px;color:var(--dim);margin-top:16px}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:900px){
+  .sidebar{width:60px}
+  .sidebar .si-label,.sidebar-title,.sidebar-sub,.sidebar-section-label,.sidebar-ts{display:none}
+  .sidebar-brand{padding:12px 8px;text-align:center}
+  .sidebar-item{justify-content:center;padding:10px}
+  .sidebar-item .si-badge{display:none}
+  .main{margin-left:60px}
+  #lgpd-bar{left:60px}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ═══════════════════════════════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo">UNIASSELVI</div>
+    <div class="sidebar-title">Gestão de Práticas</div>
+    <div class="sidebar-sub">Tutoria Laboratorial · 2026</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Portfólios</div>
+      <button class="sidebar-item active" onclick="navTo('port-visao')">
+        <span class="si-icon">📊</span><span class="si-label">Visão Geral</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-ordens')">
+        <span class="si-icon">📅</span><span class="si-label">Ordens</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-praticas')">
+        <span class="si-icon">🔬</span><span class="si-label">Práticas</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-polos')">
+        <span class="si-icon">🏛️</span><span class="si-label">Polos</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-tutores')">
+        <span class="si-icon">👤</span><span class="si-label">Tutores</span>
+      </button>
+    </div>
+    <div class="sidebar-section" id="sidebar-ger" style="display:none">
+      <div class="sidebar-section-label">Gerenciamento</div>
+      <button class="sidebar-item" onclick="navTo('ger-visao')">
+        <span class="si-icon">📋</span><span class="si-label">Visão Geral</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-ofertas')">
+        <span class="si-icon">📊</span><span class="si-label">Ofertas</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-contratacao')">
+        <span class="si-icon">👤</span><span class="si-label">Contratação</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-agendas')">
+        <span class="si-icon">📆</span><span class="si-label">Agendas</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-detalhe')">
+        <span class="si-icon">🔍</span><span class="si-label">Detalhe</span>
+      </button>
+    </div>
+    <div class="sidebar-section" id="sidebar-futuro" style="display:none">
+      <div class="sidebar-section-label">Infraestrutura</div>
+      <button class="sidebar-item" onclick="navTo('labs')" disabled style="opacity:.4">
+        <span class="si-icon">🏗️</span><span class="si-label">Laboratórios</span><span class="si-badge">Em breve</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('vagas')" disabled style="opacity:.4">
+        <span class="si-icon">📝</span><span class="si-label">Vagas</span><span class="si-badge">Em breve</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('insumos')" disabled style="opacity:.4">
+        <span class="si-icon">📦</span><span class="si-label">Insumos</span><span class="si-badge">Em breve</span>
+      </button>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <span class="sidebar-ts" id="ts-label">—</span>
+    <button class="sidebar-dark" onclick="toggleDark()" title="Modo escuro">🌙</button>
+  </div>
+</nav>
+
+<!-- ══ MAIN CONTENT ══════════════════════════════════════════════════════════ -->
+<div class="main">
+
+<!-- Topbar -->
+<div class="topbar">
+  <span class="topbar-title" id="topbar-title">Visão Geral</span>
+  <span class="topbar-breadcrumb" id="topbar-bread">Portfólios</span>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  PORTFÓLIOS — VISÃO GERAL                                           ║ -->
+<!-- ╚═══════════════════════════════════════════════════════════════════════╝ -->
+<div class="page active" id="page-port-visao">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Visão Geral</div><div class="ph-sub" id="pv-sub">—</div></div>
+  <div class="kpi-row" id="pv-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><div class="card-hdr"><div class="card-title">Situação dos Tutores</div></div>
+    <div class="stat-bar" id="pv-stat-bar"></div>
+    <div class="card-body" id="pv-ofensores"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">Envios por Mês</div></div>
+    <div class="card-body" id="pv-mes"></div></div>
+  </div>
+  <div class="card"><div class="card-hdr"><div class="card-title">Categorias</div></div>
+  <div class="card-body" id="pv-cats"></div></div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — ORDENS ═══════════════════════════════════════════════ -->
+<div class="page" id="page-port-ordens">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Ordens</div><div class="ph-sub">Acompanhamento por ordem de disciplina</div></div>
+  <div id="po-cards"></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar tutor, polo…" oninput="filterOrdemTbl(this.value)" id="ordem-search"/>
+      <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-sel">
+        <option value="">Todas ordens</option>
+      </select>
+      </select>
+      <span class="tbl-count" id="ordem-count">—</span>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortOrdem('n')">Tutor</th><th onclick="sortOrdem('p')">Polo</th>
+      <th onclick="sortOrdem('c')">Categoria</th>
+      <th onclick="sortOrdem('o1')">O.1</th><th onclick="sortOrdem('o2')">O.2</th>
+      <th onclick="sortOrdem('o3')">O.3</th><th onclick="sortOrdem('o4')">O.4</th><th onclick="sortOrdem('o5')">O.5</th>
+      <th onclick="sortOrdem('te')" style="text-align:right">Total</th>
+    </tr></thead><tbody id="ordem-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — PRÁTICAS ═════════════════════════════════════════════ -->
+<div class="page" id="page-port-praticas">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Práticas</div><div class="ph-sub">Análise por prática laboratorial</div></div>
+  <div class="kpi-row" id="pp-kpis"></div>
+  <div class="card"><div class="card-hdr"><div class="card-title">Por Categoria</div></div>
+  <div class="card-body" id="pp-cat-bars"></div></div>
+  <div class="card"><div class="card-hdr"><div class="card-title">Top 30 — Práticas com Mais Pendências</div></div>
+  <div class="card-body" id="pp-ranking"></div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar prática…" oninput="filterPrac(this.value)" id="prac-search"/>
+      <select class="sel" onchange="filterPrac(document.getElementById('prac-search').value)" id="prac-cat-sel"><option value="">Todas categorias</option></select>
+      <span class="tbl-count" id="prac-count">—</span>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortPrac('n')">Prática</th><th onclick="sortPrac('c')">Categoria</th>
+      <th onclick="sortPrac('env_n')" style="text-align:right">Enviaram</th>
+      <th onclick="sortPrac('pend_n')" style="text-align:right">Pendentes</th>
+      <th onclick="sortPrac('pct')">Conclusão</th>
+    </tr></thead><tbody id="prac-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — POLOS ════════════════════════════════════════════════ -->
+<div class="page" id="page-port-polos">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Polos</div><div class="ph-sub" id="polo-sub">—</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterPolos(this.value)" id="polo-search"/>
+      <select class="sel" onchange="filterPolos(document.getElementById('polo-search').value)" id="polo-status-sel">
+        <option value="">Todos</option><option value="pend">Com pendências</option><option value="ok">100% enviado</option>
+      </select>
+      <span class="tbl-count" id="polo-count">—</span>
+    </div>
+    <div class="stat-bar" id="polo-stat-bar"></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortPolo('n')">Polo</th><th onclick="sortPolo('t')" style="text-align:right">Tutores</th>
+      <th onclick="sortPolo('e')" style="text-align:right">Enviaram</th>
+      <th onclick="sortPolo('pend')" style="text-align:right">Pendentes</th>
+      <th onclick="sortPolo('a')" style="text-align:right">Alunos</th>
+      <th onclick="sortPolo('pct')">Conclusão</th>
+    </tr></thead><tbody id="polo-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — TUTORES ══════════════════════════════════════════════ -->
+<div class="page" id="page-port-tutores">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Tutores</div><div class="ph-sub" id="tutor-sub">—</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar tutor, polo ou categoria…" oninput="filterTutores(this.value)" id="tutor-search"/>
+      <select class="sel" onchange="filterTutores(document.getElementById('tutor-search').value)" id="tutor-status-sel">
+        <option value="">Todos</option><option value="ok">Enviou</option><option value="pend">Pendente</option>
+      </select>
+      <select class="sel" onchange="filterTutores(document.getElementById('tutor-search').value)" id="tutor-cat-sel">
+        <option value="">Todas categorias</option>
+      </select>
+      <span class="tbl-count" id="tutor-count">—</span>
+    </div>
+    <div class="stat-bar" id="tutor-stat-bar"></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortTutor('n')">Tutor</th><th onclick="sortTutor('p')">Polo</th>
+      <th onclick="sortTutor('c')">Categoria</th>
+      <th onclick="sortTutor('te')" style="text-align:right">Portfólios</th>
+      <th onclick="sortTutor('pct')">Conclusão</th><th>Status</th><th>Detalhe</th>
+    </tr></thead><tbody id="tutor-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  GERENCIAMENTO                                                       ║ -->
+<!-- ╚═══════════════════════════════════════════════════════════════════════╝ -->
+
+<!-- ═══ GERENCIAMENTO — VISÃO GERAL ══════════════════════════════════════ -->
+<div class="page" id="page-ger-visao">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Visão Geral</div><div class="ph-sub" id="gv-sub">—</div></div>
+  <div class="kpi-row" id="gv-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><div class="card-hdr"><div class="card-title">📊 Por Categoria</div></div>
+    <div class="card-body" id="gv-cat-cards"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📅 Por Ordem</div></div>
+    <div class="card-body" id="gv-ordem-cards"></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:0">
+    <div class="card"><div class="card-hdr"><div class="card-title">🔥 Top 10 Polos — Mais Ofertas sem Tutor</div></div>
+    <div class="card-body" id="gv-ranking"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">🗺️ Cobertura por Categoria</div></div>
+    <div class="card-body" id="gv-heatmap"></div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — OFERTAS ══════════════════════════════════════════ -->
+<div class="page" id="page-ger-ofertas">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Ofertas por Polo</div></div>
+  <div class="card">
+    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerPolo(this.value)" id="ger-polo-search"/>
+    <span class="tbl-count" id="ger-polo-count">—</span></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Ofertas</th><th style="text-align:right">Gerenciadas</th><th>% Ger.</th>
+      <th style="text-align:right">Com Tutor</th><th style="text-align:right">Sem Tutor</th>
+      <th style="text-align:right">Alunos Mat.</th><th style="text-align:right">Agend.</th>
+    </tr></thead><tbody id="ger-polo-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — CONTRATAÇÃO ══════════════════════════════════════ -->
+<div class="page" id="page-ger-contratacao">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Status de Contratação</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo ou categoria…" oninput="filterGerContr(this.value)" id="ger-contr-search"/>
+      <select class="sel" onchange="filterGerContr(document.getElementById('ger-contr-search').value)" id="ger-contr-status">
+        <option value="">Todos</option><option value="sem">Sem tutor</option><option value="com">Contratado</option>
+      </select>
+      <span class="tbl-count" id="ger-contr-count">—</span>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th>Categoria</th><th style="text-align:right">Ofertas</th><th>Status</th><th>Tutor(es)</th>
+    </tr></thead><tbody id="ger-contr-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — AGENDAS ══════════════════════════════════════════ -->
+<div class="page" id="page-ger-agendas">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div></div>
+  <div class="card">
+    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Total</th><th style="text-align:right">Com Agenda</th>
+      <th style="text-align:right">Sem Agenda</th><th>% Agendado</th>
+    </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — DETALHE ══════════════════════════════════════════ -->
+<div class="page" id="page-ger-detalhe">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Detalhe de Ofertas</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo, prática, tutor…" oninput="filterGerDetalhe(this.value)" id="ger-det-search"/>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todas categorias</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem"><option value="">Todas ordens</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status">
+        <option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option><option value="tutor">Com tutor</option><option value="ntutor">Sem tutor</option>
+      </select>
+      <span class="tbl-count" id="ger-det-count">—</span>
+    </div>
+    <div class="tbl-wrap" style="max-height:600px"><table><thead><tr>
+      <th>Polo</th><th>Categoria</th><th>Ordem</th><th>Prática</th><th>Tutor</th>
+      <th style="text-align:right">Al. Mat.</th><th style="text-align:right">Agend.</th><th>Status</th>
+    </tr></thead><tbody id="ger-det-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ── MODAL ──────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title" id="m-title">—</div><div class="modal-sub" id="m-sub">—</div></div>
+      <button class="modal-close" onclick="closeModal()">✕ Fechar</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+  </div>
+</div>
+
+<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · UNIASSELVI 2026</span><span id="lgpd-ts"></span></div>
+
+<div id="senha-overlay">
+  <div class="senha-box">
+    <div class="senha-logo">UNIASSELVI</div>
+    <div class="senha-title">Gestão de Práticas Laboratoriais</div>
+    <div class="senha-sub">Painel de Gestão · 2026</div>
+    <input class="senha-input" type="password" id="senha-input"
+           placeholder="Digite a senha de acesso"
+           onkeydown="if(event.key==='Enter')verificarSenha()"/>
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <div class="senha-err" id="senha-err"></div>
+    <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════════════════════════════
+const DATA_JSON_PLACEHOLDER = 'DATA_GOES_HERE';
+
+// ════════════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════════════
+let DB;
+let poloSortK='pend',poloSortA=false;
+let tutorSortK='n',tutorSortA=true;
+let pracSortK='pend_n',pracSortA=false;
+let ordemSortK='n',ordemSortA=true;
+let poloData=[],tutorData=[],pracData=[],ordemData=[];
+// ════════════════════════════════════════════════════════════════════════════
+// FLEXIBLE DATA ACCESSORS
+// ════════════════════════════════════════════════════════════════════════════
+function gPN(p){return p.n||p.polo||p.POLO||"N/A"}
+function gPT(p){return p.t||p.total||0}
+function gPE(p){return p.e||p.enviaram||0}
+function gPA(p){return p.a||p.alunos||0}
+function gTS(t){return t.sit||t.situacao||"urgente"}
+function getPraticas(){var pr=DB.praticas;if(pr&&pr.length)return pr;return(DB.pratica_stats||[]).map(function(p){var tot=(p.enviou||0)+(p.nao_enviou||0);return{n:p.nome||"",c:p.categoria||"",env_n:p.enviou||0,pend_n:p.nao_enviou||0,pct:tot?Math.round(p.enviou/tot*100):0}})}
+function getOE(o){if(DB.por_ordem&&!Array.isArray(DB.por_ordem))return DB.por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
+function getOA(o){if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
+function getOS(o){if(DB.status_ordem)return DB.status_ordem[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
+
+let gerPoloData=[],gerContrData=[],gerAgendaData=[],gerDetData=[];
+
+// ════════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════════════════════
+const pageTitles={
+  'port-visao':['Visão Geral','Portfólios'],'port-ordens':['Ordens','Portfólios'],
+  'port-praticas':['Práticas','Portfólios'],'port-polos':['Polos','Portfólios'],
+  'port-tutores':['Tutores','Portfólios'],
+  'ger-visao':['Visão Geral','Gerenciamento'],'ger-ofertas':['Ofertas','Gerenciamento'],
+  'ger-contratacao':['Contratação','Gerenciamento'],'ger-agendas':['Agendas','Gerenciamento'],
+  'ger-detalhe':['Detalhe','Gerenciamento'],
+};
+
+function navTo(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
+  const pg=document.getElementById('page-'+name);
+  if(pg) pg.classList.add('active');
+  const btn=document.querySelector(`[onclick="navTo('${name}')"]`);
+  if(btn) btn.classList.add('active');
+  const t=pageTitles[name];
+  if(t){document.getElementById('topbar-title').textContent=t[0];document.getElementById('topbar-bread').textContent=t[1]}
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+function esc(s){return(s||'').replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function pctColor(p){return p===100?'var(--ok)':p===0?'var(--red)':p>=60?'var(--teal)':'var(--red)'}
+function pctBadge(p){
+  if(p===100) return '<span class="badge ok">✓ 100%</span>';
+  if(p===0)   return '<span class="badge pend">Pendente</span>';
+  return `<span class="badge parcial">${p.toFixed(0)}%</span>`;
+}
+function progCell(p){
+  const c=pctColor(p);
+  return `<div class="prog"><div class="prog-track"><div class="prog-fill" style="width:${p}%;background:${c}"></div></div><span class="prog-txt" style="color:${c}">${p.toFixed(0)}%</span></div>`;
+}
+function fmtNum(n){return(n||0).toLocaleString('pt-BR')}
+function ordemNum(k){return{'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}[k]||0}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PORTFÓLIOS — VISÃO GERAL
+// ════════════════════════════════════════════════════════════════════════════
+function renderKPIs(){
+  const k=DB.kpis;
+  const pct=(k.enviaram/k.total*100).toFixed(1);
+  document.getElementById('pv-sub').textContent=
+    `${k.total} tutores · ${k.enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
+  document.getElementById('pv-kpis').innerHTML=`
+    <div class="kpi kpi-green"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${k.total}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${k.enviaram}</div><div class="kpi-detail">${pct}% do total</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Total Alunos</div><div class="kpi-value">${fmtNum(k.total_alunos)}</div></div>
+    <div class="kpi kpi-green"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div></div>
+  `;
+}
+
+function renderOfensores(){
+  const el=document.getElementById('pv-ofensores');
+  const sb=document.getElementById('pv-stat-bar');
+  const k=DB.kpis;
+  const total=k.total||1;
+  sb.innerHTML=`
+    <div style="width:${k.enviaram/total*100}%;background:var(--ok)" title="Enviaram: ${k.enviaram}"></div>
+    <div style="width:${k.atrasados/total*100}%;background:var(--yellow)" title="Atrasados: ${k.atrasados}"></div>
+    <div style="width:${k.urgentes/total*100}%;background:var(--red)" title="Urgentes: ${k.urgentes}"></div>
+  `;
+  const urg=(DB.tutores||[]).filter(t=>gTS(t)==='urgente').slice(0,8);
+  el.innerHTML=urg.length?`<div class="sec-label">🚨 Tutores Urgentes (top 8)</div>`+urg.map(t=>`
+    <div class="rank-item" style="cursor:pointer" onclick="openTutorModal('${esc(t.n)}')">
+      <div class="rank-pos" style="color:var(--red)">!</div>
+      <div class="rank-name">${t.n}</div>
+      <div style="font-size:10px;color:var(--muted)">${t.p}</div>
+    </div>`).join(''):`<div style="color:var(--ok);font-size:13px;text-align:center;padding:20px">✓ Nenhum tutor urgente</div>`;
+}
+
+function renderMes(){
+  const el=document.getElementById('pv-mes');
+  const meses={};
+  (DB.tutores||[]).forEach(t=>(t.hist||[]).forEach(h=>{
+    if(!h.d) return;
+    const parts=h.d.split('/');
+    const mk=parts.length===3?parts[1]+'/'+parts[2]:h.d.substring(0,7);
+    meses[mk]=(meses[mk]||0)+1;
+  }));
+  const sorted=Object.entries(meses).sort((a,b)=>a[0].localeCompare(b[0]));
+  const max=Math.max(...sorted.map(s=>s[1]),1);
+  el.innerHTML=sorted.length?sorted.map(([m,v])=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:600;min-width:50px;color:var(--muted)">${m}</span>
+      <div style="flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${v/max*100}%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">
+          <span style="font-size:10px;font-weight:700;color:#fff">${v}</span>
+        </div>
+      </div>
+    </div>`).join(''):'<div style="color:var(--muted);text-align:center;padding:20px">Sem dados</div>';
+}
+
+function renderCatOverview(){
+  const el=document.getElementById('pv-cats');
+  const cats={};
+  (DB.tutores||[]).forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
+  el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
+    const pct=v.t?Math.round(v.e/v.t*100):0;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${c}</div>
+      <div style="font-size:10px;color:var(--muted)">${v.t} tutores · ${v.e} enviaram · ${fmtNum(v.al)} alunos</div></div>
+      ${progCell(pct)}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PORTFÓLIOS — ORDENS
+// ════════════════════════════════════════════════════════════════════════════
+function renderOrdens(){
+  const el=document.getElementById('po-cards');
+  const ordens=Object.entries(DB.prazos||{}).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0]));
+  el.innerHTML=`<div class="kpi-row">`+ordens.map(([o,prazo])=>{
+    const s=getOS(o);
+    const corS=s==='VENCIDO'?'var(--red)':s==='ABERTA'?'var(--ok)':'var(--muted)';
+    const envios=getOE(o);
+    const alunos=getOA(o);
+    return `<div class="kpi kpi-green">
+      <div class="kpi-label">${o}</div>
+      <div class="kpi-value" style="font-size:20px">${envios} <small style="font-size:11px;color:var(--muted)">envios</small></div>
+      <div class="kpi-detail">${fmtNum(alunos)} alunos · Prazo: ${prazo}</div>
+      <div style="margin-top:4px"><span class="badge" style="background:${corS}20;color:${corS}">${s||'—'}</span></div>
+    </div>`;
+  }).join('')+'</div>';
+
+  // Populate filter
+  const sel=document.getElementById('ordem-sel');
+  if(sel.options.length<=1) ordens.forEach(([o])=>{const op=document.createElement('option');op.value=o;op.textContent=o;sel.appendChild(op)});
+}
+
+function filterOrdemTbl(q){
+  q=q.toLowerCase();
+  const selO=document.getElementById('ordem-sel').value;
+  let d=DB.tutores||[];
+  if(q) d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));
+  if(selO){
+    d=d.filter(t=>{
+      const po=t.por_ordem||t.porOrdem||{};
+      return (po[selO]||0)>0;
+    });
+  }
+  ordemData=d; renderOrdemTbl(d);
+}
+function sortOrdem(k){if(ordemSortK===k)ordemSortA=!ordemSortA;else{ordemSortK=k;ordemSortA=k==='n'}filterOrdemTbl(document.getElementById('ordem-search').value)}
+
+function renderOrdemTbl(data){
+  const sorted=[...data].sort((a,b)=>{
+    let va,vb;
+    if(['o1','o2','o3','o4','o5'].includes(ordemSortK)){
+      const o='Ordem '+ordemSortK[1];
+      va=((a.por_ordem||a.porOrdem||{})[o])||0;
+      vb=((b.por_ordem||b.porOrdem||{})[o])||0;
+    } else {
+      va=a[ordemSortK]||0;vb=b[ordemSortK]||0;
+    }
+    if(typeof va==='string')return ordemSortA?va.localeCompare(vb):vb.localeCompare(va);
+    return ordemSortA?va-vb:vb-va;
+  });
+  const tb=document.getElementById('ordem-tbody');
+  tb.innerHTML=sorted.map(t=>{
+    const po=t.por_ordem||t.porOrdem||{};
+    const cell=o=>{const v=po[o]||0;return `<td style="text-align:center;font-weight:600;color:${v?'var(--ok)':'var(--dim)'}"><span style="background:${v?'var(--ok-dim)':'var(--bg)'};padding:3px 8px;border-radius:4px;font-size:11px">${v||'—'}</span></td>`};
+    return `<tr>
+      <td><strong>${t.n}</strong></td><td style="font-size:11px">${t.p}</td><td style="font-size:11px">${t.c||'—'}</td>
+      ${cell('Ordem 1')}${cell('Ordem 2')}${cell('Ordem 3')}${cell('Ordem 4')}${cell('Ordem 5')}
+      <td style="text-align:right;font-weight:700">${t.te}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ordem-count').textContent=sorted.length+' tutores';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PORTFÓLIOS — PRÁTICAS
+// ════════════════════════════════════════════════════════════════════════════
+function renderPracKPIs(){
+  const el=document.getElementById('pp-kpis');
+  const pracs=getPraticas();
+  const total=pracs.length;
+  const complete=pracs.filter(p=>p.pend_n===0).length;
+  el.innerHTML=`
+    <div class="kpi kpi-green"><div class="kpi-label">Total Práticas</div><div class="kpi-value">${total}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">100% Enviadas</div><div class="kpi-value">${complete}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Com Pendências</div><div class="kpi-value">${total-complete}</div></div>
+  `;
+}
+
+function renderCatPracBars(){
+  const el=document.getElementById('pp-cat-bars');
+  const cats={};
+  (getPraticas()).forEach(p=>{const c=p.c||'Outro';if(!cats[c])cats[c]={t:0,e:0};cats[c].t++;if(p.pend_n===0)cats[c].e++});
+  el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
+    const pct=v.t?Math.round(v.e/v.t*100):0;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</div>
+      <div style="font-size:10px;color:var(--muted)">${v.e}/${v.t} práticas completas</div></div>
+      ${progCell(pct)}
+    </div>`;
+  }).join('');
+}
+
+function renderTopPrac(){
+  const el=document.getElementById('pp-ranking');
+  const pracs=(getPraticas()).filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,30);
+  const max=pracs.length?pracs[0].pend_n:1;
+  el.innerHTML=pracs.map((p,i)=>`
+    <div class="rank-item">
+      <div class="rank-pos">${i+1}</div>
+      <div class="rank-name" title="${p.n}">${p.n}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.pend_n/max*100}%;background:var(--red)"></div></div>
+      <div class="rank-val" style="color:var(--red)">${p.pend_n}</div>
+    </div>`).join('');
+}
+
+function filterPrac(q){
+  q=q.toLowerCase();
+  const cat=document.getElementById('prac-cat-sel').value;
+  let d=getPraticas();
+  if(q) d=d.filter(p=>(p.n+p.c).toLowerCase().includes(q));
+  if(cat) d=d.filter(p=>p.c===cat);
+  pracData=d; renderPracTbl(d);
+}
+function sortPrac(k){if(pracSortK===k)pracSortA=!pracSortA;else{pracSortK=k;pracSortA=k==='n'}filterPrac(document.getElementById('prac-search').value)}
+
+function renderPracTbl(data){
+  const sorted=[...data].sort((a,b)=>{const va=a[pracSortK],vb=b[pracSortK];if(typeof va==='string')return pracSortA?va.localeCompare(vb):vb.localeCompare(va);return pracSortA?va-vb:vb-va});
+  document.getElementById('prac-tbody').innerHTML=sorted.map(p=>`<tr>
+    <td><strong>${p.n}</strong></td><td style="font-size:11px">${p.c||'—'}</td>
+    <td style="text-align:right">${p.env_n}</td><td style="text-align:right;color:var(--red)">${p.pend_n}</td>
+    <td>${progCell(p.pct)}</td>
+  </tr>`).join('');
+  document.getElementById('prac-count').textContent=data.length+' práticas';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PORTFÓLIOS — POLOS
+// ════════════════════════════════════════════════════════════════════════════
+function filterPolos(q){
+  q=q.toLowerCase();
+  const st=document.getElementById('polo-status-sel').value;
+  let d=DB.polo_stats||[];
+  if(q) d=d.filter(p=>gPN(p).toLowerCase().includes(q));
+  if(st==='pend') d=d.filter(p=>p.pend>0);
+  if(st==='ok') d=d.filter(p=>p.pend===0);
+  poloData=d; renderPoloTbl(d);
+}
+function sortPolo(k){if(poloSortK===k)poloSortA=!poloSortA;else{poloSortK=k;poloSortA=k==='n'}filterPolos(document.getElementById('polo-search').value)}
+
+function renderPoloTbl(data){
+  const sorted=[...data].sort((a,b)=>{const va=a[poloSortK],vb=b[poloSortK];if(typeof va==='string')return poloSortA?va.localeCompare(vb):vb.localeCompare(va);return poloSortA?va-vb:vb-va});
+  const sb=document.getElementById('polo-stat-bar');
+  const ok=sorted.filter(p=>(p.pend||0)===0).length,pend=sorted.length-ok;
+  sb.innerHTML=`<div style="width:${ok/sorted.length*100}%;background:var(--ok)" title="OK: ${ok}"></div>
+    <div style="width:${pend/sorted.length*100}%;background:var(--red)" title="Pendentes: ${pend}"></div>`;
+  document.getElementById('polo-tbody').innerHTML=sorted.map(p=>`<tr class="${p.pend?'tr-pend':'tr-ok'}" style="cursor:pointer" onclick="openPoloModal('${esc(gPN(p))}')">
+    <td><strong>${gPN(p)}</strong></td>
+    <td style="text-align:right">${gPT(p)}</td><td style="text-align:right">${gPE(p)}</td>
+    <td style="text-align:right;color:var(--red)">${p.pend}</td>
+    <td style="text-align:right">${fmtNum(gPA(p))}</td><td>${progCell(p.pct)}</td>
+  </tr>`).join('');
+  document.getElementById('polo-count').textContent=sorted.length+' polos';
+  document.getElementById('polo-sub').textContent=`${sorted.length} polos · ${ok} sem pendências · ${pend} com pendências`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PORTFÓLIOS — TUTORES
+// ════════════════════════════════════════════════════════════════════════════
+function filterTutores(q){
+  q=q.toLowerCase();
+  const st=document.getElementById('tutor-status-sel').value;
+  const cat=document.getElementById('tutor-cat-sel').value;
+  let d=DB.tutores||[];
+  if(q) d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));
+  if(st==='ok') d=d.filter(t=>t.te>0);
+  if(st==='pend') d=d.filter(t=>t.te===0);
+  if(cat) d=d.filter(t=>t.c===cat);
+  tutorData=d; renderTutorTbl(d);
+}
+function sortTutor(k){if(tutorSortK===k)tutorSortA=!tutorSortA;else{tutorSortK=k;tutorSortA=k==='n'}filterTutores(document.getElementById('tutor-search').value)}
+
+function renderTutorTbl(data){
+  const sorted=[...data].sort((a,b)=>{const va=a[tutorSortK],vb=b[tutorSortK];if(typeof va==='string')return tutorSortA?va.localeCompare(vb):vb.localeCompare(va);return tutorSortA?va-vb:vb-va});
+  const sb=document.getElementById('tutor-stat-bar');
+  const env=sorted.filter(t=>t.te>0).length,pend=sorted.length-env;
+  sb.innerHTML=`<div style="width:${env/sorted.length*100}%;background:var(--ok)"></div>
+    <div style="width:${pend/sorted.length*100}%;background:var(--red)"></div>`;
+  document.getElementById('tutor-tbody').innerHTML=sorted.map(t=>{
+    const sit=gTS(t);
+    return `<tr class="${t.te>0?'':'tr-pend'}">
+      <td><strong>${t.n}</strong></td><td style="font-size:11px">${t.p}</td>
+      <td style="font-size:11px">${t.c||'—'}</td>
+      <td style="text-align:right;font-weight:600">${t.te}/${t.tp||'?'}</td>
+      <td>${progCell(t.pct)}</td>
+      <td><span class="badge ${sit==='ok'?'ok':sit==='atrasado'?'parcial':'pend'}">${sit==='ok'?'OK':sit==='atrasado'?'Atrasado':'Urgente'}</span></td>
+      <td><button style="font-size:10px;padding:4px 10px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;font-family:var(--font)" onclick="openTutorModal('${esc(t.n)}')">Ver</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tutor-count').textContent=sorted.length+' tutores';
+  document.getElementById('tutor-sub').textContent=`${sorted.length} tutores · ${env} enviaram · ${pend} pendentes`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════════════════════════════════════════
+function openTutorModal(nome){
+  const t=(DB.tutores||[]).find(x=>x.n===nome);
+  if(!t) return;
+  document.getElementById('m-title').textContent=t.n;
+  document.getElementById('m-sub').textContent=`${t.p} · ${t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
+  let html=`<div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div>
+  </div>`;
+  html+=`<div style="margin-bottom:12px"><div class="kpi-label" style="margin-bottom:6px">Progresso Geral</div>${progCell(t.pct)}</div>`;
+
+  // Portfólios por Ordem
+  const po=t.por_ordem||t.porOrdem||{};
+  if(Object.keys(po).length){
+    html+=`<div class="sec-label">Portfólios por Ordem</div>`;
+    html+=Object.entries(po).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0])).map(([o,v])=>
+      `<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-size:11px;font-weight:600;min-width:60px">${o}</span>
+      <span style="font-size:11px;font-weight:700;color:var(--ok)">${v} envio${v>1?'s':''}</span></div>`).join('');
+  }
+
+  // Realizadas
+  if(t.real&&t.real.length){
+    html+=`<div class="sec-label">✅ Realizadas (${t.real.length})</div>`;
+    html+=t.real.map(r=>`<div class="prac-item"><div class="prac-icon done">✓</div>
+      <div style="flex:1"><div class="prac-name">${typeof r==='object'?r.n:r}</div></div>
+      <div class="prac-date">${typeof r==='object'?(r.d||'—'):'—'}</div></div>`).join('');
+  }
+
+  // Pendentes
+  if(t.pend&&t.pend.length){
+    html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;
+    const hoje=new Date();
+    const ordensInfo=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'].map(o=>{
+      const prazoStr=DB.prazos[o]||'';const parts=prazoStr.split('/');
+      const prazoDate=parts.length===3?new Date(parts[2],parts[1]-1,parts[0]):null;
+      const vencido=prazoDate?hoje>prazoDate:false;
+      const enviou=((t.por_ordem||t.porOrdem||{})[o]||0)>0;
+      return{nome:o,prazo:prazoStr,prazoDate,vencido,enviou};
+    });
+    const ordensPendentes=ordensInfo.filter(o=>!o.vencido&&!o.enviou);
+    const ordensVencidas=ordensInfo.filter(o=>o.vencido&&!o.enviou);
+    const totalOrdens=ordensPendentes.length||1;
+    const porOrdem=Math.ceil(t.pend.length/totalOrdens);
+    if(ordensVencidas.length>0){
+      ordensVencidas.forEach(o=>{
+        html+=`<div style="font-size:10px;font-weight:700;color:var(--red);margin:8px 0 4px;padding:4px 8px;background:var(--red-dim);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;
+      });
+    }
+    if(ordensPendentes.length>0){
+      ordensPendentes.forEach((o,oi)=>{
+        const start=oi*porOrdem;const end=Math.min(start+porOrdem,t.pend.length);
+        if(start>=t.pend.length) return;
+        const pracs=t.pend.slice(start,end);
+        html+=`<div style="font-size:10px;font-weight:700;color:var(--teal);margin:8px 0 4px;padding:4px 8px;background:var(--teal-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;
+        html+=pracs.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div>
+          <div style="flex:1"><div class="prac-name">${p}</div></div>
+          <div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div></div>`).join('');
+      });
+    } else {
+      html+=t.pend.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div>
+        <div style="flex:1"><div class="prac-name" style="color:var(--red)">${p}</div></div>
+        <div class="prac-date" style="color:var(--red)">Atrasado</div></div>`).join('');
+    }
+  }
+
+  // Histórico
+  if(t.hist&&t.hist.length){
+    html+=`<div class="sec-label">📋 Histórico de Envios</div>`;
+    html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`
+      <div class="prac-item"><div class="prac-icon done">📄</div>
+        <div style="flex:1"><div class="prac-name">${h.p||'—'}</div>
+        <div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.al||0} alunos</div></div>
+        <div class="prac-date">${h.d||'—'}</div></div>`).join('');
+  }
+
+  document.getElementById('m-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function openPoloModal(nome){
+  const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
+  const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,
+    pend:tutores.filter(t=>t.te===0).length,alunos:tutores.reduce((s,t)=>s+(t.al||0),0)};
+  document.getElementById('m-title').textContent=gPN(p)||nome;
+  document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
+  let html=`<div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div>
+  </div><div class="sec-label">Tutores</div>`;
+  html+=tutores.map(t=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)">
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c||'—'}</div></div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>
+      ${pctBadge(t.pct)}
+    </div>`).join('');
+  document.getElementById('m-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GERENCIAMENTO — VISÃO GERAL (with visuals)
+// ════════════════════════════════════════════════════════════════════════════
+function renderGerenciamento(){
+  if(!DB.tem_gerenciamento) return;
+  document.getElementById('sidebar-ger').style.display='';
+  document.getElementById('sidebar-futuro').style.display='';
+  const k=DB.ger_kpis;
+  document.getElementById('gv-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
+
+  // KPIs
+  document.getElementById('gv-kpis').innerHTML=`
+    <div class="kpi kpi-green"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">${fmtNum(k.ofertas_gerenciadas)}</div><div class="kpi-detail">${k.pct_gerenciado}% do total</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Sem Tutor</div><div class="kpi-value">${fmtNum(k.ofertas_sem_tutor)}</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Alunos Matriculados</div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>
+    <div class="kpi kpi-green"><div class="kpi-label">Ocupação</div><div class="kpi-value">${k.pct_ocupacao}%</div></div>
+  `;
+
+  // Category cards (colorful)
+  const catColors=['#006B5E','#00A88F','#00C9A7','#FFD100','#E5BC00','#dc2626'];
+  document.getElementById('gv-cat-cards').innerHTML=(DB.ger_cat||[]).map((c,i)=>{
+    const cor=catColors[i%catColors.length];
+    return `<div style="padding:14px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;background:${cor}08;border-left:4px solid ${cor}">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">${c.categoria}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px">
+        <div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700;font-size:16px">${fmtNum(c.total_ofertas)}</div></div>
+        <div><span style="color:var(--muted)">Gerenciadas</span><div style="font-weight:700;font-size:16px;color:var(--ok)">${c.pct_gerenciado}%</div></div>
+        <div><span style="color:var(--muted)">Sem tutor</span><div style="font-weight:700;font-size:16px;color:${c.sem_tutor>0?'var(--red)':'var(--ok)'}">${fmtNum(c.sem_tutor)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Ordem cards
+  document.getElementById('gv-ordem-cards').innerHTML=(DB.ger_ordem||[]).map(o=>{
+    const pct=o.pct_gerenciado;
+    return `<div style="padding:14px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;background:var(--bg)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:700">${o.ordem}</div>
+        <span style="font-size:10px;color:var(--muted)">${o.dt_inicio} → ${o.dt_fim}</span>
+      </div>
+      ${progCell(pct)}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:10px;margin-top:8px">
+        <div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700">${fmtNum(o.total_ofertas)}</div></div>
+        <div><span style="color:var(--muted)">Al. Mat.</span><div style="font-weight:700">${fmtNum(o.alunos_matriculados)}</div></div>
+        <div><span style="color:var(--muted)">Agendados</span><div style="font-weight:700">${fmtNum(o.alunos_agendados)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Ranking top 10 polos sem tutor
+  const topPolos=(DB.ger_polo||[]).filter(p=>p.sem_tutor>0).sort((a,b)=>b.sem_tutor-a.sem_tutor).slice(0,10);
+  const maxST=topPolos.length?topPolos[0].sem_tutor:1;
+  document.getElementById('gv-ranking').innerHTML=topPolos.map((p,i)=>`
+    <div class="rank-item">
+      <div class="rank-pos" style="color:${i<3?'var(--red)':'var(--muted)'}">${i+1}</div>
+      <div class="rank-name" title="${p.polo}">${p.polo}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.sem_tutor/maxST*100}%;background:linear-gradient(90deg,var(--red),#f87171)"></div></div>
+      <div class="rank-val" style="color:var(--red)">${p.sem_tutor}</div>
+    </div>`).join('')||'<div style="color:var(--ok);text-align:center;padding:20px">✓ Todos os polos com tutor</div>';
+
+  // Heat map: polo (top 15) × categoria
+  const cats=(DB.ger_cat||[]).map(c=>c.categoria);
+  const topHM=(DB.ger_polo||[]).sort((a,b)=>b.total_ofertas-a.total_ofertas).slice(0,15);
+  const contrMap={};
+  (DB.ger_contratacao||[]).forEach(c=>{contrMap[c.polo+'|'+c.categoria]=c.tem_tutor});
+  let hmHTML=`<div style="overflow-x:auto"><div class="heatmap" style="grid-template-columns:160px repeat(${cats.length},1fr);min-width:${160+cats.length*80}px">`;
+  hmHTML+=`<div class="hm-label"></div>`+cats.map(c=>`<div class="hm-label" title="${c}">${c.split('(')[0].trim()}</div>`).join('');
+  topHM.forEach(p=>{
+    hmHTML+=`<div class="hm-label" style="text-align:left" title="${p.polo}">${p.polo.substring(0,25)}</div>`;
+    cats.forEach(c=>{
+      const has=contrMap[p.polo+'|'+c];
+      if(has===undefined) hmHTML+=`<div class="hm-cell" style="background:var(--bg);color:var(--dim)">—</div>`;
+      else if(has) hmHTML+=`<div class="hm-cell" style="background:var(--ok-dim);color:var(--ok)">✓</div>`;
+      else hmHTML+=`<div class="hm-cell" style="background:var(--red-dim);color:var(--red)">✕</div>`;
+    });
+  });
+  hmHTML+=`</div></div>`;
+  document.getElementById('gv-heatmap').innerHTML=hmHTML;
+
+  // Populate sub-pages
+  gerPoloData=DB.ger_polo||[]; renderGerPoloTbl(gerPoloData);
+  gerContrData=DB.ger_contratacao||[]; renderGerContrTbl(gerContrData);
+  gerAgendaData=DB.ger_agendas||[]; renderGerAgendaTbl(gerAgendaData);
+  gerDetData=DB.ger_ofertas||[];
+  const dcats=[...new Set(gerDetData.map(d=>d.categoria))].sort();
+  const dordens=[...new Set(gerDetData.map(d=>d.ordem))].filter(Boolean).sort();
+  const cs=document.getElementById('ger-det-cat');
+  dcats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o)});
+  const os2=document.getElementById('ger-det-ordem');
+  dordens.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;os2.appendChild(op)});
+  filterGerDetalhe('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GERENCIAMENTO — TABLE RENDERS
+// ════════════════════════════════════════════════════════════════════════════
+function renderGerPoloTbl(data){
+  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr>
+    <td><strong>${p.polo}</strong></td><td style="text-align:right">${fmtNum(p.total_ofertas)}</td>
+    <td style="text-align:right">${fmtNum(p.gerenciadas)}</td><td>${progCell(p.pct_gerenciado)}</td>
+    <td style="text-align:right">${fmtNum(p.com_tutor)}</td>
+    <td style="text-align:right;color:${p.sem_tutor>0?'var(--red)':'var(--ok)'}">${fmtNum(p.sem_tutor)}</td>
+    <td style="text-align:right">${fmtNum(p.alunos_matriculados)}</td><td style="text-align:right">${fmtNum(p.alunos_agendados)}</td>
+  </tr>`).join('');
+  document.getElementById('ger-polo-count').textContent=data.length+' polos';
+}
+function filterGerPolo(q){q=q.toLowerCase();renderGerPoloTbl(q?gerPoloData.filter(p=>p.polo.toLowerCase().includes(q)):gerPoloData)}
+
+function renderGerContrTbl(data){
+  document.getElementById('ger-contr-tbody').innerHTML=data.map(c=>`<tr class="${c.tem_tutor?'':'tr-pend'}">
+    <td>${c.polo}</td><td>${c.categoria}</td><td style="text-align:right">${c.total_ofertas}</td>
+    <td><span class="badge ${c.tem_tutor?'ok':'pend'}">${c.status}</span></td>
+    <td style="font-size:11px">${c.tutores.join(', ')||'—'}</td>
+  </tr>`).join('');
+  document.getElementById('ger-contr-count').textContent=data.length+' registros';
+}
+function filterGerContr(q){
+  q=q.toLowerCase();const st=document.getElementById('ger-contr-status').value;
+  let d=gerContrData;
+  if(q) d=d.filter(c=>(c.polo+c.categoria+c.tutores.join('')).toLowerCase().includes(q));
+  if(st==='sem') d=d.filter(c=>!c.tem_tutor);
+  if(st==='com') d=d.filter(c=>c.tem_tutor);
+  renderGerContrTbl(d);
+}
+
+function renderGerAgendaTbl(data){
+  document.getElementById('ger-agenda-tbody').innerHTML=data.map(a=>`<tr>
+    <td><strong>${a.polo}</strong></td><td style="text-align:right">${a.total}</td>
+    <td style="text-align:right">${a.com_agenda}</td>
+    <td style="text-align:right;color:${a.sem_agenda>0?'var(--red)':'var(--ok)'}">${a.sem_agenda}</td>
+    <td>${progCell(a.pct_agendado)}</td>
+  </tr>`).join('');
+}
+function filterGerAgenda(q){q=q.toLowerCase();renderGerAgendaTbl(q?gerAgendaData.filter(a=>a.polo.toLowerCase().includes(q)):gerAgendaData)}
+
+function filterGerDetalhe(q){
+  q=q.toLowerCase();
+  const cat=document.getElementById('ger-det-cat').value;
+  const ord=document.getElementById('ger-det-ordem').value;
+  const st=document.getElementById('ger-det-status').value;
+  let d=gerDetData;
+  if(q) d=d.filter(r=>(r.polo+r.pratica+r.tutor+r.categoria).toLowerCase().includes(q));
+  if(cat) d=d.filter(r=>r.categoria===cat);
+  if(ord) d=d.filter(r=>r.ordem===ord);
+  if(st==='ger') d=d.filter(r=>r.gerenciado);
+  if(st==='nger') d=d.filter(r=>!r.gerenciado);
+  if(st==='tutor') d=d.filter(r=>r.tutor);
+  if(st==='ntutor') d=d.filter(r=>!r.tutor);
+  const show=d.slice(0,500);
+  document.getElementById('ger-det-tbody').innerHTML=show.map(r=>`<tr class="${r.tutor?'':'tr-pend'}">
+    <td style="font-size:11px">${r.polo}</td><td style="font-size:11px">${r.categoria}</td>
+    <td>${r.ordem}</td><td style="font-size:11px">${r.pratica}</td>
+    <td style="font-size:11px">${r.tutor||'<span style="color:var(--red)">—</span>'}</td>
+    <td style="text-align:right">${fmtNum(r.alunos_mat)}</td><td style="text-align:right">${fmtNum(r.alunos_agend)}</td>
+    <td><span class="badge ${r.gerenciado?'ok':'pend'}">${r.gerenciado?'Gerenciada':'Pendente'}</span></td>
+  </tr>`).join('');
+  document.getElementById('ger-det-count').textContent=d.length+' ofertas'+(d.length>500?' (mostrando 500)':'');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FILTERS & DARK MODE & SENHA
+// ════════════════════════════════════════════════════════════════════════════
+function populateFilters(){
+  const cats=[...new Set((DB.tutores||[]).map(t=>t.c).filter(Boolean))].sort();
+  [document.getElementById('tutor-cat-sel'),document.getElementById('prac-cat-sel')].forEach(sel=>{
+    if(!sel)return;cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)})
+  });
+}
+
+function toggleDark(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');
+}
+function initDark(){if(localStorage.getItem('dark')==='1')document.body.classList.add('dark')}
+
+// ── SENHA ─────────────────────────────────────────────────────────────────
+// Para mudar a senha: gere um novo hash SHA-256 em: https://emn178.github.io/online-tools/sha256.html
+// Senha atual: uniasselvi2026
+const SENHA_HASH = '49d386eb9415e992d18baf30a40078e85a0e1f36a7509d0c798f2aff4550b476';
+
+async function sha256(msg){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function verificarSenha(){
+  const val = document.getElementById('senha-input').value.trim();
+  if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
+  const hash = await sha256(val);
+  if(hash === SENHA_HASH){
+    sessionStorage.setItem('uni_auth','1');
+    document.getElementById('senha-overlay').style.display='none';
+    document.getElementById('senha-input').value='';
+  } else {
+    // Try tutor password (email-based)
+    const tutor=(DB.tutores||[]).find(t=>{
+      const email=(t.email||'').toLowerCase();
+      return email&&(email.split('@')[0]===val.toLowerCase()||email===val.toLowerCase());
+    });
+    if(tutor){
+      sessionStorage.setItem('uni_auth','1');
+      document.getElementById('senha-overlay').style.display='none';
+      setTimeout(()=>{
+        navTo('port-tutores');
+        document.getElementById('tutor-search').value=tutor.n;
+        filterTutores(tutor.n);
+      },100);
+    } else {
+      document.getElementById('senha-err').textContent='Senha incorreta. Tente novamente.';
+      document.getElementById('senha-input').value='';
+      document.getElementById('senha-input').focus();
+    }
+  }
+}
+
+function initSenha(){
+  if(sessionStorage.getItem('uni_auth')==='1'){
+    document.getElementById('senha-overlay').style.display='none';
+  } else {
+    setTimeout(()=>document.getElementById('senha-input').focus(),200);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  initDark();
+  initSenha();
+  DB = DATA_JSON_PLACEHOLDER;
+  const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
+  document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
+  document.querySelector('.topbar-breadcrumb').insertAdjacentHTML('afterend',
+    `<span style="margin-left:auto;font-size:10px;color:var(--dim);font-family:var(--mono)">Atualizado: ${DB.gerado_em}</span>`);
+
+  renderKPIs();
+  renderOfensores();
+  renderMes();
+  renderCatOverview();
+  renderOrdens();
+  filterOrdemTbl('');
+  renderPracKPIs();
+  renderCatPracBars();
+  renderTopPrac();
+  filterPrac('');
+  filterPolos('');
+  filterTutores('');
+  renderGerenciamento();
+  populateFilters();
+});
+</script>
+</body>
+</html>
