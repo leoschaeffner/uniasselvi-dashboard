@@ -1259,7 +1259,7 @@ function renderGerenciamento(){
   const topPolos=(DB.ger_polo||[]).filter(p=>p.sem_tutor>0).sort((a,b)=>b.sem_tutor-a.sem_tutor).slice(0,10);
   const maxST=topPolos.length?topPolos[0].sem_tutor:1;
   document.getElementById('gv-ranking').innerHTML=topPolos.map((p,i)=>`
-    <div class="rank-item">
+    <div class="rank-item" style="cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')" title="Ver labs de ${esc(p.polo)}">
       <div class="rank-pos" style="color:${i<3?'var(--red)':'var(--muted)'}">${i+1}</div>
       <div class="rank-name" title="${p.polo}">${p.polo}</div>
       <div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.sem_tutor/maxST*100}%;background:linear-gradient(90deg,var(--red),#f87171)"></div></div>
@@ -1278,8 +1278,8 @@ function renderGerenciamento(){
     cats.forEach(c=>{
       const has=contrMap[p.polo+'|'+c];
       if(has===undefined) hmHTML+=`<div class="hm-cell" style="background:var(--bg);color:var(--dim)">—</div>`;
-      else if(has) hmHTML+=`<div class="hm-cell" style="background:var(--ok-dim);color:var(--ok)">✓</div>`;
-      else hmHTML+=`<div class="hm-cell" style="background:var(--red-dim);color:var(--red)">✕</div>`;
+      else if(has) hmHTML+=`<div class="hm-cell" style="background:var(--ok-dim);color:var(--ok);cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')" title="${p.polo}">✓</div>`;
+      else hmHTML+=`<div class="hm-cell" style="background:var(--red-dim);color:var(--red);cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')" title="${p.polo} — sem tutor">✕</div>`;
     });
   });
   hmHTML+=`</div></div>`;
@@ -1302,15 +1302,48 @@ function renderGerenciamento(){
 // ════════════════════════════════════════════════════════════════════════════
 // GERENCIAMENTO — TABLE RENDERS
 // ════════════════════════════════════════════════════════════════════════════
+function openGerPoloModal(polo){
+  // Abre modal com labs daquele polo (ger_contratacao filtrado)
+  const labs=(DB.ger_contratacao||[]).filter(c=>c.polo===polo);
+  if(!labs.length){
+    document.getElementById('m-title').textContent=polo;
+    document.getElementById('m-sub').textContent='Sem dados de contratação';
+    document.getElementById('m-body').innerHTML='';
+    document.getElementById('modal-overlay').classList.add('show');
+    return;
+  }
+  const semTutor=labs.filter(c=>!c.tem_tutor).length;
+  document.getElementById('m-title').textContent=polo;
+  document.getElementById('m-sub').textContent=labs.length+' laboratórios · '+semTutor+' sem tutor';
+  let bodyHtml='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<thead><tr style="background:var(--bg)">'
+    +'<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Categoria / Lab</th>'
+    +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Ofertas</th>'
+    +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Status</th>'
+    +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Tutor(es)</th>'
+    +'</tr></thead><tbody>';
+  labs.sort((a,b)=>a.tem_tutor-b.tem_tutor).forEach(c=>{
+    const bg=c.tem_tutor?'':'var(--red-dim)';
+    bodyHtml+='<tr style="background:'+bg+';border-bottom:1px solid var(--border)">'
+      +'<td style="padding:6px 8px;font-weight:600">'+c.categoria+'</td>'
+      +'<td style="padding:6px 8px;text-align:right">'+c.total_ofertas+'</td>'
+      +'<td style="padding:6px 8px"><span class="badge '+(c.tem_tutor?'ok':'pend')+'">'+c.status+'</span></td>'
+      +'<td style="padding:6px 8px;font-size:11px">'+(c.tutores&&c.tutores.length?c.tutores.join(', '):'<span style="color:var(--red)">—</span>')+'</td>'
+      +'</tr>';
+  });
+  bodyHtml+='</tbody></table>';
+  document.getElementById('m-body').innerHTML=bodyHtml;
+  document.getElementById('modal-overlay').classList.add('show');
+}
 function renderGerPoloTbl(data){
-  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr>
+  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr style="cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')">
     <td><strong>${p.polo}</strong></td><td style="text-align:right">${fmtNum(p.total_ofertas)}</td>
     <td style="text-align:right">${fmtNum(p.gerenciadas)}</td><td>${progCell(p.pct_gerenciado)}</td>
     <td style="text-align:right">${fmtNum(p.com_tutor)}</td>
     <td style="text-align:right;color:${p.sem_tutor>0?'var(--red)':'var(--ok)'}">${fmtNum(p.sem_tutor)}</td>
     <td style="text-align:right">${fmtNum(p.alunos_matriculados)}</td><td style="text-align:right">${fmtNum(p.alunos_agendados)}</td>
   </tr>`).join('');
-  document.getElementById('ger-polo-count').textContent=data.length+' polos';
+  document.getElementById('ger-polo-count').textContent=data.length+' polos (clique p/ detalhar)';
 }
 function filterGerPolo(q){q=q.toLowerCase();renderGerPoloTbl(q?gerPoloData.filter(p=>p.polo.toLowerCase().includes(q)):gerPoloData)}
 
@@ -1423,9 +1456,10 @@ function renderAgendaKPIs(){
 function renderGerAgendaTbl(data){
   var el=document.getElementById('ger-agenda-tbody');
   if(!el) return;
-  el.innerHTML=data.map(function(a){
+  window._agData=data;
+  el.innerHTML=data.map(function(a,i){
     var cor=a.sem_agenda>0?'var(--red)':'var(--ok)';
-    return '<tr>'
+    return '<tr style="cursor:pointer" data-ag="'+i+'">'
       +'<td><strong>'+a.polo+'</strong></td>'
       +'<td style="text-align:right">'+a.total+'</td>'
       +'<td style="text-align:right;color:var(--ok)">'+a.com_agenda+'</td>'
@@ -1433,6 +1467,21 @@ function renderGerAgendaTbl(data){
       +'<td>'+progCell(a.pct_agendado)+'</td>'
       +'</tr>';
   }).join('');
+  document.querySelectorAll('[data-ag]').forEach(function(row){
+    row.addEventListener('click',function(){
+      var a=window._agData[+this.dataset.ag];
+      document.getElementById('m-title').textContent=a.polo;
+      document.getElementById('m-sub').textContent='Agendamentos: '+a.com_agenda+' com agenda · '+a.sem_agenda+' sem agenda';
+      document.getElementById('m-body').innerHTML=''
+        +'<div class="kpi-row">'
+        +'<div class="kpi kpi-teal"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">'+a.total+'</div></div>'
+        +'<div class="kpi kpi-ok"><div class="kpi-label">Com Agenda</div><div class="kpi-value">'+a.com_agenda+'</div></div>'
+        +'<div class="kpi kpi-red"><div class="kpi-label">Sem Agenda</div><div class="kpi-value">'+a.sem_agenda+'</div></div>'
+        +'<div class="kpi kpi-green"><div class="kpi-label">% Agendado</div><div class="kpi-value">'+a.pct_agendado+'%</div></div>'
+        +'</div>';
+      document.getElementById('modal-overlay').classList.add('show');
+    });
+  });
   var cnt=document.getElementById('ger-agenda-count');
   if(cnt) cnt.textContent=data.length+' polos';
 }
