@@ -336,7 +336,36 @@ def processar(p1, p2):
                     catalogo_oficial[cat_nome] = sorted(set(p['nome'] for p in praticas))
                 else:
                     catalogo_oficial[cat_nome] = sorted(set(praticas))
-        print(f"[{ts()}] Catalogo oficial: {len(catalogo_oficial)} categorias")
+        print(f"[{ts()}] Catalogo oficial (JSON): {len(catalogo_oficial)} categorias")
+
+    # Fallback: carrega catálogo de planilha Excel se disponível
+    if not catalogo_oficial:
+        cat_xlsx = achar_arquivo(SCRIPT_DIR, 'CATALOGO_EXPERIMENTOS.xlsx')
+        if not cat_xlsx:
+            # Tenta nome alternativo
+            for f in os.listdir(os.path.join(SCRIPT_DIR, 'planilhas')) if os.path.isdir(os.path.join(SCRIPT_DIR, 'planilhas')) else []:
+                fu = f.upper()
+                if ('RELAT' in fu and 'EXPER' in fu) or ('CATALOGO' in fu and 'EXPER' in fu):
+                    cat_xlsx = os.path.join(SCRIPT_DIR, 'planilhas', f)
+                    break
+        if cat_xlsx and os.path.isfile(cat_xlsx):
+            try:
+                df_cat = pd.read_excel(cat_xlsx)
+                c_cat_nome = next((c for c in df_cat.columns if 'CATEGORIA' in str(c).upper()), None)
+                c_exp_nome = next((c for c in df_cat.columns if 'EXPERIMENTO' in str(c).upper() or 'NOME' in str(c).upper()), None)
+                c_sit = next((c for c in df_cat.columns if 'SITUA' in str(c).upper()), None)
+                if c_cat_nome and c_exp_nome:
+                    if c_sit:
+                        df_cat = df_cat[df_cat[c_sit].astype(str).str.strip().str.upper() == 'ATIVO']
+                    for cat_val, grp in df_cat.groupby(c_cat_nome):
+                        cat_str = str(cat_val).strip()
+                        if cat_str and cat_str != 'nan':
+                            nomes = sorted(set(str(n).strip() for n in grp[c_exp_nome].dropna() if str(n).strip() and str(n).strip() != 'nan'))
+                            if nomes:
+                                catalogo_oficial[cat_str] = nomes
+                    print(f"[{ts()}] Catalogo oficial (Excel): {len(catalogo_oficial)} categorias, {sum(len(v) for v in catalogo_oficial.values())} práticas")
+            except Exception as e:
+                print(f"[{ts()}] AVISO: Erro ao ler catálogo Excel: {e}")
 
     # Mapa de chave -> cat_raw do tutor (para enriquecer portfolio)
     chave_to_cat_raw = {}
@@ -615,7 +644,7 @@ def processar(p1, p2):
     for t in tutores_out:
         p = t['polo']
         if p not in polo_map:
-            polo_map[p] = {'POLO': p, 'polo': p, 'total': 0, 'enviaram': 0, 'atrasados': 0, 'alunos': 0}
+            polo_map[p] = {'POLO': p, 'polo': p, 'n': p, 'total': 0, 'enviaram': 0, 'atrasados': 0, 'alunos': 0}
         polo_map[p]['total'] += 1
         if t['te'] > 0: polo_map[p]['enviaram'] += 1
         if t['situacao'] == 'atrasado': polo_map[p]['atrasados'] += 1
@@ -628,6 +657,10 @@ def processar(p1, p2):
 
     polo_stats = sorted(polo_map.values(), key=lambda x: -x['atrasados'])
     for p in polo_stats:
+        p['n']      = p.get('polo', p.get('POLO', ''))
+        p['t']      = p['total']
+        p['e']      = p['enviaram']
+        p['a']      = p['alunos']
         p['pend']   = p['total'] - p['enviaram']
         p['pct']    = round(p['enviaram'] / p['total'] * 100) if p['total'] else 0
         p['envios'] = polo_envios.get(p['POLO'], 0)
