@@ -280,6 +280,28 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   #lgpd-bar{left:60px}
   .kpi-row{grid-template-columns:repeat(2,1fr)}
 }
+
+/* ── KPI INTERATIVO ─────────────────────────────────────────── */
+.kpi-link{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.kpi-link:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.kpi-link .kpi-hint{font-size:9px;color:var(--muted);margin-top:2px;opacity:0}
+.kpi-link:hover .kpi-hint{opacity:1}
+
+/* ── RANK TABS ──────────────────────────────────────────────── */
+.rtabs{display:flex;gap:4px}
+.rtab{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;
+  font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:var(--font);transition:all .15s}
+.rtab:hover{background:var(--bg)}
+.rtab.active{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* ── LINHAS EXPANSÍVEIS ─────────────────────────────────────── */
+.tr-polo-hdr{cursor:pointer}
+.tr-polo-hdr:hover td{background:var(--green-dim)!important}
+.tr-polo-hdr td.polo-toggle::before{content:'▶ ';font-size:9px;color:var(--green)}
+.tr-polo-hdr.open td.polo-toggle::before{content:'▼ ';color:var(--teal)}
+.tr-polo-child{display:none;background:var(--bg)!important}
+.tr-polo-child.vis{display:table-row}
+.tr-polo-child td{font-size:11px;padding-left:28px!important}
 </style>
 </head>
 <body>
@@ -386,6 +408,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-sel">
         <option value="">Todas ordens</option>
       </select>
+      <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-cat-sel">
+        <option value="">Todas categorias</option>
       </select>
       <span class="tbl-count" id="ordem-count">—</span>
     </div>
@@ -407,8 +431,17 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="kpi-row" id="pp-kpis"></div>
   <div class="card"><div class="card-hdr"><div class="card-title">Por Categoria</div></div>
   <div class="card-body" id="pp-cat-bars"></div></div>
-  <div class="card"><div class="card-hdr"><div class="card-title">Top 30 — Práticas com Mais Pendências</div></div>
-  <div class="card-body" id="pp-ranking"></div></div>
+  <div class="card">
+    <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="card-title" id="pp-rank-title">🔴 Top 20 — Mais Pendências</div>
+      <div class="rtabs">
+        <button class="rtab active" id="rtab-pend" onclick="switchRankTab('pend')">Mais Pendentes</button>
+        <button class="rtab" id="rtab-env" onclick="switchRankTab('env')">Mais Aplicadas</button>
+        <button class="rtab" id="rtab-menos" onclick="switchRankTab('menos')">Menos Aplicadas</button>
+      </div>
+    </div>
+    <div class="card-body" id="pp-ranking"></div>
+  </div>
   <div class="card">
     <div class="toolbar">
       <input class="search" type="text" placeholder="Buscar prática…" oninput="filterPrac(this.value)" id="prac-search"/>
@@ -528,7 +561,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <span class="tbl-count" id="ger-contr-count">—</span>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>Polo</th><th>Categoria</th><th style="text-align:right">Ofertas</th><th>Status</th><th>Tutor(es)</th>
+      <th class="polo-toggle">Polo</th><th style="text-align:right">Labs</th><th style="text-align:right">Sem Tutor</th><th>Cobertura</th><th></th>
     </tr></thead><tbody id="ger-contr-tbody"></tbody></table></div>
   </div>
 </div>
@@ -538,10 +571,25 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="page" id="page-ger-agendas">
 <div class="container">
   <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div></div>
+  <div class="kpi-row" id="ag-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
+    <div class="card"><div class="card-hdr"><div class="card-title">🏆 Top Polos — Mais Agendamentos</div></div>
+      <div class="card-body" id="ag-top-polos"><div style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Sem dados de agenda</div></div>
+    </div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📊 Agendamentos vs Pendentes</div></div>
+      <div class="card-body" id="ag-dist"><div style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Sem dados de agenda</div></div>
+    </div>
+  </div>
   <div class="card">
-    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/>
+      <select class="sel" id="ag-status-sel" onchange="filterGerAgenda(document.getElementById('ger-agenda-search').value)">
+        <option value="">Todos</option><option value="sem">Sem agenda</option><option value="com">Com agenda</option>
+      </select>
+      <span class="tbl-count" id="ger-agenda-count">—</span>
+    </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>Polo</th><th style="text-align:right">Total</th><th style="text-align:right">Com Agenda</th>
+      <th>Polo</th><th style="text-align:right">Total Ofertas</th><th style="text-align:right">Com Agenda</th>
       <th style="text-align:right">Sem Agenda</th><th>% Agendado</th>
     </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div>
   </div>
@@ -678,12 +726,22 @@ function renderKPIs(){
   document.getElementById('pv-sub').textContent=
     `${k.total} tutores · ${k.enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
   document.getElementById('pv-kpis').innerHTML=`
-    <div class="kpi kpi-green"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${k.total}</div></div>
-    <div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${k.enviaram}</div><div class="kpi-detail">${pct}% do total</div></div>
-    <div class="kpi kpi-red"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div></div>
-    <div class="kpi kpi-yellow"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div></div>
+    <div class="kpi kpi-green kpi-link" onclick="openListModal('todos')" title="Ver todos os tutores">
+      <div class="kpi-label">Total Tutores</div><div class="kpi-value">${k.total}</div>
+      <div class="kpi-hint">clique para ver lista</div></div>
+    <div class="kpi kpi-ok kpi-link" onclick="openListModal('enviaram')" title="Ver tutores que enviaram">
+      <div class="kpi-label">Enviaram</div><div class="kpi-value">${k.enviaram}</div><div class="kpi-detail">${pct}% do total</div>
+      <div class="kpi-hint">clique para ver lista</div></div>
+    <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')" title="Ver tutores urgentes">
+      <div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div>
+      <div class="kpi-hint">clique para ver lista</div></div>
+    <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')" title="Ver tutores atrasados">
+      <div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div>
+      <div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-teal"><div class="kpi-label">Total Alunos</div><div class="kpi-value">${fmtNum(k.total_alunos)}</div></div>
-    <div class="kpi kpi-green"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div></div>
+    <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')" title="Ver ranking de polos">
+      <div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div>
+      <div class="kpi-hint">clique para ver lista</div></div>
   `;
 }
 
@@ -732,13 +790,17 @@ function renderCatOverview(){
   const el=document.getElementById('pv-cats');
   const cats={};
   (DB.tutores||[]).forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
-  el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
+  // guardar cats no DOM via data para evitar escape em onclick
+  window._pvCats=cats;
+  el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v],i)=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="flex:1"><div style="font-size:13px;font-weight:600">${c}</div>
-      <div style="font-size:10px;color:var(--muted)">${v.t} tutores · ${v.e} enviaram · ${fmtNum(v.al)} alunos</div></div>
-      ${progCell(pct)}
-    </div>`;
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer"'
+      +' data-cat="'+i+'" onclick="openCatModal('+i+')" title="Ver tutores desta categoria">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+c+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+v.t+' tutores · '+v.e+' enviaram · '+fmtNum(v.al)+' alunos</div></div>'
+      +progCell(pct)
+      +'<span style="font-size:11px;color:var(--muted)">↗</span>'
+      +'</div>';
   }).join('');
 }
 
@@ -769,14 +831,11 @@ function renderOrdens(){
 function filterOrdemTbl(q){
   q=q.toLowerCase();
   const selO=document.getElementById('ordem-sel').value;
+  const selC=(document.getElementById('ordem-cat-sel')||{}).value||'';
   let d=DB.tutores||[];
   if(q) d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));
-  if(selO){
-    d=d.filter(t=>{
-      const po=t.por_ordem||t.porOrdem||{};
-      return (po[selO]||0)>0;
-    });
-  }
+  if(selC) d=d.filter(t=>t.c===selC);
+  if(selO) d=d.filter(t=>{const po=t.por_ordem||t.porOrdem||{};return (po[selO]||0)>0;});
   ordemData=d; renderOrdemTbl(d);
 }
 function sortOrdem(k){if(ordemSortK===k)ordemSortA=!ordemSortA;else{ordemSortK=k;ordemSortA=k==='n'}filterOrdemTbl(document.getElementById('ordem-search').value)}
@@ -836,17 +895,42 @@ function renderCatPracBars(){
   }).join('');
 }
 
+let _rankTab='pend';
+function switchRankTab(tab){
+  _rankTab=tab;
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('rtab-'+tab).classList.add('active');
+  renderTopPrac();
+}
 function renderTopPrac(){
   const el=document.getElementById('pp-ranking');
-  const pracs=(getPraticas()).filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,30);
-  const max=pracs.length?pracs[0].pend_n:1;
-  el.innerHTML=pracs.map((p,i)=>`
-    <div class="rank-item">
-      <div class="rank-pos">${i+1}</div>
-      <div class="rank-name" title="${p.n}">${p.n}</div>
-      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.pend_n/max*100}%;background:var(--red)"></div></div>
-      <div class="rank-val" style="color:var(--red)">${p.pend_n}</div>
-    </div>`).join('');
+  const all=getPraticas();
+  let pracs,color,valFn,titleTxt;
+  if(_rankTab==='env'){
+    pracs=[...all].sort((a,b)=>b.env_n-a.env_n).slice(0,20);
+    color='var(--ok)'; valFn=p=>p.env_n+' enviadas'; titleTxt='🟢 Top 20 — Mais Aplicadas';
+  } else if(_rankTab==='menos'){
+    pracs=[...all].filter(p=>p.env_n>0).sort((a,b)=>a.env_n-b.env_n).slice(0,20);
+    color='var(--yellow-d)'; valFn=p=>p.env_n+' enviadas'; titleTxt='🟡 Menos Aplicadas (bottom 20)';
+  } else {
+    pracs=[...all].filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,20);
+    color='var(--red)'; valFn=p=>p.pend_n+' pendentes'; titleTxt='🔴 Top 20 — Mais Pendências';
+  }
+  const titleEl=document.getElementById('pp-rank-title');
+  if(titleEl) titleEl.textContent=titleTxt;
+  const max=pracs.length?Math.max(...pracs.map(p=>_rankTab==='pend'?p.pend_n:p.env_n)):1;
+  el.innerHTML=pracs.map((p,i)=>{
+    const v=_rankTab==='pend'?p.pend_n:p.env_n;
+    return '<div class="rank-item">'
+      +'<div class="rank-pos">'+(i+1)+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div class="rank-name" title="'+p.n+'">'+p.n+'</div>'
+        +'<div style="font-size:9px;color:var(--muted)">'+(p.c||'')+'</div>'
+      +'</div>'
+      +'<div class="rank-bar-wrap"><div class="rank-bar" style="width:'+(v/max*100)+'%;background:'+color+'"></div></div>'
+      +'<div class="rank-val" style="color:'+color+'">'+valFn(p)+'</div>'
+      +'</div>';
+  }).join('');
 }
 
 function filterPrac(q){
@@ -939,6 +1023,47 @@ function renderTutorTbl(data){
 // ════════════════════════════════════════════════════════════════════════════
 // MODALS
 // ════════════════════════════════════════════════════════════════════════════
+function openListModal(tipo){
+  const tutores=DB.tutores||[];
+  let lista,titulo,sub;
+  if(tipo==='todos'){
+    lista=tutores;titulo='Todos os Tutores';sub=lista.length+' tutores ativos';
+  } else if(tipo==='enviaram'){
+    lista=tutores.filter(t=>t.te>0);titulo='Tutores que Enviaram';sub=lista.length+' enviaram portfólio';
+  } else if(tipo==='urgentes'){
+    lista=tutores.filter(t=>gTS(t)==='urgente');titulo='⚠️ Tutores Urgentes';sub=lista.length+' com prazo crítico';
+  } else if(tipo==='atrasados'){
+    lista=tutores.filter(t=>gTS(t)==='atrasado');titulo='🕐 Tutores Atrasados';sub=lista.length+' com prazo vencido';
+  } else if(tipo==='polos'){
+    // Abre listagem de polos no modal
+    const polos=DB.polo_stats||[];
+    document.getElementById('m-title').textContent='Ranking de Polos';
+    document.getElementById('m-sub').textContent=polos.length+' polos · clique num polo para detalhar';
+    const sorted=[...polos].sort((a,b)=>(b.pend||0)-(a.pend||0));
+    document.getElementById('m-body').innerHTML=sorted.map(p=>{
+      const pct=p.pct||0;const nm=gPN(p);
+      return '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"'
+        +' onclick="closeModal();setTimeout(()=>openPoloModal(''+esc(nm)+''),100)">'
+        +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+nm+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">'+p.t+' tutores · '+p.pend+' pendentes</div></div>'
+        +progCell(pct)+'</div>';
+    }).join('');
+    document.getElementById('modal-overlay').classList.add('show');
+    return;
+  }
+  document.getElementById('m-title').textContent=titulo;
+  document.getElementById('m-sub').textContent=sub;
+  const sorted=[...lista].sort((a,b)=>a.n.localeCompare(b.n));
+  document.getElementById('m-body').innerHTML=sorted.map(t=>
+    '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"'
+    +' onclick="closeModal();setTimeout(()=>openTutorModal(''+esc(t.n)+''),100)">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+t.n+'</div>'
+    +'<div style="font-size:10px;color:var(--muted)">'+t.p+' · '+(t.c||'—')+'</div></div>'
+    +pctBadge(t.pct)+'</div>'
+  ).join('');
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
 function openTutorModal(nome){
   const t=(DB.tutores||[]).find(x=>x.n===nome);
   if(!t) return;
@@ -1042,6 +1167,22 @@ function openPoloModal(nome){
   document.getElementById('modal-overlay').classList.add('show');
 }
 
+function openCatModal(idx){
+  const entry=Object.entries(window._pvCats||{}).sort((a,b)=>b[1].t-a[1].t)[idx];
+  if(!entry) return;
+  const [cat]=entry;
+  const lista=(DB.tutores||[]).filter(t=>t.c===cat);
+  document.getElementById('m-title').textContent=cat;
+  document.getElementById('m-sub').textContent=lista.length+' tutores nesta categoria';
+  document.getElementById('m-body').innerHTML=lista.map(t=>
+    '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"'
+    +' onclick="closeModal();setTimeout(()=>openTutorModal(''+esc(t.n)+''),100)">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+t.n+'</div>'
+    +'<div style="font-size:10px;color:var(--muted)">'+t.p+'</div></div>'
+    +pctBadge(t.pct)+'</div>'
+  ).join('');
+  document.getElementById('modal-overlay').classList.add('show');
+}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1128,7 +1269,7 @@ function renderGerenciamento(){
   // Populate sub-pages
   gerPoloData=DB.ger_polo||[]; renderGerPoloTbl(gerPoloData);
   gerContrData=DB.ger_contratacao||[]; renderGerContrTbl(gerContrData);
-  gerAgendaData=DB.ger_agendas||[]; renderGerAgendaTbl(gerAgendaData);
+  gerAgendaData=DB.ger_agendas||[]; renderAgendaKPIs(); renderGerAgendaTbl(gerAgendaData);
   gerDetData=DB.ger_ofertas||[];
   const dcats=[...new Set(gerDetData.map(d=>d.categoria))].sort();
   const dordens=[...new Set(gerDetData.map(d=>d.ordem))].filter(Boolean).sort();
@@ -1155,12 +1296,44 @@ function renderGerPoloTbl(data){
 function filterGerPolo(q){q=q.toLowerCase();renderGerPoloTbl(q?gerPoloData.filter(p=>p.polo.toLowerCase().includes(q)):gerPoloData)}
 
 function renderGerContrTbl(data){
-  document.getElementById('ger-contr-tbody').innerHTML=data.map(c=>`<tr class="${c.tem_tutor?'':'tr-pend'}">
-    <td>${c.polo}</td><td>${c.categoria}</td><td style="text-align:right">${c.total_ofertas}</td>
-    <td><span class="badge ${c.tem_tutor?'ok':'pend'}">${c.status}</span></td>
-    <td style="font-size:11px">${c.tutores.join(', ')||'—'}</td>
-  </tr>`).join('');
-  document.getElementById('ger-contr-count').textContent=data.length+' registros';
+  // Agrupar por polo
+  var grps={};
+  data.forEach(function(c){
+    var k=c.polo||'—';
+    if(!grps[k]) grps[k]={polo:k,total:0,semTutor:0,labs:[]};
+    grps[k].total++;
+    if(!c.tem_tutor) grps[k].semTutor++;
+    grps[k].labs.push(c);
+  });
+  var sorted=Object.values(grps).sort(function(a,b){return b.semTutor-a.semTutor;});
+  var rows='';
+  sorted.forEach(function(g,gi){
+    var pend=g.semTutor>0;
+    var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
+    var corST=pend?'var(--red)':'var(--ok)';
+    rows+='<tr class="tr-polo-hdr'+(pend?' tr-pend':'')+'" onclick="toggleContrGrp(this,'cg'+gi+'')">'
+      +'<td class="polo-toggle"><strong>'+g.polo+'</strong></td>'
+      +'<td style="text-align:right">'+g.total+'</td>'
+      +'<td style="text-align:right;color:'+corST+'">'+g.semTutor+'</td>'
+      +'<td>'+progCell(pct)+'</td>'
+      +'<td style="font-size:10px;color:var(--muted)">expandir</td>'
+      +'</tr>';
+    g.labs.sort(function(a,b){return a.tem_tutor-b.tem_tutor;}).forEach(function(c){
+      rows+='<tr class="tr-polo-child" data-cg="cg'+gi+'">'
+        +'<td style="padding-left:28px!important">'+c.categoria+'</td>'
+        +'<td style="text-align:right">'+c.total_ofertas+' of.</td>'
+        +'<td style="color:'+(c.tem_tutor?'var(--ok)':'var(--red)')+'">'+c.semTutor+'</td>'
+        +'<td><span class="badge '+(c.tem_tutor?'ok':'pend')+'">'+c.status+'</span></td>'
+        +'<td style="font-size:11px">'+(c.tutores&&c.tutores.length?c.tutores.join(', '):'—')+'</td>'
+        +'</tr>';
+    });
+  });
+  document.getElementById('ger-contr-tbody').innerHTML=rows;
+  document.getElementById('ger-contr-count').textContent=sorted.length+' polos ('+data.length+' labs)';
+}
+function toggleContrGrp(hdr,gid){
+  hdr.classList.toggle('open');
+  document.querySelectorAll('[data-cg="'+gid+'"]').forEach(function(r){r.classList.toggle('vis');});
 }
 function filterGerContr(q){
   q=q.toLowerCase();const st=document.getElementById('ger-contr-status').value;
@@ -1171,48 +1344,165 @@ function filterGerContr(q){
   renderGerContrTbl(d);
 }
 
-function renderGerAgendaTbl(data){
-  document.getElementById('ger-agenda-tbody').innerHTML=data.map(a=>`<tr>
-    <td><strong>${a.polo}</strong></td><td style="text-align:right">${a.total}</td>
-    <td style="text-align:right">${a.com_agenda}</td>
-    <td style="text-align:right;color:${a.sem_agenda>0?'var(--red)':'var(--ok)'}">${a.sem_agenda}</td>
-    <td>${progCell(a.pct_agendado)}</td>
-  </tr>`).join('');
+function renderAgendaKPIs(){
+  var data=gerAgendaData||[];
+  var comA=data.filter(function(a){return a.com_agenda>0;}).length;
+  var semA=data.filter(function(a){return a.sem_agenda>0;}).length;
+  var totAg=data.reduce(function(s,a){return s+(a.com_agenda||0);},0);
+  var totOf=data.reduce(function(s,a){return s+(a.total||0);},0);
+  var pct=totOf?Math.round(totAg/totOf*100):0;
+  var el=document.getElementById('ag-kpis');
+  if(!el) return;
+  el.innerHTML=''
+    +'<div class="kpi kpi-teal"><div class="kpi-label">Polos com Agenda</div><div class="kpi-value">'+comA+'</div><div class="kpi-detail">de '+data.length+' polos</div></div>'
+    +'<div class="kpi kpi-red"><div class="kpi-label">Polos sem Agenda</div><div class="kpi-value">'+semA+'</div></div>'
+    +'<div class="kpi kpi-green"><div class="kpi-label">Total Agendados</div><div class="kpi-value">'+fmtNum(totAg)+'</div><div class="kpi-detail">'+pct+'% das ofertas</div></div>'
+    +'<div class="kpi kpi-yellow"><div class="kpi-label">Pendentes de Agenda</div><div class="kpi-value">'+fmtNum(totOf-totAg)+'</div></div>';
+  // Top polos
+  var topEl=document.getElementById('ag-top-polos');
+  if(topEl && data.length){
+    var top=[...data].sort(function(a,b){return (b.com_agenda||0)-(a.com_agenda||0);}).slice(0,10);
+    var mx=top[0].com_agenda||1;
+    topEl.innerHTML=top.map(function(a,i){
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+        +'<span style="font-size:10px;font-weight:700;min-width:16px;color:var(--muted)">'+(i+1)+'</span>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.polo+'</div>'
+          +'<div style="height:6px;background:var(--bg);border-radius:3px;margin-top:3px">'
+            +'<div style="height:100%;width:'+(a.com_agenda/mx*100)+'%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:3px"></div>'
+          +'</div>'
+        +'</div>'
+        +'<span style="font-size:11px;font-weight:700;color:var(--teal)">'+a.com_agenda+'</span>'
+        +'</div>';
+    }).join('');
+  }
+  // Distribuição com/sem
+  var distEl=document.getElementById('ag-dist');
+  if(distEl && data.length){
+    var comTot=data.reduce(function(s,a){return s+(a.com_agenda||0);},0);
+    var semTot=data.reduce(function(s,a){return s+(a.sem_agenda||0);},0);
+    var total2=comTot+semTot||1;
+    distEl.innerHTML=''
+      +'<div style="margin-bottom:12px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">'
+          +'<span style="color:var(--ok)">✓ Com agenda</span><span style="font-weight:700">'+fmtNum(comTot)+'</span>'
+        +'</div>'
+        +'<div style="height:12px;background:var(--bg);border-radius:6px;overflow:hidden">'
+          +'<div style="height:100%;width:'+(comTot/total2*100)+'%;background:linear-gradient(90deg,var(--ok),var(--teal));border-radius:6px"></div>'
+        +'</div>'
+      +'</div>'
+      +'<div>'
+        +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">'
+          +'<span style="color:var(--red)">✗ Sem agenda</span><span style="font-weight:700">'+fmtNum(semTot)+'</span>'
+        +'</div>'
+        +'<div style="height:12px;background:var(--bg);border-radius:6px;overflow:hidden">'
+          +'<div style="height:100%;width:'+(semTot/total2*100)+'%;background:linear-gradient(90deg,var(--red),#f87171);border-radius:6px"></div>'
+        +'</div>'
+      +'</div>';
+  }
 }
-function filterGerAgenda(q){q=q.toLowerCase();renderGerAgendaTbl(q?gerAgendaData.filter(a=>a.polo.toLowerCase().includes(q)):gerAgendaData)}
+function renderGerAgendaTbl(data){
+  var el=document.getElementById('ger-agenda-tbody');
+  if(!el) return;
+  el.innerHTML=data.map(function(a){
+    var cor=a.sem_agenda>0?'var(--red)':'var(--ok)';
+    return '<tr>'
+      +'<td><strong>'+a.polo+'</strong></td>'
+      +'<td style="text-align:right">'+a.total+'</td>'
+      +'<td style="text-align:right;color:var(--ok)">'+a.com_agenda+'</td>'
+      +'<td style="text-align:right;color:'+cor+'">'+a.sem_agenda+'</td>'
+      +'<td>'+progCell(a.pct_agendado)+'</td>'
+      +'</tr>';
+  }).join('');
+  var cnt=document.getElementById('ger-agenda-count');
+  if(cnt) cnt.textContent=data.length+' polos';
+}
+function filterGerAgenda(q){
+  q=q.toLowerCase();
+  var stv=(document.getElementById('ag-status-sel')||{}).value||'';
+  var d=gerAgendaData||[];
+  if(q) d=d.filter(function(a){return a.polo.toLowerCase().includes(q);});
+  if(stv==='sem') d=d.filter(function(a){return a.sem_agenda>0;});
+  if(stv==='com') d=d.filter(function(a){return a.com_agenda>0;});
+  renderGerAgendaTbl(d);
+}
 
 function filterGerDetalhe(q){
   q=q.toLowerCase();
-  const cat=document.getElementById('ger-det-cat').value;
-  const ord=document.getElementById('ger-det-ordem').value;
-  const st=document.getElementById('ger-det-status').value;
-  let d=gerDetData;
-  if(q) d=d.filter(r=>(r.polo+r.pratica+r.tutor+r.categoria).toLowerCase().includes(q));
-  if(cat) d=d.filter(r=>r.categoria===cat);
-  if(ord) d=d.filter(r=>r.ordem===ord);
-  if(st==='ger') d=d.filter(r=>r.gerenciado);
-  if(st==='nger') d=d.filter(r=>!r.gerenciado);
-  if(st==='tutor') d=d.filter(r=>r.tutor);
-  if(st==='ntutor') d=d.filter(r=>!r.tutor);
-  const show=d.slice(0,500);
-  document.getElementById('ger-det-tbody').innerHTML=show.map(r=>`<tr class="${r.tutor?'':'tr-pend'}">
-    <td style="font-size:11px">${r.polo}</td><td style="font-size:11px">${r.categoria}</td>
-    <td>${r.ordem}</td><td style="font-size:11px">${r.pratica}</td>
-    <td style="font-size:11px">${r.tutor||'<span style="color:var(--red)">—</span>'}</td>
-    <td style="text-align:right">${fmtNum(r.alunos_mat)}</td><td style="text-align:right">${fmtNum(r.alunos_agend)}</td>
-    <td><span class="badge ${r.gerenciado?'ok':'pend'}">${r.gerenciado?'Gerenciada':'Pendente'}</span></td>
-  </tr>`).join('');
-  document.getElementById('ger-det-count').textContent=d.length+' ofertas'+(d.length>500?' (mostrando 500)':'');
+  var cat=document.getElementById('ger-det-cat').value;
+  var ord=document.getElementById('ger-det-ordem').value;
+  var st=document.getElementById('ger-det-status').value;
+  var d=gerDetData;
+  if(q) d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
+  if(cat) d=d.filter(function(r){return r.categoria===cat;});
+  if(ord) d=d.filter(function(r){return r.ordem===ord;});
+  if(st==='ger') d=d.filter(function(r){return r.gerenciado;});
+  if(st==='nger') d=d.filter(function(r){return !r.gerenciado;});
+  if(st==='tutor') d=d.filter(function(r){return r.tutor;});
+  if(st==='ntutor') d=d.filter(function(r){return !r.tutor;});
+
+  // Se não há filtro de ordem específico, agrupar por Ordem; caso contrário por Polo
+  var groupBy=ord?'polo':'ordem';
+  var grps={};
+  d.forEach(function(r){
+    var key=groupBy==='ordem'?(r.ordem||'—'):(r.polo||'—');
+    if(!grps[key]) grps[key]={key:key,total:0,semTutor:0,rows:[]};
+    grps[key].total++;
+    if(!r.tutor) grps[key].semTutor++;
+    grps[key].rows.push(r);
+  });
+  var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
+  var sortedGrp=Object.values(grps).sort(function(a,b){
+    if(groupBy==='ordem') return (ordemOrder[a.key]||9)-(ordemOrder[b.key]||9);
+    return b.semTutor-a.semTutor;
+  });
+  var rows='';
+  sortedGrp.forEach(function(g,gi){
+    var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
+    var corST=g.semTutor>0?'var(--red)':'var(--ok)';
+    rows+='<tr class="tr-polo-hdr" onclick="toggleDetGrp(this,'dg'+gi+'')">'
+      +'<td class="polo-toggle" colspan="2"><strong>'+g.key+'</strong>'
+        +'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">'+g.total+' ofertas</span></td>'
+      +'<td colspan="2" style="color:'+corST+'">'+g.semTutor+' sem tutor</td>'
+      +'<td colspan="4">'+progCell(pct)+'</td>'
+      +'</tr>';
+    g.rows.slice(0,150).forEach(function(r){
+      var tutorCell=r.tutor?r.tutor:'<span style="color:var(--red)">—</span>';
+      rows+='<tr class="tr-polo-child" data-dg="dg'+gi+'">'
+        +'<td style="font-size:11px;padding-left:28px!important">'+(groupBy==='ordem'?r.polo:r.ordem)+'</td>'
+        +'<td style="font-size:11px">'+r.categoria+'</td>'
+        +'<td>'+r.ordem+'</td>'
+        +'<td style="font-size:11px">'+r.pratica+'</td>'
+        +'<td style="font-size:11px">'+tutorCell+'</td>'
+        +'<td style="text-align:right">'+fmtNum(r.alunos_mat)+'</td>'
+        +'<td style="text-align:right">'+fmtNum(r.alunos_agend)+'</td>'
+        +'<td><span class="badge '+(r.gerenciado?'ok':'pend')+'">'+(r.gerenciado?'Ger.':'Pend.')+'</span></td>'
+        +'</tr>';
+    });
+  });
+  document.getElementById('ger-det-tbody').innerHTML=rows;
+  document.getElementById('ger-det-count').textContent=d.length+' ofertas em '+sortedGrp.length+' grupos';
+}
+function toggleDetGrp(hdr,gid){
+  hdr.classList.toggle('open');
+  document.querySelectorAll('[data-dg="'+gid+'"]').forEach(function(r){r.classList.toggle('vis');});
 }
 
 // ════════════════════════════════════════════════════════════════════════════
 // FILTERS & DARK MODE & SENHA
 // ════════════════════════════════════════════════════════════════════════════
 function populateFilters(){
-  const cats=[...new Set((DB.tutores||[]).map(t=>t.c).filter(Boolean))].sort();
-  [document.getElementById('tutor-cat-sel'),document.getElementById('prac-cat-sel')].forEach(sel=>{
-    if(!sel)return;cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)})
-  });
+  // Categorias de tutores
+  const tutorCats=[...new Set((DB.tutores||[]).map(t=>t.c).filter(Boolean))].sort();
+  const tSel=document.getElementById('tutor-cat-sel');
+  if(tSel) tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tSel.appendChild(o)});
+  // Categorias de práticas — fonte própria para não cruzar sets
+  const pracCats=[...new Set(getPraticas().map(p=>p.c).filter(Boolean))].sort();
+  const pSel=document.getElementById('prac-cat-sel');
+  if(pSel) pracCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pSel.appendChild(o)});
+  // Categoria no filtro de Ordens
+  const ocSel=document.getElementById('ordem-cat-sel');
+  if(ocSel) tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;ocSel.appendChild(o)});
 }
 
 function toggleDark(){
