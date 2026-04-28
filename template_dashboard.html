@@ -1025,7 +1025,7 @@ function renderTutorTbl(data){
 // ════════════════════════════════════════════════════════════════════════════
 function openListModal(tipo){
   const tutores=DB.tutores||[];
-  let lista,titulo,sub;
+  let lista,titulo,sub,isPolos=false;
   if(tipo==='todos'){
     lista=tutores;titulo='Todos os Tutores';sub=lista.length+' tutores ativos';
   } else if(tipo==='enviaram'){
@@ -1035,135 +1035,42 @@ function openListModal(tipo){
   } else if(tipo==='atrasados'){
     lista=tutores.filter(t=>gTS(t)==='atrasado');titulo='🕐 Tutores Atrasados';sub=lista.length+' com prazo vencido';
   } else if(tipo==='polos'){
-    // Abre listagem de polos no modal
-    const polos=DB.polo_stats||[];
+    const polos=[...DB.polo_stats||[]].sort((a,b)=>(b.pend||0)-(a.pend||0));
+    window._ml=polos;
     document.getElementById('m-title').textContent='Ranking de Polos';
-    document.getElementById('m-sub').textContent=polos.length+' polos · clique num polo para detalhar';
-    const sorted=[...polos].sort((a,b)=>(b.pend||0)-(a.pend||0));
-    document.getElementById('m-body').innerHTML=sorted.map(p=>{
-      const pct=p.pct||0;const nm=gPN(p);
-      return '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"'
-        +' onclick="closeModal();setTimeout(()=>openPoloModal(''+esc(nm)+''),100)">'
+    document.getElementById('m-sub').textContent=polos.length+' polos · clique para detalhar';
+    document.getElementById('m-body').innerHTML=polos.map((p,i)=>{
+      const nm=gPN(p);
+      return '<div class="modal-list-item" data-mli="'+i+'" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">'
         +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+nm+'</div>'
         +'<div style="font-size:10px;color:var(--muted)">'+p.t+' tutores · '+p.pend+' pendentes</div></div>'
-        +progCell(pct)+'</div>';
+        +progCell(p.pct||0)+'</div>';
     }).join('');
+    document.querySelectorAll('[data-mli]').forEach(function(el){
+      el.addEventListener('click',function(){
+        const p=window._ml[+this.dataset.mli];
+        closeModal();setTimeout(function(){openPoloModal(gPN(p));},100);
+      });
+    });
     document.getElementById('modal-overlay').classList.add('show');
     return;
   }
+  const sorted=[...lista].sort((a,b)=>a.n.localeCompare(b.n));
+  window._ml=sorted;
   document.getElementById('m-title').textContent=titulo;
   document.getElementById('m-sub').textContent=sub;
-  const sorted=[...lista].sort((a,b)=>a.n.localeCompare(b.n));
-  document.getElementById('m-body').innerHTML=sorted.map(t=>
-    '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"'
-    +' onclick="closeModal();setTimeout(()=>openTutorModal(''+esc(t.n)+''),100)">'
+  document.getElementById('m-body').innerHTML=sorted.map((t,i)=>
+    '<div class="modal-list-item" data-mli="'+i+'" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">'
     +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+t.n+'</div>'
     +'<div style="font-size:10px;color:var(--muted)">'+t.p+' · '+(t.c||'—')+'</div></div>'
     +pctBadge(t.pct)+'</div>'
   ).join('');
-  document.getElementById('modal-overlay').classList.add('show');
-}
-
-function openTutorModal(nome){
-  const t=(DB.tutores||[]).find(x=>x.n===nome);
-  if(!t) return;
-  document.getElementById('m-title').textContent=t.n;
-  document.getElementById('m-sub').textContent=`${t.p} · ${t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
-  let html=`<div class="kpi-row" style="margin-bottom:14px">
-    <div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div>
-    <div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div>
-    <div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div>
-  </div>`;
-  html+=`<div style="margin-bottom:12px"><div class="kpi-label" style="margin-bottom:6px">Progresso Geral</div>${progCell(t.pct)}</div>`;
-
-  // Portfólios por Ordem
-  const po=t.por_ordem||t.porOrdem||{};
-  if(Object.keys(po).length){
-    html+=`<div class="sec-label">Portfólios por Ordem</div>`;
-    html+=Object.entries(po).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0])).map(([o,v])=>
-      `<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-size:11px;font-weight:600;min-width:60px">${o}</span>
-      <span style="font-size:11px;font-weight:700;color:var(--ok)">${v} envio${v>1?'s':''}</span></div>`).join('');
-  }
-
-  // Realizadas
-  if(t.real&&t.real.length){
-    html+=`<div class="sec-label">✅ Realizadas (${t.real.length})</div>`;
-    html+=t.real.map(r=>`<div class="prac-item"><div class="prac-icon done">✓</div>
-      <div style="flex:1"><div class="prac-name">${typeof r==='object'?r.n:r}</div></div>
-      <div class="prac-date">${typeof r==='object'?(r.d||'—'):'—'}</div></div>`).join('');
-  }
-
-  // Pendentes
-  if(t.pend&&t.pend.length){
-    html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;
-    const hoje=new Date();
-    const ordensInfo=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'].map(o=>{
-      const prazoStr=DB.prazos[o]||'';const parts=prazoStr.split('/');
-      const prazoDate=parts.length===3?new Date(parts[2],parts[1]-1,parts[0]):null;
-      const vencido=prazoDate?hoje>prazoDate:false;
-      const enviou=((t.por_ordem||t.porOrdem||{})[o]||0)>0;
-      return{nome:o,prazo:prazoStr,prazoDate,vencido,enviou};
+  document.querySelectorAll('[data-mli]').forEach(function(el){
+    el.addEventListener('click',function(){
+      const t=window._ml[+this.dataset.mli];
+      closeModal();setTimeout(function(){openTutorModal(t.n);},100);
     });
-    const ordensPendentes=ordensInfo.filter(o=>!o.vencido&&!o.enviou);
-    const ordensVencidas=ordensInfo.filter(o=>o.vencido&&!o.enviou);
-    const totalOrdens=ordensPendentes.length||1;
-    const porOrdem=Math.ceil(t.pend.length/totalOrdens);
-    if(ordensVencidas.length>0){
-      ordensVencidas.forEach(o=>{
-        html+=`<div style="font-size:10px;font-weight:700;color:var(--red);margin:8px 0 4px;padding:4px 8px;background:var(--red-dim);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;
-      });
-    }
-    if(ordensPendentes.length>0){
-      ordensPendentes.forEach((o,oi)=>{
-        const start=oi*porOrdem;const end=Math.min(start+porOrdem,t.pend.length);
-        if(start>=t.pend.length) return;
-        const pracs=t.pend.slice(start,end);
-        html+=`<div style="font-size:10px;font-weight:700;color:var(--teal);margin:8px 0 4px;padding:4px 8px;background:var(--teal-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;
-        html+=pracs.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div>
-          <div style="flex:1"><div class="prac-name">${p}</div></div>
-          <div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div></div>`).join('');
-      });
-    } else {
-      html+=t.pend.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div>
-        <div style="flex:1"><div class="prac-name" style="color:var(--red)">${p}</div></div>
-        <div class="prac-date" style="color:var(--red)">Atrasado</div></div>`).join('');
-    }
-  }
-
-  // Histórico
-  if(t.hist&&t.hist.length){
-    html+=`<div class="sec-label">📋 Histórico de Envios</div>`;
-    html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`
-      <div class="prac-item"><div class="prac-icon done">📄</div>
-        <div style="flex:1"><div class="prac-name">${h.p||'—'}</div>
-        <div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.al||0} alunos</div></div>
-        <div class="prac-date">${h.d||'—'}</div></div>`).join('');
-  }
-
-  document.getElementById('m-body').innerHTML=html;
-  document.getElementById('modal-overlay').classList.add('show');
-}
-
-function openPoloModal(nome){
-  const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
-  const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,
-    pend:tutores.filter(t=>t.te===0).length,alunos:tutores.reduce((s,t)=>s+(t.al||0),0)};
-  document.getElementById('m-title').textContent=gPN(p)||nome;
-  document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
-  let html=`<div class="kpi-row" style="margin-bottom:14px">
-    <div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div>
-    <div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div>
-    <div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div>
-  </div><div class="sec-label">Tutores</div>`;
-  html+=tutores.map(t=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)">
-      <div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c||'—'}</div></div>
-      <div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>
-      ${pctBadge(t.pct)}
-    </div>`).join('');
-  document.getElementById('m-body').innerHTML=html;
+  });
   document.getElementById('modal-overlay').classList.add('show');
 }
 
@@ -1172,17 +1079,24 @@ function openCatModal(idx){
   if(!entry) return;
   const [cat]=entry;
   const lista=(DB.tutores||[]).filter(t=>t.c===cat);
+  window._ml=lista;
   document.getElementById('m-title').textContent=cat;
   document.getElementById('m-sub').textContent=lista.length+' tutores nesta categoria';
-  document.getElementById('m-body').innerHTML=lista.map(t=>
-    '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"'
-    +' onclick="closeModal();setTimeout(()=>openTutorModal(''+esc(t.n)+''),100)">'
+  document.getElementById('m-body').innerHTML=lista.map((t,i)=>
+    '<div class="modal-list-item" data-mli="'+i+'" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">'
     +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+t.n+'</div>'
     +'<div style="font-size:10px;color:var(--muted)">'+t.p+'</div></div>'
     +pctBadge(t.pct)+'</div>'
   ).join('');
+  document.querySelectorAll('[data-mli]').forEach(function(el){
+    el.addEventListener('click',function(){
+      const t=window._ml[+this.dataset.mli];
+      closeModal();setTimeout(function(){openTutorModal(t.n);},100);
+    });
+  });
   document.getElementById('modal-overlay').classList.add('show');
 }
+
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1311,7 +1225,7 @@ function renderGerContrTbl(data){
     var pend=g.semTutor>0;
     var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
     var corST=pend?'var(--red)':'var(--ok)';
-    rows+='<tr class="tr-polo-hdr'+(pend?' tr-pend':'')+'" onclick="toggleContrGrp(this,'cg'+gi+'')">'
+    rows+='<tr class="tr-polo-hdr'+(pend?' tr-pend':'')+'" onclick="toggleContrGrp(this,\"cg'+gi+'\")">'
       +'<td class="polo-toggle"><strong>'+g.polo+'</strong></td>'
       +'<td style="text-align:right">'+g.total+'</td>'
       +'<td style="text-align:right;color:'+corST+'">'+g.semTutor+'</td>'
@@ -1460,7 +1374,7 @@ function filterGerDetalhe(q){
   sortedGrp.forEach(function(g,gi){
     var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
     var corST=g.semTutor>0?'var(--red)':'var(--ok)';
-    rows+='<tr class="tr-polo-hdr" onclick="toggleDetGrp(this,'dg'+gi+'')">'
+    rows+='<tr class="tr-polo-hdr" onclick="toggleDetGrp(this,\"dg'+gi+'\")">'
       +'<td class="polo-toggle" colspan="2"><strong>'+g.key+'</strong>'
         +'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">'+g.total+' ofertas</span></td>'
       +'<td colspan="2" style="color:'+corST+'">'+g.semTutor+' sem tutor</td>'
