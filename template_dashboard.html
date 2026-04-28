@@ -280,6 +280,18 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   #lgpd-bar{left:60px}
   .kpi-row{grid-template-columns:repeat(2,1fr)}
 }
+
+/* ── EXPANDABLE ROWS ─────────────────────────────────────────────── */
+.tr-group-hdr{cursor:pointer;transition:background .15s}
+.tr-group-hdr:hover td{background:var(--green-dim)!important}
+.tr-group-hdr td:first-child::before{content:'▶ ';font-size:9px;color:var(--green);transition:transform .2s;display:inline-block}
+.tr-group-hdr.open td:first-child::before{content:'▼ ';color:var(--teal)}
+.tr-group-child{display:none;background:var(--bg)}
+.tr-group-child.show{display:table-row}
+.tr-group-child td{padding-left:32px!important;font-size:11px;border-top:none}
+/* ── CLICKABLE KPI ───────────────────────────────────────────────── */
+.kpi-link{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.kpi-link:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
 </style>
 </head>
 <body>
@@ -386,6 +398,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-sel">
         <option value="">Todas ordens</option>
       </select>
+      <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-cat-sel">
+        <option value="">Todas categorias</option>
       </select>
       <span class="tbl-count" id="ordem-count">—</span>
     </div>
@@ -528,7 +542,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <span class="tbl-count" id="ger-contr-count">—</span>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>Polo</th><th>Categoria</th><th style="text-align:right">Ofertas</th><th>Status</th><th>Tutor(es)</th>
+      <th>Polo</th><th style="text-align:right">Labs</th><th style="text-align:right">Sem Tutor</th><th>Cobertura</th><th>Detalhe</th>
     </tr></thead><tbody id="ger-contr-tbody"></tbody></table></div>
   </div>
 </div>
@@ -538,10 +552,27 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="page" id="page-ger-agendas">
 <div class="container">
   <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div></div>
+  <div class="kpi-row" id="ag-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">📅 Distribuição por Mês</div></div>
+      <div class="card-body" id="ag-mes-bars"></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">🏆 Top Polos — Mais Agendamentos</div></div>
+      <div class="card-body" id="ag-top-polos"></div>
+    </div>
+  </div>
   <div class="card">
-    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/>
+      <select class="sel" onchange="filterGerAgenda(document.getElementById('ger-agenda-search').value)" id="ag-status-sel">
+        <option value="">Todos</option><option value="sem">Sem agenda</option><option value="com">Com agenda</option>
+      </select>
+      <span class="tbl-count" id="ger-agenda-count">—</span>
+    </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>Polo</th><th style="text-align:right">Total</th><th style="text-align:right">Com Agenda</th>
+      <th>Polo</th><th style="text-align:right">Total Ofertas</th><th style="text-align:right">Com Agenda</th>
       <th style="text-align:right">Sem Agenda</th><th>% Agendado</th>
     </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div>
   </div>
@@ -678,12 +709,24 @@ function renderKPIs(){
   document.getElementById('pv-sub').textContent=
     `${k.total} tutores · ${k.enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
   document.getElementById('pv-kpis').innerHTML=`
-    <div class="kpi kpi-green"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${k.total}</div></div>
-    <div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${k.enviaram}</div><div class="kpi-detail">${pct}% do total</div></div>
-    <div class="kpi kpi-red"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div></div>
-    <div class="kpi kpi-yellow"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Total Alunos</div><div class="kpi-value">${fmtNum(k.total_alunos)}</div></div>
-    <div class="kpi kpi-green"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div></div>
+    <div class="kpi kpi-green kpi-link" onclick="navTo('port-tutores')" title="Ver todos os tutores">
+      <div class="kpi-label">Total Tutores</div><div class="kpi-value">${k.total}</div>
+      <div class="kpi-detail" style="color:var(--green-l)">↗ Ver tutores</div></div>
+    <div class="kpi kpi-ok kpi-link" onclick="navTo('port-tutores');setTimeout(()=>{document.getElementById('tutor-status-sel').value='ok';filterTutores('')},100)" title="Ver tutores que enviaram">
+      <div class="kpi-label">Enviaram</div><div class="kpi-value">${k.enviaram}</div>
+      <div class="kpi-detail">${pct}% do total ↗</div></div>
+    <div class="kpi kpi-red kpi-link" onclick="navTo('port-tutores');setTimeout(()=>{document.getElementById('tutor-status-sel').value='pend';filterTutores('')},100)" title="Ver tutores urgentes/pendentes">
+      <div class="kpi-label">Pendentes</div><div class="kpi-value">${k.urgentes}</div>
+      <div class="kpi-detail" style="color:var(--red)">↗ Filtrar pendentes</div></div>
+    <div class="kpi kpi-yellow kpi-link" onclick="navTo('port-ordens')" title="Ver por ordens">
+      <div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div>
+      <div class="kpi-detail" style="color:var(--yellow-d)">↗ Ver ordens</div></div>
+    <div class="kpi kpi-teal kpi-link" onclick="navTo('port-polos')" title="Ver ranking de polos">
+      <div class="kpi-label">Total Alunos</div><div class="kpi-value">${fmtNum(k.total_alunos)}</div>
+      <div class="kpi-detail" style="color:var(--teal)">↗ Ver polos</div></div>
+    <div class="kpi kpi-green kpi-link" onclick="navTo('port-polos')" title="Ver polos">
+      <div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div>
+      <div class="kpi-detail" style="color:var(--green-l)">↗ Ver polos</div></div>
   `;
 }
 
@@ -734,10 +777,14 @@ function renderCatOverview(){
   (DB.tutores||[]).forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
+      onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"
+      onclick="navTo('port-tutores');setTimeout(()=>{const s=document.getElementById('tutor-cat-sel');if(s){s.value='${c}';filterTutores('')}},100)"
+      title="Filtrar tutores por ${c}">
       <div style="flex:1"><div style="font-size:13px;font-weight:600">${c}</div>
       <div style="font-size:10px;color:var(--muted)">${v.t} tutores · ${v.e} enviaram · ${fmtNum(v.al)} alunos</div></div>
       ${progCell(pct)}
+      <span style="font-size:10px;color:var(--muted)">↗</span>
     </div>`;
   }).join('');
 }
@@ -769,8 +816,11 @@ function renderOrdens(){
 function filterOrdemTbl(q){
   q=q.toLowerCase();
   const selO=document.getElementById('ordem-sel').value;
+  const selCat=document.getElementById('ordem-cat-sel');
+  const cat=selCat?selCat.value:'';
   let d=DB.tutores||[];
   if(q) d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));
+  if(cat) d=d.filter(t=>t.c===cat);
   if(selO){
     d=d.filter(t=>{
       const po=t.por_ordem||t.porOrdem||{};
@@ -836,17 +886,43 @@ function renderCatPracBars(){
   }).join('');
 }
 
+let rankTab='pend';
+function switchRankTab(tab){
+  rankTab=tab;
+  document.querySelectorAll('.btn-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('rt-'+tab).classList.add('active');
+  renderTopPrac();
+}
 function renderTopPrac(){
   const el=document.getElementById('pp-ranking');
-  const pracs=(getPraticas()).filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,30);
-  const max=pracs.length?pracs[0].pend_n:1;
-  el.innerHTML=pracs.map((p,i)=>`
-    <div class="rank-item">
+  const all=getPraticas();
+  let pracs,color,label;
+  if(rankTab==='pend'){
+    pracs=all.filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,20);
+    color='var(--red)'; label=p=>p.pend_n+' pendentes';
+    document.getElementById('rank-title').textContent='🔴 Top 20 — Mais Pendências';
+  } else if(rankTab==='env'){
+    pracs=all.sort((a,b)=>b.env_n-a.env_n).slice(0,20);
+    color='var(--ok)'; label=p=>p.env_n+' enviadas';
+    document.getElementById('rank-title').textContent='🟢 Top 20 — Mais Aplicadas';
+  } else {
+    pracs=all.filter(p=>p.env_n>0).sort((a,b)=>a.env_n-b.env_n).slice(0,20);
+    color='var(--yellow-d)'; label=p=>p.env_n+' enviadas';
+    document.getElementById('rank-title').textContent='🟡 Bottom 20 — Menos Aplicadas';
+  }
+  const max=pracs.length?Math.max(...pracs.map(p=>rankTab==='pend'?p.pend_n:p.env_n)):1;
+  el.innerHTML=pracs.map((p,i)=>{
+    const v=rankTab==='pend'?p.pend_n:p.env_n;
+    return `<div class="rank-item">
       <div class="rank-pos">${i+1}</div>
-      <div class="rank-name" title="${p.n}">${p.n}</div>
-      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.pend_n/max*100}%;background:var(--red)"></div></div>
-      <div class="rank-val" style="color:var(--red)">${p.pend_n}</div>
-    </div>`).join('');
+      <div style="flex:1;min-width:0">
+        <div class="rank-name" title="${p.n}">${p.n}</div>
+        <div style="font-size:10px;color:var(--muted)">${p.c||''}</div>
+      </div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${v/max*100}%;background:${color}"></div></div>
+      <div class="rank-val" style="color:${color}">${label(p)}</div>
+    </div>`;
+  }).join('');
 }
 
 function filterPrac(q){
@@ -1128,7 +1204,7 @@ function renderGerenciamento(){
   // Populate sub-pages
   gerPoloData=DB.ger_polo||[]; renderGerPoloTbl(gerPoloData);
   gerContrData=DB.ger_contratacao||[]; renderGerContrTbl(gerContrData);
-  gerAgendaData=DB.ger_agendas||[]; renderGerAgendaTbl(gerAgendaData);
+  gerAgendaData=DB.ger_agendas||[]; renderAgendaKPIs(); renderGerAgendaTbl(gerAgendaData);
   gerDetData=DB.ger_ofertas||[];
   const dcats=[...new Set(gerDetData.map(d=>d.categoria))].sort();
   const dordens=[...new Set(gerDetData.map(d=>d.ordem))].filter(Boolean).sort();
@@ -1155,12 +1231,44 @@ function renderGerPoloTbl(data){
 function filterGerPolo(q){q=q.toLowerCase();renderGerPoloTbl(q?gerPoloData.filter(p=>p.polo.toLowerCase().includes(q)):gerPoloData)}
 
 function renderGerContrTbl(data){
-  document.getElementById('ger-contr-tbody').innerHTML=data.map(c=>`<tr class="${c.tem_tutor?'':'tr-pend'}">
-    <td>${c.polo}</td><td>${c.categoria}</td><td style="text-align:right">${c.total_ofertas}</td>
-    <td><span class="badge ${c.tem_tutor?'ok':'pend'}">${c.status}</span></td>
-    <td style="font-size:11px">${c.tutores.join(', ')||'—'}</td>
-  </tr>`).join('');
-  document.getElementById('ger-contr-count').textContent=data.length+' registros';
+  // Agrupar por polo
+  const grupos={};
+  data.forEach(c=>{
+    if(!grupos[c.polo])grupos[c.polo]={polo:c.polo,total:0,semTutor:0,labs:[]};
+    grupos[c.polo].total++;
+    if(!c.tem_tutor)grupos[c.polo].semTutor++;
+    grupos[c.polo].labs.push(c);
+  });
+  const sorted=Object.values(grupos).sort((a,b)=>b.semTutor-a.semTutor);
+  let html='';let gi=0;
+  sorted.forEach(g=>{
+    const pend=g.semTutor>0;
+    const pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
+    html+=`<tr class="tr-group-hdr${pend?' tr-pend':''}" onclick="toggleGerContrGroup(this,'grp-${gi}')">
+      <td><strong>${g.polo}</strong></td>
+      <td style="text-align:right">${g.total} labs</td>
+      <td style="text-align:right;color:${pend?'var(--red)':'var(--ok)'}">${g.semTutor} sem tutor</td>
+      <td>${progCell(pct)}</td><td style="font-size:10px;color:var(--muted)">Clique para expandir</td>
+    </tr>`;
+    g.labs.sort((a,b)=>a.tem_tutor-b.tem_tutor).forEach(c=>{
+      html+=`<tr class="tr-group-child" data-group="grp-${gi}">
+        <td style="padding-left:32px!important">${c.categoria}</td>
+        <td style="text-align:right">${c.total_ofertas} ofertas</td>
+        <td style="color:${c.tem_tutor?'var(--ok)':'var(--red)'}">—</td>
+        <td><span class="badge ${c.tem_tutor?'ok':'pend'}">${c.status}</span></td>
+        <td style="font-size:11px">${c.tutores.join(', ')||'—'}</td>
+      </tr>`;
+    });
+    gi++;
+  });
+  document.getElementById('ger-contr-tbody').innerHTML=html;
+  document.getElementById('ger-contr-count').textContent=sorted.length+' polos ('+data.length+' labs)';
+}
+function toggleGerContrGroup(hdr,gid){
+  hdr.classList.toggle('open');
+  document.querySelectorAll('[data-group="'+gid+'"]').forEach(r=>{
+    r.classList.toggle('show');
+  });
 }
 function filterGerContr(q){
   q=q.toLowerCase();const st=document.getElementById('ger-contr-status').value;
@@ -1171,15 +1279,82 @@ function filterGerContr(q){
   renderGerContrTbl(d);
 }
 
+function renderAgendaKPIs(){
+  const data=gerAgendaData||[];
+  const totalPolos=data.length;
+  const comAgenda=data.filter(a=>a.com_agenda>0).length;
+  const semAgenda=data.filter(a=>a.sem_agenda>0).length;
+  const totalAg=data.reduce((s,a)=>s+(a.com_agenda||0),0);
+  const totalOf=data.reduce((s,a)=>s+(a.total||0),0);
+  const pct=totalOf?Math.round(totalAg/totalOf*100):0;
+  const el=document.getElementById('ag-kpis');
+  if(!el)return;
+  el.innerHTML=`
+    <div class="kpi kpi-teal"><div class="kpi-label">Polos com Agenda</div><div class="kpi-value">${comAgenda}</div><div class="kpi-detail">de ${totalPolos} polos</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Polos sem Agenda</div><div class="kpi-value">${semAgenda}</div></div>
+    <div class="kpi kpi-green"><div class="kpi-label">Total Agendados</div><div class="kpi-value">${fmtNum(totalAg)}</div><div class="kpi-detail">${pct}% das ofertas</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">Pendentes de Agenda</div><div class="kpi-value">${fmtNum(totalOf-totalAg)}</div></div>
+  `;
+  // Barras por polo (top 10 mais agendamentos)
+  const topEl=document.getElementById('ag-top-polos');
+  if(topEl){
+    const top=[...data].sort((a,b)=>(b.com_agenda||0)-(a.com_agenda||0)).slice(0,10);
+    const mx=top.length?top[0].com_agenda:1;
+    topEl.innerHTML=top.map((a,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:10px;font-weight:700;min-width:16px;color:var(--muted)">${i+1}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.polo}</div>
+          <div style="height:8px;background:var(--bg);border-radius:4px;margin-top:3px;overflow:hidden">
+            <div style="height:100%;width:${a.com_agenda/mx*100}%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:4px"></div>
+          </div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:var(--teal)">${a.com_agenda}</span>
+      </div>`).join('');
+  }
+  // Distribuição por mês (estimada a partir dos dados de agendamento se disponíveis)
+  const mesEl=document.getElementById('ag-mes-bars');
+  if(mesEl){
+    const meses={'Jan/2026':0,'Fev/2026':0,'Mar/2026':0,'Abr/2026':0,'Mai/2026':0,'Jun/2026':0,
+      'Jul/2026':0,'Ago/2026':0,'Set/2026':0,'Out/2026':0,'Nov/2026':0,'Dez/2026':0};
+    // Se tiver dados de data de agenda, usa; senão mostra distribuição de com_agenda por polo
+    data.forEach(a=>{if(a.mes_agenda)meses[a.mes_agenda]=(meses[a.mes_agenda]||0)+a.com_agenda});
+    const entries=Object.entries(meses);
+    const mx2=Math.max(...entries.map(e=>e[1]),1);
+    mesEl.innerHTML=entries.map(([m,v])=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <span style="font-size:10px;font-weight:600;min-width:70px;color:var(--muted)">${m}</span>
+        <div style="flex:1;height:18px;background:var(--bg);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${v?v/mx2*100:0}%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;min-width:${v?'24px':'0'}">
+            ${v?`<span style="font-size:9px;font-weight:700;color:#fff">${v}</span>`:''}
+          </div>
+        </div>
+      </div>`).join('')+'<div style="font-size:10px;color:var(--dim);margin-top:6px">* Distribuição estimada. Dados de data de agenda enriquecerão este gráfico.</div>';
+  }
+}
 function renderGerAgendaTbl(data){
-  document.getElementById('ger-agenda-tbody').innerHTML=data.map(a=>`<tr>
-    <td><strong>${a.polo}</strong></td><td style="text-align:right">${a.total}</td>
-    <td style="text-align:right">${a.com_agenda}</td>
+  const el=document.getElementById('ger-agenda-tbody');
+  if(!el)return;
+  el.innerHTML=data.map(a=>`<tr>
+    <td><strong>${a.polo}</strong></td>
+    <td style="text-align:right">${a.total}</td>
+    <td style="text-align:right;color:var(--ok)">${a.com_agenda}</td>
     <td style="text-align:right;color:${a.sem_agenda>0?'var(--red)':'var(--ok)'}">${a.sem_agenda}</td>
     <td>${progCell(a.pct_agendado)}</td>
   </tr>`).join('');
+  const cnt=document.getElementById('ger-agenda-count');
+  if(cnt)cnt.textContent=data.length+' polos';
 }
-function filterGerAgenda(q){q=q.toLowerCase();renderGerAgendaTbl(q?gerAgendaData.filter(a=>a.polo.toLowerCase().includes(q)):gerAgendaData)}
+function filterGerAgenda(q){
+  q=q.toLowerCase();
+  const st=document.getElementById('ag-status-sel');
+  const stv=st?st.value:'';
+  let d=gerAgendaData||[];
+  if(q) d=d.filter(a=>a.polo.toLowerCase().includes(q));
+  if(stv==='sem') d=d.filter(a=>a.sem_agenda>0);
+  if(stv==='com') d=d.filter(a=>a.com_agenda>0);
+  renderGerAgendaTbl(d);
+}
 
 function filterGerDetalhe(q){
   q=q.toLowerCase();
@@ -1194,25 +1369,88 @@ function filterGerDetalhe(q){
   if(st==='nger') d=d.filter(r=>!r.gerenciado);
   if(st==='tutor') d=d.filter(r=>r.tutor);
   if(st==='ntutor') d=d.filter(r=>!r.tutor);
-  const show=d.slice(0,500);
-  document.getElementById('ger-det-tbody').innerHTML=show.map(r=>`<tr class="${r.tutor?'':'tr-pend'}">
-    <td style="font-size:11px">${r.polo}</td><td style="font-size:11px">${r.categoria}</td>
-    <td>${r.ordem}</td><td style="font-size:11px">${r.pratica}</td>
-    <td style="font-size:11px">${r.tutor||'<span style="color:var(--red)">—</span>'}</td>
-    <td style="text-align:right">${fmtNum(r.alunos_mat)}</td><td style="text-align:right">${fmtNum(r.alunos_agend)}</td>
-    <td><span class="badge ${r.gerenciado?'ok':'pend'}">${r.gerenciado?'Gerenciada':'Pendente'}</span></td>
-  </tr>`).join('');
-  document.getElementById('ger-det-count').textContent=d.length+' ofertas'+(d.length>500?' (mostrando 500)':'');
+
+  // Agrupar por Ordem quando não há filtro de ordem específico
+  // (ou agrupar por polo quando há filtro de ordem)
+  const groupBy = ord ? 'polo' : 'ordem';
+  const grupos={};
+  d.forEach(r=>{
+    const key=groupBy==='ordem'?r.ordem:(r.polo||'—');
+    if(!grupos[key])grupos[key]={key,total:0,semTutor:0,rows:[]};
+    grupos[key].total++;
+    if(!r.tutor)grupos[key].semTutor++;
+    grupos[key].rows.push(r);
+  });
+
+  const ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
+  const sortedGrp=Object.values(grupos).sort((a,b)=>{
+    if(groupBy==='ordem') return (ordemOrder[a.key]||9)-(ordemOrder[b.key]||9);
+    return b.semTutor-a.semTutor;
+  });
+
+  let rows=''; let gi=0;
+  sortedGrp.forEach(g=>{
+    const pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
+    const corPend=g.semTutor>0?'var(--red)':'var(--ok)';
+    rows+=`<tr class="tr-group-hdr" onclick="toggleDetGroup(this,'dg-${gi}')">
+      <td colspan="2"><strong>${g.key}</strong>
+        <span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">${g.total} ofertas</span></td>
+      <td colspan="2" style="color:${corPend}">${g.semTutor} sem tutor</td>
+      <td colspan="4">${progCell(pct)}</td>
+    </tr>`;
+    g.rows.slice(0,200).forEach(r=>{
+      rows+=`<tr class="tr-group-child" data-dgroup="dg-${gi}">
+        <td style="font-size:11px">${groupBy==='ordem'?r.polo:r.ordem}</td>
+        <td style="font-size:11px">${r.categoria}</td>
+        <td>${groupBy==='ordem'?r.ordem:''}</td>
+        <td style="font-size:11px">${r.pratica}</td>
+        <td style="font-size:11px">${r.tutor||'<span style="color:var(--red)">—</span>'}</td>
+        <td style="text-align:right">${fmtNum(r.alunos_mat)}</td>
+        <td style="text-align:right">${fmtNum(r.alunos_agend)}</td>
+        <td><span class="badge ${r.gerenciado?'ok':'pend'}">${r.gerenciado?'Ger.':'Pend.'}</span></td>
+      </tr>`;
+    });
+    gi++;
+  });
+  document.getElementById('ger-det-tbody').innerHTML=rows;
+  document.getElementById('ger-det-count').textContent=d.length+' ofertas em '+sortedGrp.length+' grupos';
+}
+function toggleDetGroup(hdr,gid){
+  hdr.classList.toggle('open');
+  document.querySelectorAll('[data-dgroup="'+gid+'"]').forEach(r=>r.classList.toggle('show'));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
 // FILTERS & DARK MODE & SENHA
 // ════════════════════════════════════════════════════════════════════════════
 function populateFilters(){
-  const cats=[...new Set((DB.tutores||[]).map(t=>t.c).filter(Boolean))].sort();
-  [document.getElementById('tutor-cat-sel'),document.getElementById('prac-cat-sel')].forEach(sel=>{
-    if(!sel)return;cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)})
-  });
+  // Categorias de tutores para o select de tutores
+  const tutorCats=[...new Set((DB.tutores||[]).map(t=>t.c).filter(Boolean))].sort();
+  const tutorSel=document.getElementById('tutor-cat-sel');
+  if(tutorSel) tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tutorSel.appendChild(o)});
+
+  // Categorias de práticas — vem do próprio catálogo de práticas, não dos tutores
+  const pracCats=[...new Set(getPraticas().map(p=>p.c).filter(Boolean))].sort();
+  const pracSel=document.getElementById('prac-cat-sel');
+  if(pracSel) pracCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pracSel.appendChild(o)});
+
+  // Categorias do filtro de Ordens
+  const ordemCatSel=document.getElementById('ordem-cat-sel');
+  if(ordemCatSel){
+    tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;ordemCatSel.appendChild(o)});
+  }
+
+  // Populando selects de Detalhe (categorias e ordens)
+  const dCat=document.getElementById('ger-det-cat');
+  if(dCat && dCat.options.length<=1){
+    tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;dCat.appendChild(o)});
+  }
+  const dOrdem=document.getElementById('ger-det-ordem');
+  if(dOrdem && dOrdem.options.length<=1){
+    Object.keys(DB.prazos||{}).sort((a,b)=>ordemNum(a)-ordemNum(b)).forEach(ord=>{
+      const o=document.createElement('option');o.value=ord;o.textContent=ord;dOrdem.appendChild(o);
+    });
+  }
 }
 
 function toggleDark(){
