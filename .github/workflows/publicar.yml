@@ -1,47 +1,85 @@
 name: Atualizar Dashboard
 
 on:
-  schedule:
-    - cron: '0 */2 * * *'
-  workflow_dispatch:
   push:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */2 * * *'   # a cada 2 horas
+
+# Garante que só roda UMA instância por vez.
+# Se um novo push chegar enquanto o anterior ainda está rodando,
+# cancela o anterior e roda o novo. Resolve o "higher priority" error.
+concurrency:
+  group: dashboard-deploy
+  cancel-in-progress: true
+
+env:
+  # Força Node.js 24 nas actions — resolve o aviso de depreciação do Node.js 20
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   publicar:
     runs-on: ubuntu-latest
-    env:
-      TZ: America/Sao_Paulo
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Instalar dependencias
-        run: pip install pandas openpyxl
+      - name: Dependências
+        run: pip install pandas openpyxl xlrd requests --quiet
 
       - name: Baixar planilhas do OneDrive
+        env:
+          URL_CONTROLE:   ${{ secrets.URL_CONTROLE }}
+          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
+          URL_GERENCIAL:  ${{ secrets.URL_GERENCIAL }}
         run: |
           mkdir -p planilhas
-          curl -L -o planilhas/PORTIFOLIO_TUTOR.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQAzXkKdX-d4RLvcWWfFPFnAAcW2md2Hd2hUoyeQEHVCrmQ"
-          curl -L -o planilhas/01_CONTROLE_TUTORIA.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQDD_AnC4zM3TJXM6lU1F6hvAY7Wx5-ILtt6SvVzK3ksYjE"
-          curl -L -o planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx "https://uniasselvi01-my.sharepoint.com/personal/leonardo_camargo_uniasselvi_com_br/_layouts/15/download.aspx?share=IQA7ujbXsrepQoBHD_LUAxL-AcEH6mUBWA7UeTimfWppbqs"
-          ls -la planilhas/
+          python - <<'PYEOF'
+          import os, requests, sys
 
-      - name: Processar
+          def baixar(url_env, nome):
+              url = os.environ.get(url_env, '')
+              if not url:
+                  print(f'[SKIP] {url_env} não configurado')
+                  return
+              r = requests.get(url, timeout=60)
+              if r.status_code == 200:
+                  with open(f'planilhas/{nome}', 'wb') as f:
+                      f.write(r.content)
+                  print(f'[OK] {nome} — {len(r.content)//1024}KB')
+              else:
+                  print(f'[ERRO] {url_env} → HTTP {r.status_code}')
+                  sys.exit(1)
+
+          baixar('URL_CONTROLE',  '01_CONTROLE_TUTORIA.xlsx')
+          baixar('URL_PORTFOLIO', 'PORTIFOLIO_TUTOR.xlsx')
+          baixar('URL_GERENCIAL', 'REL_GERAL_DE_GERENCIAMENTO.xlsx')
+          PYEOF
+
+      - name: Verificar planilhas
+        run: |
+          echo "=== Planilhas disponíveis ==="
+          ls -lh planilhas/ 2>/dev/null || echo "(pasta vazia)"
+
+      - name: Processar dashboard
         run: python processar.py --sem-browser
 
-      - name: Preparar deploy
-        run: cp saida/dashboard.html index.html
-
-      - name: Deploy GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          publish_branch: gh-pages
-          force_orphan: true
+      - name: Publicar index.html
+        run: |
+          cp saida/dashboard.html index.html
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add index.html
+          git diff --cached --quiet && echo "Sem mudanças" || \
+            git commit -m "Dashboard $(date '+%d/%m/%Y %H:%M')" && git push
