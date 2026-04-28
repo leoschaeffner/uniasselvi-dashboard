@@ -409,7 +409,15 @@ def processar(p1, p2):
                     # Mapa reverso: variante portfolio -> chave canônica do tutor
                     chave_alias.setdefault(v, chave)
 
-    # Catalogo real: aprende com portfolios enviados
+    # Mapa rápido: prática -> categoria oficial (para blindar catalogo_real)
+    oficial_p_to_cat = {}
+    for cat, pracs in catalogo_oficial.items():
+        for p in pracs:
+            oficial_p_to_cat.setdefault(p, cat)
+
+    # Catalogo real: aprende com portfolios enviados.
+    # Só adiciona prática a uma categoria se ela NÃO pertencer já ao catálogo
+    # oficial de OUTRA categoria — evita que fisioterapia contamine bio-far e vice-versa.
     catalogo_real = defaultdict(set)
     for _, r in df_p.iterrows():
         chave = str(r.get('_CHAVE', '') or '').strip()
@@ -420,7 +428,12 @@ def processar(p1, p2):
         if not cf: continue
         for p in proto.split(';'):
             p = p.strip()
-            if p: catalogo_real[cf].add(p)
+            if not p: continue
+            cat_oficial = oficial_p_to_cat.get(p)
+            # Prática já no catálogo oficial de OUTRA categoria → não contaminar
+            if cat_oficial and cat_oficial != cf:
+                continue
+            catalogo_real[cf].add(p)
 
     # Merge: oficial como base, real adiciona novas práticas
     catalogo = {}
@@ -517,11 +530,29 @@ def processar(p1, p2):
             tutores_dedup.append(t)
     tutores = tutores_dedup
 
-    # Stats pratica
+    # Mapa prática -> categoria a partir do catálogo (fonte de verdade)
+    # Garante que Fisioterapia não apareça como BIO-FAR por causa
+    # do loop sobrescrever a categoria com o último tutor processado.
+    p_to_cat = {}
+    for cat, pracs in catalogo.items():
+        for p in pracs:
+            if p not in p_to_cat:          # primeiro catálogo que contém a prática vence
+                p_to_cat[p] = cat
+
+    # Stats pratica — conta por tutor, mas categoria vem do catálogo
     ps = defaultdict(lambda: {'enviou': 0, 'nao_enviou': 0, 'categoria': ''})
     for t in tutores:
-        for p in t['real']: ps[p]['enviou'] += 1; ps[p]['categoria'] = t['cf']
-        for p in t['pend']: ps[p]['nao_enviou'] += 1; ps[p]['categoria'] = t['cf']
+        for p in t['real']:  ps[p]['enviou']    += 1
+        for p in t['pend']:  ps[p]['nao_enviou'] += 1
+    # Atribui categoria do catálogo; se a prática não estiver no catálogo,
+    # usa o cf do primeiro tutor que a enviou (compatibilidade retroativa)
+    _p_fallback = {}
+    for t in tutores:
+        for p in t['real'] + t['pend']:
+            _p_fallback.setdefault(p, t['cf'])
+    for p in ps:
+        ps[p]['categoria'] = p_to_cat.get(p, _p_fallback.get(p, ''))
+
     ps_all = sorted([{'nome': k, **v} for k, v in ps.items()], key=lambda x: -x['nao_enviou'])
     ps_list = ps_all[:30]  # top 30 for ranking
 
