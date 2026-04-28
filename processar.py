@@ -294,15 +294,46 @@ def processar(p1, p2):
 
     c_chave = col(df_p, 'CHAVE', 'LINK')
     c_proto = col(df_p, 'PROTOCOLOS', 'ATIVIDADES') 
-    # Pega o :7 especificamente
-    proto_cols = [c for c in df_p.columns if 'PROTOCOLOS' in str(c).upper() and str(c).endswith(':7')]
-    if proto_cols: c_proto = proto_cols[0]
+    # Tenta sufixo :7, depois :8, depois qualquer PROTOCOLOS
+    for sfx in (':7', ':8', ':6', ':9'):
+        proto_sfx = [c for c in df_p.columns if 'PROTOCOLOS' in str(c).upper() and str(c).endswith(sfx)]
+        if proto_sfx: c_proto = proto_sfx[0]; break
+    else:
+        proto_any = [c for c in df_p.columns if 'PROTOCOLOS' in str(c).upper() or 'ATIVIDADE' in str(c).upper()]
+        if proto_any: c_proto = proto_any[0]
     
+    # Data: tenta sufixo :7 primeiro, depois qualquer sufixo
     data_cols = [c for c in df_p.columns if 'DATA DA APLICA' in str(c).upper() and str(c).endswith(':7')]
+    if not data_cols:
+        data_cols = [c for c in df_p.columns if 'DATA DA APLICA' in str(c).upper()]
+    if not data_cols:
+        data_cols = [c for c in df_p.columns if 'DATA' in str(c).upper() and 'APLICA' in str(c).upper()]
     c_data = data_cols[0] if data_cols else None
 
-    aluno_cols = [c for c in df_p.columns if 'ESTUDANTES' in str(c).upper() and str(c).endswith('72')]
-    c_aluno = aluno_cols[0] if aluno_cols else None
+    # Detecção robusta: tenta várias estratégias em ordem de confiança
+    def find_aluno_col(df):
+        cols = df.columns.tolist()
+        # 1. Contém ESTUDANTES e termina em número (sufixo do Forms)
+        for suffix_end in ('72', '73', '74', '70', '71', '75'):
+            for c in cols:
+                if 'ESTUDANTES' in str(c).upper() and str(c).endswith(suffix_end):
+                    return c
+        # 2. Contém ESTUDANTES (qualquer sufixo)
+        for c in cols:
+            if 'ESTUDANTES' in str(c).upper() and 'PONTOS' not in str(c).upper():
+                return c
+        # 3. Contém ALUNO ou ALUNOS
+        for c in cols:
+            cu = str(c).upper()
+            if ('ALUNO' in cu or 'ALUNOS' in cu) and 'PONTOS' not in cu and 'COMENT' not in cu:
+                return c
+        # 4. Contém QUANTIDADE ou QTD próximo de ALUNO
+        for c in cols:
+            cu = str(c).upper()
+            if 'QUANTIDADE' in cu or 'QTD' in cu:
+                return c
+        return None
+    c_aluno = find_aluno_col(df_p)
 
     cat_cols = [c for c in df_p.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
     c_cat = cat_cols[0] if cat_cols else None
