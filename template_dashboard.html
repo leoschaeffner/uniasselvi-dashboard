@@ -614,6 +614,19 @@ let tutorSortK='n',tutorSortA=true;
 let pracSortK='pend_n',pracSortA=false;
 let ordemSortK='n',ordemSortA=true;
 let poloData=[],tutorData=[],pracData=[],ordemData=[];
+// ════════════════════════════════════════════════════════════════════════════
+// FLEXIBLE DATA ACCESSORS
+// ════════════════════════════════════════════════════════════════════════════
+function gPN(p){return p.n||p.polo||p.POLO||"N/A"}
+function gPT(p){return p.t||p.total||0}
+function gPE(p){return p.e||p.enviaram||0}
+function gPA(p){return p.a||p.alunos||0}
+function gTS(t){return t.sit||t.situacao||"urgente"}
+function getPraticas(){var pr=DB.praticas;if(pr&&pr.length)return pr;return(DB.pratica_stats||[]).map(function(p){var tot=(p.enviou||0)+(p.nao_enviou||0);return{n:p.nome||"",c:p.categoria||"",env_n:p.enviou||0,pend_n:p.nao_enviou||0,pct:tot?Math.round(p.enviou/tot*100):0}})}
+function getOE(o){if(DB.por_ordem&&!Array.isArray(DB.por_ordem))return DB.por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
+function getOA(o){if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
+function getOS(o){if(DB.status_ordem)return DB.status_ordem[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
+
 let gerPoloData=[],gerContrData=[],gerAgendaData=[],gerDetData=[];
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -684,7 +697,7 @@ function renderOfensores(){
     <div style="width:${k.atrasados/total*100}%;background:var(--yellow)" title="Atrasados: ${k.atrasados}"></div>
     <div style="width:${k.urgentes/total*100}%;background:var(--red)" title="Urgentes: ${k.urgentes}"></div>
   `;
-  const urg=(DB.tutores||[]).filter(t=>t.sit==='urgente').slice(0,8);
+  const urg=(DB.tutores||[]).filter(t=>gTS(t)==='urgente').slice(0,8);
   el.innerHTML=urg.length?`<div class="sec-label">🚨 Tutores Urgentes (top 8)</div>`+urg.map(t=>`
     <div class="rank-item" style="cursor:pointer" onclick="openTutorModal('${esc(t.n)}')">
       <div class="rank-pos" style="color:var(--red)">!</div>
@@ -736,10 +749,10 @@ function renderOrdens(){
   const el=document.getElementById('po-cards');
   const ordens=Object.entries(DB.prazos||{}).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0]));
   el.innerHTML=`<div class="kpi-row">`+ordens.map(([o,prazo])=>{
-    const s=DB.status_ordem?.[o]||'';
+    const s=getOS(o);
     const corS=s==='VENCIDO'?'var(--red)':s==='ABERTA'?'var(--ok)':'var(--muted)';
-    const envios=(DB.por_ordem||{})[o]||0;
-    const alunos=(DB.alunos_por_ordem||{})[o]||0;
+    const envios=getOE(o);
+    const alunos=getOA(o);
     return `<div class="kpi kpi-green">
       <div class="kpi-label">${o}</div>
       <div class="kpi-value" style="font-size:20px">${envios} <small style="font-size:11px;color:var(--muted)">envios</small></div>
@@ -799,7 +812,7 @@ function renderOrdemTbl(data){
 // ════════════════════════════════════════════════════════════════════════════
 function renderPracKPIs(){
   const el=document.getElementById('pp-kpis');
-  const pracs=DB.praticas||[];
+  const pracs=getPraticas();
   const total=pracs.length;
   const complete=pracs.filter(p=>p.pend_n===0).length;
   el.innerHTML=`
@@ -812,7 +825,7 @@ function renderPracKPIs(){
 function renderCatPracBars(){
   const el=document.getElementById('pp-cat-bars');
   const cats={};
-  (DB.praticas||[]).forEach(p=>{const c=p.c||'Outro';if(!cats[c])cats[c]={t:0,e:0};cats[c].t++;if(p.pend_n===0)cats[c].e++});
+  (getPraticas()).forEach(p=>{const c=p.c||'Outro';if(!cats[c])cats[c]={t:0,e:0};cats[c].t++;if(p.pend_n===0)cats[c].e++});
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
     return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
@@ -825,7 +838,7 @@ function renderCatPracBars(){
 
 function renderTopPrac(){
   const el=document.getElementById('pp-ranking');
-  const pracs=(DB.praticas||[]).filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,30);
+  const pracs=(getPraticas()).filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,30);
   const max=pracs.length?pracs[0].pend_n:1;
   el.innerHTML=pracs.map((p,i)=>`
     <div class="rank-item">
@@ -839,7 +852,7 @@ function renderTopPrac(){
 function filterPrac(q){
   q=q.toLowerCase();
   const cat=document.getElementById('prac-cat-sel').value;
-  let d=DB.praticas||[];
+  let d=getPraticas();
   if(q) d=d.filter(p=>(p.n+p.c).toLowerCase().includes(q));
   if(cat) d=d.filter(p=>p.c===cat);
   pracData=d; renderPracTbl(d);
@@ -863,7 +876,7 @@ function filterPolos(q){
   q=q.toLowerCase();
   const st=document.getElementById('polo-status-sel').value;
   let d=DB.polo_stats||[];
-  if(q) d=d.filter(p=>p.n.toLowerCase().includes(q));
+  if(q) d=d.filter(p=>gPN(p).toLowerCase().includes(q));
   if(st==='pend') d=d.filter(p=>p.pend>0);
   if(st==='ok') d=d.filter(p=>p.pend===0);
   poloData=d; renderPoloTbl(d);
@@ -873,14 +886,14 @@ function sortPolo(k){if(poloSortK===k)poloSortA=!poloSortA;else{poloSortK=k;polo
 function renderPoloTbl(data){
   const sorted=[...data].sort((a,b)=>{const va=a[poloSortK],vb=b[poloSortK];if(typeof va==='string')return poloSortA?va.localeCompare(vb):vb.localeCompare(va);return poloSortA?va-vb:vb-va});
   const sb=document.getElementById('polo-stat-bar');
-  const ok=sorted.filter(p=>p.pend===0).length,pend=sorted.length-ok;
+  const ok=sorted.filter(p=>(p.pend||0)===0).length,pend=sorted.length-ok;
   sb.innerHTML=`<div style="width:${ok/sorted.length*100}%;background:var(--ok)" title="OK: ${ok}"></div>
     <div style="width:${pend/sorted.length*100}%;background:var(--red)" title="Pendentes: ${pend}"></div>`;
-  document.getElementById('polo-tbody').innerHTML=sorted.map(p=>`<tr class="${p.pend?'tr-pend':'tr-ok'}" style="cursor:pointer" onclick="openPoloModal('${esc(p.n)}')">
-    <td><strong>${p.n}</strong></td>
-    <td style="text-align:right">${p.t}</td><td style="text-align:right">${p.e}</td>
+  document.getElementById('polo-tbody').innerHTML=sorted.map(p=>`<tr class="${p.pend?'tr-pend':'tr-ok'}" style="cursor:pointer" onclick="openPoloModal('${esc(gPN(p))}')">
+    <td><strong>${gPN(p)}</strong></td>
+    <td style="text-align:right">${gPT(p)}</td><td style="text-align:right">${gPE(p)}</td>
     <td style="text-align:right;color:var(--red)">${p.pend}</td>
-    <td style="text-align:right">${fmtNum(p.a)}</td><td>${progCell(p.pct)}</td>
+    <td style="text-align:right">${fmtNum(gPA(p))}</td><td>${progCell(p.pct)}</td>
   </tr>`).join('');
   document.getElementById('polo-count').textContent=sorted.length+' polos';
   document.getElementById('polo-sub').textContent=`${sorted.length} polos · ${ok} sem pendências · ${pend} com pendências`;
@@ -909,7 +922,7 @@ function renderTutorTbl(data){
   sb.innerHTML=`<div style="width:${env/sorted.length*100}%;background:var(--ok)"></div>
     <div style="width:${pend/sorted.length*100}%;background:var(--red)"></div>`;
   document.getElementById('tutor-tbody').innerHTML=sorted.map(t=>{
-    const sit=t.sit||'';
+    const sit=gTS(t);
     return `<tr class="${t.te>0?'':'tr-pend'}">
       <td><strong>${t.n}</strong></td><td style="font-size:11px">${t.p}</td>
       <td style="font-size:11px">${t.c||'—'}</td>
@@ -1010,7 +1023,7 @@ function openPoloModal(nome){
   const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
   const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,
     pend:tutores.filter(t=>t.te===0).length,alunos:tutores.reduce((s,t)=>s+(t.al||0),0)};
-  document.getElementById('m-title').textContent=p.n;
+  document.getElementById('m-title').textContent=gPN(p)||nome;
   document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
   let html=`<div class="kpi-row" style="margin-bottom:14px">
     <div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div>
