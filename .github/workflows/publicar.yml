@@ -5,26 +5,17 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '0 */2 * * *'   # a cada 2 horas
+    - cron: '0 */2 * * *'
 
-# Garante que só roda UMA instância por vez.
-# Se um novo push chegar enquanto o anterior ainda está rodando,
-# cancela o anterior e roda o novo. Resolve o "higher priority" error.
 concurrency:
   group: dashboard-deploy
   cancel-in-progress: true
-
-env:
-  # Força Node.js 24 nas actions — resolve o aviso de depreciação do Node.js 20
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   publicar:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pages: write
-      id-token: write
 
     steps:
       - name: Checkout
@@ -40,37 +31,43 @@ jobs:
 
       - name: Baixar planilhas do OneDrive
         env:
-          URL_CONTROLE:   ${{ secrets.URL_CONTROLE }}
-          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
-          URL_GERENCIAL:  ${{ secrets.URL_GERENCIAL }}
+          URL_CONTROLE:  ${{ secrets.URL_CONTROLE }}
+          URL_PORTFOLIO: ${{ secrets.URL_PORTFOLIO }}
+          URL_GERENCIAL: ${{ secrets.URL_GERENCIAL }}
         run: |
           mkdir -p planilhas
-          python - <<'PYEOF'
-          import os, requests, sys
 
-          def baixar(url_env, nome):
-              url = os.environ.get(url_env, '')
-              if not url:
-                  print(f'[SKIP] {url_env} não configurado')
-                  return
-              r = requests.get(url, timeout=60)
-              if r.status_code == 200:
-                  with open(f'planilhas/{nome}', 'wb') as f:
-                      f.write(r.content)
-                  print(f'[OK] {nome} — {len(r.content)//1024}KB')
-              else:
-                  print(f'[ERRO] {url_env} → HTTP {r.status_code}')
-                  sys.exit(1)
+          if [ -z "$URL_CONTROLE" ]; then
+            echo "[FATAL] Secret URL_CONTROLE nao configurado"
+            echo "Acesse: GitHub → Settings → Secrets and variables → Actions → New secret"
+            exit 1
+          fi
 
-          baixar('URL_CONTROLE',  '01_CONTROLE_TUTORIA.xlsx')
-          baixar('URL_PORTFOLIO', 'PORTIFOLIO_TUTOR.xlsx')
-          baixar('URL_GERENCIAL', 'REL_GERAL_DE_GERENCIAMENTO.xlsx')
-          PYEOF
+          if [ -z "$URL_PORTFOLIO" ]; then
+            echo "[FATAL] Secret URL_PORTFOLIO nao configurado"
+            exit 1
+          fi
 
-      - name: Verificar planilhas
-        run: |
-          echo "=== Planilhas disponíveis ==="
-          ls -lh planilhas/ 2>/dev/null || echo "(pasta vazia)"
+          echo "[INFO] Baixando 01_CONTROLE_TUTORIA.xlsx..."
+          curl -L --max-time 90 --retry 3 --retry-delay 5 \
+            -o planilhas/01_CONTROLE_TUTORIA.xlsx "$URL_CONTROLE"
+          echo "[INFO] Tamanho: $(wc -c < planilhas/01_CONTROLE_TUTORIA.xlsx) bytes"
+
+          echo "[INFO] Baixando PORTIFOLIO_TUTOR.xlsx..."
+          curl -L --max-time 90 --retry 3 --retry-delay 5 \
+            -o planilhas/PORTIFOLIO_TUTOR.xlsx "$URL_PORTFOLIO"
+          echo "[INFO] Tamanho: $(wc -c < planilhas/PORTIFOLIO_TUTOR.xlsx) bytes"
+
+          if [ -n "$URL_GERENCIAL" ]; then
+            echo "[INFO] Baixando REL_GERAL_DE_GERENCIAMENTO.xlsx..."
+            curl -L --max-time 90 --retry 3 --retry-delay 5 \
+              -o planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx "$URL_GERENCIAL" || true
+          else
+            echo "[AVISO] URL_GERENCIAL nao configurado — modulo gerenciamento desativado"
+          fi
+
+          echo "=== Planilhas baixadas ==="
+          ls -lh planilhas/
 
       - name: Processar dashboard
         run: python processar.py --sem-browser
@@ -81,5 +78,5 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add index.html
-          git diff --cached --quiet && echo "Sem mudanças" || \
-            git commit -m "Dashboard $(date '+%d/%m/%Y %H:%M')" && git push
+          git diff --cached --quiet && echo "Sem mudancas" || \
+            (git commit -m "Dashboard $(date '+%d/%m/%Y %H:%M')" && git push)
