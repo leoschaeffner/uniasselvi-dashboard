@@ -1097,6 +1097,111 @@ function openCatModal(idx){
   document.getElementById('modal-overlay').classList.add('show');
 }
 
+function openTutorModal(nome){
+  const t=(DB.tutores||[]).find(x=>x.n===nome);
+  if(!t) return;
+  document.getElementById('m-title').textContent=t.n;
+  document.getElementById('m-sub').textContent=`${t.p} · ${t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
+  let html=`<div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div>
+  </div>`;
+  html+=`<div style="margin-bottom:12px"><div class="kpi-label" style="margin-bottom:6px">Progresso Geral</div>${progCell(t.pct)}</div>`;
+
+  // Portfólios por Ordem
+  const po=t.por_ordem||t.porOrdem||{};
+  if(Object.keys(po).length){
+    html+=`<div class="sec-label">Portfólios por Ordem</div>`;
+    html+=Object.entries(po).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0])).map(([o,v])=>
+      `<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-size:11px;font-weight:600;min-width:60px">${o}</span>
+      <span style="font-size:11px;font-weight:700;color:var(--ok)">${v} envio${v>1?'s':''}</span></div>`).join('');
+  }
+
+  // Realizadas
+  if(t.real&&t.real.length){
+    html+=`<div class="sec-label">✅ Realizadas (${t.real.length})</div>`;
+    html+=t.real.map(r=>`<div class="prac-item"><div class="prac-icon done">✓</div>
+      <div style="flex:1"><div class="prac-name">${typeof r==='object'?r.n:r}</div></div>
+      <div class="prac-date">${typeof r==='object'?(r.d||'—'):'—'}</div></div>`).join('');
+  }
+
+  // Pendentes
+  if(t.pend&&t.pend.length){
+    html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;
+    const hoje=new Date();
+    const ordensInfo=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'].map(o=>{
+      const prazoStr=DB.prazos[o]||'';const parts=prazoStr.split('/');
+      const prazoDate=parts.length===3?new Date(parts[2],parts[1]-1,parts[0]):null;
+      const vencido=prazoDate?hoje>prazoDate:false;
+      const enviou=((t.por_ordem||t.porOrdem||{})[o]||0)>0;
+      return{nome:o,prazo:prazoStr,prazoDate,vencido,enviou};
+    });
+    const ordensPendentes=ordensInfo.filter(o=>!o.vencido&&!o.enviou);
+    const ordensVencidas=ordensInfo.filter(o=>o.vencido&&!o.enviou);
+    const totalOrdens=ordensPendentes.length||1;
+    const porOrdem=Math.ceil(t.pend.length/totalOrdens);
+    if(ordensVencidas.length>0){
+      ordensVencidas.forEach(o=>{
+        html+=`<div style="font-size:10px;font-weight:700;color:var(--red);margin:8px 0 4px;padding:4px 8px;background:var(--red-dim);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;
+      });
+    }
+    if(ordensPendentes.length>0){
+      ordensPendentes.forEach((o,oi)=>{
+        const start=oi*porOrdem;const end=Math.min(start+porOrdem,t.pend.length);
+        if(start>=t.pend.length) return;
+        const pracs=t.pend.slice(start,end);
+        html+=`<div style="font-size:10px;font-weight:700;color:var(--teal);margin:8px 0 4px;padding:4px 8px;background:var(--teal-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;
+        html+=pracs.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div>
+          <div style="flex:1"><div class="prac-name">${p}</div></div>
+          <div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div></div>`).join('');
+      });
+    } else {
+      html+=t.pend.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div>
+        <div style="flex:1"><div class="prac-name" style="color:var(--red)">${p}</div></div>
+        <div class="prac-date" style="color:var(--red)">Atrasado</div></div>`).join('');
+    }
+  }
+
+  // Histórico
+  if(t.hist&&t.hist.length){
+    html+=`<div class="sec-label">📋 Histórico de Envios</div>`;
+    html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`
+      <div class="prac-item"><div class="prac-icon done">📄</div>
+        <div style="flex:1"><div class="prac-name">${h.p||'—'}</div>
+        <div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.al||0} alunos</div></div>
+        <div class="prac-date">${h.d||'—'}</div></div>`).join('');
+  }
+
+  document.getElementById('m-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+
+function openPoloModal(nome){
+  const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
+  const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,
+    pend:tutores.filter(t=>t.te===0).length,alunos:tutores.reduce((s,t)=>s+(t.al||0),0)};
+  document.getElementById('m-title').textContent=gPN(p)||nome;
+  document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
+  let html=`<div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div>
+  </div><div class="sec-label">Tutores</div>`;
+  html+=tutores.map(t=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)">
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c||'—'}</div></div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>
+      ${pctBadge(t.pct)}
+    </div>`).join('');
+  document.getElementById('m-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
 
 // ════════════════════════════════════════════════════════════════════════════
