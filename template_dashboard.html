@@ -302,6 +302,27 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 .tr-polo-child{display:none;background:var(--bg)!important}
 .tr-polo-child.vis{display:table-row}
 .tr-polo-child td{font-size:11px;padding-left:28px!important}
+
+/* ── BOTÃO EXPORTAR ─────────────────────────────────────────────────── */
+.btn-export{background:var(--green);color:#fff;border:none;border-radius:6px;
+  padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;
+  font-family:var(--font);display:flex;align-items:center;gap:5px;transition:opacity .15s}
+.btn-export:hover{opacity:.85}
+
+/* ── CALENDÁRIO ─────────────────────────────────────────────────────── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+.cal-day-hdr{text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:4px}
+.cal-day{min-height:36px;border-radius:6px;padding:4px;font-size:10px;background:var(--bg);
+  border:1px solid var(--border);display:flex;flex-direction:column;align-items:center}
+.cal-day.empty{background:none;border-color:transparent}
+.cal-day.has-data{background:var(--green-dim);border-color:var(--green);cursor:pointer}
+.cal-day.has-data:hover{background:var(--green);color:#fff}
+.cal-day-num{font-weight:700;font-size:11px}
+.cal-day-val{font-size:9px;color:var(--teal);font-weight:600}
+.cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.cal-nav button{background:none;border:1px solid var(--border);border-radius:6px;
+  padding:4px 10px;cursor:pointer;font-family:var(--font);color:var(--text)}
 </style>
 </head>
 <body>
@@ -412,6 +433,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
         <option value="">Todas categorias</option>
       </select>
       <span class="tbl-count" id="ordem-count">—</span>
+      <button class="btn-export" onclick="exportPendentes()" title="Exportar tutores pendentes">⬇ Pendentes</button>
+      <button class="btn-export" onclick="exportEnviados()" title="Exportar portfólios enviados" style="background:var(--teal)">⬇ Enviados</button>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
       <th onclick="sortOrdem('n')">Tutor</th><th onclick="sortOrdem('p')">Polo</th>
@@ -559,6 +582,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
         <option value="">Todos</option><option value="sem">Sem tutor</option><option value="com">Contratado</option>
       </select>
       <span class="tbl-count" id="ger-contr-count">—</span>
+      <button class="btn-export" onclick="exportSemTutor()" title="Exportar polos sem tutor">⬇ Sem Tutor</button>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
       <th class="polo-toggle">Polo</th><th style="text-align:right">Labs</th><th style="text-align:right">Sem Tutor</th><th>Cobertura</th><th></th>
@@ -572,6 +596,21 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="container">
   <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div></div>
   <div class="kpi-row" id="ag-kpis"></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between">
+      <div class="card-title">📅 Calendário de Agendamentos</div>
+      <div class="cal-nav">
+        <button onclick="calNav(-1)">‹ Anterior</button>
+        <span id="cal-label" style="font-weight:600;font-size:13px"></span>
+        <button onclick="calNav(1)">Próximo ›</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="cal-header" id="cal-week-hdr"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">* Dias com agendamentos registrados. Clique para ver polos.</div>
+    </div>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
     <div class="card"><div class="card-hdr"><div class="card-title">🏆 Top Polos — Mais Agendamentos</div></div>
       <div class="card-body" id="ag-top-polos"><div style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Sem dados de agenda</div></div>
@@ -1169,7 +1208,7 @@ function openTutorModal(nome){
     html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`
       <div class="prac-item"><div class="prac-icon done">📄</div>
         <div style="flex:1"><div class="prac-name">${h.p||'—'}</div>
-        <div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.al||0} alunos</div></div>
+        <div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.a||0} alunos</div></div>
         <div class="prac-date">${h.d||'—'}</div></div>`).join('');
   }
 
@@ -1288,10 +1327,12 @@ function renderGerenciamento(){
   // Populate sub-pages
   gerPoloData=DB.ger_polo||[]; renderGerPoloTbl(gerPoloData);
   gerContrData=DB.ger_contratacao||[]; renderGerContrTbl(gerContrData);
-  gerAgendaData=DB.ger_agendas||[]; renderAgendaKPIs(); renderGerAgendaTbl(gerAgendaData);
+  gerAgendaData=DB.ger_agendas||[]; renderAgendaKPIs(); renderGerAgendaTbl(gerAgendaData); renderCalendario();
   gerDetData=DB.ger_ofertas||[];
-  const dcats=[...new Set(gerDetData.map(d=>d.categoria))].sort();
-  const dordens=[...new Set(gerDetData.map(d=>d.ordem))].filter(Boolean).sort();
+  const dcats=[...new Set(gerDetData.map(d=>d.categoria).filter(Boolean))].sort();
+  // Ordens: preferir DB.ger_ordem se disponível (mais confiável que inferir de ofertas)
+  const ordemKeys=(DB.ger_ordem||[]).map(o=>o.ordem).filter(Boolean).sort();
+  const dordens=ordemKeys.length?ordemKeys:[...new Set(gerDetData.map(d=>d.ordem).filter(Boolean))].sort();
   const cs=document.getElementById('ger-det-cat');
   dcats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o)});
   const os2=document.getElementById('ger-det-ordem');
@@ -1315,18 +1356,27 @@ function openGerPoloModal(polo){
   const semTutor=labs.filter(c=>!c.tem_tutor).length;
   document.getElementById('m-title').textContent=polo;
   document.getElementById('m-sub').textContent=labs.length+' laboratórios · '+semTutor+' sem tutor';
+  // Buscar ofertas detalhadas deste polo para mostrar datas
+  const ofertasPolo=(DB.ger_ofertas||[]).filter(o=>o.polo===polo);
   let bodyHtml='<table style="width:100%;border-collapse:collapse;font-size:12px">'
     +'<thead><tr style="background:var(--bg)">'
     +'<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Categoria / Lab</th>'
     +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Ofertas</th>'
+    +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Agend.</th>'
     +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Status</th>'
     +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Tutor(es)</th>'
     +'</tr></thead><tbody>';
   labs.sort((a,b)=>a.tem_tutor-b.tem_tutor).forEach(c=>{
     const bg=c.tem_tutor?'':'var(--red-dim)';
+    const ofCat=ofertasPolo.filter(o=>o.categoria===c.categoria);
+    const agend=ofCat.filter(o=>o.tem_agenda).length;
+    const agendCell=agend>0
+      ?'<span style="color:var(--ok)">'+agend+'✓</span>'
+      :'<span style="color:var(--muted)">0</span>';
     bodyHtml+='<tr style="background:'+bg+';border-bottom:1px solid var(--border)">'
       +'<td style="padding:6px 8px;font-weight:600">'+c.categoria+'</td>'
       +'<td style="padding:6px 8px;text-align:right">'+c.total_ofertas+'</td>'
+      +'<td style="padding:6px 8px;text-align:center">'+agendCell+'</td>'
       +'<td style="padding:6px 8px"><span class="badge '+(c.tem_tutor?'ok':'pend')+'">'+c.status+'</span></td>'
       +'<td style="padding:6px 8px;font-size:11px">'+(c.tutores&&c.tutores.length?c.tutores.join(', '):'<span style="color:var(--red)">—</span>')+'</td>'
       +'</tr>';
@@ -1630,6 +1680,156 @@ function initSenha(){
 // ════════════════════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════════════════════
+
+// ── EXPORTAÇÃO CSV ───────────────────────────────────────────────────────────
+function exportCSV(rows, filename){
+  if(!rows||!rows.length){alert('Sem dados para exportar');return;}
+  const headers=Object.keys(rows[0]);
+  const escape=v=>{
+    v=String(v===null||v===undefined?'':v);
+    if(v.includes(',')||v.includes('"')||v.includes('\n'))
+      v='"'+v.replace(/"/g,'""')+'"';
+    return v;
+  };
+  const csv=[headers.map(escape).join(','),
+    ...rows.map(r=>headers.map(h=>escape(r[h])).join(','))].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Exportar tutores PENDENTES por ordem/lab
+function exportPendentes(){
+  const ord=document.getElementById('ordem-sel').value;
+  const cat=(document.getElementById('ordem-cat-sel')||{}).value||'';
+  let tutores=DB.tutores||[];
+  if(cat) tutores=tutores.filter(t=>t.c===cat);
+  const rows=[];
+  tutores.forEach(t=>{
+    const ordens=Object.entries(t.por_ordem||t.porOrdem||{});
+    ordens.forEach(([o,qt])=>{
+      if(ord&&o!==ord) return;
+      if(qt===0||(t.pend||[]).length>0){
+        rows.push({
+          'Nome':t.n,'Polo':t.p,'Categoria':t.c||'',
+          'Ordem':o,'Envios':qt,
+          'Status':gTS(t)||'',
+          'Pendências':t.pend_n||0
+        });
+      }
+    });
+  });
+  const ord_label=ord||'todas_ordens';
+  exportCSV(rows,`pendentes_${ord_label}_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+// Exportar portfólios ENVIADOS com detalhes
+function exportEnviados(){
+  const rows=[];
+  (DB.tutores||[]).forEach(t=>{
+    (t.hist||[]).forEach(h=>{
+      rows.push({
+        'Tutor':t.n,'Polo':t.p,'Categoria':t.c||'',
+        'Prática':h.p||'','Ordem':h.o||'','Data':h.d||'','Alunos':h.a||0
+      });
+    });
+  });
+  exportCSV(rows,`portfolios_enviados_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+// Exportar polos SEM TUTOR
+function exportSemTutor(){
+  const rows=[];
+  (DB.ger_contratacao||[]).filter(c=>!c.tem_tutor).forEach(c=>{
+    rows.push({
+      'Polo':c.polo,'Categoria':c.categoria,'Status':c.status,
+      'Total Ofertas':c.total_ofertas,
+      'Tutores':(c.tutores||[]).join('; ')||'—'
+    });
+  });
+  exportCSV(rows,`polos_sem_tutor_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+
+// ── CALENDÁRIO DE AGENDAMENTOS ───────────────────────────────────────────────
+let _calYear=new Date().getFullYear();
+let _calMonth=new Date().getMonth();
+const _calDays=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const _calMonths=['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function renderCalendario(){
+  // Construir mapa dia -> count de ofertas agendadas
+  // DB.ger_ofertas tem tem_agenda:true/false mas não tem data
+  // Usar DB.ger_agendas para distribuição por polo e estimar por mês
+  // Se processar.py adicionar datas, usar. Senão, distribuir uniformemente.
+  const agMap={}; // 'YYYY-MM-DD' -> count
+  (DB.ger_agendas||[]).forEach(function(a){
+    if(a.datas_agenda&&Array.isArray(a.datas_agenda)){
+      a.datas_agenda.forEach(function(d){
+        agMap[d]=(agMap[d]||0)+1;
+      });
+    }
+  });
+  const hdrEl=document.getElementById('cal-week-hdr');
+  const gridEl=document.getElementById('cal-grid');
+  const lblEl=document.getElementById('cal-label');
+  if(!hdrEl||!gridEl) return;
+  
+  lblEl.textContent=_calMonths[_calMonth]+' '+_calYear;
+  hdrEl.innerHTML=_calDays.map(function(d){
+    return '<div class="cal-day-hdr">'+d+'</div>';
+  }).join('');
+  
+  const firstDay=new Date(_calYear,_calMonth,1).getDay();
+  const daysInMonth=new Date(_calYear,_calMonth+1,0).getDate();
+  let cells='';
+  for(var i=0;i<firstDay;i++) cells+='<div class="cal-day empty"></div>';
+  for(var d=1;d<=daysInMonth;d++){
+    const key=_calYear+'-'+String(_calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const cnt=agMap[key]||0;
+    const hasData=cnt>0;
+    cells+='<div class="cal-day'+(hasData?' has-data':'')+'"'
+      +(hasData?' data-calday="'+key+'" title="'+cnt+' agendamentos"':'')+'>'
+      +'<span class="cal-day-num">'+d+'</span>'
+      +(hasData?'<span class="cal-day-val">'+cnt+'</span>':'')
+      +'</div>';
+  }
+  gridEl.innerHTML=cells;
+  // Event delegation para cliques nos dias
+  gridEl.querySelectorAll('[data-calday]').forEach(function(el){
+    el.addEventListener('click',function(){calDayClick(this.dataset.calday);});
+  });
+}
+function calNav(dir){
+  _calMonth+=dir;
+  if(_calMonth<0){_calMonth=11;_calYear--;}
+  if(_calMonth>11){_calMonth=0;_calYear++;}
+  renderCalendario();
+}
+function calDayClick(date){
+  const agMap={};
+  (DB.ger_agendas||[]).forEach(function(a){
+    if(a.datas_agenda&&a.datas_agenda.includes(date)) agMap[a.polo]=true;
+  });
+  const polos=Object.keys(agMap);
+  if(!polos.length){
+    document.getElementById('m-title').textContent='Agendamentos em '+date;
+    document.getElementById('m-sub').textContent='Sem dados detalhados por data';
+    document.getElementById('m-body').innerHTML='';
+  } else {
+    document.getElementById('m-title').textContent='Agendamentos em '+date;
+    document.getElementById('m-sub').textContent=polos.length+' polos';
+    document.getElementById('m-body').innerHTML=polos.map(function(p){
+      return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">'+p+'</div>';
+    }).join('');
+  }
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
   initSenha();
