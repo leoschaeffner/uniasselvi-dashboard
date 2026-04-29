@@ -608,31 +608,6 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="container">
   <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div></div>
   <div class="kpi-row" id="ag-kpis"></div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between">
-      <div class="card-title">📅 Calendário de Agendamentos</div>
-      <div class="cal-nav">
-        <button onclick="calNav(-1)">‹ Anterior</button>
-        <span id="cal-label" style="font-weight:600;font-size:13px"></span>
-        <button onclick="calNav(1)">Próximo ›</button>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="cal-header" id="cal-week-hdr"></div>
-      <div class="cal-grid" id="cal-grid"></div>
-      <div style="font-size:10px;color:var(--muted);margin-top:6px">* Dias com agendamentos. Hover para ver o lab. Múltiplos labs: bolinhas coloridas abaixo do dia.</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-        <span style="font-size:10px;font-weight:700;color:var(--muted)">Legenda:</span>
-        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#2196F3;display:inline-block"></span>ENF-INS</span>
-        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#4CAF50;display:inline-block"></span>BIO-FAR</span>
-        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#FF9800;display:inline-block"></span>BIO-FISIO</span>
-        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#9C27B0;display:inline-block"></span>QUÍ/FÍS</span>
-        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#F44336;display:inline-block"></span>ENGMAKER</span>
-        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#00BCD4;display:inline-block"></span>NUTRI</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="cal-legenda"></div>
-    </div>
-  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
     <div class="card"><div class="card-hdr"><div class="card-title">🏆 Top Polos — Mais Agendamentos</div></div>
       <div class="card-body" id="ag-top-polos"><div style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Sem dados de agenda</div></div>
@@ -670,6 +645,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
         <option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option><option value="tutor">Com tutor</option><option value="ntutor">Sem tutor</option>
       </select>
       <span class="tbl-count" id="ger-det-count">—</span>
+      <button class="btn-export" onclick="exportDetalhe()" title="Exportar relatório polo > tutor > lab">⬇ Relatório</button>
     </div>
     <div class="tbl-wrap" style="max-height:600px"><table><thead><tr>
       <th>Polo</th><th>Categoria</th><th>Ordem</th><th>Prática</th><th>Tutor</th>
@@ -1779,6 +1755,52 @@ function exportPraticas(modo){
     return {'Prática':p.n,'Categoria':p.c||'','Enviadas':p.env_n,'Pendentes':p.pend_n,'% Envio':p.pct||0};
   });
   exportCSV(out,'praticas_'+modo+'_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
+
+function exportDetalhe(){
+  // Relatório: polo, tutor, laboratório/prática, categoria, ordem, gerenciado, alunos_mat, agendado
+  var d=gerDetData||[];
+  // Aplicar filtros atuais
+  var q=(document.getElementById('ger-det-search')||{}).value||'';
+  var cat=(document.getElementById('ger-det-cat')||{}).value||'';
+  var ord=(document.getElementById('ger-det-ordem')||{}).value||'';
+  var st=(document.getElementById('ger-det-status')||{}).value||'';
+  q=q.toLowerCase();
+  if(q) d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
+  if(cat) d=d.filter(function(r){return r.categoria===cat;});
+  if(ord) d=d.filter(function(r){return r.ordem===ord;});
+  if(st==='ger') d=d.filter(function(r){return r.gerenciado;});
+  if(st==='nger') d=d.filter(function(r){return !r.gerenciado;});
+  if(st==='tutor') d=d.filter(function(r){return r.tutor;});
+  if(st==='ntutor') d=d.filter(function(r){return !r.tutor;});
+
+  // Agregar por polo+tutor+laboratório
+  var agg={};
+  d.forEach(function(r){
+    var chave=(r.polo||'—')+'|||'+(r.tutor||'Sem tutor')+'|||'+(r.pratica||'—')+'|||'+(r.categoria||'—');
+    if(!agg[chave]) agg[chave]={
+      'Polo':r.polo||'—',
+      'Tutor':r.tutor||'Sem tutor',
+      'Laboratório / Prática':r.pratica||'—',
+      'Categoria':r.categoria||'—',
+      'Gerenciou':'Não',
+      'Total Gerenciados':0,
+      'Alunos Matriculados':0,
+      'Alunos Agendados':0,
+    };
+    if(r.gerenciado){agg[chave]['Gerenciou']='Sim';agg[chave]['Total Gerenciados']++;}
+    agg[chave]['Alunos Matriculados']+=r.alunos_mat||0;
+    agg[chave]['Alunos Agendados']+=r.alunos_agend||0;
+  });
+
+  var rows=Object.values(agg).sort(function(a,b){
+    return a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']);
+  });
+
+  if(!rows.length){alert('Sem dados para exportar');return;}
+  var suf=ord||'todas_ordens';
+  exportCSV(rows,'detalhe_gerenciamento_'+suf+'_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
 function exportCSV(rows, filename){
