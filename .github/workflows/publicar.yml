@@ -3,9 +3,9 @@ name: Atualizar Dashboard
 on:
   push:
     branches: [main]
+    paths:
+      - 'planilhas/**'   # só roda quando o Power Automate atualizar as planilhas
   workflow_dispatch:
-  schedule:
-    - cron: '0 */2 * * *'
 
 concurrency:
   group: dashboard-deploy
@@ -29,45 +29,10 @@ jobs:
       - name: Dependências
         run: pip install pandas openpyxl xlrd requests --quiet
 
-      - name: Baixar planilhas do OneDrive
-        env:
-          URL_CONTROLE:  ${{ secrets.URL_CONTROLE }}
-          URL_PORTFOLIO: ${{ secrets.URL_PORTFOLIO }}
-          URL_GERENCIAL: ${{ secrets.URL_GERENCIAL }}
+      - name: Verificar planilhas
         run: |
-          mkdir -p planilhas
-
-          if [ -z "$URL_CONTROLE" ]; then
-            echo "[FATAL] Secret URL_CONTROLE nao configurado"
-            echo "Acesse: GitHub → Settings → Secrets and variables → Actions → New secret"
-            exit 1
-          fi
-
-          if [ -z "$URL_PORTFOLIO" ]; then
-            echo "[FATAL] Secret URL_PORTFOLIO nao configurado"
-            exit 1
-          fi
-
-          echo "[INFO] Baixando 01_CONTROLE_TUTORIA.xlsx..."
-          curl -L --max-time 90 --retry 3 --retry-delay 5 \
-            -o planilhas/01_CONTROLE_TUTORIA.xlsx "$URL_CONTROLE"
-          echo "[INFO] Tamanho: $(wc -c < planilhas/01_CONTROLE_TUTORIA.xlsx) bytes"
-
-          echo "[INFO] Baixando PORTIFOLIO_TUTOR.xlsx..."
-          curl -L --max-time 90 --retry 3 --retry-delay 5 \
-            -o planilhas/PORTIFOLIO_TUTOR.xlsx "$URL_PORTFOLIO"
-          echo "[INFO] Tamanho: $(wc -c < planilhas/PORTIFOLIO_TUTOR.xlsx) bytes"
-
-          if [ -n "$URL_GERENCIAL" ]; then
-            echo "[INFO] Baixando REL_GERAL_DE_GERENCIAMENTO.xlsx..."
-            curl -L --max-time 90 --retry 3 --retry-delay 5 \
-              -o planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx "$URL_GERENCIAL" || true
-          else
-            echo "[AVISO] URL_GERENCIAL nao configurado — modulo gerenciamento desativado"
-          fi
-
-          echo "=== Planilhas baixadas ==="
-          ls -lh planilhas/
+          echo "=== Planilhas no repositório ==="
+          ls -lh planilhas/ 2>/dev/null || echo "Pasta planilhas/ não encontrada"
 
       - name: Processar dashboard
         run: python processar.py --sem-browser
@@ -78,5 +43,5 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add index.html
-          git diff --cached --quiet && echo "Sem mudancas" || \
+          git diff --cached --quiet && echo "Sem mudanças" || \
             (git commit -m "Dashboard $(date '+%d/%m/%Y %H:%M')" && git push)
