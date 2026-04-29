@@ -773,8 +773,8 @@ function ordemNum(k){return{'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ord
 // PORTFÓLIOS — VISÃO GERAL
 // ════════════════════════════════════════════════════════════════════════════
 function renderKPIs(){
-  const k=DB.kpis;
-  const pct=(k.enviaram/k.total*100).toFixed(1);
+  const k=DB.kpis||{total:0,enviaram:0,atrasados:0,urgentes:0,total_alunos:0,total_polos:0};
+  const pct=k.total?((k.enviaram/k.total)*100).toFixed(1):'0.0';
   document.getElementById('pv-sub').textContent=
     `${k.total} tutores · ${k.enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
   document.getElementById('pv-kpis').innerHTML=`
@@ -800,7 +800,7 @@ function renderKPIs(){
 function renderOfensores(){
   const el=document.getElementById('pv-ofensores');
   const sb=document.getElementById('pv-stat-bar');
-  const k=DB.kpis;
+  const k=DB.kpis||{total:0,enviaram:0,atrasados:0,urgentes:0};
   const total=k.total||1;
   sb.innerHTML=`
     <div style="width:${k.enviaram/total*100}%;background:var(--ok)" title="Enviaram: ${k.enviaram}"></div>
@@ -1947,8 +1947,8 @@ document.addEventListener('click', function(e){
 });
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
-  initSenha();
   DB = DATA_JSON_PLACEHOLDER;
+  initSenha();
   const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
   document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
   document.querySelector('.topbar-breadcrumb').insertAdjacentHTML('afterend',
