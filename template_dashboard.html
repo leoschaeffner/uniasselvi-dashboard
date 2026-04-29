@@ -456,7 +456,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="card-body" id="pp-cat-bars"></div></div>
   <div class="card">
     <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div class="card-title" id="pp-rank-title">🔴 Top 20 — Mais Pendências</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="card-title" id="pp-rank-title">🔴 Top 20 — Mais Pendências</div>
+        <button class="btn-export" id="btn-export-prac" onclick="exportPraticas('pend')" style="font-size:10px;padding:3px 8px">⬇ Exportar</button>
+      </div>
       <div class="rtabs">
         <button class="rtab active" id="rtab-pend" onclick="switchRankTab('pend')">Mais Pendentes</button>
         <button class="rtab" id="rtab-env" onclick="switchRankTab('env')">Mais Aplicadas</button>
@@ -609,7 +612,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="card-body">
       <div class="cal-header" id="cal-week-hdr"></div>
       <div class="cal-grid" id="cal-grid"></div>
-      <div style="font-size:10px;color:var(--muted);margin-top:6px">* Dias com agendamentos registrados. Clique para ver polos.</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">* Dias com agendamentos. Hover para ver o lab. Múltiplos labs: bolinhas coloridas abaixo do dia.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="cal-legenda"></div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
@@ -936,10 +940,13 @@ function renderCatPracBars(){
 }
 
 let _rankTab='pend';
+var tutoresFiltrados=[];
 function switchRankTab(tab){
   _rankTab=tab;
   document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('active'));
   document.getElementById('rtab-'+tab).classList.add('active');
+  var btnExp=document.getElementById('btn-export-prac');
+  if(btnExp) btnExp.onclick=function(){exportPraticas(tab);};
   renderTopPrac();
 }
 function renderTopPrac(){
@@ -1552,12 +1559,24 @@ function renderGerAgendaTbl(data){
             calHtml+='<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted)">'+d+'</div>';
           });
           for(var i=0;i<firstDay;i++) calHtml+='<div></div>';
+          var datCat=a.datas_por_cat||{};
           for(var d=1;d<=diasDoMes;d++){
             var key=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
             var temAg=datasSet.has(key);
+            var cats=datCat[key]||[];
+            var bgColor=temAg?(cats.length?getCatColor(cats[0]):'var(--green)'):'var(--bg)';
+            var titleTxt=temAg?(key+': '+( cats.length?cats.join(', '):'agendado')):'';
+            // Múltiplas categorias: mostrar split colorido
+            var innerHtml=String(d);
+            if(cats.length>1){
+              innerHtml='<div style="font-size:10px;font-weight:700">'+d+'</div>'
+                +'<div style="display:flex;gap:1px;margin-top:1px">'
+                +cats.slice(0,3).map(function(c){return '<div style="width:6px;height:4px;border-radius:2px;background:'+getCatColor(c)+'"></div>';}).join('')
+                +'</div>';
+            }
             calHtml+='<div style="text-align:center;font-size:10px;padding:3px;border-radius:4px;'
-              +(temAg?'background:var(--green);color:#fff;font-weight:700':'background:var(--bg);color:var(--muted)')
-              +'" title="'+(temAg?key+' — agendado':'')+'">'+d+'</div>';
+              +(temAg?'background:'+bgColor+';color:#fff;font-weight:700':'background:var(--bg);color:var(--muted)')
+              +'" title="'+titleTxt+'">'+innerHtml+'</div>';
           }
           calHtml+='</div></div>';
         });
@@ -1841,6 +1860,15 @@ function renderCalendario(){
   gridEl.querySelectorAll('[data-calday]').forEach(function(el){
     el.addEventListener('click',function(){calDayClick(this.dataset.calday);});
   });
+  // Legenda de cores
+  var legEl=document.getElementById('cal-legenda');
+  if(legEl){
+    legEl.innerHTML=Object.entries(CAT_COLORS).map(function(e){
+      return '<span style="display:flex;align-items:center;gap:4px;font-size:10px">'
+        +'<span style="width:10px;height:10px;border-radius:2px;background:'+e[1]+';display:inline-block"></span>'
+        +e[0].split('(')[0].trim()+'</span>';
+    }).join('');
+  }
 }
 function calNav(dir){
   _calMonth+=dir;
@@ -1882,6 +1910,21 @@ function exportTutores(){
   exportCSV(rows,'tutores_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
+// Paleta de cores por categoria para o calendário
+var CAT_COLORS={
+  'ENF-INS (Multidisciplinar II)':'#2196F3',
+  'BIO-FAR (Multidisciplinar I)':'#4CAF50',
+  'BIO-FISIO-EST-TO (Multidisciplinar III)':'#FF9800',
+  'QUÍMICA E FÍSICA':'#9C27B0',
+  'ENGMAKER':'#F44336',
+  'NUTRI (Multidisciplinar IV)':'#00BCD4',
+};
+function getCatColor(cat){
+  if(!cat) return 'var(--green)';
+  for(var k in CAT_COLORS){if(cat.toLowerCase().includes(k.toLowerCase().split('(')[0].trim().toLowerCase()))return CAT_COLORS[k];}
+  return 'var(--teal)';
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
   initSenha();
@@ -1907,5 +1950,700 @@ document.addEventListener('DOMContentLoaded',()=>{
   populateFilters();
 });
 </script>
+</body>
+</html>  tutoresFiltrados=d;
+  renderTutores(d);tml lang="pt-BR">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Painel de Gestão · UNIASSELVI</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#006B5E; --green-l:#00A88F; --green-dim:rgba(0,107,94,.1);
+  --yellow:#FFD100; --yellow-d:#E5BC00; --yellow-dim:rgba(255,209,0,.12);
+  --teal:#00C9A7; --teal-dim:rgba(0,201,167,.1);
+  --red:#dc2626; --red-dim:rgba(220,38,38,.08);
+  --ok:#16a34a; --ok-dim:rgba(22,163,74,.1);
+  --bg:#f4f6f8; --surface:#fff; --card:#fff; --border:#e5e7eb;
+  --text:#111827; --muted:#6b7280; --dim:#9ca3af;
+  --shadow:0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --radius:10px;
+  --font:'Plus Jakarta Sans','Segoe UI',sans-serif;
+  --mono:'Cascadia Code','Consolas',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh}
+body.dark{
+  --bg:#0f1419;--surface:#1a2028;--card:#1e2530;--border:#2d3748;
+  --text:#e5e7eb;--muted:#9ca3af;--dim:#6b7280;
+  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 12px rgba(0,0,0,.4);
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar{
+  width:240px;min-height:100vh;background:var(--green);
+  display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:300;
+  transition:width .2s;overflow:hidden;
+}
+.sidebar-brand{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo{
+  background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;
+  letter-spacing:1.5px;padding:5px 10px;border-radius:5px;display:inline-block;
+}
+.sidebar-title{color:#fff;font-size:14px;font-weight:700;margin-top:8px}
+.sidebar-sub{color:rgba(255,255,255,.5);font-size:10px;margin-top:2px}
+
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.sidebar-section{margin-bottom:16px}
+.sidebar-section-label{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+  color:rgba(255,255,255,.35);padding:0 12px;margin-bottom:6px;
+}
+.sidebar-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+  color:rgba(255,255,255,.7);font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left;
+}
+.sidebar-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.sidebar-item.active{background:var(--yellow);color:#1a1d23;font-weight:700}
+.sidebar-item .si-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sidebar-item .si-badge{
+  margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;
+  background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);
+}
+.sidebar-item.active .si-badge{background:rgba(0,0,0,.12);color:#1a1d23}
+
+.sidebar-footer{
+  padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;gap:8px;
+}
+.sidebar-ts{font-size:10px;color:rgba(255,255,255,.4);font-family:var(--mono)}
+.sidebar-dark{
+  background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;
+  font-size:18px;margin-left:auto;padding:4px;
+}
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.main{margin-left:240px;flex:1;min-width:0}
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  height:52px;display:flex;align-items:center;padding:0 24px;gap:12px;
+  position:sticky;top:0;z-index:200;
+}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text)}
+.topbar-breadcrumb{font-size:12px;color:var(--muted)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+
+.container{max-width:1400px;margin:0 auto;padding:20px 24px}
+.page{display:none}
+.page.active{display:block}
+
+/* ── PAGE HEADER ─────────────────────────────────────────── */
+.ph{margin-bottom:20px}
+.ph-title{font-size:22px;font-weight:800;color:var(--text)}
+.ph-sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* ── SUB TABS ────────────────────────────────────────────── */
+.sub-tabs{display:flex;gap:4px;margin-bottom:18px;flex-wrap:wrap;border-bottom:2px solid var(--border);padding-bottom:0}
+.sub-tab{
+  padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;
+  border:none;background:none;color:var(--muted);font-family:var(--font);
+  border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;
+}
+.sub-tab:hover{color:var(--text)}
+.sub-tab.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* ── KPI CARDS ───────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi{
+  background:var(--card);border-radius:var(--radius);padding:16px 18px;
+  border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.kpi.kpi-green::before{background:var(--green)}
+.kpi.kpi-yellow::before{background:var(--yellow)}
+.kpi.kpi-teal::before{background:var(--teal)}
+.kpi.kpi-red::before{background:var(--red)}
+.kpi.kpi-ok::before{background:var(--ok)}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-detail{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ── CARDS ───────────────────────────────────────────────── */
+.card{
+  background:var(--card);border-radius:var(--radius);border:1px solid var(--border);
+  box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;
+}
+.card-hdr{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{font-size:14px;font-weight:700}
+.card-badge{font-size:11px;color:var(--muted);font-weight:500}
+.card-body{padding:16px 18px}
+
+/* ── TOOLBAR / SEARCH ────────────────────────────────────── */
+.toolbar{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.search{
+  padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:12px;
+  background:var(--bg);color:var(--text);font-family:var(--font);min-width:200px;flex:1;max-width:320px;
+}
+.search:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
+.sel{
+  padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;
+  background:var(--bg);color:var(--text);font-family:var(--font);cursor:pointer;
+}
+.tbl-count{font-size:11px;color:var(--muted);margin-left:auto;font-weight:600}
+
+/* ── TABLES ──────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;max-height:500px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{
+  position:sticky;top:0;background:var(--bg);padding:10px 14px;text-align:left;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;z-index:5;
+}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,107,94,.02)}
+.tr-pend td{background:var(--red-dim)}
+.tr-ok td{background:var(--ok-dim)}
+
+/* ── BADGES ──────────────────────────────────────────────── */
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap}
+.badge.ok{background:var(--ok-dim);color:var(--ok)}
+.badge.pend{background:var(--red-dim);color:var(--red)}
+.badge.parcial{background:var(--yellow-dim);color:#b45309}
+.badge.info{background:var(--green-dim);color:var(--green)}
+
+/* ── PROGRESS BARS ───────────────────────────────────────── */
+.prog{display:flex;align-items:center;gap:8px}
+.prog-track{flex:1;height:6px;background:var(--bg);border-radius:3px;min-width:60px}
+.prog-fill{height:100%;border-radius:3px;transition:width .3s}
+.prog-txt{font-size:11px;font-weight:700;min-width:36px;text-align:right}
+
+/* ── HEAT MAP ────────────────────────────────────────────── */
+.heatmap{display:grid;gap:3px;margin:16px 0}
+.hm-cell{
+  padding:6px;border-radius:5px;font-size:9px;text-align:center;font-weight:600;
+  min-height:36px;display:flex;align-items:center;justify-content:center;
+  cursor:default;transition:transform .1s;
+}
+.hm-cell:hover{transform:scale(1.05);z-index:1}
+.hm-label{font-size:9px;font-weight:700;color:var(--muted);padding:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── RANKING BARS ────────────────────────────────────────── */
+.rank-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.rank-item:last-child{border:none}
+.rank-pos{font-size:11px;font-weight:800;color:var(--muted);min-width:22px;text-align:center}
+.rank-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-bar-wrap{width:120px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.rank-bar{height:100%;border-radius:4px}
+.rank-val{font-size:12px;font-weight:700;min-width:40px;text-align:right}
+
+/* ── STAT BAR ────────────────────────────────────────────── */
+.stat-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:0 18px 12px;background:var(--bg)}
+.stat-bar div{height:100%;transition:width .5s}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+  z-index:500;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--card);border-radius:12px;width:100%;max-width:700px;
+  box-shadow:0 20px 40px rgba(0,0,0,.2);animation:slideUp .2s;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{
+  padding:18px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-title{font-size:16px;font-weight:700}
+.modal-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.modal-close{
+  background:none;border:1px solid var(--border);border-radius:6px;
+  padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;
+  color:var(--muted);font-family:var(--font);
+}
+.modal-close:hover{background:var(--bg)}
+.modal-body{padding:18px 20px;max-height:65vh;overflow-y:auto}
+.prac-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.prac-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.prac-icon.done{background:var(--ok-dim);color:var(--ok)}
+.prac-icon.miss{background:var(--red-dim);color:var(--red)}
+.prac-name{font-size:12px;font-weight:500}
+.prac-date{font-size:10px;color:var(--muted);text-align:right;min-width:80px}
+.sec-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:12px 0 6px}
+.vp-section{margin-bottom:14px}
+.vp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+
+/* ── DARK MODE ───────────────────────────────────────────── */
+body.dark .sidebar{background:#0a1f1c}
+body.dark .topbar{background:var(--surface)}
+body.dark th{background:var(--surface)}
+body.dark .search,body.dark .sel{background:var(--surface)}
+
+/* ── LGPD BAR ────────────────────────────────────────────── */
+#lgpd-bar{
+  position:fixed;bottom:0;left:240px;right:0;background:var(--surface);
+  border-top:1px solid var(--border);padding:6px 20px;
+  font-size:10px;color:var(--dim);display:flex;justify-content:space-between;z-index:100;
+}
+
+/* ── SENHA OVERLAY ───────────────────────────────────────── */
+#senha-overlay{
+  position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--green) 0%,#0d2b25 100%);
+}
+.senha-box{
+  background:var(--card);border-radius:16px;padding:40px;width:360px;text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.senha-logo{
+  background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;
+  letter-spacing:2px;padding:6px 16px;border-radius:6px;display:inline-block;margin-bottom:16px;
+}
+.senha-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.senha-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.senha-input{
+  width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:8px;
+  font-size:14px;text-align:center;font-family:var(--font);background:var(--bg);color:var(--text);
+}
+.senha-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-dim)}
+.senha-btn{
+  width:100%;padding:12px;border:none;border-radius:8px;margin-top:12px;
+  background:var(--green);color:#fff;font-weight:700;font-size:14px;cursor:pointer;
+  font-family:var(--font);transition:background .15s;
+}
+.senha-btn:hover{background:var(--green-l)}
+.senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+.senha-lgpd{font-size:10px;color:var(--dim);margin-top:16px}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:900px){
+  .sidebar{width:60px}
+  .sidebar .si-label,.sidebar-title,.sidebar-sub,.sidebar-section-label,.sidebar-ts{display:none}
+  .sidebar-brand{padding:12px 8px;text-align:center}
+  .sidebar-item{justify-content:center;padding:10px}
+  .sidebar-item .si-badge{display:none}
+  .main{margin-left:60px}
+  #lgpd-bar{left:60px}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── KPI INTERATIVO ─────────────────────────────────────────── */
+.kpi-link{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.kpi-link:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.kpi-link .kpi-hint{font-size:9px;color:var(--muted);margin-top:2px;opacity:0}
+.kpi-link:hover .kpi-hint{opacity:1}
+
+/* ── RANK TABS ──────────────────────────────────────────────── */
+.rtabs{display:flex;gap:4px}
+.rtab{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;
+  font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:var(--font);transition:all .15s}
+.rtab:hover{background:var(--bg)}
+.rtab.active{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* ── LINHAS EXPANSÍVEIS ─────────────────────────────────────── */
+.tr-polo-hdr{cursor:pointer}
+.tr-polo-hdr:hover td{background:var(--green-dim)!important}
+.tr-polo-hdr td.polo-toggle::before{content:'▶ ';font-size:9px;color:var(--green)}
+.tr-polo-hdr.open td.polo-toggle::before{content:'▼ ';color:var(--teal)}
+.tr-polo-child{display:none;background:var(--bg)!important}
+.tr-polo-child.vis{display:table-row}
+.tr-polo-child td{font-size:11px;padding-left:28px!important}
+
+/* ── BOTÃO EXPORTAR ─────────────────────────────────────────────────── */
+.btn-export{background:var(--green);color:#fff;border:none;border-radius:6px;
+  padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;
+  font-family:var(--font);display:flex;align-items:center;gap:5px;transition:opacity .15s}
+.btn-export:hover{opacity:.85}
+
+/* ── CALENDÁRIO ─────────────────────────────────────────────────────── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+.cal-day-hdr{text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:4px}
+.cal-day{min-height:36px;border-radius:6px;padding:4px;font-size:10px;background:var(--bg);
+  border:1px solid var(--border);display:flex;flex-direction:column;align-items:center}
+.cal-day.empty{background:none;border-color:transparent}
+.cal-day.has-data{background:var(--green-dim);border-color:var(--green);cursor:pointer}
+.cal-day.has-data:hover{background:var(--green);color:#fff}
+.cal-day-num{font-weight:700;font-size:11px}
+.cal-day-val{font-size:9px;color:var(--teal);font-weight:600}
+.cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.cal-nav button{background:none;border:1px solid var(--border);border-radius:6px;
+  padding:4px 10px;cursor:pointer;font-family:var(--font);color:var(--text)}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ═══════════════════════════════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo">UNIASSELVI</div>
+    <div class="sidebar-title">Gestão de Práticas</div>
+    <div class="sidebar-sub">Tutoria Laboratorial · 2026</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Portfólios</div>
+      <button class="sidebar-item active" onclick="navTo('port-visao')">
+        <span class="si-icon">📊</span><span class="si-label">Visão Geral</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-ordens')">
+        <span class="si-icon">📅</span><span class="si-label">Ordens</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-praticas')">
+        <span class="si-icon">🔬</span><span class="si-label">Práticas</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-polos')">
+        <span class="si-icon">🏛️</span><span class="si-label">Polos</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('port-tutores')">
+        <span class="si-icon">👤</span><span class="si-label">Tutores</span>
+      </button>
+    </div>
+    <div class="sidebar-section" id="sidebar-ger" style="display:none">
+      <div class="sidebar-section-label">Gerenciamento</div>
+      <button class="sidebar-item" onclick="navTo('ger-visao')">
+        <span class="si-icon">📋</span><span class="si-label">Visão Geral</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-ofertas')">
+        <span class="si-icon">📊</span><span class="si-label">Ofertas</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-contratacao')">
+        <span class="si-icon">👤</span><span class="si-label">Contratação</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-agendas')">
+        <span class="si-icon">📆</span><span class="si-label">Agendas</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('ger-detalhe')">
+        <span class="si-icon">🔍</span><span class="si-label">Detalhe</span>
+      </button>
+    </div>
+    <div class="sidebar-section" id="sidebar-futuro" style="display:none">
+      <div class="sidebar-section-label">Infraestrutura</div>
+      <button class="sidebar-item" onclick="navTo('labs')" disabled style="opacity:.4">
+        <span class="si-icon">🏗️</span><span class="si-label">Laboratórios</span><span class="si-badge">Em breve</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('vagas')" disabled style="opacity:.4">
+        <span class="si-icon">📝</span><span class="si-label">Vagas</span><span class="si-badge">Em breve</span>
+      </button>
+      <button class="sidebar-item" onclick="navTo('insumos')" disabled style="opacity:.4">
+        <span class="si-icon">📦</span><span class="si-label">Insumos</span><span class="si-badge">Em breve</span>
+      </button>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <span class="sidebar-ts" id="ts-label">—</span>
+    <button class="sidebar-dark" onclick="toggleDark()" title="Modo escuro">🌙</button>
+  </div>
+</nav>
+
+<!-- ══ MAIN CONTENT ══════════════════════════════════════════════════════════ -->
+<div class="main">
+
+<!-- Topbar -->
+<div class="topbar">
+  <span class="topbar-title" id="topbar-title">Visão Geral</span>
+  <span class="topbar-breadcrumb" id="topbar-bread">Portfólios</span>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  PORTFÓLIOS — VISÃO GERAL                                           ║ -->
+<!-- ╚═══════════════════════════════════════════════════════════════════════╝ -->
+<div class="page active" id="page-port-visao">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Visão Geral</div><div class="ph-sub" id="pv-sub">—</div></div>
+  <div class="kpi-row" id="pv-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><div class="card-hdr"><div class="card-title">Situação dos Tutores</div></div>
+    <div class="stat-bar" id="pv-stat-bar"></div>
+    <div class="card-body" id="pv-ofensores"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">Envios por Mês</div></div>
+    <div class="card-body" id="pv-mes"></div></div>
+  </div>
+  <div class="card"><div class="card-hdr"><div class="card-title">Categorias</div></div>
+  <div class="card-body" id="pv-cats"></div></div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — ORDENS ═══════════════════════════════════════════════ -->
+<div class="page" id="page-port-ordens">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Ordens</div><div class="ph-sub">Acompanhamento por ordem de disciplina</div></div>
+  <div id="po-cards"></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar tutor, polo…" oninput="filterOrdemTbl(this.value)" id="ordem-search"/>
+      <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-sel">
+        <option value="">Todas ordens</option>
+      </select>
+      <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-cat-sel">
+        <option value="">Todas categorias</option>
+      </select>
+      <span class="tbl-count" id="ordem-count">—</span>
+      <button class="btn-export" onclick="exportPendentes()" title="Exportar tutores pendentes">⬇ Pendentes</button>
+      <button class="btn-export" onclick="exportEnviados()" title="Exportar portfólios enviados" style="background:var(--teal)">⬇ Enviados</button>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortOrdem('n')">Tutor</th><th onclick="sortOrdem('p')">Polo</th>
+      <th onclick="sortOrdem('c')">Categoria</th>
+      <th onclick="sortOrdem('o1')">O.1</th><th onclick="sortOrdem('o2')">O.2</th>
+      <th onclick="sortOrdem('o3')">O.3</th><th onclick="sortOrdem('o4')">O.4</th><th onclick="sortOrdem('o5')">O.5</th>
+      <th onclick="sortOrdem('te')" style="text-align:right">Total</th>
+    </tr></thead><tbody id="ordem-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — PRÁTICAS ═════════════════════════════════════════════ -->
+<div class="page" id="page-port-praticas">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Práticas</div><div class="ph-sub">Análise por prática laboratorial</div></div>
+  <div class="kpi-row" id="pp-kpis"></div>
+  <div class="card"><div class="card-hdr"><div class="card-title">Por Categoria</div></div>
+  <div class="card-body" id="pp-cat-bars"></div></div>
+  <div class="card">
+    <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="card-title" id="pp-rank-title">🔴 Top 20 — Mais Pendências</div>
+        <button class="btn-export" id="btn-export-prac" onclick="exportPraticas('pend')" style="font-size:10px;padding:3px 8px">⬇ Exportar</button>
+      </div>
+      <div class="rtabs">
+        <button class="rtab active" id="rtab-pend" onclick="switchRankTab('pend')">Mais Pendentes</button>
+        <button class="rtab" id="rtab-env" onclick="switchRankTab('env')">Mais Aplicadas</button>
+        <button class="rtab" id="rtab-menos" onclick="switchRankTab('menos')">Menos Aplicadas</button>
+      </div>
+    </div>
+    <div class="card-body" id="pp-ranking"></div>
+  </div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar prática…" oninput="filterPrac(this.value)" id="prac-search"/>
+      <select class="sel" onchange="filterPrac(document.getElementById('prac-search').value)" id="prac-cat-sel"><option value="">Todas categorias</option></select>
+      <span class="tbl-count" id="prac-count">—</span>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortPrac('n')">Prática</th><th onclick="sortPrac('c')">Categoria</th>
+      <th onclick="sortPrac('env_n')" style="text-align:right">Enviaram</th>
+      <th onclick="sortPrac('pend_n')" style="text-align:right">Pendentes</th>
+      <th onclick="sortPrac('pct')">Conclusão</th>
+    </tr></thead><tbody id="prac-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — POLOS ════════════════════════════════════════════════ -->
+<div class="page" id="page-port-polos">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Polos</div><div class="ph-sub" id="polo-sub">—</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterPolos(this.value)" id="polo-search"/>
+      <select class="sel" onchange="filterPolos(document.getElementById('polo-search').value)" id="polo-status-sel">
+        <option value="">Todos</option><option value="pend">Com pendências</option><option value="ok">100% enviado</option>
+      </select>
+      <span class="tbl-count" id="polo-count">—</span>
+    </div>
+    <div class="stat-bar" id="polo-stat-bar"></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortPolo('n')">Polo</th><th onclick="sortPolo('t')" style="text-align:right">Tutores</th>
+      <th onclick="sortPolo('e')" style="text-align:right">Enviaram</th>
+      <th onclick="sortPolo('pend')" style="text-align:right">Pendentes</th>
+      <th onclick="sortPolo('a')" style="text-align:right">Alunos</th>
+      <th onclick="sortPolo('pct')">Conclusão</th>
+    </tr></thead><tbody id="polo-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ PORTFÓLIOS — TUTORES ══════════════════════════════════════════════ -->
+<div class="page" id="page-port-tutores">
+<div class="container">
+  <div class="ph"><div class="ph-title">Portfólios — Tutores</div><div class="ph-sub" id="tutor-sub">—</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar tutor, polo ou categoria…" oninput="filterTutores(this.value)" id="tutor-search"/>
+      <select class="sel" onchange="filterTutores(document.getElementById('tutor-search').value)" id="tutor-status-sel">
+        <option value="">Todos</option><option value="ok">Enviou</option><option value="pend">Pendente</option>
+      </select>
+      <select class="sel" onchange="filterTutores(document.getElementById('tutor-search').value)" id="tutor-cat-sel">
+        <option value="">Todas categorias</option>
+      </select>
+      <span class="tbl-count" id="tutor-count">—</span>
+      <button class="btn-export" onclick="exportTutores()" title="Exportar tutores filtrados">⬇ Exportar</button>
+    </div>
+    <div class="stat-bar" id="tutor-stat-bar"></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortTutor('n')">Tutor</th><th onclick="sortTutor('p')">Polo</th>
+      <th onclick="sortTutor('c')">Categoria</th>
+      <th onclick="sortTutor('te')" style="text-align:right">Portfólios</th>
+      <th onclick="sortTutor('pct')">Conclusão</th><th>Status</th><th>Detalhe</th>
+    </tr></thead><tbody id="tutor-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════════════════════╗ -->
+<!-- ║  GERENCIAMENTO                                                       ║ -->
+<!-- ╚═══════════════════════════════════════════════════════════════════════╝ -->
+
+<!-- ═══ GERENCIAMENTO — VISÃO GERAL ══════════════════════════════════════ -->
+<div class="page" id="page-ger-visao">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Visão Geral</div><div class="ph-sub" id="gv-sub">—</div></div>
+  <div class="kpi-row" id="gv-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card"><div class="card-hdr"><div class="card-title">📊 Por Categoria</div></div>
+    <div class="card-body" id="gv-cat-cards"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📅 Por Ordem</div></div>
+    <div class="card-body" id="gv-ordem-cards"></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:0">
+    <div class="card"><div class="card-hdr"><div class="card-title">🔥 Top 10 Polos — Mais Ofertas sem Tutor</div></div>
+    <div class="card-body" id="gv-ranking"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">🗺️ Cobertura por Categoria</div></div>
+    <div class="card-body" id="gv-heatmap"></div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — OFERTAS ══════════════════════════════════════════ -->
+<div class="page" id="page-ger-ofertas">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Ofertas por Polo</div></div>
+  <div class="card">
+    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerPolo(this.value)" id="ger-polo-search"/>
+    <span class="tbl-count" id="ger-polo-count">—</span></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Ofertas</th><th style="text-align:right">Gerenciadas</th><th>% Ger.</th>
+      <th style="text-align:right">Com Tutor</th><th style="text-align:right">Sem Tutor</th>
+      <th style="text-align:right">Alunos Mat.</th><th style="text-align:right">Agend.</th>
+    </tr></thead><tbody id="ger-polo-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — CONTRATAÇÃO ══════════════════════════════════════ -->
+<div class="page" id="page-ger-contratacao">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Status de Contratação</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo ou categoria…" oninput="filterGerContr(this.value)" id="ger-contr-search"/>
+      <select class="sel" onchange="filterGerContr(document.getElementById('ger-contr-search').value)" id="ger-contr-status">
+        <option value="">Todos</option><option value="sem">Sem tutor</option><option value="com">Contratado</option>
+      </select>
+      <span class="tbl-count" id="ger-contr-count">—</span>
+      <button class="btn-export" onclick="exportSemTutor()" title="Exportar polos sem tutor">⬇ Sem Tutor</button>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th class="polo-toggle">Polo</th><th style="text-align:right">Labs</th><th style="text-align:right">Sem Tutor</th><th>Cobertura</th><th></th>
+    </tr></thead><tbody id="ger-contr-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — AGENDAS ══════════════════════════════════════════ -->
+<div class="page" id="page-ger-agendas">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div></div>
+  <div class="kpi-row" id="ag-kpis"></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between">
+      <div class="card-title">📅 Calendário de Agendamentos</div>
+      <div class="cal-nav">
+        <button onclick="calNav(-1)">‹ Anterior</button>
+        <span id="cal-label" style="font-weight:600;font-size:13px"></span>
+        <button onclick="calNav(1)">Próximo ›</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="cal-header" id="cal-week-hdr"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">* Dias com agendamentos. Hover para ver o lab. Múltiplos labs: bolinhas coloridas abaixo do dia.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="cal-legenda"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
+    <div class="card"><div class="card-hdr"><div class="card-title">🏆 Top Polos — Mais Agendamentos</div></div>
+      <div class="card-body" id="ag-top-polos"><div style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Sem dados de agenda</div></div>
+    </div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📊 Agendamentos vs Pendentes</div></div>
+      <div class="card-body" id="ag-dist"><div style="color:var(--muted);text-align:center;padding:20px;font-size:12px">Sem dados de agenda</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/>
+      <select class="sel" id="ag-status-sel" onchange="filterGerAgenda(document.getElementById('ger-agenda-search').value)">
+        <option value="">Todos</option><option value="sem">Sem agenda</option><option value="com">Com agenda</option>
+      </select>
+      <span class="tbl-count" id="ger-agenda-count">—</span>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Total Ofertas</th><th style="text-align:right">Com Agenda</th>
+      <th style="text-align:right">Sem Agenda</th><th>% Agendado</th>
+    </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ GERENCIAMENTO — DETALHE ══════════════════════════════════════════ -->
+<div class="page" id="page-ger-detalhe">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Detalhe de Ofertas</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo, prática, tutor…" oninput="filterGerDetalhe(this.value)" id="ger-det-search"/>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todas categorias</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem"><option value="">Todas ordens</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status">
+        <option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option><option value="tutor">Com tutor</option><option value="ntutor">Sem tutor</option>
+      </select>
+      <span class="tbl-count" id="ger-det-count">—</span>
+    </div>
+    <div class="tbl-wrap" style="max-height:600px"><table><thead><tr>
+      <th>Polo</th><th>Categoria</th><th>Ordem</th><th>Prática</th><th>Tutor</th>
+      <th style="text-align:right">Al. Mat.</th><th style="text-align:right">Agend.</th><th>Status</th>
+    </tr></thead><tbody id="ger-det-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ── MODAL ──────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title" id="m-title">—</div><div class="modal-sub" id="m-sub">—</div></div>
+      <button class="modal-close" onclick="closeModal()">✕ Fechar</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+  </div>
+</div>
+
+<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · UNIASSELVI 2026</span><span id="lgpd-ts"></span></div>
+
+<div id="senha-overlay">
+  <div class="senha-box">
+    <div class="senha-logo">UNIASSELVI</div>
+    <div class="senha-title">Gestão de Práticas Laboratoriais</div>
+    <div class="senha-sub">Painel de Gestão · 2026</div>
+    <input class="senha-input" type="password" id="senha-input"
+           placeholder="Digite a senha de acesso"
+           onkeydown="if(event.key==='Enter')verificarSenha()"/>
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <div class="senha-err" id="senha-err"></div>
+    <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
+  </div>
+</div>
+
+
 </body>
 </html>
