@@ -267,21 +267,21 @@ def verificar_e_localizar():
     return p1, p2, tmpl, p3
 
 
+def ler_excel(path, **kwargs):
+    """Lê Excel tentando múltiplos engines — robusto para arquivos do SharePoint."""
+    for engine in ('openpyxl', 'xlrd', None):
+        try:
+            kw = dict(kwargs)
+            if engine:
+                kw['engine'] = engine
+            return pd.read_excel(path, **kw)
+        except Exception:
+            continue
+    raise ValueError(f"Não foi possível ler {path} com nenhum engine disponível")
+
+
 def processar(p1, p2):
     print(f"[{ts()}] Lendo tutores...")
-    # Detectar engine robustamente — arquivos baixados do SharePoint
-    # podem ter magic bytes inesperados independente da extensão
-    def ler_excel(path, **kwargs):
-        for engine in ('openpyxl', 'xlrd', None):
-            try:
-                kw = dict(kwargs)
-                if engine:
-                    kw['engine'] = engine
-                return pd.read_excel(path, **kw)
-            except Exception:
-                continue
-        raise ValueError(f"Não foi possível ler {path} com nenhum engine disponível")
-
     # Validar que o arquivo é realmente um Excel (magic bytes PK)
     with open(p1, 'rb') as _f:
         _magic = _f.read(8)
