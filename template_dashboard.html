@@ -519,6 +519,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
         <option value="">Todas categorias</option>
       </select>
       <span class="tbl-count" id="tutor-count">—</span>
+      <button class="btn-export" onclick="exportTutores()" title="Exportar tutores filtrados">⬇ Exportar</button>
     </div>
     <div class="stat-bar" id="tutor-stat-bar"></div>
     <div class="tbl-wrap"><table><thead><tr>
@@ -1413,12 +1414,12 @@ function renderGerContrTbl(data){
     var pend=g.semTutor>0;
     var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
     var corST=pend?'var(--red)':'var(--ok)';
-    rows+='<tr class="tr-polo-hdr'+(pend?' tr-pend':'')+'" onclick="toggleContrGrp(this,\"cg'+gi+'\")">'
-      +'<td class="polo-toggle"><strong>'+g.polo+'</strong></td>'
+    rows+='<tr class="tr-polo-hdr'+(pend?' tr-pend':'')+'">'
+      +'<td class="polo-toggle" style="cursor:pointer" onclick="toggleContrGrp(this.closest(\'tr\'),\'cg'+gi+'\')" ><strong>'+g.polo+'</strong></td>'
       +'<td style="text-align:right">'+g.total+'</td>'
       +'<td style="text-align:right;color:'+corST+'">'+g.semTutor+'</td>'
       +'<td>'+progCell(pct)+'</td>'
-      +'<td style="font-size:10px;color:var(--muted)">expandir</td>'
+      +'<td><button style="font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--bg);cursor:pointer;padding:2px 8px;font-family:var(--font)" onclick="toggleContrGrp(this.closest(\'tr\'),\'cg'+gi+'\')" >▶ expandir</button></td>'
       +'</tr>';
     g.labs.sort(function(a,b){return a.tem_tutor-b.tem_tutor;}).forEach(function(c){
       rows+='<tr class="tr-polo-child" data-cg="cg'+gi+'">'
@@ -1522,13 +1523,48 @@ function renderGerAgendaTbl(data){
       var a=window._agData[+this.dataset.ag];
       document.getElementById('m-title').textContent=a.polo;
       document.getElementById('m-sub').textContent='Agendamentos: '+a.com_agenda+' com agenda · '+a.sem_agenda+' sem agenda';
-      document.getElementById('m-body').innerHTML=''
-        +'<div class="kpi-row">'
+          // Construir mini-calendário com datas deste polo
+      var datas=a.datas_agenda||[];
+      var kpiHtml='<div class="kpi-row">'
         +'<div class="kpi kpi-teal"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">'+a.total+'</div></div>'
         +'<div class="kpi kpi-ok"><div class="kpi-label">Com Agenda</div><div class="kpi-value">'+a.com_agenda+'</div></div>'
         +'<div class="kpi kpi-red"><div class="kpi-label">Sem Agenda</div><div class="kpi-value">'+a.sem_agenda+'</div></div>'
         +'<div class="kpi kpi-green"><div class="kpi-label">% Agendado</div><div class="kpi-value">'+a.pct_agendado+'%</div></div>'
         +'</div>';
+      var calHtml='';
+      if(datas.length){
+        // Agrupar por mês
+        var mesesMap={};
+        datas.forEach(function(d){var m=d.slice(0,7);if(!mesesMap[m])mesesMap[m]=[];mesesMap[m].push(d);});
+        var mesesNames=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        calHtml='<div style="font-size:11px;font-weight:700;margin:12px 0 6px">📅 Datas de Agendamento ('+datas.length+' datas)</div>';
+        Object.keys(mesesMap).sort().forEach(function(mes){
+          var parts=mes.split('-');
+          var yr=parseInt(parts[0]),mo=parseInt(parts[1])-1;
+          var label=mesesNames[mo]+'/'+yr;
+          var diasDoMes=new Date(yr,mo+1,0).getDate();
+          var firstDay=new Date(yr,mo,1).getDay();
+          var datasSet=new Set(mesesMap[mes]);
+          calHtml+='<div style="margin-bottom:12px">';
+          calHtml+='<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px">'+label+'</div>';
+          calHtml+='<div style="display:grid;grid-template-columns:repeat(7,28px);gap:2px">';
+          ['D','S','T','Q','Q','S','S'].forEach(function(d){
+            calHtml+='<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted)">'+d+'</div>';
+          });
+          for(var i=0;i<firstDay;i++) calHtml+='<div></div>';
+          for(var d=1;d<=diasDoMes;d++){
+            var key=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+            var temAg=datasSet.has(key);
+            calHtml+='<div style="text-align:center;font-size:10px;padding:3px;border-radius:4px;'
+              +(temAg?'background:var(--green);color:#fff;font-weight:700':'background:var(--bg);color:var(--muted)')
+              +'" title="'+(temAg?key+' — agendado':'')+'">'+d+'</div>';
+          }
+          calHtml+='</div></div>';
+        });
+      } else {
+        calHtml='<div style="color:var(--muted);font-size:11px;margin-top:8px">Sem datas de agendamento registradas para este polo.</div>';
+      }
+      document.getElementById('m-body').innerHTML=kpiHtml+calHtml;
       document.getElementById('modal-overlay').classList.add('show');
     });
   });
@@ -1578,9 +1614,9 @@ function filterGerDetalhe(q){
   sortedGrp.forEach(function(g,gi){
     var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
     var corST=g.semTutor>0?'var(--red)':'var(--ok)';
-    rows+='<tr class="tr-polo-hdr" onclick="toggleDetGrp(this,\"dg'+gi+'\")">'
-      +'<td class="polo-toggle" colspan="2"><strong>'+g.key+'</strong>'
-        +'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">'+g.total+' ofertas</span></td>'
+    rows+='<tr class="tr-polo-hdr">'
+      +'<td class="polo-toggle" colspan="2" style="cursor:pointer" onclick="toggleDetGrp(this.closest(\'tr\'),\'dg'+gi+'\')" ><strong>'+g.key+'</strong>'
+        +'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">'+g.total+' ofertas — clique para expandir</span></td>'
       +'<td colspan="2" style="color:'+corST+'">'+g.semTutor+' sem tutor</td>'
       +'<td colspan="4">'+progCell(pct)+'</td>'
       +'</tr>';
@@ -1691,8 +1727,10 @@ function exportCSV(rows, filename){
       v='"'+v.replace(/"/g,'""')+'"';
     return v;
   };
-  const csv=[headers.map(escape).join(','),
-    ...rows.map(r=>headers.map(h=>escape(r[h])).join(','))].join('\n');
+  // Separador ; para Excel em pt-BR (que usa vírgula como decimal)
+  const sep=';';
+  const csv=[headers.map(escape).join(sep),
+    ...rows.map(r=>headers.map(h=>escape(r[h])).join(sep))].join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1828,6 +1866,20 @@ function calDayClick(date){
     }).join('');
   }
   document.getElementById('modal-overlay').classList.add('show');
+}
+
+// Exportar lista de tutores (filtrada pelo que está visível)
+function exportTutores(){
+  var d=tutoresFiltrados||DB.tutores||[];
+  var rows=d.map(function(t){
+    return {
+      'Nome':t.n,'Polo':t.p,'Categoria':t.c||'',
+      'Portfólios Enviados':t.te||0,'Total Práticas':t.tp||'?',
+      '% Conclusão':t.pct||0,'Status':gTS(t)||'',
+      'Pendências':t.pend_n||0
+    };
+  });
+  exportCSV(rows,'tutores_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
