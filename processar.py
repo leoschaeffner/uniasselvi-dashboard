@@ -6,7 +6,7 @@ Le as planilhas da pasta planilhas/ e gera saida/dashboard.html
 import pandas as pd
 import json, os, sys, math, webbrowser, time, threading, glob
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
 # ── Localiza a pasta do script de 3 formas diferentes (a que funcionar serve) ─
@@ -202,7 +202,8 @@ CAT_MAP = {
 
 
 def ts():
-    return datetime.now().strftime('%H:%M:%S')
+    BRT = timezone(timedelta(hours=-3))
+    return datetime.now(BRT).strftime('%H:%M:%S')
 
 
 def limpar(obj):
@@ -805,7 +806,8 @@ def processar(p1, p2):
             'nome': p['nome'], 'enviou': p['enviou'], 'nao_enviou': p['nao_enviou'], 'categoria': p['categoria'],
         })
 
-    gerado = datetime.now().strftime('%d/%m/%Y %H:%M')
+    BRT = timezone(timedelta(hours=-3))
+    gerado = datetime.now(BRT).strftime('%d/%m/%Y %H:%M')
     print(f"[{ts()}] {total} tutores · {enviaram} enviaram · {atrasados} atrasados · {urgentes} urgentes")
 
     return limpar({
