@@ -269,8 +269,20 @@ def verificar_e_localizar():
 
 def processar(p1, p2):
     print(f"[{ts()}] Lendo tutores...")
-    engine_t = 'xlrd' if str(p1).lower().endswith('.xls') and not str(p1).lower().endswith('.xlsx') else None
-    df_t = pd.read_excel(p1, sheet_name='Base de Tutores', header=1, **({'engine': engine_t} if engine_t else {}))
+    # Detectar engine robustamente — arquivos baixados do SharePoint
+    # podem ter magic bytes inesperados independente da extensão
+    def ler_excel(path, **kwargs):
+        for engine in ('openpyxl', 'xlrd', None):
+            try:
+                kw = dict(kwargs)
+                if engine:
+                    kw['engine'] = engine
+                return pd.read_excel(path, **kw)
+            except Exception:
+                continue
+        raise ValueError(f"Não foi possível ler {path} com nenhum engine disponível")
+
+    df_t = ler_excel(p1, sheet_name='Base de Tutores', header=1)
 
     col_sit  = next((c for c in df_t.columns if 'SITUA' in str(c).upper()), None)
     col_nome = next((c for c in df_t.columns if 'NOME'  in str(c).upper() and 'TUTOR' in str(c).upper()), None)
@@ -282,7 +294,7 @@ def processar(p1, p2):
     df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
 
     print(f"[{ts()}] Lendo portfolios...")
-    df_p = pd.read_excel(p2, sheet_name='Sheet1')
+    df_p = ler_excel(p2, sheet_name='Sheet1')
 
     # Localizar colunas pelo conteudo do nome
     def col(df, *partes):
@@ -810,7 +822,7 @@ def processar(p1, p2):
 def processar_gerenciamento(p3):
     """Processa a planilha REL_GERAL_DE_GERENCIAMENTO.xlsx e retorna dados de gerenciamento."""
     print(f"[{ts()}] Lendo gerenciamento...")
-    df_g = pd.read_excel(p3)
+    df_g = ler_excel(p3)
     print(f"[{ts()}] Gerenciamento: {len(df_g)} linhas, {len(df_g.columns)} colunas")
 
     # ── Identificar colunas ───────────────────────────────────────────────────
