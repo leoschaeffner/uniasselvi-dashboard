@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # histórico completo para evitar conflito no push
 
       - name: Python 3.11
         uses: actions/setup-python@v5
@@ -41,26 +43,20 @@ jobs:
           curl -L --max-time 90 --retry 3 --retry-delay 5 \
             -H "User-Agent: Mozilla/5.0" \
             -o planilhas/01_CONTROLE_TUTORIA.xlsx "$URL_CONTROLE"
-          
           CTRL_SIZE=$(wc -c < planilhas/01_CONTROLE_TUTORIA.xlsx)
           echo "[INFO] Controle: $CTRL_SIZE bytes"
           if [ "$CTRL_SIZE" -lt 5000 ]; then
-            echo "[ERRO] Arquivo muito pequeno — provavelmente HTML de erro"
-            cat planilhas/01_CONTROLE_TUTORIA.xlsx
-            exit 1
+            echo "[ERRO] Arquivo inválido"; cat planilhas/01_CONTROLE_TUTORIA.xlsx; exit 1
           fi
 
           echo "[INFO] Baixando PORTIFOLIO_TUTOR.xlsx..."
           curl -L --max-time 90 --retry 3 --retry-delay 5 \
             -H "User-Agent: Mozilla/5.0" \
             -o planilhas/PORTIFOLIO_TUTOR.xlsx "$URL_PORTFOLIO"
-          
           PORT_SIZE=$(wc -c < planilhas/PORTIFOLIO_TUTOR.xlsx)
           echo "[INFO] Portfolio: $PORT_SIZE bytes"
           if [ "$PORT_SIZE" -lt 5000 ]; then
-            echo "[ERRO] Arquivo muito pequeno — provavelmente HTML de erro"
-            cat planilhas/PORTIFOLIO_TUTOR.xlsx
-            exit 1
+            echo "[ERRO] Arquivo inválido"; cat planilhas/PORTIFOLIO_TUTOR.xlsx; exit 1
           fi
 
           if [ -n "$URL_GERENCIAL" ]; then
@@ -68,8 +64,6 @@ jobs:
             curl -L --max-time 90 --retry 3 --retry-delay 5 \
               -H "User-Agent: Mozilla/5.0" \
               -o planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx "$URL_GERENCIAL" || true
-            GER_SIZE=$(wc -c < planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx 2>/dev/null || echo 0)
-            echo "[INFO] Gerencial: $GER_SIZE bytes"
           fi
 
           echo "=== Planilhas baixadas ==="
@@ -84,5 +78,8 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add index.html
-          git diff --cached --quiet && echo "Sem mudancas" || \
-            (git commit -m "Dashboard $(date '+%d/%m/%Y %H:%M')" && git push)
+          git diff --cached --quiet && echo "Sem mudancas" || (
+            git commit -m "Dashboard $(date '+%d/%m/%Y %H:%M')"
+            git pull --rebase origin main
+            git push
+          )
