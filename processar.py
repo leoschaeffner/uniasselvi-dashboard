@@ -1009,12 +1009,18 @@ def processar_gerenciamento(p3):
             total = len(grp)
             com_agenda = int(grp['_TEM_AGENDA'].sum())
             sem_agenda = total - com_agenda
+            # Extrair datas únicas de agendamento para o calendário
+            datas = []
+            if c_dt_agenda and c_dt_agenda in grp.columns:
+                datas_raw = pd.to_datetime(grp[c_dt_agenda], errors='coerce').dropna()
+                datas = sorted(set(d.strftime('%Y-%m-%d') for d in datas_raw))
             ger_agendas.append({
                 'polo': str(polo),
                 'total': total,
                 'com_agenda': com_agenda,
                 'sem_agenda': sem_agenda,
                 'pct_agendado': round(com_agenda / total * 100, 1) if total else 0,
+                'datas_agenda': datas,
             })
         ger_agendas.sort(key=lambda x: -x['sem_agenda'])
 
