@@ -323,6 +323,14 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 .cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:8px}
 .cal-nav button{background:none;border:1px solid var(--border);border-radius:6px;
   padding:4px 10px;cursor:pointer;font-family:var(--font);color:var(--text)}
+
+.btn-expand{font-size:10px;border:1px solid var(--border);border-radius:4px;
+  background:var(--bg);cursor:pointer;padding:2px 8px;font-family:var(--font);
+  color:var(--text);transition:background .15s}
+.btn-expand:hover{background:var(--green-dim)}
+.tr-polo-hdr.open .btn-expand::before{content:'▼ ';font-size:9px}
+.tr-polo-hdr:not(.open) .btn-expand::before{content:'▶ ';font-size:9px}
+.btn-expand{padding-left:4px}
 </style>
 </head>
 <body>
@@ -1422,11 +1430,11 @@ function renderGerContrTbl(data){
     var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
     var corST=pend?'var(--red)':'var(--ok)';
     rows+='<tr class="tr-polo-hdr'+(pend?' tr-pend':'')+'">'
-      +'<td class="polo-toggle" style="cursor:pointer" onclick="toggleContrGrp(this.closest(\'tr\'),\'cg'+gi+'\')" ><strong>'+g.polo+'</strong></td>'
+      +'<td class="polo-toggle"><strong>'+g.polo+'</strong></td>'
       +'<td style="text-align:right">'+g.total+'</td>'
       +'<td style="text-align:right;color:'+corST+'">'+g.semTutor+'</td>'
       +'<td>'+progCell(pct)+'</td>'
-      +'<td><button style="font-size:10px;border:1px solid var(--border);border-radius:4px;background:var(--bg);cursor:pointer;padding:2px 8px;font-family:var(--font)" onclick="toggleContrGrp(this.closest(\'tr\'),\'cg'+gi+'\')" >▶ expandir</button></td>'
+      +'<td><button class="btn-expand" data-grp="cg'+gi+'">▶ expandir</button></td>'
       +'</tr>';
     g.labs.sort(function(a,b){return a.tem_tutor-b.tem_tutor;}).forEach(function(c){
       rows+='<tr class="tr-polo-child" data-cg="cg'+gi+'">'
@@ -1634,10 +1642,11 @@ function filterGerDetalhe(q){
     var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
     var corST=g.semTutor>0?'var(--red)':'var(--ok)';
     rows+='<tr class="tr-polo-hdr">'
-      +'<td class="polo-toggle" colspan="2" style="cursor:pointer" onclick="toggleDetGrp(this.closest(\'tr\'),\'dg'+gi+'\')" ><strong>'+g.key+'</strong>'
+      +'<td class="polo-toggle" colspan="2"><strong>'+g.key+'</strong>'
         +'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">'+g.total+' ofertas — clique para expandir</span></td>'
       +'<td colspan="2" style="color:'+corST+'">'+g.semTutor+' sem tutor</td>'
-      +'<td colspan="4">'+progCell(pct)+'</td>'
+      +'<td><button class="btn-expand" data-grp="dg'+gi+'">▶ expandir</button></td>'
+      +'<td colspan="3">'+progCell(pct)+'</td>'
       +'</tr>';
     g.rows.slice(0,150).forEach(function(r){
       var tutorCell=r.tutor?r.tutor:'<span style="color:var(--red)">—</span>';
@@ -1925,6 +1934,17 @@ function getCatColor(cat){
   return 'var(--teal)';
 }
 
+document.addEventListener('click', function(e){
+  var btn=e.target.closest('.btn-expand');
+  if(!btn) return;
+  var grp=btn.dataset.grp;
+  if(!grp) return;
+  var row=btn.closest('tr');
+  if(!row) return;
+  // Determinar qual função usar
+  if(grp.startsWith('cg')) toggleContrGrp(row,grp);
+  else if(grp.startsWith('dg')) toggleDetGrp(row,grp);
+});
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
   initSenha();
