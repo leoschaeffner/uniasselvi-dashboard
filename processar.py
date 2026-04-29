@@ -282,6 +282,19 @@ def processar(p1, p2):
                 continue
         raise ValueError(f"Não foi possível ler {path} com nenhum engine disponível")
 
+    # Validar que o arquivo é realmente um Excel (magic bytes PK)
+    with open(p1, 'rb') as _f:
+        _magic = _f.read(8)
+        _preview = _f.read(200)
+    print(f"  [DEBUG] Magic bytes de {p1.name}: {_magic.hex()}")
+    if _magic[:2] == b'PK':
+        print(f"  [DEBUG] Formato ZIP/XLSX confirmado")
+    elif _magic[:2] in (b'\xd0\xcf', b'\xCF\xD0'):
+        print(f"  [DEBUG] Formato XLS (OLE2) confirmado")
+    else:
+        print(f"  [ERRO] Arquivo não é Excel válido. Conteúdo inicial:")
+        print((_magic + _preview).decode('utf-8', errors='replace')[:300])
+        raise ValueError(f"Arquivo {p1.name} não é um Excel válido — SharePoint pode ter retornado HTML de erro")
     df_t = ler_excel(p1, sheet_name='Base de Tutores', header=1)
 
     col_sit  = next((c for c in df_t.columns if 'SITUA' in str(c).upper()), None)
