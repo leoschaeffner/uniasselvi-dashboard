@@ -1652,7 +1652,12 @@ function filterGerDetalhe(q){
         +'<td style="font-size:11px">'+tutorCell+'</td>'
         +'<td style="text-align:right">'+fmtNum(r.alunos_mat)+'</td>'
         +'<td style="text-align:right">'+fmtNum(r.alunos_agend)+'</td>'
-        +'<td><span class="badge '+(r.gerenciado?'ok':'pend')+'">'+(r.gerenciado?'Ger.':'Pend.')+'</span></td>'
+        +'<td>'
+          +(r.tutor
+            ?'<span class="badge ok">Com Tutor</span>'
+            :'<span class="badge pend">Sem Tutor</span>')
+          +(r.gerenciado?' <span style="font-size:9px;color:var(--teal)">✓Cad.</span>':'')
+          +'</td>'
         +'</tr>';
     });
   });
@@ -1782,13 +1787,16 @@ function exportDetalhe(){
     if(!agg[chave]) agg[chave]={
       'Polo':r.polo||'—',
       'Tutor':r.tutor||'Sem tutor',
-      'Laboratório / Prática':r.pratica||'—',
+      'Ordem':r.ordem||'—',
+      'Laboratório / Prática':(r.pratica||'—'),
       'Categoria':r.categoria||'—',
+      'Com Tutor':r.tutor?'Sim':'Não',
       'Gerenciou':'Não',
       'Total Gerenciados':0,
       'Alunos Matriculados':0,
       'Alunos Agendados':0,
     };
+    if(r.tutor) agg[chave]['Com Tutor']='Sim';
     if(r.gerenciado){agg[chave]['Gerenciou']='Sim';agg[chave]['Total Gerenciados']++;}
     agg[chave]['Alunos Matriculados']+=r.alunos_mat||0;
     agg[chave]['Alunos Agendados']+=r.alunos_agend||0;
