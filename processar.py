@@ -1009,11 +1009,23 @@ def processar_gerenciamento(p3):
             total = len(grp)
             com_agenda = int(grp['_TEM_AGENDA'].sum())
             sem_agenda = total - com_agenda
-            # Extrair datas únicas de agendamento para o calendário
+            # Extrair datas por categoria para o calendário com cores
             datas = []
+            datas_por_cat = {}
             if c_dt_agenda and c_dt_agenda in grp.columns:
-                datas_raw = pd.to_datetime(grp[c_dt_agenda], errors='coerce').dropna()
-                datas = sorted(set(d.strftime('%Y-%m-%d') for d in datas_raw))
+                for _, ag_row in grp[grp['_TEM_AGENDA']].iterrows():
+                    dt_val = pd.to_datetime(ag_row.get(c_dt_agenda), errors='coerce')
+                    if pd.notna(dt_val):
+                        dt_str = dt_val.strftime('%Y-%m-%d')
+                        cat_val = str(ag_row.get(c_cat, '') or '')
+                        if dt_str not in datas:
+                            datas.append(dt_str)
+                        if cat_val:
+                            if dt_str not in datas_por_cat:
+                                datas_por_cat[dt_str] = []
+                            if cat_val not in datas_por_cat[dt_str]:
+                                datas_por_cat[dt_str].append(cat_val)
+                datas = sorted(set(datas))
             ger_agendas.append({
                 'polo': str(polo),
                 'total': total,
@@ -1021,6 +1033,7 @@ def processar_gerenciamento(p3):
                 'sem_agenda': sem_agenda,
                 'pct_agendado': round(com_agenda / total * 100, 1) if total else 0,
                 'datas_agenda': datas,
+                'datas_por_cat': datas_por_cat,
             })
         ger_agendas.sort(key=lambda x: -x['sem_agenda'])
 
@@ -1028,7 +1041,8 @@ def processar_gerenciamento(p3):
     ger_ofertas_detalhe = []
     cols_detalhe = [c_polo, c_cat, '_ORDEM_G', '_PRATICA_G', c_curso, c_tutor,
                     '_GERENCIADO', '_TEM_AGENDA', '_ALUNOS_MAT', '_QTD_ALUN', '_CAPA']
-    for _, row in df_g.head(5000).iterrows():
+    # Sem limite — o template agrupa e pagina automaticamente
+    for _, row in df_g.iterrows():
         ger_ofertas_detalhe.append({
             'polo': str(row.get(c_polo, '')),
             'categoria': str(row.get(c_cat, '')),
