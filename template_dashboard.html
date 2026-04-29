@@ -621,7 +621,16 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <div class="cal-header" id="cal-week-hdr"></div>
       <div class="cal-grid" id="cal-grid"></div>
       <div style="font-size:10px;color:var(--muted);margin-top:6px">* Dias com agendamentos. Hover para ver o lab. Múltiplos labs: bolinhas coloridas abaixo do dia.</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="cal-legenda"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+        <span style="font-size:10px;font-weight:700;color:var(--muted)">Legenda:</span>
+        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#2196F3;display:inline-block"></span>ENF-INS</span>
+        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#4CAF50;display:inline-block"></span>BIO-FAR</span>
+        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#FF9800;display:inline-block"></span>BIO-FISIO</span>
+        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#9C27B0;display:inline-block"></span>QUÍ/FÍS</span>
+        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#F44336;display:inline-block"></span>ENGMAKER</span>
+        <span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#00BCD4;display:inline-block"></span>NUTRI</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="cal-legenda"></div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
@@ -1050,7 +1059,7 @@ function filterTutores(q){
   if(st==='ok') d=d.filter(t=>t.te>0);
   if(st==='pend') d=d.filter(t=>t.te===0);
   if(cat) d=d.filter(t=>t.c===cat);
-  tutorData=d; renderTutorTbl(d);
+  tutorData=d; tutoresFiltrados=d; renderTutorTbl(d);
 }
 function sortTutor(k){if(tutorSortK===k)tutorSortA=!tutorSortA;else{tutorSortK=k;tutorSortA=k==='n'}filterTutores(document.getElementById('tutor-search').value)}
 
@@ -1323,7 +1332,7 @@ function renderGerenciamento(){
 
   // Heat map: polo (top 15) × categoria
   const cats=(DB.ger_cat||[]).map(c=>c.categoria);
-  const topHM=(DB.ger_polo||[]).sort((a,b)=>b.total_ofertas-a.total_ofertas).slice(0,15);
+  const topHM=(DB.ger_polo||[]).sort((a,b)=>b.total_ofertas-a.total_ofertas);
   const contrMap={};
   (DB.ger_contratacao||[]).forEach(c=>{contrMap[c.polo+'|'+c.categoria]=c.tem_tutor});
   let hmHTML=`<div style="overflow-x:auto"><div class="heatmap" style="grid-template-columns:160px repeat(${cats.length},1fr);min-width:${160+cats.length*80}px">`;
@@ -1440,7 +1449,7 @@ function renderGerContrTbl(data){
       rows+='<tr class="tr-polo-child" data-cg="cg'+gi+'">'
         +'<td style="padding-left:28px!important">'+c.categoria+'</td>'
         +'<td style="text-align:right">'+c.total_ofertas+' of.</td>'
-        +'<td style="color:'+(c.tem_tutor?'var(--ok)':'var(--red)')+'">'+c.semTutor+'</td>'
+        +'<td style="color:'+(c.tem_tutor?'var(--ok)':'var(--red)')+'">'+(c.tem_tutor?'Com tutor':'Sem tutor')+'</td>'
         +'<td><span class="badge '+(c.tem_tutor?'ok':'pend')+'">'+c.status+'</span></td>'
         +'<td style="font-size:11px">'+(c.tutores&&c.tutores.length?c.tutores.join(', '):'—')+'</td>'
         +'</tr>';
@@ -1591,7 +1600,16 @@ function renderGerAgendaTbl(data){
       } else {
         calHtml='<div style="color:var(--muted);font-size:11px;margin-top:8px">Sem datas de agendamento registradas para este polo.</div>';
       }
-      document.getElementById('m-body').innerHTML=kpiHtml+calHtml;
+      var legendaHtml='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:8px;border-top:1px solid var(--border)">'
+        +'<span style="font-size:10px;font-weight:700;color:var(--muted)">Legenda: </span>'
+        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#2196F3;display:inline-block"></span>ENF-INS</span>'
+        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#4CAF50;display:inline-block"></span>BIO-FAR</span>'
+        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#FF9800;display:inline-block"></span>BIO-FISIO</span>'
+        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#9C27B0;display:inline-block"></span>QUÍ/FÍS</span>'
+        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#F44336;display:inline-block"></span>ENGMAKER</span>'
+        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#00BCD4;display:inline-block"></span>NUTRI</span>'
+        +'</div>';
+      document.getElementById('m-body').innerHTML=kpiHtml+calHtml+legendaHtml;
       document.getElementById('modal-overlay').classList.add('show');
     });
   });
