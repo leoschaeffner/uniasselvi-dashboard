@@ -627,8 +627,12 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <span class="tbl-count" id="ger-agenda-count">—</span>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>Polo</th><th style="text-align:right">Total Ofertas</th><th style="text-align:right">Com Agenda</th>
-      <th style="text-align:right">Sem Agenda</th><th>% Agendado</th><th>Próxima Data</th>
+      <th class="th-sort" data-sort-table="ger-agenda-tbody" data-sort-col="polo" onclick="sortTable('ger-agenda-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-agenda-tbody" data-sort-col="tot" style="text-align:right" onclick="sortTable('ger-agenda-tbody','tot','num')">Total Ofertas<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-agenda-tbody" data-sort-col="ca" style="text-align:right" onclick="sortTable('ger-agenda-tbody','ca','num')">Com Agenda<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-agenda-tbody" data-sort-col="sa" style="text-align:right" onclick="sortTable('ger-agenda-tbody','sa','num')">Sem Agenda<span class="sort-ind"> ▼</span></th>
+      <th class="th-sort" data-sort-table="ger-agenda-tbody" data-sort-col="pct" onclick="sortTable('ger-agenda-tbody','pct','num')">% Agendado<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-agenda-tbody" data-sort-col="prx" onclick="sortTable('ger-agenda-tbody','prx','str')">Próxima Data<span class="sort-ind"></span></th>
     </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div>
   </div>
 </div>
@@ -1855,8 +1859,13 @@ function _renderSemGer(ord, cat){
     return (s||'').toLowerCase().split('(')[0].trim()
       .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   }
+  // comGer = tutores que fizeram pelo menos 1 agendamento (tem_agenda) OU gerenciamento
   var comGer=new Set();
-  d.forEach(function(r){if(r.gerenciado&&r.tutor) comGer.add(normNome(r.tutor));});
+  d.forEach(function(r){
+    if(r.tutor && (r.tem_agenda || r.gerenciado)){
+      comGer.add(normNome(r.tutor));
+    }
+  });
 
   // Tutores ativos sem gerenciamento
   var tutoresAtivos=DB.tutores||[];
