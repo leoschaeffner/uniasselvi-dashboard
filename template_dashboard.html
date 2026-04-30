@@ -626,7 +626,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     </div>
     <div class="tbl-wrap"><table><thead><tr>
       <th>Polo</th><th style="text-align:right">Total Ofertas</th><th style="text-align:right">Com Agenda</th>
-      <th style="text-align:right">Sem Agenda</th><th>% Agendado</th>
+      <th style="text-align:right">Sem Agenda</th><th>% Agendado</th><th>Próxima Data</th>
     </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div>
   </div>
 </div>
@@ -1142,7 +1142,24 @@ function openTutorModal(nome){
   if(!t) return;
   document.getElementById('m-title').textContent=t.n;
   document.getElementById('m-sub').textContent=`${t.p} · ${t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
-  let html=`<div class="kpi-row" style="margin-bottom:14px">
+  // Bloco de perfil/cursos/CH da lotação
+  let perfilHtml='';
+  if(t.perfil||t.cursos||t.ch_semanal){
+    perfilHtml='<div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border)">';
+    if(t.perfil) perfilHtml+=`<div style="font-size:12px;font-weight:700;margin-bottom:4px">👤 ${t.perfil}</div>`;
+    if(t.cursos) perfilHtml+=`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 ${t.cursos}</div>`;
+    if(t.ch_semanal||t.ch_ideal){
+      const chS=t.ch_semanal?t.ch_semanal.toFixed(1)+'h':'—';
+      const chI=t.ch_ideal?t.ch_ideal.toFixed(1)+'h':'—';
+      // 1 prática = 1:30h → calcular quantas práticas cabem na CH ideal
+      const praticasPoss=t.ch_ideal?Math.floor(t.ch_ideal/1.5):0;
+      perfilHtml+=`<div style="font-size:11px;color:var(--muted)">⏱ CH Semanal: <strong>${chS}</strong> · CH Ideal: <strong>${chI}</strong>`;
+      if(praticasPoss) perfilHtml+=` · Capacidade: <strong style="color:var(--teal)">${praticasPoss} práticas/sem</strong>`;
+      perfilHtml+='</div>';
+    }
+    perfilHtml+='</div>';
+  }
+  let html=perfilHtml+`<div class="kpi-row" style="margin-bottom:14px">
     <div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div>
     <div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div>
     <div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div>
@@ -1516,6 +1533,7 @@ function renderGerAgendaTbl(data){
       +'<td style="text-align:right;color:var(--ok)">'+a.com_agenda+'</td>'
       +'<td style="text-align:right;color:'+cor+'">'+a.sem_agenda+'</td>'
       +'<td>'+progCell(a.pct_agendado)+'</td>'
+      +'<td style="font-size:11px;color:var(--muted)">'+(a.datas_agenda&&a.datas_agenda.length?a.datas_agenda.filter(function(d){return d>=new Date().toISOString().slice(0,10);}).sort()[0]||'—':'—')+'</td>'
       +'</tr>';
   }).join('');
   document.querySelectorAll('[data-ag]').forEach(function(row){
@@ -1558,7 +1576,8 @@ function renderGerAgendaTbl(data){
             var temAg=datasSet.has(key);
             var cats=datCat[key]||[];
             var bgColor=temAg?(cats.length?getCatColor(cats[0]):'var(--green)'):'var(--bg)';
-            var titleTxt=temAg?(key+': '+( cats.length?cats.join(', '):'agendado')):'';
+            var tutsDia=(a.datas_por_tutor&&a.datas_por_tutor[key])||[];
+            var titleTxt=temAg?(key+(cats.length?' — '+cats.join(', '):'')+(tutsDia.length?' | '+tutsDia.map(function(t){return t.split('(')[0].trim();}).join(', '):'')):'';
             // Múltiplas categorias: mostrar split colorido
             var innerHtml=String(d);
             if(cats.length>1){
