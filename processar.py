@@ -9,6 +9,15 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
+# Prazos semestrais — edite aqui a cada semestre
+PRAZOS_ORDENS = {
+    'Ordem 1': '14/03/2026',
+    'Ordem 2': '11/04/2026',
+    'Ordem 3': '09/05/2026',
+    'Ordem 4': '06/06/2026',
+    'Ordem 5': '04/07/2026',
+}
+
 # ── Localiza a pasta do script de 3 formas diferentes (a que funcionar serve) ─
 def achar_pasta_script():
     candidatos = []
@@ -260,12 +269,17 @@ def verificar_e_localizar():
     if os.path.isfile(tmpl): print(f"  [OK] template_dashboard.html")
     else:                    print(f"  [FALTA] template_dashboard.html")
 
-    # Planilha de gerenciamento (opcional)
+    # Planilha de gerenciamento (novo formato ou antigo — detectado automaticamente)
     p3 = achar_arquivo(SCRIPT_DIR, "REL_GERAL_DE_GERENCIAMENTO.xlsx")
     if p3: print(f"  [OK] {os.path.basename(p3)}")
-    else:  print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO.xlsx não encontrada (módulo gerenciamento desativado)")
+    else:  print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO.xlsx não encontrada (módulo desativado)")
 
-    return p1, p2, tmpl, p3
+    # Lotação de tutores (enriquecimento)
+    p4 = achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsx")
+    if p4: print(f"  [OK] {os.path.basename(p4)}")
+    else:  print(f"  [INFO] LOTACAO_TUTORES.xlsx não encontrada (dados de perfil indisponíveis)")
+
+    return p1, p2, tmpl, p3, p4
 
 
 def ler_excel(path, **kwargs):
@@ -626,10 +640,7 @@ def processar(p1, p2):
     print(f"[{ts()}] {len(tutores)} tutores, {sum(len(v) for v in catalogo.values())} praticas")
 
     # ── Normaliza campos para compatibilidade com template ────────────────────
-    prazos = {
-        'Ordem 1': '14/03/2026', 'Ordem 2': '11/04/2026',
-        'Ordem 3': '09/05/2026', 'Ordem 4': '06/06/2026', 'Ordem 5': '04/07/2026',
-    }
+    prazos = PRAZOS_ORDENS.copy()
     # Calcula status dinamicamente baseado na data atual
     hoje = datetime.now()
     status_ordem = {}
@@ -834,13 +845,511 @@ def processar(p1, p2):
     })
 
 
+
+def carregar_lotacao(p4):
+    """Carrega LOTACAO_TUTORES.xlsx e retorna mapa nome_lower -> dados do tutor."""
+    from openpyxl import load_workbook as _lwb
+    print(f"[{ts()}] Lendo lotação de tutores...")
+    _wb = _lwb(str(p4), read_only=True, data_only=True)
+    _ws = _wb['Quadro Geral de Lotação'] if 'Quadro Geral de Lotação' in _wb.sheetnames else list(_wb.worksheets)[0]
+    _rows = list(_ws.iter_rows(values_only=True))
+
+    def parse_ch(v):
+        """Converte HH:MM ou HH:MM:SS para horas decimais."""
+        try:
+            v = str(v or '').strip()
+            if ':' in v:
+                parts = v.split(':')
+                return float(parts[0]) + float(parts[1])/60
+            return float(v)
+        except: return 0.0
+
+    lotacao = {}
+    for r in _rows[2:]:
+        if not r[8] or str(r[8]).strip() in ('', '-', 'None', 'nan'):
+            continue
+        nome_raw = str(r[8]).strip()
+        nome_lower = nome_raw.lower()
+        lotacao[nome_lower] = {
+            'nome_oficial': nome_raw,
+            'perfil':       str(r[13] or '').strip(),
+            'cursos':       str(r[0]  or '').strip(),
+            'ch_semanal':   parse_ch(r[14]),
+            'ch_ideal':     parse_ch(r[15]),
+            'contratacao':  str(r[7]  or '').strip(),
+            'polo_hub':     str(r[4]  or '').strip(),
+            'categoria_gio': str(r[29] or '').strip(),
+        }
+    print(f"[{ts()}] Lotação: {len(lotacao)} tutores mapeados")
+    return lotacao
+
+
+def enriquecer_tutores(dados, lotacao):
+    """Enriquece tutores com perfil, cursos e CH da planilha de lotação."""
+    tutores = dados.get('tutores', [])
+    matched = 0
+    for t in tutores:
+        nome_lower = str(t.get('n', '')).lower()
+        # Tentar match exato; depois match parcial
+        info = lotacao.get(nome_lower)
+        if not info:
+            for k, v in lotacao.items():
+                if nome_lower in k or k in nome_lower:
+                    info = v
+                    break
+        if info:
+            t['perfil']     = info['perfil']
+            t['cursos']     = info['cursos']
+            t['ch_semanal'] = info['ch_semanal']
+            t['ch_ideal']   = info['ch_ideal']
+            t['contratacao_lot'] = info['contratacao']
+            matched += 1
+    print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH")
+    dados['tutores'] = tutores
+    return dados
+
+
+def processar_gerenciamento_csv(p5):
+    """Processa o novo CSV detalhado de gerenciamento (REL_DETALHADO.csv)."""
+    import csv, re as _re
+    print(f"[{ts()}] Lendo gerenciamento (novo CSV)...")
+
+    # Detectar encoding
+    for enc in ('utf-8-sig', 'utf-8', 'latin-1', 'cp1252'):
+        try:
+            with open(str(p5), 'r', encoding=enc, errors='replace') as f:
+                rows = list(csv.reader(f, delimiter=';'))
+            break
+        except: continue
+
+    header = rows[0]
+    data   = rows[1:]
+
+    # Mapeamento de colunas pelo nome
+    col = {h.strip().upper(): i for i, h in enumerate(header)}
+    def gc(name): return col.get(name.upper())
+
+    ci_polo   = gc('LABORATORIO')
+    ci_cat    = gc('CATEGORIA')
+    ci_exp    = gc('NOME_EXPERIMENTO')
+    ci_tutor  = gc('TUTOR')
+    ci_mat    = gc('ALUNOS_MATRICULADOS')
+    ci_agend  = gc('ALUNOS_AGENDADOS')
+    ci_pend   = gc('PENDENCIA_AGENDAMENTOS')
+    ci_capa   = gc('CAPACIDADE_TOTAL')
+    ci_ofe    = gc('OFERTAS_CADASTRADAS')
+    ci_situ   = gc('SITU_OFERTA')
+    ci_dt_ger = gc('DT_GERENCIAMENTO')
+    ci_dt_ag  = gc('DT_GERENCIADA')
+    ci_hr_ag  = gc('HR_GERENCIADA')
+    ci_sem    = gc('SEMESTRE')
+
+    def gv(row, ci, default=''):
+        try: return str(row[ci]).strip() if ci is not None and ci < len(row) else default
+        except: return default
+
+    def gn(row, ci):
+        try: return float(str(row[ci]).replace(',','.').strip()) if ci is not None and ci < len(row) and row[ci] else 0
+        except: return 0
+
+    print(f"[{ts()}] Gerenciamento CSV: {len(data)} linhas, {len(header)} colunas")
+
+    # ── Extrair ordem e prática do NOME_EXPERIMENTO ───────────────────────────
+    def extrair_ordem_exp(val):
+        m = _re.match(r'O\.(\d+):\s*(.*)', str(val or ''))
+        if m: return f'Ordem {m.group(1)}', m.group(2).strip()
+        return '', str(val or '').strip()
+
+    # Construir lista de registros
+    registros = []
+    for r in data:
+        polo   = gv(r, ci_polo)
+        cat    = gv(r, ci_cat)
+        exp    = gv(r, ci_exp)
+        tutor  = gv(r, ci_tutor)
+        situ   = gv(r, ci_situ)
+        if not polo: continue
+
+        ordem, pratica = extrair_ordem_exp(exp)
+        mat   = int(gn(r, ci_mat))
+        agend = int(gn(r, ci_agend))
+        capa  = int(gn(r, ci_capa))
+        ofe   = int(gn(r, ci_ofe))
+        dt_ag = gv(r, ci_dt_ag)
+        hr_ag = gv(r, ci_hr_ag)
+
+        # Converter data DD/MM/AAAA para AAAA-MM-DD
+        dt_ag_iso = ''
+        if dt_ag and '/' in dt_ag:
+            try:
+                parts = dt_ag.split('/')
+                dt_ag_iso = f"{parts[2]}-{parts[1]}-{parts[0]}"
+            except: pass
+
+        tem_tutor  = bool(tutor)
+        tem_agenda = bool(dt_ag_iso)
+        gerenciado = ofe > 0
+
+        registros.append({
+            'polo': polo, 'categoria': cat, 'pratica': pratica,
+            'ordem': ordem, 'tutor': tutor if tem_tutor else '',
+            'tem_tutor': tem_tutor, 'tem_agenda': tem_agenda,
+            'gerenciado': gerenciado, 'situ': situ,
+            'alunos_mat': mat, 'alunos_agend': agend,
+            'capacidade': capa, 'ofertas_cad': ofe,
+            'dt_agenda_iso': dt_ag_iso, 'hr_agenda': hr_ag,
+        })
+
+    df_r = pd.DataFrame(registros)
+    if df_r.empty:
+        return {'ger_kpis': {}, 'ger_polo': [], 'ger_cat': [], 'ger_ordem': [],
+                'ger_contratacao': [], 'ger_agendas': [], 'ger_ofertas': []}
+
+    # ── KPIs Globais ──────────────────────────────────────────────────────────
+    total       = len(df_r)
+    com_tutor   = int(df_r['tem_tutor'].sum())
+    sem_tutor   = total - com_tutor
+    gerenciadas = int(df_r['gerenciado'].sum())
+    com_agenda  = int(df_r['tem_agenda'].sum())
+    tot_mat     = int(df_r['alunos_mat'].sum())
+    tot_agend   = int(df_r['alunos_agend'].sum())
+    tot_capa    = int(df_r['capacidade'].sum())
+    ordens_u    = df_r['ordem'].nunique()
+    print(f"[{ts()}] Gerenciamento: {total} ofertas, {gerenciadas} gerenciadas, {sem_tutor} sem tutor")
+    print(f"[{ts()}] Gerenciamento processado: {df_r['polo'].nunique()} polos, {df_r['categoria'].nunique()} categorias, {ordens_u} ordens")
+
+    ger_kpis = {
+        'total_ofertas': total, 'ofertas_gerenciadas': gerenciadas,
+        'ofertas_nao_gerenciadas': total - gerenciadas,
+        'pct_gerenciado': round(gerenciadas/total*100,1) if total else 0,
+        'ofertas_com_tutor': com_tutor, 'ofertas_sem_tutor': sem_tutor,
+        'pct_com_tutor': round(com_tutor/total*100,1) if total else 0,
+        'ofertas_com_agenda': com_agenda,
+        'total_alunos_matriculados': tot_mat,
+        'total_alunos_agendados': tot_agend,
+        'total_capacidade': tot_capa,
+        'pct_ocupacao': round(tot_agend/tot_capa*100,1) if tot_capa else 0,
+        'polos_total': df_r['polo'].nunique(),
+        'polos_sem_tutor': int(df_r[~df_r['tem_tutor']].groupby('polo').ngroups),
+    }
+
+    # ── Por Polo ──────────────────────────────────────────────────────────────
+    ger_polo = []
+    for polo, grp in df_r.groupby('polo'):
+        tutores_unicos = list(grp[grp['tem_tutor']]['tutor'].dropna().unique())
+        ger_polo.append({
+            'polo': str(polo),
+            'total_ofertas': len(grp),
+            'gerenciadas': int(grp['gerenciado'].sum()),
+            'pct_gerenciado': round(grp['gerenciado'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['tem_tutor'].sum()),
+            'sem_tutor': int((~grp['tem_tutor']).sum()),
+            'com_agenda': int(grp['tem_agenda'].sum()),
+            'alunos_matriculados': int(grp['alunos_mat'].sum()),
+            'alunos_agendados': int(grp['alunos_agend'].sum()),
+            'capacidade': int(grp['capacidade'].sum()),
+            'tutores_unicos': [str(t) for t in tutores_unicos],
+        })
+    ger_polo.sort(key=lambda x: -x['sem_tutor'])
+
+    # ── Por Categoria ─────────────────────────────────────────────────────────
+    ger_cat = []
+    for cat, grp in df_r.groupby('categoria'):
+        ger_cat.append({
+            'categoria': str(cat),
+            'total_ofertas': len(grp),
+            'gerenciadas': int(grp['gerenciado'].sum()),
+            'pct_gerenciado': round(grp['gerenciado'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['tem_tutor'].sum()),
+            'sem_tutor': int((~grp['tem_tutor']).sum()),
+            'alunos_matriculados': int(grp['alunos_mat'].sum()),
+            'alunos_agendados': int(grp['alunos_agend'].sum()),
+        })
+    ger_cat.sort(key=lambda x: -x['total_ofertas'])
+
+    # ── Por Ordem ─────────────────────────────────────────────────────────────
+    ger_ordem = []
+    ordem_map = {'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}
+    for ordem in sorted(df_r['ordem'].unique(), key=lambda x: ordem_map.get(x,9)):
+        if not ordem: continue
+        grp = df_r[df_r['ordem']==ordem]
+        # Datas da oferta: usar DATA_OFERTADA e DATA_EXPIRACAO do CSV se disponíveis
+        # Por ora usar prazos configurados
+        dt_ini = ''
+        dt_fim = PRAZOS_ORDENS.get(ordem, '')
+        ger_ordem.append({
+            'ordem': ordem,
+            'total_ofertas': len(grp),
+            'gerenciadas': int(grp['gerenciado'].sum()),
+            'pct_gerenciado': round(grp['gerenciado'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['tem_tutor'].sum()),
+            'alunos_matriculados': int(grp['alunos_mat'].sum()),
+            'alunos_agendados': int(grp['alunos_agend'].sum()),
+            'dt_inicio': dt_ini,
+            'dt_fim': dt_fim,
+        })
+
+    # ── Contratação ───────────────────────────────────────────────────────────
+    ger_contratacao = []
+    for (polo, cat), grp in df_r.groupby(['polo','categoria']):
+        tutores_list = list(grp[grp['tem_tutor']]['tutor'].dropna().unique())
+        tem_tutor = len(tutores_list) > 0
+        ger_contratacao.append({
+            'polo': str(polo), 'categoria': str(cat),
+            'total_ofertas': len(grp),
+            'tem_tutor': tem_tutor,
+            'tutores': [str(t) for t in tutores_list],
+            'status': 'Contratado' if tem_tutor else 'Sem tutor',
+        })
+
+    # ── Agendas por Polo ──────────────────────────────────────────────────────
+    ger_agendas = []
+    for polo, grp in df_r.groupby('polo'):
+        total_p = len(grp)
+        com_ag  = int(grp['tem_agenda'].sum())
+        sem_ag  = total_p - com_ag
+
+        # Datas por categoria
+        datas_por_cat = {}
+        for _, row in grp[grp['tem_agenda']].iterrows():
+            d = row['dt_agenda_iso']
+            c = row['categoria']
+            t = row['tutor'] or ''
+            if d:
+                if d not in datas_por_cat:
+                    datas_por_cat[d] = {'cats': [], 'tutores': []}
+                if c and c not in datas_por_cat[d]['cats']:
+                    datas_por_cat[d]['cats'].append(c)
+                if t and t not in datas_por_cat[d]['tutores']:
+                    datas_por_cat[d]['tutores'].append(t)
+
+        ger_agendas.append({
+            'polo': str(polo),
+            'total': total_p,
+            'com_agenda': com_ag,
+            'sem_agenda': sem_ag,
+            'pct_agendado': round(com_ag/total_p*100, 1) if total_p else 0,
+            'datas_agenda': sorted(datas_por_cat.keys()),
+            'datas_por_cat': {d: v['cats'] for d, v in datas_por_cat.items()},
+            'datas_por_tutor': {d: v['tutores'] for d, v in datas_por_cat.items()},
+        })
+    ger_agendas.sort(key=lambda x: -x['sem_agenda'])
+
+    # ── Detalhe de Ofertas (todas) ────────────────────────────────────────────
+    ger_ofertas_detalhe = []
+    for _, row in df_r.iterrows():
+        ger_ofertas_detalhe.append({
+            'polo': row['polo'], 'categoria': row['categoria'],
+            'ordem': row['ordem'], 'pratica': row['pratica'],
+            'tutor': row['tutor'], 'tem_tutor': row['tem_tutor'],
+            'tem_agenda': row['tem_agenda'], 'gerenciado': row['gerenciado'],
+            'alunos_mat': row['alunos_mat'], 'alunos_agend': row['alunos_agend'],
+            'dt_agenda': row['dt_agenda_iso'], 'hr_agenda': row['hr_agenda'],
+        })
+
+    return {
+        'ger_kpis': ger_kpis, 'ger_polo': ger_polo,
+        'ger_cat': ger_cat, 'ger_ordem': ger_ordem,
+        'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas,
+        'ger_ofertas': ger_ofertas_detalhe,
+    }
+
+
+def _processar_gerenciamento_novo(df_g):
+    """Processa o novo formato de gerenciamento (DataFrame já lido)."""
+    import re as _re
+
+    # Mapeamento de colunas pelo nome exato
+    col = {str(c).strip().upper(): c for c in df_g.columns}
+    def gc(name): return col.get(name.upper())
+
+    c_polo  = gc('LABORATORIO')
+    c_cat   = gc('CATEGORIA')
+    c_exp   = gc('NOME_EXPERIMENTO')
+    c_tutor = gc('TUTOR')
+    c_mat   = gc('ALUNOS_MATRICULADOS')
+    c_agend = gc('ALUNOS_AGENDADOS')
+    c_capa  = gc('CAPACIDADE_TOTAL')
+    c_ofe   = gc('OFERTAS_CADASTRADAS')
+    c_situ  = gc('SITU_OFERTA')
+    c_dt_ag = gc('DT_GERENCIADA')
+    c_hr_ag = gc('HR_GERENCIADA')
+
+    def extrair_ordem_exp(val):
+        m = _re.match(r'O\.(\d+):\s*(.*)', str(val or ''))
+        if m: return f'Ordem {m.group(1)}', m.group(2).strip()
+        return '', str(val or '').strip()
+
+    def safe_int(val):
+        try: return int(float(str(val).replace(',','.').strip() or 0))
+        except: return 0
+
+    # Construir campos calculados
+    df = df_g.copy()
+    df['_POLO']    = df[c_polo].astype(str).str.strip() if c_polo else ''
+    df['_CAT']     = df[c_cat].astype(str).str.strip()  if c_cat  else ''
+    df['_TUTOR']   = df[c_tutor].astype(str).str.strip().replace('nan','') if c_tutor else ''
+    df['_MAT']     = pd.to_numeric(df[c_mat],  errors='coerce').fillna(0).astype(int) if c_mat  else 0
+    df['_AGEND']   = pd.to_numeric(df[c_agend],errors='coerce').fillna(0).astype(int) if c_agend else 0
+    df['_CAPA']    = pd.to_numeric(df[c_capa], errors='coerce').fillna(0).astype(int) if c_capa  else 0
+    df['_OFE']     = pd.to_numeric(df[c_ofe],  errors='coerce').fillna(0).astype(int) if c_ofe   else 0
+    df['_TEM_TUTOR'] = df['_TUTOR'].str.len() > 0
+    df['_GERENCIADO'] = df['_OFE'] > 0
+
+    # Data de agenda
+    dt_col = df[c_dt_ag].astype(str).str.strip() if c_dt_ag else pd.Series([''] * len(df))
+    def to_iso(v):
+        if not v or v == 'nan': return ''
+        try:
+            parts = v.split('/')
+            if len(parts) == 3: return f'{parts[2]}-{parts[1]}-{parts[0]}'
+        except: pass
+        return ''
+    df['_DT_AG_ISO'] = dt_col.apply(to_iso)
+    df['_TEM_AGENDA'] = df['_DT_AG_ISO'].str.len() > 0
+    df['_HR_AG'] = df[c_hr_ag].astype(str).str.strip().replace('nan','') if c_hr_ag else ''
+
+    # Ordem e prática
+    parsed = (df[c_exp] if c_exp else pd.Series([''] * len(df))).apply(extrair_ordem_exp)
+    df['_ORDEM']  = parsed.apply(lambda x: x[0])
+    df['_PRATICA'] = parsed.apply(lambda x: x[1])
+
+    # Filtrar linhas sem polo
+    df = df[df['_POLO'].str.len() > 0].copy()
+
+    total       = len(df)
+    com_tutor   = int(df['_TEM_TUTOR'].sum())
+    gerenciadas = int(df['_GERENCIADO'].sum())
+    com_agenda  = int(df['_TEM_AGENDA'].sum())
+    tot_mat     = int(df['_MAT'].sum())
+    tot_agend   = int(df['_AGEND'].sum())
+    tot_capa    = int(df['_CAPA'].sum())
+
+    print(f"[{ts()}] Gerenciamento: {total} ofertas, {gerenciadas} gerenciadas, {total-com_tutor} sem tutor")
+    print(f"[{ts()}] Gerenciamento processado: {df['_POLO'].nunique()} polos, {df['_CAT'].nunique()} categorias, {df['_ORDEM'].nunique()} ordens")
+
+    ger_kpis = {
+        'total_ofertas': total, 'ofertas_gerenciadas': gerenciadas,
+        'ofertas_nao_gerenciadas': total - gerenciadas,
+        'pct_gerenciado': round(gerenciadas/total*100,1) if total else 0,
+        'ofertas_com_tutor': com_tutor, 'ofertas_sem_tutor': total-com_tutor,
+        'pct_com_tutor': round(com_tutor/total*100,1) if total else 0,
+        'ofertas_com_agenda': com_agenda,
+        'total_alunos_matriculados': tot_mat, 'total_alunos_agendados': tot_agend,
+        'total_capacidade': tot_capa,
+        'pct_ocupacao': round(tot_agend/tot_capa*100,1) if tot_capa else 0,
+        'polos_total': df['_POLO'].nunique(),
+        'polos_sem_tutor': int(df[~df['_TEM_TUTOR']].groupby('_POLO').ngroups),
+    }
+
+    # Por Polo
+    ger_polo = []
+    for polo, grp in df.groupby('_POLO'):
+        tuts = list(grp[grp['_TEM_TUTOR']]['_TUTOR'].dropna().unique())
+        ger_polo.append({
+            'polo': str(polo), 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+            'com_agenda': int(grp['_TEM_AGENDA'].sum()),
+            'alunos_matriculados': int(grp['_MAT'].sum()), 'alunos_agendados': int(grp['_AGEND'].sum()),
+            'capacidade': int(grp['_CAPA'].sum()), 'tutores_unicos': [str(t) for t in tuts],
+        })
+    ger_polo.sort(key=lambda x: -x['sem_tutor'])
+
+    # Por Categoria
+    ger_cat = []
+    for cat, grp in df.groupby('_CAT'):
+        ger_cat.append({
+            'categoria': str(cat), 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+            'alunos_matriculados': int(grp['_MAT'].sum()), 'alunos_agendados': int(grp['_AGEND'].sum()),
+        })
+    ger_cat.sort(key=lambda x: -x['total_ofertas'])
+
+    # Por Ordem
+    ger_ordem = []
+    ordem_sort = {'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}
+    for ordem in sorted(df['_ORDEM'].unique(), key=lambda x: ordem_sort.get(x,9)):
+        if not ordem: continue
+        grp = df[df['_ORDEM']==ordem]
+        ger_ordem.append({
+            'ordem': ordem, 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()),
+            'alunos_matriculados': int(grp['_MAT'].sum()), 'alunos_agendados': int(grp['_AGEND'].sum()),
+            'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(ordem,''),
+        })
+
+    # Contratação
+    ger_contratacao = []
+    for (polo, cat), grp in df.groupby(['_POLO','_CAT']):
+        tuts = list(grp[grp['_TEM_TUTOR']]['_TUTOR'].dropna().unique())
+        ger_contratacao.append({
+            'polo': str(polo), 'categoria': str(cat), 'total_ofertas': len(grp),
+            'tem_tutor': len(tuts)>0, 'tutores': [str(t) for t in tuts],
+            'status': 'Contratado' if len(tuts)>0 else 'Sem tutor',
+        })
+
+    # Agendas por Polo
+    ger_agendas = []
+    for polo, grp in df.groupby('_POLO'):
+        total_p = len(grp); com_ag = int(grp['_TEM_AGENDA'].sum())
+        datas_por_cat = {}; datas_por_tutor = {}
+        for _, row in grp[grp['_TEM_AGENDA']].iterrows():
+            d = row['_DT_AG_ISO']; c = row['_CAT']; t = row['_TUTOR']
+            if d:
+                if d not in datas_por_cat: datas_por_cat[d]=[]
+                if c and c not in datas_por_cat[d]: datas_por_cat[d].append(c)
+                if d not in datas_por_tutor: datas_por_tutor[d]=[]
+                if t and t not in datas_por_tutor[d]: datas_por_tutor[d].append(t)
+        ger_agendas.append({
+            'polo': str(polo), 'total': total_p, 'com_agenda': com_ag,
+            'sem_agenda': total_p-com_ag,
+            'pct_agendado': round(com_ag/total_p*100,1) if total_p else 0,
+            'datas_agenda': sorted(datas_por_cat.keys()),
+            'datas_por_cat': datas_por_cat, 'datas_por_tutor': datas_por_tutor,
+        })
+    ger_agendas.sort(key=lambda x: -x['sem_agenda'])
+
+    # Detalhe de Ofertas
+    ger_ofertas = []
+    for _, row in df.iterrows():
+        ger_ofertas.append({
+            'polo': row['_POLO'], 'categoria': row['_CAT'],
+            'ordem': row['_ORDEM'], 'pratica': row['_PRATICA'],
+            'tutor': row['_TUTOR'], 'tem_tutor': bool(row['_TEM_TUTOR']),
+            'tem_agenda': bool(row['_TEM_AGENDA']), 'gerenciado': bool(row['_GERENCIADO']),
+            'alunos_mat': int(row['_MAT']), 'alunos_agend': int(row['_AGEND']),
+            'dt_agenda': row['_DT_AG_ISO'], 'hr_agenda': row['_HR_AG'],
+        })
+
+    return {
+        'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
+        'ger_ordem': ger_ordem, 'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas, 'ger_ofertas': ger_ofertas,
+    }
+
 def processar_gerenciamento(p3):
-    """Processa a planilha REL_GERAL_DE_GERENCIAMENTO.xlsx e retorna dados de gerenciamento."""
+    """Processa REL_GERAL_DE_GERENCIAMENTO.xlsx — detecta formato novo ou antigo."""
     print(f"[{ts()}] Lendo gerenciamento...")
     df_g = ler_excel(p3)
     print(f"[{ts()}] Gerenciamento: {len(df_g)} linhas, {len(df_g.columns)} colunas")
 
-    # ── Identificar colunas ───────────────────────────────────────────────────
+    # ── Detectar formato: novo (LABORATORIO, NOME_EXPERIMENTO) ou antigo ─────
+    cols_upper = [str(c).upper() for c in df_g.columns]
+    is_novo = 'LABORATORIO' in cols_upper and 'NOME_EXPERIMENTO' in cols_upper
+    if is_novo:
+        print(f"[{ts()}] Formato detectado: NOVO (relatório detalhado)")
+        return _processar_gerenciamento_novo(df_g)
+    else:
+        print(f"[{ts()}] Formato detectado: ANTIGO (GIOCONDA)")
+
+    # ── Identificar colunas (formato antigo) ─────────────────────────────────
     def gcol(df, *partes):
         for c in df.columns:
             cu = str(c).upper()
@@ -1120,7 +1629,7 @@ if __name__ == '__main__':
     print(" Verificando arquivos...")
     print()
 
-    p1, p2, tmpl, p3 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p4 = verificar_e_localizar()
 
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
@@ -1132,9 +1641,21 @@ if __name__ == '__main__':
         sys.exit(1)
 
     print()
-    dados  = processar(p1, p2)
+    dados = processar(p1, p2)
 
-    # Integra dados de gerenciamento se a planilha existir
+    # Lotação de tutores — enriquece dados com perfil, cursos, CH
+    if p4:
+        try:
+            lotacao = carregar_lotacao(p4)
+            dados = enriquecer_tutores(dados, lotacao)
+            dados['tem_lotacao'] = True
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar lotação: {e}")
+            dados['tem_lotacao'] = False
+    else:
+        dados['tem_lotacao'] = False
+
+    # Gerenciamento — detecta formato automaticamente pelo cabeçalho
     if p3:
         try:
             ger_dados = processar_gerenciamento(p3)
