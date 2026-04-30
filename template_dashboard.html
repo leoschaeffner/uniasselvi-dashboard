@@ -651,7 +651,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
         <option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option><option value="tutor">Com tutor</option><option value="ntutor">Sem tutor</option>
       </select>
       <span class="tbl-count" id="ger-det-count">—</span>
-      <button class="btn-export" onclick="exportDetalhe()" title="Exportar relatório polo > tutor > lab">⬇ Relatório</button>
+      <button class="btn-export" onclick="exportDetalhe()" title="Exportar: tutores sem gerenciamento + ofertas detalhadas">⬇ Relatório Completo</button>
       <button class="btn-export" onclick="abrirSemGerenciamento()" title="Tutores sem gerenciamento nesta ordem" style="background:var(--teal)">🔍 Sem Gerenciamento</button>
     </div>
     <div class="tbl-wrap" style="max-height:600px"><table><thead><tr>
@@ -1936,14 +1936,46 @@ function exportarSemGer(){
 
 
 function exportDetalhe(){
-  // Relatório: polo, tutor, laboratório/prática, categoria, ordem, gerenciado, alunos_mat, agendado
-  var d=gerDetData||[];
-  // Aplicar filtros atuais
   var q=(document.getElementById('ger-det-search')||{}).value||'';
   var cat=(document.getElementById('ger-det-cat')||{}).value||'';
   var ord=(document.getElementById('ger-det-ordem')||{}).value||'';
   var st=(document.getElementById('ger-det-status')||{}).value||'';
   q=q.toLowerCase();
+
+  // ── PARTE 1: Tutores SEM gerenciamento (da lista de ativos) ─────────────────
+  function normNomeExp(s){
+    return (s||'').toLowerCase().split('(')[0].trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
+  var dFiltrado=gerDetData||[];
+  if(ord) dFiltrado=dFiltrado.filter(function(r){return r.ordem===ord;});
+  if(cat) dFiltrado=dFiltrado.filter(function(r){return r.categoria===cat;});
+
+  var comGerSet=new Set();
+  dFiltrado.forEach(function(r){
+    if(r.tutor&&(r.tem_agenda||r.gerenciado)) comGerSet.add(normNomeExp(r.tutor));
+  });
+
+  var tutoresAtivos=DB.tutores||[];
+  if(cat) tutoresAtivos=tutoresAtivos.filter(function(t){
+    return t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0;
+  });
+  var semGerRows=tutoresAtivos
+    .filter(function(t){return !comGerSet.has(normNomeExp(t.n));})
+    .map(function(t){
+      return {
+        'Tipo':'SEM GERENCIAMENTO',
+        'Polo':t.p,'Tutor':t.n,'Ordem':ord||'—',
+        'Curso / Lab':catParaCurso(t.c||'—'),'Categoria':t.c||'',
+        'Com Tutor':'Sim','Gerenciou':'Não',
+        'Prática':'—','Total Gerenciados':0,
+        'Alunos Matriculados':0,'Alunos Agendados':0
+      };
+    })
+    .sort(function(a,b){return a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']);});
+
+  // ── PARTE 2: Ofertas detalhadas (com e sem gerenciamento) ───────────────────
+  var d=gerDetData||[];
   if(q) d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
   if(cat) d=d.filter(function(r){return r.categoria===cat;});
   if(ord) d=d.filter(function(r){return r.ordem===ord;});
@@ -1952,36 +1984,35 @@ function exportDetalhe(){
   if(st==='tutor') d=d.filter(function(r){return r.tutor;});
   if(st==='ntutor') d=d.filter(function(r){return !r.tutor;});
 
-  // Agregar por polo+tutor+laboratório
   var agg={};
   d.forEach(function(r){
     var chave=(r.polo||'—')+'|||'+(r.tutor||'Sem tutor')+'|||'+(r.pratica||'—')+'|||'+(r.categoria||'—');
     if(!agg[chave]) agg[chave]={
-      'Polo':r.polo||'—',
-      'Tutor':r.tutor||'Sem tutor',
-      'Ordem':r.ordem||'—',
-      'Laboratório / Prática':(r.pratica||'—'),
+      'Tipo':'OFERTA DETALHADA',
+      'Polo':r.polo||'—','Tutor':r.tutor||'Sem tutor','Ordem':r.ordem||'—',
+      'Prática':r.pratica||'—','Curso / Lab':catParaCurso(r.categoria||'—'),
       'Categoria':r.categoria||'—',
-      'Com Tutor':r.tutor?'Sim':'Não',
-      'Gerenciou':'Não',
-      'Total Gerenciados':0,
-      'Alunos Matriculados':0,
-      'Alunos Agendados':0,
+      'Com Tutor':r.tutor?'Sim':'Não','Gerenciou':'Não',
+      'Total Gerenciados':0,'Alunos Matriculados':0,'Alunos Agendados':0
     };
-    if(r.tutor) agg[chave]['Com Tutor']='Sim';
     if(r.gerenciado){agg[chave]['Gerenciou']='Sim';agg[chave]['Total Gerenciados']++;}
+    if(r.tutor) agg[chave]['Com Tutor']='Sim';
     agg[chave]['Alunos Matriculados']+=r.alunos_mat||0;
     agg[chave]['Alunos Agendados']+=r.alunos_agend||0;
   });
 
-  var rows=Object.values(agg).sort(function(a,b){
+  var ofertaRows=Object.values(agg).sort(function(a,b){
     return a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']);
   });
 
-  if(!rows.length){alert('Sem dados para exportar');return;}
+  // ── Combinar: tutores sem gerenciamento PRIMEIRO, depois ofertas ─────────────
+  var allRows=semGerRows.concat(ofertaRows);
+
+  if(!allRows.length){alert('Sem dados para exportar');return;}
   var suf=ord||'todas_ordens';
-  exportCSV(rows,'detalhe_gerenciamento_'+suf+'_'+new Date().toISOString().slice(0,10)+'.csv');
+  exportCSV(allRows,'gerenciamento_completo_'+suf+'_'+new Date().toISOString().slice(0,10)+'.csv');
 }
+
 
 function exportCSV(rows, filename){
   if(!rows||!rows.length){alert('Sem dados para exportar');return;}
