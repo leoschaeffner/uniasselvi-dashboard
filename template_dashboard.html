@@ -646,6 +646,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       </select>
       <span class="tbl-count" id="ger-det-count">—</span>
       <button class="btn-export" onclick="exportDetalhe()" title="Exportar relatório polo > tutor > lab">⬇ Relatório</button>
+      <button class="btn-export" onclick="abrirAnaliseChTutores()" title="Ver utilização de CH por tutor" style="background:var(--teal)">📊 CH Tutores</button>
     </div>
     <div class="tbl-wrap" style="max-height:600px"><table><thead><tr>
       <th>Polo</th><th>Categoria</th><th>Ordem</th><th>Prática</th><th>Tutor</th>
@@ -1556,55 +1557,79 @@ function renderGerAgendaTbl(data){
         datas.forEach(function(d){var m=d.slice(0,7);if(!mesesMap[m])mesesMap[m]=[];mesesMap[m].push(d);});
         var mesesNames=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
         calHtml='<div style="font-size:11px;font-weight:700;margin:12px 0 6px">📅 Datas de Agendamento ('+datas.length+' datas)</div>';
-        Object.keys(mesesMap).sort().forEach(function(mes){
+        // Meses em grid 2 colunas
+        var mesKeys=Object.keys(mesesMap).sort();
+        calHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px">';
+        mesKeys.forEach(function(mes){
           var parts=mes.split('-');
           var yr=parseInt(parts[0]),mo=parseInt(parts[1])-1;
           var label=mesesNames[mo]+'/'+yr;
           var diasDoMes=new Date(yr,mo+1,0).getDate();
           var firstDay=new Date(yr,mo,1).getDay();
           var datasSet=new Set(mesesMap[mes]);
-          calHtml+='<div style="margin-bottom:12px">';
-          calHtml+='<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px">'+label+'</div>';
-          calHtml+='<div style="display:grid;grid-template-columns:repeat(7,28px);gap:2px">';
+          calHtml+='<div>';
+          calHtml+='<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:4px">'+label+'</div>';
+          calHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">';
           ['D','S','T','Q','Q','S','S'].forEach(function(d){
-            calHtml+='<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted)">'+d+'</div>';
+            calHtml+='<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:2px 0">'+d+'</div>';
           });
           for(var i=0;i<firstDay;i++) calHtml+='<div></div>';
-          var datCat=a.datas_por_cat||{};
-          for(var d=1;d<=diasDoMes;d++){
-            var key=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+          for(var d2=1;d2<=diasDoMes;d2++){
+            var key=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d2).padStart(2,'0');
             var temAg=datasSet.has(key);
             var cats=datCat[key]||[];
-            var bgColor=temAg?(cats.length?getCatColor(cats[0]):'var(--green)'):'var(--bg)';
             var tutsDia=(a.datas_por_tutor&&a.datas_por_tutor[key])||[];
-            var titleTxt=temAg?(key+(cats.length?' — '+cats.join(', '):'')+(tutsDia.length?' | '+tutsDia.map(function(t){return t.split('(')[0].trim();}).join(', '):'')):'';
-            // Múltiplas categorias: mostrar split colorido
-            var innerHtml=String(d);
+            var tutNomes=tutsDia.map(function(t){return t.split('(')[0].trim();});
+            var bgColor=temAg?(cats.length?getCatColor(cats[0]):'var(--green)'):'var(--bg)';
+            var title=temAg?(key+(tutNomes.length?' | '+tutNomes.join(', '):'')+(cats.length?' ['+cats.join(', ')+']':'')):'';
+            var inner=String(d2);
             if(cats.length>1){
-              innerHtml='<div style="font-size:10px;font-weight:700">'+d+'</div>'
-                +'<div style="display:flex;gap:1px;margin-top:1px">'
-                +cats.slice(0,3).map(function(c){return '<div style="width:6px;height:4px;border-radius:2px;background:'+getCatColor(c)+'"></div>';}).join('')
-                +'</div>';
+              inner='<div style="font-size:9px;font-weight:700;line-height:1.2">'+d2+'</div>'
+                +'<div style="display:flex;gap:1px;justify-content:center;margin-top:1px">'
+                +cats.slice(0,3).map(function(c){return '<div style="width:4px;height:3px;border-radius:1px;background:'+getCatColor(c)+'"></div>';}).join('')+'</div>';
             }
-            calHtml+='<div style="text-align:center;font-size:10px;padding:3px;border-radius:4px;'
-              +(temAg?'background:'+bgColor+';color:#fff;font-weight:700':'background:var(--bg);color:var(--muted)')
-              +'" title="'+titleTxt+'">'+innerHtml+'</div>';
+            calHtml+='<div style="text-align:center;font-size:9px;padding:2px;border-radius:3px;'
+              +(temAg?'background:'+bgColor+';color:#fff;font-weight:700':'color:var(--muted)')
+              +'" title="'+title+'">'+inner+'</div>';
           }
           calHtml+='</div></div>';
         });
+        calHtml+='</div>';
       } else {
         calHtml='<div style="color:var(--muted);font-size:11px;margin-top:8px">Sem datas de agendamento registradas para este polo.</div>';
       }
-      var legendaHtml='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:8px;border-top:1px solid var(--border)">'
-        +'<span style="font-size:10px;font-weight:700;color:var(--muted)">Legenda: </span>'
-        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#2196F3;display:inline-block"></span>ENF-INS</span>'
-        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#4CAF50;display:inline-block"></span>BIO-FAR</span>'
-        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#FF9800;display:inline-block"></span>BIO-FISIO</span>'
-        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#9C27B0;display:inline-block"></span>QUÍ/FÍS</span>'
-        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#F44336;display:inline-block"></span>ENGMAKER</span>'
-        +'<span style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:10px;height:10px;border-radius:2px;background:#00BCD4;display:inline-block"></span>NUTRI</span>'
-        +'</div>';
-      document.getElementById('m-body').innerHTML=kpiHtml+calHtml+legendaHtml;
+      // Legenda: tutores e suas categorias agendadas
+      var tutMap={};
+      if(a.datas_por_tutor){
+        Object.entries(a.datas_por_tutor).forEach(function(e){
+          var d=e[0],tuts=e[1];
+          var cats=(a.datas_por_cat&&a.datas_por_cat[d])||[];
+          tuts.forEach(function(t){
+            if(!tutMap[t]) tutMap[t]=[];
+            cats.forEach(function(c){if(tutMap[t].indexOf(c)<0)tutMap[t].push(c);});
+          });
+        });
+      }
+      var legendaTuts=Object.keys(tutMap);
+      var legendaHtml='<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border)">'
+        +'<div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">Tutores com agendamento:</div>'
+        +'<div style="display:flex;flex-direction:column;gap:4px">';
+      if(legendaTuts.length){
+        legendaTuts.forEach(function(t){
+          var cats=tutMap[t];
+          var cor=cats.length?getCatColor(cats[0]):'var(--green)';
+          var nomeShort=t.split('(')[0].trim();
+          legendaHtml+='<div style="display:flex;align-items:center;gap:6px;font-size:11px">'
+            +'<span style="width:10px;height:10px;border-radius:2px;background:'+cor+';flex-shrink:0;display:inline-block"></span>'
+            +'<strong>'+nomeShort+'</strong>'
+            +(cats.length?'<span style="color:var(--muted)"> — '+cats.join(', ')+'</span>':'')
+            +'</div>';
+        });
+      } else {
+        legendaHtml+='<div style="font-size:11px;color:var(--muted)">Nenhum tutor identificado neste polo</div>';
+      }
+      legendaHtml+='</div></div>';
+            document.getElementById('m-body').innerHTML=kpiHtml+calHtml+legendaHtml;
       document.getElementById('modal-overlay').classList.add('show');
     });
   });
@@ -1657,7 +1682,7 @@ function filterGerDetalhe(q){
     rows+='<tr class="tr-polo-hdr">'
       +'<td class="polo-toggle" colspan="2"><strong>'+g.key+'</strong>'
         +'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">'+g.total+' ofertas — clique para expandir</span></td>'
-      +'<td colspan="2" style="color:'+corST+'">'+g.semTutor+' sem tutor</td>'
+      +'<td colspan="2" style="color:'+corST+'">'+(g.semTutor>0?g.semTutor+' sem tutor':'<span style="color:var(--ok)">✓ Todos com tutor</span>')+'</td>'
       +'<td><button class="btn-expand" data-grp="dg'+gi+'">▶ expandir</button></td>'
       +'<td colspan="3">'+progCell(pct)+'</td>'
       +'</tr>';
@@ -1781,6 +1806,96 @@ function exportPraticas(modo){
   exportCSV(out,'praticas_'+modo+'_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
+
+
+// Análise de utilização de CH por tutor no Detalhe
+function abrirAnaliseChTutores(){
+  var d=gerDetData||[];
+  // Aplicar filtros ativos
+  var q=(document.getElementById('ger-det-search')||{}).value||'';
+  var cat=(document.getElementById('ger-det-cat')||{}).value||'';
+  var ord=(document.getElementById('ger-det-ordem')||{}).value||'';
+  var st=(document.getElementById('ger-det-status')||{}).value||'';
+  q=q.toLowerCase();
+  if(q) d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
+  if(cat) d=d.filter(function(r){return r.categoria===cat;});
+  if(ord) d=d.filter(function(r){return r.ordem===ord;});
+
+  // Agrupar por tutor
+  var tutorMap={};
+  d.forEach(function(r){
+    var t=r.tutor||'';
+    if(!t) return;
+    if(!tutorMap[t]) tutorMap[t]={tutor:t,total:0,gerenciado:0,agendado:0,mat:0};
+    tutorMap[t].total++;
+    if(r.gerenciado) tutorMap[t].gerenciado++;
+    if(r.tem_agenda) tutorMap[t].agendado++;
+    tutorMap[t].mat+=r.alunos_mat||0;
+  });
+
+  // Cruzar com CH ideal dos tutores
+  var tutoresDB=DB.tutores||[];
+  var chMap={};
+  tutoresDB.forEach(function(t){
+    if(t.ch_ideal) chMap[t.n.toLowerCase()]=t.ch_ideal;
+  });
+
+  // Calcular % CH utilizada (1 prática gerenciada = 1.5h)
+  var rows=Object.values(tutorMap).map(function(t){
+    var nomeKey=t.tutor.split('(')[0].trim().toLowerCase();
+    var chIdeal=chMap[nomeKey]||0;
+    var chUsada=t.gerenciado*1.5;  // 1 prática = 1:30h
+    var pctCh=chIdeal>0?Math.round(chUsada/chIdeal*100):null;
+    return Object.assign(t,{chIdeal:chIdeal,chUsada:chUsada,pctCh:pctCh});
+  });
+
+  // Ordenar por % CH (menores primeiro para priorizar atenção)
+  rows.sort(function(a,b){
+    if(a.gerenciado===0 && b.gerenciado>0) return -1;
+    if(b.gerenciado===0 && a.gerenciado>0) return 1;
+    return (a.pctCh||0)-(b.pctCh||0);
+  });
+
+  document.getElementById('m-title').textContent='Análise de Carga Horária dos Tutores';
+  document.getElementById('m-sub').textContent=rows.length+' tutores · filtro: '+(ord||'todas ordens')+' '+(cat||'');
+
+  var bodyHtml='<table style="width:100%;border-collapse:collapse;font-size:11px">'
+    +'<thead><tr style="background:var(--bg);position:sticky;top:0">'
+    +'<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Tutor</th>'
+    +'<th style="padding:6px 4px;border-bottom:2px solid var(--border);text-align:right">Ofertas</th>'
+    +'<th style="padding:6px 4px;border-bottom:2px solid var(--border);text-align:right">Ger.</th>'
+    +'<th style="padding:6px 4px;border-bottom:2px solid var(--border);text-align:right">CH Ideal</th>'
+    +'<th style="padding:6px 4px;border-bottom:2px solid var(--border);text-align:right">CH Usada</th>'
+    +'<th style="padding:6px 4px;border-bottom:2px solid var(--border)">Utilização</th>'
+    +'</tr></thead><tbody>';
+
+  rows.forEach(function(t){
+    var alerta=t.gerenciado===0?'var(--red)':t.pctCh!==null&&t.pctCh<50?'var(--yellow-d)':'var(--ok)';
+    var pctTxt=t.pctCh!==null?t.pctCh+'%':'—';
+    var nomeShort=t.tutor.split('(')[0].trim();
+    var barW=t.pctCh!==null?Math.min(t.pctCh,100):0;
+    bodyHtml+='<tr style="border-bottom:1px solid var(--border)">'
+      +'<td style="padding:5px 8px;font-weight:600">'+nomeShort+'</td>'
+      +'<td style="padding:5px 4px;text-align:right">'+t.total+'</td>'
+      +'<td style="padding:5px 4px;text-align:right;color:'+alerta+'">'+t.gerenciado+'</td>'
+      +'<td style="padding:5px 4px;text-align:right">'+( t.chIdeal?t.chIdeal.toFixed(1)+'h':'—')+'</td>'
+      +'<td style="padding:5px 4px;text-align:right">'+t.chUsada.toFixed(1)+'h</td>'
+      +'<td style="padding:5px 4px;min-width:80px">'
+        +'<div style="display:flex;align-items:center;gap:4px">'
+          +'<div style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden">'
+            +'<div style="height:100%;width:'+barW+'%;background:'+alerta+';border-radius:4px"></div>'
+          +'</div>'
+          +'<span style="font-size:10px;font-weight:700;color:'+alerta+';min-width:28px">'+pctTxt+'</span>'
+        +'</div>'
+      +'</td>'
+      +'</tr>';
+  });
+  bodyHtml+='</tbody></table>';
+  bodyHtml+='<div style="font-size:10px;color:var(--muted);margin-top:8px">* CH Usada = gerenciamentos × 1:30h por prática. Vermelho = sem gerenciamento. Amarelo = abaixo de 50% da CH ideal.</div>';
+
+  document.getElementById('m-body').innerHTML=bodyHtml;
+  document.getElementById('modal-overlay').classList.add('show');
+}
 
 function exportDetalhe(){
   // Relatório: polo, tutor, laboratório/prática, categoria, ordem, gerenciado, alunos_mat, agendado
