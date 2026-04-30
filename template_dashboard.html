@@ -1859,12 +1859,10 @@ function _renderSemGer(ord, cat){
     return (s||'').toLowerCase().split('(')[0].trim()
       .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   }
-  // comGer = tutores que fizeram pelo menos 1 agendamento (tem_agenda) OU gerenciamento
+  // comGer = todos que têm oferta atribuída na ordem (qualquer status)
   var comGer=new Set();
   d.forEach(function(r){
-    if(r.tutor && (r.tem_agenda || r.gerenciado)){
-      comGer.add(normNome(r.tutor));
-    }
+    if(r.tutor) comGer.add(normNome(r.tutor));
   });
 
   // Tutores ativos sem gerenciamento
@@ -1951,9 +1949,11 @@ function exportDetalhe(){
   if(ord) dFiltrado=dFiltrado.filter(function(r){return r.ordem===ord;});
   if(cat) dFiltrado=dFiltrado.filter(function(r){return r.categoria===cat;});
 
+  // comGerSet = todos que têm QUALQUER oferta atribuída na ordem
+  // (aparece em OFERTA DETALHADA, não deve aparecer em SEM GERENCIAMENTO)
   var comGerSet=new Set();
   dFiltrado.forEach(function(r){
-    if(r.tutor&&(r.tem_agenda||r.gerenciado)) comGerSet.add(normNomeExp(r.tutor));
+    if(r.tutor) comGerSet.add(normNomeExp(r.tutor));
   });
 
   var tutoresAtivos=DB.tutores||[];
