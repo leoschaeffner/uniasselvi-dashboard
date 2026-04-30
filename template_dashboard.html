@@ -369,9 +369,6 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <button class="sidebar-item" onclick="navTo('ger-ofertas')">
         <span class="si-icon">📊</span><span class="si-label">Ofertas</span>
       </button>
-      <button class="sidebar-item" onclick="navTo('ger-contratacao')">
-        <span class="si-icon">👤</span><span class="si-label">Contratação</span>
-      </button>
       <button class="sidebar-item" onclick="navTo('ger-agendas')">
         <span class="si-icon">📆</span><span class="si-label">Agendas</span>
       </button>
@@ -1853,15 +1850,20 @@ function _renderSemGer(ord, cat){
   var d=gerDetData||[];
   if(ord) d=d.filter(function(r){return r.ordem===ord;});
   if(cat) d=d.filter(function(r){return r.categoria===cat;});
+  // Normalizar nome: minúsculas + sem acentos para comparação robusta
+  function normNome(s){
+    return (s||'').toLowerCase().split('(')[0].trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
   var comGer=new Set();
-  d.forEach(function(r){if(r.gerenciado&&r.tutor) comGer.add(r.tutor.toLowerCase().split('(')[0].trim());});
+  d.forEach(function(r){if(r.gerenciado&&r.tutor) comGer.add(normNome(r.tutor));});
 
   // Tutores ativos sem gerenciamento
   var tutoresAtivos=DB.tutores||[];
   if(cat) tutoresAtivos=tutoresAtivos.filter(function(t){return t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0;});
   var semGer=tutoresAtivos.filter(function(t){
-    return !comGer.has(t.n.toLowerCase().trim());
-  }).sort(function(a,b){return a.p.localeCompare(b.p)||a.n.localeCompare(b.n);});
+    return !comGer.has(normNome(t.n));
+  }).sort(function(a,b){return a.p.localeCompare(b.p,'pt')||a.n.localeCompare(b.n,'pt');});
 
   // Opções de ordem e categoria para os selects do modal
   var ordens=[...new Set((gerDetData||[]).map(function(r){return r.ordem;}).filter(Boolean))].sort();
@@ -2178,23 +2180,23 @@ function sortTable(tbodyId, col, tipo){
   var key = tbodyId + col;
   var asc = _sortState[key] !== true;
   _sortState[key] = asc;
-  // Atualizar indicador visual no th
-  document.querySelectorAll('[data-sort-table="'+tbodyId+'"]').forEach(function(th){
-    th.querySelector('.sort-ind') && (th.querySelector('.sort-ind').textContent = '');
-  });
+  // Indicador visual
+  document.querySelectorAll('[data-sort-table="'+tbodyId+'"] .sort-ind').forEach(function(el){el.textContent='';});
   var thAtivo = document.querySelector('[data-sort-table="'+tbodyId+'"][data-sort-col="'+col+'"] .sort-ind');
   if(thAtivo) thAtivo.textContent = asc ? ' ▲' : ' ▼';
-  // Ordenar as linhas
+  // Ordenar — pega TODAS as tr diretas do tbody (não filha de grupo expandido)
   var tbody = document.getElementById(tbodyId);
   if(!tbody) return;
-  var rows = Array.from(tbody.querySelectorAll('tr.sort-row'));
+  // Usar todas as tr que têm o atributo data-v+col
+  var dataAttr = 'data-v'+col;
+  var rows = Array.from(tbody.querySelectorAll('tr['+dataAttr+']'));
+  if(!rows.length) rows = Array.from(tbody.querySelectorAll('tr.sort-row'));
+  if(!rows.length){ console.warn('sortTable: nenhuma linha com',dataAttr,'em',tbodyId); return; }
   rows.sort(function(a,b){
-    var va = a.dataset['v'+col] || '';
-    var vb = b.dataset['v'+col] || '';
-    if(tipo === 'num'){
-      return asc ? parseFloat(va||0) - parseFloat(vb||0) : parseFloat(vb||0) - parseFloat(va||0);
-    }
-    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    var va = a.getAttribute(dataAttr) || '';
+    var vb = b.getAttribute(dataAttr) || '';
+    if(tipo === 'num') return asc ? parseFloat(va||0)-parseFloat(vb||0) : parseFloat(vb||0)-parseFloat(va||0);
+    return asc ? va.localeCompare(vb,'pt') : vb.localeCompare(va,'pt');
   });
   rows.forEach(function(r){ tbody.appendChild(r); });
 }
