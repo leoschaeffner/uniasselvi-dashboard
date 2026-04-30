@@ -1678,7 +1678,7 @@ if __name__ == '__main__':
     else:
         dados['tem_lotacao'] = False
 
-    # Gerenciamento — detecta formato automaticamente pelo cabeçalho
+        # Gerenciamento — detecta formato automaticamente pelo cabeçalho
     if p3:
         try:
             ger_dados = processar_gerenciamento(p3)
