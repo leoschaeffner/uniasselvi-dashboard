@@ -575,9 +575,14 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerPolo(this.value)" id="ger-polo-search"/>
     <span class="tbl-count" id="ger-polo-count">—</span></div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>Polo</th><th style="text-align:right">Ofertas</th><th style="text-align:right">Gerenciadas</th><th>% Ger.</th>
-      <th style="text-align:right">Com Tutor</th><th style="text-align:right">Sem Tutor</th>
-      <th style="text-align:right">Alunos Mat.</th><th style="text-align:right">Agend.</th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="polo" onclick="sortTable('ger-polo-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="tot" style="text-align:right" onclick="sortTable('ger-polo-tbody','tot','num')">Ofertas<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="ger" style="text-align:right" onclick="sortTable('ger-polo-tbody','ger','num')">Gerenciadas<span class="sort-ind"> ▼</span></th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="pct" onclick="sortTable('ger-polo-tbody','pct','num')">% Ger.<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="ct" style="text-align:right" onclick="sortTable('ger-polo-tbody','ct','num')">Com Tutor<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="st" style="text-align:right" onclick="sortTable('ger-polo-tbody','st','num')">Sem Tutor<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="mat" style="text-align:right" onclick="sortTable('ger-polo-tbody','mat','num')">Alunos Mat.<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-polo-tbody" data-sort-col="ag" style="text-align:right" onclick="sortTable('ger-polo-tbody','ag','num')">Agend.<span class="sort-ind"></span></th>
     </tr></thead><tbody id="ger-polo-tbody"></tbody></table></div>
   </div>
 </div>
@@ -1405,7 +1410,11 @@ function openGerPoloModal(polo){
   document.getElementById('modal-overlay').classList.add('show');
 }
 function renderGerPoloTbl(data){
-  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr style="cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')">
+  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr class="sort-row" style="cursor:pointer"
+    data-vpolo="${esc(p.polo)}" data-vtot="${p.total_ofertas}" data-vger="${p.gerenciadas}"
+    data-vpct="${p.pct_gerenciado}" data-vct="${p.com_tutor}" data-vst="${p.sem_tutor}"
+    data-vmat="${p.alunos_matriculados}" data-vag="${p.alunos_agendados}"
+    onclick="openGerPoloModal('${esc(p.polo)}')">
     <td><strong>${p.polo}</strong></td><td style="text-align:right">${fmtNum(p.total_ofertas)}</td>
     <td style="text-align:right">${fmtNum(p.gerenciadas)}</td><td>${progCell(p.pct_gerenciado)}</td>
     <td style="text-align:right">${fmtNum(p.com_tutor)}</td>
@@ -1432,7 +1441,8 @@ function renderGerContrTbl(data){
     var pend=g.semTutor>0;
     var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
     var corST=pend?'var(--red)':'var(--ok)';
-    rows+='<tr class="tr-polo-hdr'+(pend?' tr-pend':'')+'">'
+    rows+='<tr class="sort-row tr-polo-hdr'+(pend?' tr-pend':'')+'"'
+      +' data-vpolo="'+g.polo+'" data-vlabs="'+g.total+'" data-vst="'+g.semTutor+'" data-vpct="'+pct+'">'
       +'<td class="polo-toggle"><strong>'+g.polo+'</strong></td>'
       +'<td style="text-align:right">'+g.total+'</td>'
       +'<td style="text-align:right;color:'+corST+'">'+g.semTutor+'</td>'
@@ -1626,7 +1636,7 @@ function renderGerAgendaTbl(data){
         legendaHtml+='<div style="display:flex;align-items:center;gap:6px;font-size:11px">'
           +'<span style="width:10px;height:10px;border-radius:2px;background:'+cor+';flex-shrink:0;display:inline-block"></span>'
           +'<strong>'+nomeShort+'</strong>'
-          +(cats.length?'<span style="color:var(--muted)"> — '+cats.join(', ')+'</span>':'')
+          +(cats.length?'<span style="color:var(--muted)"> — '+cats.map(catParaCurso).join(', ')+'</span>':'')
           +'</div>';
       });
     } else {
@@ -1813,70 +1823,86 @@ function exportPraticas(modo){
 
 
 
-// Tutores sem gerenciamento — cruza DB.tutores (ativos) x gerDetData
+// Tutores sem gerenciamento — com filtros internos no modal
 function abrirSemGerenciamento(){
+  // Pré-preencher com filtros ativos da tela Detalhe
   var ord=(document.getElementById('ger-det-ordem')||{}).value||'';
   var cat=(document.getElementById('ger-det-cat')||{}).value||'';
+  _renderSemGer(ord, cat);
+}
 
-  // Conjunto de tutores que têm pelo menos 1 gerenciamento no filtro atual
+function _renderSemGer(ord, cat){
+  // Conjunto de tutores com gerenciamento no filtro
   var d=gerDetData||[];
   if(ord) d=d.filter(function(r){return r.ordem===ord;});
   if(cat) d=d.filter(function(r){return r.categoria===cat;});
-
   var comGer=new Set();
   d.forEach(function(r){if(r.gerenciado&&r.tutor) comGer.add(r.tutor.toLowerCase().split('(')[0].trim());});
 
-  // Tutores ativos que NÃO aparecem no conjunto acima
+  // Tutores ativos sem gerenciamento
   var tutoresAtivos=DB.tutores||[];
   if(cat) tutoresAtivos=tutoresAtivos.filter(function(t){return t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0;});
-
   var semGer=tutoresAtivos.filter(function(t){
-    var nLow=t.n.toLowerCase().trim();
-    return !comGer.has(nLow);
-  });
+    return !comGer.has(t.n.toLowerCase().trim());
+  }).sort(function(a,b){return a.p.localeCompare(b.p)||a.n.localeCompare(b.n);});
 
-  semGer.sort(function(a,b){return a.p.localeCompare(b.p)||a.n.localeCompare(b.n);});
+  // Opções de ordem e categoria para os selects do modal
+  var ordens=[...new Set((gerDetData||[]).map(function(r){return r.ordem;}).filter(Boolean))].sort();
+  var cats=[...new Set((DB.tutores||[]).map(function(t){return t.c;}).filter(Boolean))].sort();
 
+  var filtroLabel=(ord||'Todas ordens')+(cat?' · '+catParaCurso(cat.split('(')[0].trim()):'');
   document.getElementById('m-title').textContent='Tutores sem Gerenciamento';
-  var filtroLabel=(ord||'Todas ordens')+(cat?' · '+cat.split('(')[0].trim():'');
   document.getElementById('m-sub').textContent=semGer.length+' tutores · '+filtroLabel;
 
-  var bodyHtml='<table style="width:100%;border-collapse:collapse;font-size:12px">'
-    +'<thead><tr style="background:var(--bg);position:sticky;top:0">'
+  // Cabeçalho com filtros internos
+  var headerHtml='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">'
+    +'<select id="sgm-ord" style="flex:1;min-width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--bg);color:var(--text)">'
+    +'<option value="">Todas as ordens</option>';
+  ordens.forEach(function(o){headerHtml+='<option value="'+o+'"'+(o===ord?' selected':'')+'>'+o+'</option>';});
+  headerHtml+='</select>'
+    +'<select id="sgm-cat" style="flex:2;min-width:180px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--bg);color:var(--text)">'
+    +'<option value="">Todos os laboratórios</option>';
+  cats.forEach(function(c){headerHtml+='<option value="'+c+'"'+(c===cat?' selected':'')+'>'+catParaCurso(c)+'</option>';});
+  headerHtml+='</select>'
+    +'<button class="btn-export" onclick="exportarSemGer()" style="white-space:nowrap">⬇ Exportar</button>'
+    +'</div>';
+
+  var tableHtml='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<thead><tr style="background:var(--bg)">'
     +'<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Tutor</th>'
     +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Polo</th>'
-    +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Categoria</th>'
-    +'<th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Portfólios</th>'
+    +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Curso / Laboratório</th>'
     +'</tr></thead><tbody>';
 
   semGer.forEach(function(t){
-    bodyHtml+='<tr style="border-bottom:1px solid var(--border)">'
+    tableHtml+='<tr style="border-bottom:1px solid var(--border)">'
       +'<td style="padding:5px 8px;font-weight:600">'+t.n+'</td>'
       +'<td style="padding:5px 8px;font-size:11px">'+t.p+'</td>'
-      +'<td style="padding:5px 8px;font-size:11px">'+( t.c||'—')+'</td>'
-      +'<td style="padding:5px 8px;text-align:right">'+t.te+'/'+( t.tp||'?')+'</td>'
+      +'<td style="padding:5px 8px;font-size:11px">'+catParaCurso(t.c||'—')+'</td>'
       +'</tr>';
   });
 
   if(!semGer.length){
-    bodyHtml+='<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--ok)">✅ Todos os tutores têm gerenciamento registrado para esta ordem!</td></tr>';
+    tableHtml+='<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--ok)">✅ Todos os tutores gerenciaram para esta seleção!</td></tr>';
   }
-
-  bodyHtml+='</tbody></table>';
-  bodyHtml+='<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button class="btn-export" onclick="exportarSemGer()" style="font-size:11px">⬇ Exportar lista</button>'
-    +'</div>';
-  bodyHtml+='<div style="font-size:10px;color:var(--muted);margin-top:6px">* Tutores ativos sem nenhum registro de gerenciamento para o filtro selecionado. Selecione uma ordem específica para resultado mais preciso.</div>';
+  tableHtml+='</tbody></table>';
+  tableHtml+='<div style="font-size:10px;color:var(--muted);margin-top:6px">* Selecione uma ordem específica para resultado mais preciso.</div>';
 
   window._semGerData=semGer;
   window._semGerFiltro=filtroLabel;
-  document.getElementById('m-body').innerHTML=bodyHtml;
+  document.getElementById('m-body').innerHTML=headerHtml+tableHtml;
+  // Event listeners após render (sem aspas aninhadas)
+  var sgOrd=document.getElementById('sgm-ord');
+  var sgCat=document.getElementById('sgm-cat');
+  if(sgOrd) sgOrd.addEventListener('change',function(){_renderSemGer(this.value,(sgCat||{}).value||'');});
+  if(sgCat) sgCat.addEventListener('change',function(){_renderSemGer((sgOrd||{}).value||'',this.value);});
   document.getElementById('modal-overlay').classList.add('show');
 }
 
+
 function exportarSemGer(){
   var rows=(window._semGerData||[]).map(function(t){
-    return {'Tutor':t.n,'Polo':t.p,'Categoria':t.c||'','Portfólios Enviados':t.te,'Total Práticas':t.tp||'?'};
+    return {'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c||'—'),'Categoria':t.c||''};
   });
   exportCSV(rows,'sem_gerenciamento_'+(window._semGerFiltro||'').replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv');
 }
@@ -2129,6 +2155,52 @@ document.addEventListener('click', function(e){
   if(grp.startsWith('cg')) toggleContrGrp(row,grp);
   else if(grp.startsWith('dg')) toggleDetGrp(row,grp);
 });
+
+// ── SORT GENÉRICO DE TABELAS ─────────────────────────────────────────────────
+var _sortState = {};
+function sortTable(tbodyId, col, tipo){
+  var key = tbodyId + col;
+  var asc = _sortState[key] !== true;
+  _sortState[key] = asc;
+  // Atualizar indicador visual no th
+  document.querySelectorAll('[data-sort-table="'+tbodyId+'"]').forEach(function(th){
+    th.querySelector('.sort-ind') && (th.querySelector('.sort-ind').textContent = '');
+  });
+  var thAtivo = document.querySelector('[data-sort-table="'+tbodyId+'"][data-sort-col="'+col+'"] .sort-ind');
+  if(thAtivo) thAtivo.textContent = asc ? ' ▲' : ' ▼';
+  // Ordenar as linhas
+  var tbody = document.getElementById(tbodyId);
+  if(!tbody) return;
+  var rows = Array.from(tbody.querySelectorAll('tr.sort-row'));
+  rows.sort(function(a,b){
+    var va = a.dataset['v'+col] || '';
+    var vb = b.dataset['v'+col] || '';
+    if(tipo === 'num'){
+      return asc ? parseFloat(va||0) - parseFloat(vb||0) : parseFloat(vb||0) - parseFloat(va||0);
+    }
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  rows.forEach(function(r){ tbody.appendChild(r); });
+}
+
+
+// Mapeamento categoria → nome do curso legível
+var CAT_CURSO = {
+  'ENF-INS (Multidisciplinar II)': 'Enfermagem e Instrumentação Cirúrgica',
+  'BIO-FAR (Multidisciplinar I)': 'Biomedicina e Farmácia',
+  'BIO-FISIO-EST-TO (Multidisciplinar III)': 'Fisioterapia, T.Ocupacional e Estética',
+  'QUÍMICA E FÍSICA': 'Química e Física / Agronomia',
+  'ENGMAKER': 'Engenharias e Licenciaturas',
+  'NUTRI (Multidisciplinar IV)': 'Nutrição',
+};
+function catParaCurso(cat){
+  if(!cat) return cat;
+  for(var k in CAT_CURSO){
+    if(cat.toUpperCase().includes(k.split('(')[0].trim().toUpperCase())) return CAT_CURSO[k];
+  }
+  return cat;
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
   DB = DATA_JSON_PLACEHOLDER;
