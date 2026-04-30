@@ -1189,26 +1189,48 @@ def _processar_gerenciamento_novo(df_g):
     df = df_g.copy()
     df['_POLO']    = df[c_polo].astype(str).str.strip() if c_polo else ''
     df['_CAT']     = df[c_cat].astype(str).str.strip()  if c_cat  else ''
-    df['_TUTOR']   = df[c_tutor].astype(str).str.strip().replace('nan','') if c_tutor else ''
+    df['_TUTOR']   = df[c_tutor].fillna('').astype(str).str.strip().replace('nan','') if c_tutor else ''
     df['_MAT']     = pd.to_numeric(df[c_mat],  errors='coerce').fillna(0).astype(int) if c_mat  else 0
     df['_AGEND']   = pd.to_numeric(df[c_agend],errors='coerce').fillna(0).astype(int) if c_agend else 0
     df['_CAPA']    = pd.to_numeric(df[c_capa], errors='coerce').fillna(0).astype(int) if c_capa  else 0
     df['_OFE']     = pd.to_numeric(df[c_ofe],  errors='coerce').fillna(0).astype(int) if c_ofe   else 0
     df['_TEM_TUTOR'] = df['_TUTOR'].str.len() > 0
-    df['_GERENCIADO'] = df['_OFE'] > 0
+    # Gerenciado = tem oferta cadastrada OU situação Concluído
+    _situ_col = df[c_situ].fillna('').astype(str).str.strip() if c_situ else pd.Series([''] * len(df))
+    df['_GERENCIADO'] = (df['_OFE'] > 0) | _situ_col.str.upper().str.contains('CONCLU', na=False)
 
     # Data de agenda
-    dt_col = df[c_dt_ag].astype(str).str.strip() if c_dt_ag else pd.Series([''] * len(df))
+    dt_col = df[c_dt_ag] if c_dt_ag else pd.Series([''] * len(df))  # manter tipo nativo (datetime)
     def to_iso(v):
-        if not v or v == 'nan': return ''
+        if v is None: return ''
+        # Objeto datetime/date nativo (xlsx entrega assim)
         try:
-            parts = v.split('/')
-            if len(parts) == 3: return f'{parts[2]}-{parts[1]}-{parts[0]}'
+            import datetime as _dt
+            if isinstance(v, (_dt.datetime, _dt.date)):
+                return v.strftime('%Y-%m-%d')
+        except: pass
+        sv = str(v).strip()
+        if not sv or sv == 'nan': return ''
+        # String DD/MM/AAAA
+        if '/' in sv:
+            try:
+                parts = sv.split('/')
+                if len(parts) == 3: return f'{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}'
+            except: pass
+        # String AAAA-MM-DD já no formato correto
+        if '-' in sv and len(sv) >= 10:
+            return sv[:10]
+        # Número serial do Excel
+        try:
+            n = float(sv)
+            import datetime as _dt
+            base = _dt.date(1899, 12, 30)
+            return (base + _dt.timedelta(days=int(n))).strftime('%Y-%m-%d')
         except: pass
         return ''
     df['_DT_AG_ISO'] = dt_col.apply(to_iso)
     df['_TEM_AGENDA'] = df['_DT_AG_ISO'].str.len() > 0
-    df['_HR_AG'] = df[c_hr_ag].astype(str).str.strip().replace('nan','') if c_hr_ag else ''
+    df['_HR_AG'] = df[c_hr_ag].fillna('').astype(str).str.strip().replace('nan','').replace('NaT','') if c_hr_ag else ''
 
     # Ordem e prática
     parsed = (df[c_exp] if c_exp else pd.Series([''] * len(df))).apply(extrair_ordem_exp)
@@ -1227,6 +1249,7 @@ def _processar_gerenciamento_novo(df_g):
     tot_capa    = int(df['_CAPA'].sum())
 
     print(f"[{ts()}] Gerenciamento: {total} ofertas, {gerenciadas} gerenciadas, {total-com_tutor} sem tutor")
+    print(f"[{ts()}] Agendas: {com_agenda} com data · amostra datas: {sorted(df[df['_TEM_AGENDA']]['_DT_AG_ISO'].head(3).tolist())}")
     print(f"[{ts()}] Gerenciamento processado: {df['_POLO'].nunique()} polos, {df['_CAT'].nunique()} categorias, {df['_ORDEM'].nunique()} ordens")
 
     ger_kpis = {
