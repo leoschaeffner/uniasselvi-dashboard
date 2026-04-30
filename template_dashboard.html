@@ -1542,7 +1542,9 @@ function renderGerAgendaTbl(data){
     var cor=a.sem_agenda>0?'var(--red)':'var(--ok)';
     var proxData=a.datas_agenda&&a.datas_agenda.length
       ?a.datas_agenda.filter(function(d){return d>=new Date().toISOString().slice(0,10);}).sort()[0]||'—':'—';
-    return '<tr style="cursor:pointer" data-ag="'+i+'">'
+    return '<tr class="sort-row" style="cursor:pointer" data-ag="'+i+'" data-polo="'+a.polo.replace(/"/g,'&quot;')+'"'
+      +' data-vpolo="'+a.polo+'" data-vtot="'+a.total+'" data-vca="'+a.com_agenda
+      +'" data-vsa="'+a.sem_agenda+'" data-vpct="'+a.pct_agendado+'" data-vprx="'+proxData+'">'
       +'<td><strong>'+a.polo+'</strong></td>'
       +'<td style="text-align:right">'+a.total+'</td>'
       +'<td style="text-align:right;color:var(--ok)">'+a.com_agenda+'</td>'
@@ -1555,7 +1557,8 @@ function renderGerAgendaTbl(data){
   el.onclick=function(e){
     var row=e.target.closest('[data-ag]');
     if(!row) return;
-    var a=window._agData[+row.dataset.ag];
+    var polo=row.dataset.polo||'';
+    var a=polo?(window._agData||[]).find(function(x){return x.polo===polo;}):window._agData[+row.dataset.ag];
     if(!a) return;
     // Construir modal com KPIs + calendário 2 colunas
     var kpiHtml='<div class="kpi-row">'
@@ -1632,11 +1635,25 @@ function renderGerAgendaTbl(data){
       legendaTuts.forEach(function(t){
         var cats=tutMap[t];
         var cor=cats.length?getCatColor(cats[0]):'var(--green)';
-        var nomeShort=t.split('(')[0].trim();
+        // Apenas primeiro e segundo nome
+        var partes=t.split('(')[0].trim().split(' ');
+        var nomeShort=partes[0]+(partes.length>1?' '+partes[1]:'');
+        // Categoria principal curta
+        function catCurta(c){
+          if(!c) return '';
+          if(/fisio|estet|ocup/i.test(c)) return 'Fisioterapia/Estética';
+          if(/enf|instrum/i.test(c)) return 'Enfermagem';
+          if(/bio.far|farmac|biomed/i.test(c)) return 'Biomedicina/Farmácia';
+          if(/nutri/i.test(c)) return 'Nutrição';
+          if(/engmak|engenh|licenc/i.test(c)) return 'Engenharias';
+          if(/quimic|fisica|agrono/i.test(c)) return 'Química/Física';
+          return c.split('(')[0].trim().split(' ').slice(0,2).join(' ');
+        }
+        var catLabel=cats.length?catCurta(cats[0]):'';
         legendaHtml+='<div style="display:flex;align-items:center;gap:6px;font-size:11px">'
           +'<span style="width:10px;height:10px;border-radius:2px;background:'+cor+';flex-shrink:0;display:inline-block"></span>'
           +'<strong>'+nomeShort+'</strong>'
-          +(cats.length?'<span style="color:var(--muted)"> — '+cats.map(catParaCurso).join(', ')+'</span>':'')
+          +(catLabel?'<span style="color:var(--muted)"> — '+catLabel+'</span>':'')
           +'</div>';
       });
     } else {
@@ -1873,16 +1890,15 @@ function _renderSemGer(ord, cat){
     +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Polo</th>'
     +'<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Curso / Laboratório</th>'
     +'</tr></thead><tbody>';
-
   semGer.forEach(function(t){
+    var cursoNome=catParaCurso(t.c||'—');
     tableHtml+='<tr style="border-bottom:1px solid var(--border)">'
       +'<td style="padding:5px 8px;font-weight:600">'+t.n+'</td>'
       +'<td style="padding:5px 8px;font-size:11px">'+t.p+'</td>'
-      +'<td style="padding:5px 8px;font-size:11px">'+catParaCurso(t.c||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-size:11px">'+cursoNome+'</td>'
       +'</tr>';
   });
-
-  if(!semGer.length){
+    if(!semGer.length){
     tableHtml+='<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--ok)">✅ Todos os tutores gerenciaram para esta seleção!</td></tr>';
   }
   tableHtml+='</tbody></table>';
