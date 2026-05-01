@@ -1881,7 +1881,17 @@ function _renderSemGer(ord, cat){
 
   // Opções de ordem e categoria para os selects do modal
   var ordens=[...new Set((gerDetData||[]).map(function(r){return r.ordem;}).filter(Boolean))].sort();
-  var cats=[...new Set((DB.tutores||[]).map(function(t){return t.c;}).filter(Boolean))].sort();
+  // Usar categorias canônicas do catálogo em vez de derivar de DB.tutores
+  // (evita categorias compostas como "ENGMAKER+QUÍMICA E FÍSICA" aparecerem como opção)
+  var catsCanon=[
+    'ENF-INS (Multidisciplinar II)',
+    'BIO-FAR (Multidisciplinar I)',
+    'BIO-FISIO-EST-TO (Multidisciplinar III)',
+    'QUÍMICA E FÍSICA',
+    'ENGMAKER',
+    'NUTRI (Multidisciplinar IV)',
+  ];
+  var cats=catsCanon;
 
   var filtroLabel=(ord||'Todas ordens')+(cat?' · '+catParaCurso(cat.split('(')[0].trim()):'');
   document.getElementById('m-title').textContent='Tutores sem Gerenciamento';
@@ -1958,9 +1968,15 @@ function exportDetalhe(){
 
   // Tutores ativos SEM oferta atribuída
   var tutoresAtivos=DB.tutores||[];
-  if(cat) tutoresAtivos=tutoresAtivos.filter(function(t){
-    return t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0;
-  });
+  if(cat){
+    var catBusca=cat.split('(')[0].trim().toUpperCase();
+    tutoresAtivos=tutoresAtivos.filter(function(t){
+      if(!t.c) return false;
+      // Dividir categorias compostas por + e verificar se alguma bate
+      var partes=t.c.toUpperCase().split('+').map(function(s){return s.trim();});
+      return partes.some(function(p){return p===catBusca||p.indexOf(catBusca)>=0;});
+    });
+  }
   // Deduplicar por nome+polo antes de exportar
   var semGerExpMap={};
   tutoresAtivos.filter(function(t){return !comGerSet.has(normNomeExp(t.n));})
