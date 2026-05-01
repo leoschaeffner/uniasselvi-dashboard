@@ -1868,9 +1868,16 @@ function _renderSemGer(ord, cat){
   // Tutores ativos sem gerenciamento
   var tutoresAtivos=DB.tutores||[];
   if(cat) tutoresAtivos=tutoresAtivos.filter(function(t){return t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0;});
-  var semGer=tutoresAtivos.filter(function(t){
+  // Filtrar e deduplicar por nome (evita duplicatas de tutores multi-categoria)
+  var semGerMap={};
+  tutoresAtivos.filter(function(t){
     return !comGer.has(normNome(t.n));
-  }).sort(function(a,b){return a.p.localeCompare(b.p,'pt')||a.n.localeCompare(b.n,'pt');});
+  }).forEach(function(t){
+    var key=normNome(t.n)+'|'+normNome(t.p);
+    if(!semGerMap[key]) semGerMap[key]=t;
+  });
+  var semGer=Object.values(semGerMap)
+    .sort(function(a,b){return a.p.localeCompare(b.p,'pt')||a.n.localeCompare(b.n,'pt');});
 
   // Opções de ordem e categoria para os selects do modal
   var ordens=[...new Set((gerDetData||[]).map(function(r){return r.ordem;}).filter(Boolean))].sort();
@@ -1954,16 +1961,19 @@ function exportDetalhe(){
   if(cat) tutoresAtivos=tutoresAtivos.filter(function(t){
     return t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0;
   });
-  var rows=tutoresAtivos
-    .filter(function(t){return !comGerSet.has(normNomeExp(t.n));})
-    .map(function(t){
-      return {
+  // Deduplicar por nome+polo antes de exportar
+  var semGerExpMap={};
+  tutoresAtivos.filter(function(t){return !comGerSet.has(normNomeExp(t.n));})
+    .forEach(function(t){
+      var key=normNomeExp(t.n)+'|'+normNomeExp(t.p);
+      if(!semGerExpMap[key]) semGerExpMap[key]={
         'Tutor':t.n,'Polo':t.p,
         'Curso / Lab':catParaCurso(t.c||'—'),
         'Categoria':t.c||'',
         'Ordem':ord||'—'
       };
-    })
+    });
+  var rows=Object.values(semGerExpMap)
     .sort(function(a,b){return a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']);});
 
   if(!rows.length){alert('Todos os tutores têm oferta atribuída para esta seleção!');return;}
