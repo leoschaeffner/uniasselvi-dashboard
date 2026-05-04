@@ -655,8 +655,17 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <button class="btn-export" onclick="abrirSemGerenciamento()" title="Tutores sem gerenciamento nesta ordem" style="background:var(--teal)">🔍 Sem Gerenciamento</button>
     </div>
     <div class="tbl-wrap" style="max-height:600px"><table><thead><tr>
-      <th>Polo</th><th>Categoria</th><th>Ordem</th><th>Prática</th><th>Tutor</th>
-      <th style="text-align:right">Al. Mat.</th><th style="text-align:right">Agend.</th><th>Status</th>
+      <th onclick="sortTable('ger-det-tbody','polo','str')">Polo</th>
+      <th onclick="sortTable('ger-det-tbody','tutor','str')">Tutor</th>
+      <th>Curso / Lab</th>
+      <th style="text-align:center">O.1</th>
+      <th style="text-align:center">O.2</th>
+      <th style="text-align:center">O.3</th>
+      <th style="text-align:center">O.4</th>
+      <th style="text-align:right">CH Cont.</th>
+      <th style="text-align:right">CH Ger.</th>
+      <th style="text-align:right">CH Rest.</th>
+      <th>% Ger.</th>
     </tr></thead><tbody id="ger-det-tbody"></tbody></table></div>
   </div>
 </div>
@@ -1693,54 +1702,183 @@ function filterGerDetalhe(q){
   if(st==='tutor') d=d.filter(function(r){return r.tutor;});
   if(st==='ntutor') d=d.filter(function(r){return !r.tutor;});
 
-  // Se não há filtro de ordem específico, agrupar por Ordem; caso contrário por Polo
-  var groupBy=ord?'polo':'ordem';
-  var grps={};
+  // ── Agrupar por TUTOR ────────────────────────────────────────────────────
+  var tutorMap={};
   d.forEach(function(r){
-    var key=groupBy==='ordem'?(r.ordem||'—'):(r.polo||'—');
-    if(!grps[key]) grps[key]={key:key,total:0,semTutor:0,rows:[]};
-    grps[key].total++;
-    if(!r.tutor) grps[key].semTutor++;
-    grps[key].rows.push(r);
+    var key=(r.tutor||'__SEM_TUTOR__')+'|||'+(r.polo||'')+'|||'+(r.categoria||'');
+    if(!tutorMap[key]) tutorMap[key]={
+      tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',
+      ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0
+    };
+    var t=tutorMap[key];
+    t.totalOfertas++;
+    t.totalMat+=r.alunos_mat||0;
+    t.totalAgend+=r.alunos_agend||0;
+    if(!t.ordens[r.ordem]) t.ordens[r.ordem]={ger:0,total:0,praticas:[]};
+    t.ordens[r.ordem].total++;
+    if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}
+    t.ordens[r.ordem].praticas.push(r);
   });
+
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
-  var sortedGrp=Object.values(grps).sort(function(a,b){
-    if(groupBy==='ordem') return (ordemOrder[a.key]||9)-(ordemOrder[b.key]||9);
-    return b.semTutor-a.semTutor;
+  var sorted=Object.values(tutorMap).sort(function(a,b){
+    if(!a.tutor && b.tutor) return 1;
+    if(a.tutor && !b.tutor) return -1;
+    return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');
   });
+
   var rows='';
-  sortedGrp.forEach(function(g,gi){
-    var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;
-    var corST=g.semTutor>0?'var(--red)':'var(--ok)';
-    rows+='<tr class="tr-polo-hdr">'
-      +'<td class="polo-toggle" colspan="2"><strong>'+g.key+'</strong>'
-        +'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px">'+g.total+' ofertas — clique para expandir</span></td>'
-      +'<td colspan="2" style="color:'+corST+'">'+(g.semTutor>0?g.semTutor+' sem tutor':'<span style="color:var(--ok)">✓ Todos com tutor</span>')+'</td>'
-      +'<td><button class="btn-expand" data-grp="dg'+gi+'">▶ expandir</button></td>'
-      +'<td colspan="3">'+progCell(pct)+'</td>'
+  sorted.forEach(function(t,gi){
+    var pct=t.totalOfertas?Math.round(t.totalGer/t.totalOfertas*100):0;
+    var semTutor=!t.tutor;
+    var cor=semTutor?'var(--red)':pct===100?'var(--ok)':pct>0?'var(--yellow-d)':'var(--red)';
+    var tutorDisplay=t.tutor||'<span style="color:var(--red)">Sem tutor</span>';
+    // Buscar dados de CH do tutor em DB.tutores
+    var normT=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};
+    var dbTutor=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normT(x.n)===normT(t.tutor);});
+    var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;
+    // Arredondar para CH contratada padrão (4,8,12,20,24h)
+    var padraoCH=[4,8,12,20,24];
+    var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});
+    // Fórmula correta:
+    // 25% da CH = administrativo → 75% para práticas
+    // Cada prática = 1.5h → práticas/semana = (CH×0.75)/1.5
+    // Cada ordem = 4 semanas → capacidade/ordem = práticas/semana × 4
+    var praticasSemana=chCont?Math.floor((chCont*0.75)/1.5):null;  // ex: 8h→4/semana
+    var capOrdem=praticasSemana?praticasSemana*4:null;               // ex: 4×4=16/ordem
+
+    // Células por ordem: gerenciou / capacidade
+    var ordCells='';
+    ['Ordem 1','Ordem 2','Ordem 3','Ordem 4'].forEach(function(o){
+      var od=t.ordens[o];
+      var ger=od?od.ger:0;
+      var total=od?od.total:0;
+      if(!od&&!capOrdem){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}
+      if(capOrdem){
+        // Mostrar: gerenciou / capacidade máxima da CH
+        var corO=ger>=capOrdem?'var(--ok)':ger>0?'var(--yellow-d)':'var(--red)';
+        ordCells+='<td style="text-align:center;font-size:11px" title="'+ger+' gerenciadas de '+total+' atribuídas (cap: '+capOrdem+'/ordem)">'
+          +'<span style="font-weight:700;color:'+corO+'">'+ger+'</span>'
+          +'<span style="color:var(--dim)">/'+capOrdem+'</span></td>';
+      } else {
+        var pO2=total?Math.round(ger/total*100):0;
+        var corO2=pO2===100?'var(--ok)':pO2>0?'var(--yellow-d)':'var(--red)';
+        ordCells+='<td style="text-align:center;font-size:11px"><span style="font-weight:700;color:'+corO2+'">'+ger+'/'+total+'</span></td>';
+      }
+    });
+
+    // CH Gerenciada = práticas gerenciadas × 1.5h
+    var chGerH=(t.totalGer*1.5).toFixed(1);
+    var chGer=chGerH+'h';
+    // CH Restante = (capOrdem×nOrdens - totalGer) × 1.5h
+    var nOrdens=Object.keys(t.ordens).length||1;
+    var capTotal=capOrdem?capOrdem*nOrdens:null;
+    var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;
+    var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
+
+    var chContCell=chCont
+      ?'<td style="text-align:right;font-size:11px;font-weight:700;color:var(--teal)" title="'+praticasSemana+' práticas/semana · '+capOrdem+' cap/ordem">'+chCont+'h</td>'
+      :'<td style="text-align:right;color:var(--dim)">—</td>';
+    var chRestCell=chRestH!==null
+      ?'<td style="text-align:right;font-size:11px;font-weight:700;color:'+(parseFloat(chRestH)>0?'var(--red)':'var(--ok)')+'">'+chRestH+'h'+(praticasRest>0?' <span style="font-size:9px">('+praticasRest+' ag)</span>':'')+'</td>'
+      :'<td style="text-align:right;color:var(--dim)">—</td>';    rows+='<tr class="tr-polo-hdr" style="cursor:pointer" data-det="'+gi+'">'
+      +'<td class="polo-toggle"><strong>'+t.polo+'</strong></td>'
+      +'<td style="font-size:11px">'+tutorDisplay+'</td>'
+      +'<td style="font-size:11px">'+catParaCurso(t.categoria)+'</td>'
+      +ordCells
+      +chContCell
+      +'<td style="text-align:right;font-size:11px">'+chGer+'</td>'
+      +chRestCell
+      +'<td>'+progCell(pct)+'</td>'
       +'</tr>';
-    g.rows.slice(0,150).forEach(function(r){
-      var tutorCell=r.tutor?r.tutor:'<span style="color:var(--red)">—</span>';
+    // Linhas expandíveis por ordem
+    Object.keys(t.ordens).sort(function(a,b){return (ordemOrder[a]||9)-(ordemOrder[b]||9);}).forEach(function(o){
+      var od=t.ordens[o];
       rows+='<tr class="tr-polo-child" data-dg="dg'+gi+'">'
-        +'<td style="font-size:11px;padding-left:28px!important">'+(groupBy==='ordem'?r.polo:r.ordem)+'</td>'
-        +'<td style="font-size:11px">'+r.categoria+'</td>'
-        +'<td>'+r.ordem+'</td>'
-        +'<td style="font-size:11px">'+r.pratica+'</td>'
-        +'<td style="font-size:11px">'+tutorCell+'</td>'
-        +'<td style="text-align:right">'+fmtNum(r.alunos_mat)+'</td>'
-        +'<td style="text-align:right">'+fmtNum(r.alunos_agend)+'</td>'
-        +'<td>'
-          +(r.tutor
-            ?'<span class="badge ok">Com Tutor</span>'
-            :'<span class="badge pend">Sem Tutor</span>')
-          +(r.gerenciado?' <span style="font-size:9px;color:var(--teal)">✓Cad.</span>':'')
-          +'</td>'
+        +'<td colspan="2" style="padding-left:28px!important;font-size:11px"><strong>'+o+'</strong> — '+od.ger+' gerenciadas de '+od.total+'</td>'
+        +'<td colspan="2" style="font-size:11px">'+od.praticas.filter(function(r){return r.gerenciado;}).map(function(r){return r.pratica;}).slice(0,3).join('; ')+(od.praticas.filter(function(r){return r.gerenciado;}).length>3?'...':'')+'</td>'
+        +'<td style="text-align:right;font-size:11px">'+(od.ger*1.5).toFixed(1)+'h</td>'
+        +'<td></td>'
+        +'<td>'+progCell(od.total?Math.round(od.ger/od.total*100):0)+'</td>'
         +'</tr>';
     });
   });
+
   document.getElementById('ger-det-tbody').innerHTML=rows;
-  document.getElementById('ger-det-count').textContent=d.length+' ofertas em '+sortedGrp.length+' grupos';
+  document.getElementById('ger-det-count').textContent=sorted.length+' tutores ('+d.length+' ofertas)';
+
+  // Click nos grupos → abre modal do tutor
+  document.querySelectorAll('[data-det]').forEach(function(row){
+    row.addEventListener('click',function(e){
+      if(e.target.closest('.btn-expand')) return;
+      var gi=this.dataset.det;
+      var t=sorted[+gi];
+      if(!t) return;
+      _openDetTutorModal(t, sorted);
+    });
+  });
 }
+
+function _openDetTutorModal(t, allTutores){
+  var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
+  // Buscar CH do tutor na Lotação
+  var normM=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};
+  var dbTM=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normM(x.n)===normM(t.tutor);});
+  var chSemM=dbTM&&dbTM.ch_semanal?dbTM.ch_semanal:null;
+  // Arredondar para padrão contratado
+  var padCHM=[4,8,12,20,24];
+  var chContM=!chSemM?null:padCHM.reduce(function(a,b){return Math.abs(b-chSemM)<Math.abs(a-chSemM)?b:a;});
+  // Capacidade: 75% da CH para práticas ÷ 1.5h × 4 semanas/ordem
+  var pracSemM=chContM?Math.floor((chContM*0.75)/1.5):null;
+  var capOrdM=pracSemM?pracSemM*4:null;
+  var nOrdM=Object.keys(t.ordens).length||1;
+  var capTotM=capOrdM?capOrdM*nOrdM:null;
+  // CH Gerenciada = práticas × 1.5h
+  var chGer=t.totalGer*1.5;
+  // Práticas restantes e CH restante
+  var pracRestM=capTotM!==null?Math.max(0,capTotM-t.totalGer):null;
+  var chRest=pracRestM!==null?pracRestM*1.5:null;
+
+  document.getElementById('m-title').textContent=t.tutor||'Sem tutor';
+  document.getElementById('m-sub').textContent=t.polo+' · '+catParaCurso(t.categoria);
+
+  var kpiHtml='<div class="kpi-row">'
+    +'<div class="kpi kpi-green"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">'+t.totalGer+'</div><div class="kpi-detail">'+chGer.toFixed(1)+'h realizadas</div></div>'
+    +(chContM?'<div class="kpi kpi-teal"><div class="kpi-label">CH Contratada</div><div class="kpi-value">'+chContM+'h</div><div class="kpi-detail">'+pracSemM+' práticas/sem · '+capOrdM+'/ordem</div></div>':'')
+    +(capTotM?'<div class="kpi kpi-ok"><div class="kpi-label">Capacidade Total</div><div class="kpi-value">'+capTotM+'</div><div class="kpi-detail">práticas em '+nOrdM+' ordens</div></div>':'')
+    +(chRest!==null?'<div class="kpi kpi-'+(chRest>0?'red':'ok')+'"><div class="kpi-label">CH Restante</div><div class="kpi-value">'+chRest.toFixed(1)+'h</div>'+(pracRestM>0?'<div class="kpi-detail">'+pracRestM+' práticas não gerenciadas</div>':'<div class="kpi-detail">✓ Capacidade aproveitada</div>')+'</div>':'')
+    +'<div class="kpi kpi-yellow"><div class="kpi-label">Al. Matriculados</div><div class="kpi-value">'+fmtNum(t.totalMat)+'</div></div>'
+    +'<div class="kpi kpi-teal"><div class="kpi-label">Al. Agendados</div><div class="kpi-value">'+fmtNum(t.totalAgend)+'</div></div>'
+    +'</div>';
+
+  var ordensHtml='';
+  Object.keys(t.ordens).sort(function(a,b){return (ordemOrder[a]||9)-(ordemOrder[b]||9);}).forEach(function(o){
+    var od=t.ordens[o];
+    var pct=od.total?Math.round(od.ger/od.total*100):0;
+    var gerPracs=od.praticas.filter(function(r){return r.gerenciado;});
+    var pendPracs=od.praticas.filter(function(r){return !r.gerenciado;});
+    ordensHtml+='<div style="margin-bottom:16px;padding:12px;border:1px solid var(--border);border-radius:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<strong>'+o+'</strong>'
+        +'<span style="font-size:11px;color:var(--muted)">'+od.ger+'/'+od.total+' · '+(od.ger*1.5).toFixed(1)+'h</span>'
+      +'</div>'
+      +progCell(pct);
+    if(gerPracs.length){
+      ordensHtml+='<div style="margin-top:8px;font-size:10px;font-weight:700;color:var(--ok);margin-bottom:4px">✓ Gerenciadas ('+gerPracs.length+')</div>';
+      ordensHtml+=gerPracs.map(function(r){return '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">'+r.pratica+'<span style="float:right;color:var(--muted)">'+fmtNum(r.alunos_mat)+' al.</span></div>';}).join('');
+    }
+    if(pendPracs.length){
+      ordensHtml+='<div style="margin-top:8px;font-size:10px;font-weight:700;color:var(--red);margin-bottom:4px">✗ Pendentes ('+pendPracs.length+')</div>';
+      ordensHtml+=pendPracs.slice(0,5).map(function(r){return '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);color:var(--muted)">'+r.pratica+'</div>';}).join('');
+      if(pendPracs.length>5) ordensHtml+='<div style="font-size:10px;color:var(--dim)">+ '+(pendPracs.length-5)+' mais...</div>';
+    }
+    ordensHtml+='</div>';
+  });
+
+  document.getElementById('m-body').innerHTML=kpiHtml+ordensHtml;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
 function toggleDetGrp(hdr,gid){
   hdr.classList.toggle('open');
   document.querySelectorAll('[data-dg="'+gid+'"]').forEach(function(r){r.classList.toggle('vis');});
