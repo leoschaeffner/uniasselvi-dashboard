@@ -1860,24 +1860,35 @@ function _renderSemGer(ord, cat){
       .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
       .replace(/\s+/g,' ').trim();
   }
-  // comGer = todos que têm oferta atribuída na ordem (qualquer status)
-  var comGer=new Set();
+  // Normalizar polo: remove prefixo "LAP - " para cruzar com DB.tutores
+  function normPolo(p){
+    return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();
+  }
+  // Construir mapa polo_norm -> Set de nomes normalizados com oferta
+  var poloTutorMap={};
   d.forEach(function(r){
-    if(r.tutor) comGer.add(normNome(r.tutor));
+    if(r.tutor && r.polo){
+      var pk=normPolo(r.polo);
+      if(!poloTutorMap[pk]) poloTutorMap[pk]=new Set();
+      poloTutorMap[pk].add(normNome(r.tutor));
+    }
   });
-  // DEBUG: logar no console para diagnóstico
-  console.log('[SemGer] comGer size:', comGer.size, '| ord:', ord, '| cat:', cat);
-  if(comGer.size < 10) console.log('[SemGer] comGer:', Array.from(comGer).slice(0,5));
+  var totalComGer=Object.values(poloTutorMap).reduce(function(s,v){return s+v.size;},0);
+  console.log('[SemGer] polos com ofertas:', Object.keys(poloTutorMap).length, '| tutores mapeados:', totalComGer, '| ord:', ord, '| cat:', cat);
 
-  // Tutores ativos sem gerenciamento
+  // Tutores ativos: excluir quem aparece no polo+nome do gerDetData
   var tutoresAtivos=DB.tutores||[];
   if(cat) tutoresAtivos=tutoresAtivos.filter(function(t){return t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0;});
-  // Filtrar e deduplicar por nome (evita duplicatas de tutores multi-categoria)
   var semGerMap={};
   tutoresAtivos.filter(function(t){
-    return !comGer.has(normNome(t.n));
+    var pk=normPolo(t.p);
+    var poloSet=poloTutorMap[pk];
+    // Se o polo do tutor tem ofertas nessa ordem, verificar se o tutor está nelas
+    if(poloSet) return !poloSet.has(normNome(t.n));
+    // Se o polo do tutor não tem nenhuma oferta nessa ordem, tutor sem gerenciamento
+    return true;
   }).forEach(function(t){
-    var key=normNome(t.n)+'|'+normNome(t.p);
+    var key=normNome(t.n)+'|'+normPolo(t.p);
     if(!semGerMap[key]) semGerMap[key]=t;
   });
   var semGer=Object.values(semGerMap)
@@ -1968,8 +1979,18 @@ function exportDetalhe(){
   var dFiltrado=gerDetData||[];
   if(ord) dFiltrado=dFiltrado.filter(function(r){return r.ordem===ord;});
   if(cat) dFiltrado=dFiltrado.filter(function(r){return r.categoria===cat;});
-  var comGerSet=new Set();
-  dFiltrado.forEach(function(r){if(r.tutor) comGerSet.add(normNomeExp(r.tutor));});
+  function normPoloExp(p){
+    return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();
+  }
+  // Polo+nome mapa (mesmo critério do modal)
+  var poloTutorMapExp={};
+  dFiltrado.forEach(function(r){
+    if(r.tutor && r.polo){
+      var pk=normPoloExp(r.polo);
+      if(!poloTutorMapExp[pk]) poloTutorMapExp[pk]=new Set();
+      poloTutorMapExp[pk].add(normNomeExp(r.tutor));
+    }
+  });
 
   // Tutores ativos SEM oferta atribuída
   var tutoresAtivos=DB.tutores||[];
@@ -1977,16 +1998,19 @@ function exportDetalhe(){
     var catBusca=cat.split('(')[0].trim().toUpperCase();
     tutoresAtivos=tutoresAtivos.filter(function(t){
       if(!t.c) return false;
-      // Dividir categorias compostas por + e verificar se alguma bate
       var partes=t.c.toUpperCase().split('+').map(function(s){return s.trim();});
       return partes.some(function(p){return p===catBusca||p.indexOf(catBusca)>=0;});
     });
   }
   // Deduplicar por nome+polo antes de exportar
   var semGerExpMap={};
-  tutoresAtivos.filter(function(t){return !comGerSet.has(normNomeExp(t.n));})
-    .forEach(function(t){
-      var key=normNomeExp(t.n)+'|'+normNomeExp(t.p);
+  tutoresAtivos.filter(function(t){
+    var pk=normPoloExp(t.p);
+    var poloSet=poloTutorMapExp[pk];
+    if(poloSet) return !poloSet.has(normNomeExp(t.n));
+    return true;
+  }).forEach(function(t){
+      var key=normNomeExp(t.n)+'|'+normPoloExp(t.p);
       if(!semGerExpMap[key]) semGerExpMap[key]={
         'Tutor':t.n,'Polo':t.p,
         'Curso / Lab':catParaCurso(t.c||'—'),
