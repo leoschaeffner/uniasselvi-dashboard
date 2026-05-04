@@ -18,6 +18,20 @@ PRAZOS_ORDENS = {
     'Ordem 5': '04/07/2026',
 }
 
+# Datas de início e fim da realização das práticas (período de oferta)
+# Fonte: tabela do Help Tutor 2026/1
+PERIODOS_ORDENS = {
+    'Ordem 1': {'inicio': '16/02/2026', 'fim': '14/03/2026', 'semanas': 4},
+    'Ordem 2': {'inicio': '16/03/2026', 'fim': '11/04/2026', 'semanas': 4},
+    'Ordem 3': {'inicio': '13/04/2026', 'fim': '09/05/2026', 'semanas': 4},
+    'Ordem 4': {'inicio': '11/05/2026', 'fim': '06/06/2026', 'semanas': 4},
+    'Ordem 5': {'inicio': '08/06/2026', 'fim': '04/07/2026', 'semanas': 4},
+}
+
+# Constantes de CH
+CH_ADMIN_FATOR   = 0.25   # 1h a cada 4h = 25% para administrativo
+CH_PRATICA_DURAC = 1.5    # cada prática dura 1:30h
+
 # ── Localiza a pasta do script de 3 formas diferentes (a que funcionar serve) ─
 def achar_pasta_script():
     candidatos = []
