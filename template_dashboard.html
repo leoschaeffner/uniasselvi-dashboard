@@ -1857,13 +1857,17 @@ function _renderSemGer(ord, cat){
   // Normalizar nome: minúsculas + sem acentos para comparação robusta
   function normNome(s){
     return (s||'').toLowerCase().split('(')[0].trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/\s+/g,' ').trim();
   }
   // comGer = todos que têm oferta atribuída na ordem (qualquer status)
   var comGer=new Set();
   d.forEach(function(r){
     if(r.tutor) comGer.add(normNome(r.tutor));
   });
+  // DEBUG: logar no console para diagnóstico
+  console.log('[SemGer] comGer size:', comGer.size, '| ord:', ord, '| cat:', cat);
+  if(comGer.size < 10) console.log('[SemGer] comGer:', Array.from(comGer).slice(0,5));
 
   // Tutores ativos sem gerenciamento
   var tutoresAtivos=DB.tutores||[];
@@ -1956,7 +1960,8 @@ function exportDetalhe(){
 
   function normNomeExp(s){
     return (s||'').toLowerCase().split('(')[0].trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/\s+/g,' ').trim();
   }
 
   // Tutores com oferta atribuída na ordem/categoria selecionada
