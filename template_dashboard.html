@@ -564,6 +564,27 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="card"><div class="card-hdr"><div class="card-title">🗺️ Cobertura por Categoria</div></div>
     <div class="card-body" id="gv-heatmap"></div></div>
   </div>
+
+  <!-- ── Por Estado integrado na Visão Geral ── -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between">
+      <div class="card-title">🗺️ Gerenciamento por Estado</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" class="search" placeholder="Buscar estado…" style="max-width:200px;margin:0" oninput="filterGerEstadosInline(this.value)" id="gv-estados-search"/>
+        <span class="tbl-count" id="gv-estados-count">—</span>
+        <button class="btn-export" onclick="navTo('ger-estados')" style="background:var(--teal);white-space:nowrap">Ver todos ↗</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
+      <th onclick="sortTable('gv-estados-tbody','uf','str')">Estado</th>
+      <th style="text-align:right" onclick="sortTable('gv-estados-tbody','polos','num')">Polos</th>
+      <th style="text-align:right" onclick="sortTable('gv-estados-tbody','ofertas','num')">Ofertas</th>
+      <th style="text-align:right" onclick="sortTable('gv-estados-tbody','ger','num')">Ger.</th>
+      <th onclick="sortTable('gv-estados-tbody','pct','num')">% Ger.</th>
+      <th style="text-align:right;color:var(--red)" onclick="sortTable('gv-estados-tbody','st','num')">Sem Tutor</th>
+      <th style="text-align:right" onclick="sortTable('gv-estados-tbody','mat','num')">Al. Mat.</th>
+    </tr></thead><tbody id="gv-estados-tbody"></tbody></table></div>
+  </div>
 </div>
 </div>
 
@@ -665,9 +686,9 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th style="text-align:center" title="Ordem 2 — Gerenciadas pelo tutor / Capacidade baseada na CH contratada">O.2<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap.CH</span></th>
       <th style="text-align:center" title="Ordem 3 — Gerenciadas pelo tutor / Capacidade baseada na CH contratada">O.3<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap.CH</span></th>
       <th style="text-align:center" title="Ordem 4 — Gerenciadas pelo tutor / Capacidade baseada na CH contratada">O.4<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap.CH</span></th>
-      <th style="text-align:right" title="CH contratada semanal arredondada para padrão (4/8/12/20/24h)">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">contrat.</span></th>
+      <th class="col-ch-lot" style="text-align:right" title="CH contratada semanal (4/8/12/20/24h) — requer Lotação">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">contrat.</span></th>
       <th style="text-align:right" title="CH realizada = práticas gerenciadas × 1,5h">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">realizada</span></th>
-      <th style="text-align:right" title="CH restante por ordem = (cap/ordem - gerenciadas) × 1,5h">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">restante/ord.</span></th>
+      <th class="col-ch-lot" style="text-align:right" title="CH restante por ordem = (cap/ordem - gerenciadas) × 1,5h — requer Lotação">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">restante/ord.</span></th>
       <th>% Ger.</th>
     </tr></thead><tbody id="ger-det-tbody"></tbody></table></div>
   </div>
@@ -1395,10 +1416,24 @@ function renderGerenciamento(){
 
   // Populate sub-pages
   gerPoloData=DB.ger_polo||[]; renderGerPoloTbl(gerPoloData);
+  // Mostrar/esconder colunas CH que requerem Lotação
+  var temLot=DB.tem_lotacao||false;
+  document.querySelectorAll('.col-ch-lot').forEach(function(el){
+    el.style.display=temLot?'':'none';
+  });
+  if(!temLot){
+    var notaLot=document.createElement('div');
+    notaLot.style.cssText='font-size:10px;color:var(--yellow);padding:4px 18px;background:var(--yellow-dim)';
+    notaLot.textContent='⚠ Colunas CH Contratada e CH Restante disponíveis após configurar Planilha de Lotação (URL_LOTACAO)';
+    var detCard=document.querySelector('#page-ger-detalhe .card');
+    if(detCard) detCard.insertBefore(notaLot,detCard.firstChild);
+  }
   // Visão por estado
   var estadosData=agruparPorEstado(gerPoloData);
   window._estadosData=estadosData;
   renderEstadosTbl(estadosData);
+  // Renderizar também na Visão Geral (versão compacta)
+  renderEstadosInline(estadosData);
   gerContrData=DB.ger_contratacao||[]; renderGerContrTbl(gerContrData);
   gerAgendaData=DB.ger_agendas||[]; renderAgendaKPIs(); renderGerAgendaTbl(gerAgendaData); renderCalendario();
   gerDetData=DB.ger_ofertas||[];
@@ -1720,6 +1755,39 @@ function renderGerAgendaTbl(data){
   var cnt=document.getElementById('ger-agenda-count');
   if(cnt) cnt.textContent=data.length+' polos';
 }
+function renderEstadosInline(estadoData){
+  var el=document.getElementById('gv-estados-tbody');
+  if(!el) return;
+  el.innerHTML=estadoData.map(function(e){
+    var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;
+    return '<tr class="sort-row" style="cursor:pointer" data-estado-uf="'+e.uf+'"'
+      +' data-vuf="'+e.uf+'" data-vpolos="'+e.polos+'" data-vofertas="'+e.ofertas
+      +'" data-vger="'+e.gerenciadas+'" data-vpct="'+pct
+      +'" data-vst="'+e.sem_tutor+'" data-vmat="'+e.mat+'">'
+      +'<td><strong>'+e.uf+'</strong> <span style="color:var(--muted);font-size:11px">'+e.nome+'</span></td>'
+      +'<td style="text-align:right">'+e.polos+'</td>'
+      +'<td style="text-align:right">'+fmtNum(e.ofertas)+'</td>'
+      +'<td style="text-align:right">'+fmtNum(e.gerenciadas)+'</td>'
+      +'<td>'+progCell(pct)+'</td>'
+      +'<td style="text-align:right;color:var(--red)">'+fmtNum(e.sem_tutor)+'</td>'
+      +'<td style="text-align:right">'+fmtNum(e.mat)+'</td>'
+      +'</tr>';
+  }).join('');
+  var cnt=document.getElementById('gv-estados-count');
+  if(cnt) cnt.textContent=estadoData.length+' estados';
+  // Click delegation
+  el.onclick=function(e){
+    var row=e.target.closest('[data-estado-uf]');
+    if(row) openEstadoModal(row.dataset.estadoUf);
+  };
+}
+function filterGerEstadosInline(q){
+  q=q.toLowerCase();
+  var d=window._estadosData||[];
+  if(q) d=d.filter(function(e){return (e.uf+e.nome).toLowerCase().includes(q);});
+  renderEstadosInline(d);
+}
+
 function filterGerEstados(q){
   q=q.toLowerCase();
   var d=window._estadosData||[];
@@ -1839,9 +1907,9 @@ function filterGerDetalhe(q){
       +'<td style="font-size:11px">'+tutorDisplay+'</td>'
       +'<td style="font-size:11px">'+catParaCurso(t.categoria)+'</td>'
       +ordCells
-      +chContCell
+      +'<td class="col-ch-lot"'+chContCell.slice(3)
       +'<td style="text-align:right;font-size:11px">'+chGer+'</td>'
-      +chRestCell
+      +'<td class="col-ch-lot"'+chRestCell.slice(3)
       +'<td>'+progCell(pct)+'</td>'
       +'</tr>';
     // Linhas expandíveis por ordem
