@@ -861,15 +861,63 @@ def processar(p1, p2):
 
 
 
-def carregar_lotacao(p4):
-    """Carrega LOTACAO_TUTORES.xlsx ou .xlsm e retorna mapa nome_lower -> dados do tutor."""
+def _ler_lotacao_xlsx(p4):
+    """Tenta ler com openpyxl (xlsx/xlsm)."""
     from openpyxl import load_workbook as _lwb
-    print(f"[{ts()}] Lendo lotação de tutores ({os.path.basename(str(p4))})...")
-    # keep_vba=False ignora macros do .xlsm, data_only lê valores calculados
-    _is_xlsm = str(p4).lower().endswith('.xlsm')
-    _wb = _lwb(str(p4), read_only=True, data_only=True, keep_vba=False) if _is_xlsm else _lwb(str(p4), read_only=True, data_only=True)
-    _ws = _wb['Quadro Geral de Lotação'] if 'Quadro Geral de Lotação' in _wb.sheetnames else list(_wb.worksheets)[0]
-    _rows = list(_ws.iter_rows(values_only=True))
+    wb = _lwb(str(p4), read_only=True, data_only=True, keep_vba=False)
+    ws = wb['Quadro Geral de Lotação'] if 'Quadro Geral de Lotação' in wb.sheetnames else list(wb.worksheets)[0]
+    return list(ws.iter_rows(values_only=True))
+
+def _ler_lotacao_xls(p4):
+    """Tenta ler com xlrd (formato .xls antigo)."""
+    import xlrd
+    wb = xlrd.open_workbook(str(p4))
+    # Buscar aba de lotação
+    try:
+        ws = wb.sheet_by_name('Quadro Geral de Lotação')
+    except xlrd.XLRDError:
+        ws = wb.sheet_by_index(0)
+    rows = []
+    for i in range(ws.nrows):
+        row = []
+        for j in range(ws.ncols):
+            cell = ws.cell(i, j)
+            if cell.ctype == xlrd.XL_CELL_DATE:
+                import xlrd.xldate
+                row.append(xlrd.xldate.xldate_as_datetime(cell.value, wb.datemode))
+            else:
+                row.append(cell.value if cell.ctype != xlrd.XL_CELL_EMPTY else None)
+        rows.append(tuple(row))
+    return rows
+
+def _ler_lotacao_pandas(p4):
+    """Fallback: ler com pandas (aceita xlsx e xls)."""
+    import pandas as pd
+    p = str(p4)
+    try:
+        df = pd.read_excel(p, sheet_name='Quadro Geral de Lotação', header=None)
+    except Exception:
+        df = pd.read_excel(p, sheet_name=0, header=None)
+    # Converter para lista de tuplas
+    return [tuple(row) for row in df.fillna('').values.tolist()]
+
+def carregar_lotacao(p4):
+    """Carrega LOTACAO_TUTORES (.xlsx/.xlsm/.xls) com fallback multi-formato."""
+    fname = os.path.basename(str(p4))
+    print(f"[{ts()}] Lendo lotação de tutores ({fname})...")
+    
+    _rows = None
+    for estrategia, fn in [('openpyxl', _ler_lotacao_xlsx), ('xlrd', _ler_lotacao_xls), ('pandas', _ler_lotacao_pandas)]:
+        try:
+            _rows = fn(p4)
+            print(f"[{ts()}] Lotação lida com sucesso via {estrategia}: {len(_rows)} linhas")
+            break
+        except Exception as e:
+            print(f"[{ts()}] Tentativa {estrategia}: {e}")
+    
+    if not _rows:
+        raise RuntimeError(f"Não foi possível ler {fname} com nenhuma estratégia")
+
 
     def parse_ch(v):
         """Converte HH:MM ou HH:MM:SS para horas decimais."""
