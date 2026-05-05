@@ -887,7 +887,11 @@ def _detectar_e_corrigir_base64(p4):
             except Exception:
                 continue
         
-        print(f"  [INFO] Arquivo não é ZIP nem base64 reconhecível ({raw[:4].hex()})")
+        if raw[:5] in (b'\r\n<!D', b'<!DOC', b'<html'):
+            print(f"  [ERRO] Arquivo é uma página HTML (login Microsoft) — URL_LOTACAO requer autenticação")
+            print(f"  [ERRO] Regenere o link de compartilhamento no OneDrive com 'Qualquer pessoa com o link'")
+        else:
+            print(f"  [INFO] Arquivo não é ZIP nem base64 reconhecível ({raw[:4].hex()})")
     except Exception as e:
         print(f"  [AVISO] Verificação base64 falhou: {e}")
 
@@ -1006,26 +1010,68 @@ def enriquecer_tutores(dados, lotacao):
     Também calcula alunos únicos por curso (sem repetição entre práticas)."""
     tutores = dados.get('tutores', [])
     matched = 0
-    # Acumular alunos por curso usando TOTAL_ALUNOS da Lotação (sem repetição)
-    alunos_por_curso_raw = {}  # sigla_curso -> total alunos únicos
-
+    # Alunos por LABORATÓRIO — agrupar por polo+cursos_raw para evitar duplicatas
+    # IMPORTANTE: NÃO dividir "BFR+BBI" em componentes — isso duplicaria alunos
+    # Usar o código de cursos como chave de lab (ex: "BFR+BBI" → "Biomedicina/Farmácia")
+    
+    # Mapa laboratório → categoria legível
+    LAB_PARA_CAT = {
+        'EMF-ISN':  'Enfermagem e Instrumentação Cirúrgica',
+        'EMF-ISN2': 'Enfermagem e Instrumentação Cirúrgica',
+        'BFR+BBI':  'Biomedicina e Farmácia',
+        'BBI+BFR':  'Biomedicina e Farmácia',
+        'BFR':      'Farmácia',
+        'BBI':      'Biomedicina',
+        'BFI':      'Fisioterapia',
+        'BTO':      'T. Ocupacional',
+        'COS-TIP':  'Estética e Cosmética',
+        'BFI+BTO+COS-TIP': 'Fisioterapia, T.Ocup. e Estética',
+        'NTR':      'Nutrição',
+        'AGM':      'Agronomia',
+        'BAU':      'Arquitetura',
+        'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI': 'Engenharias e Licenciaturas',
+    }
+    
+    # Somar alunos únicos por polo+código_lab (sem split por componente)
+    polo_lab_seen = set()
+    alunos_por_lab_raw = {}   # código_lab → total alunos
+    
     for nome_lower, info in lotacao.items():
-        cursos_raw = info.get('cursos', '')
+        cursos_raw = info.get('cursos', '').strip().upper()
+        polo_hub   = info.get('polo_hub', '').strip()
         total_al   = info.get('total_alunos', 0)
         if not cursos_raw or not total_al:
             continue
-        for sigla in cursos_raw.replace(',', '+').split('+'):
-            sigla = sigla.strip().upper()
-            if sigla:
-                alunos_por_curso_raw[sigla] = alunos_por_curso_raw.get(sigla, 0) + total_al
-
-    # Converter para lista com nomes legíveis
+        
+        # Chave única por polo+lab para não duplicar quando há múltiplos tutores
+        chave_polo_lab = f"{polo_hub}||{cursos_raw}"
+        if chave_polo_lab in polo_lab_seen:
+            continue
+        polo_lab_seen.add(chave_polo_lab)
+        
+        # Normalizar código: ordenar componentes para "BBI+BFR" == "BFR+BBI"
+        componentes = sorted([c.strip() for c in cursos_raw.replace(',', '+').split('+')])
+        lab_key = '+'.join(componentes)
+        alunos_por_lab_raw[lab_key] = alunos_por_lab_raw.get(lab_key, 0) + total_al
+    
+    # Converter para lista legível
     alunos_por_curso = []
-    for sigla, total in sorted(alunos_por_curso_raw.items(), key=lambda x: -x[1]):
-        nome = CURSOS_NOMES.get(sigla, sigla)
-        alunos_por_curso.append({'sigla': sigla, 'curso': nome, 'alunos': total})
+    for lab_key, total in sorted(alunos_por_lab_raw.items(), key=lambda x: -x[1]):
+        # Buscar nome legível — tentar chave composta e chave simples
+        nome = LAB_PARA_CAT.get(lab_key)
+        if not nome:
+            # Tentar variações de ordenação
+            for k, v in LAB_PARA_CAT.items():
+                if set(k.split('+')) == set(lab_key.split('+')):
+                    nome = v
+                    break
+        if not nome:
+            nome = CURSOS_NOMES.get(lab_key.split('+')[0], lab_key)
+        alunos_por_curso.append({'sigla': lab_key, 'curso': nome, 'alunos': total})
+    
     dados['alunos_por_curso'] = alunos_por_curso
-    print(f"[{ts()}] Alunos por curso: {len(alunos_por_curso)} cursos, total {sum(x['alunos'] for x in alunos_por_curso):,}")
+    total_al_sum = sum(x['alunos'] for x in alunos_por_curso)
+    print(f"[{ts()}] Alunos por lab: {len(alunos_por_curso)} labs, total {total_al_sum:,} (alunos únicos por polo+lab)")
 
     # Enriquecer tutores individualmente
     for t in tutores:
