@@ -64,7 +64,7 @@ jobs:
           baixar "$URL_CONTROLE"  "01_CONTROLE_TUTORIA.xlsx"            "sim"
           baixar "$URL_PORTFOLIO" "PORTIFOLIO_TUTOR.xlsx"               "sim"
           baixar "$URL_GERENCIAL" "REL_GERAL_DE_GERENCIAMENTO.xlsx"     "nao"
-          baixar "$URL_LOTACAO"   "LOTACAO_TUTORES.xlsx"                "nao"
+          baixar "$URL_LOTACAO"   "LOTACAO_TUTORES.xlsm"                "nao"
           baixar "$URL_REL_NOVO"  "REL_DETALHADO.csv"                   "nao"
 
           echo "=== Planilhas disponíveis ==="
