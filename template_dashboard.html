@@ -369,6 +369,9 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <button class="sidebar-item" onclick="navTo('ger-ofertas')">
         <span class="si-icon">📊</span><span class="si-label">Ofertas</span>
       </button>
+      <button class="sidebar-item" onclick="navTo('ger-estados')">
+        <span class="si-icon">🗺️</span><span class="si-label">Por Estado</span>
+      </button>
       <button class="sidebar-item" onclick="navTo('ger-agendas')">
         <span class="si-icon">📆</span><span class="si-label">Agendas</span>
       </button>
@@ -658,15 +661,38 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th onclick="sortTable('ger-det-tbody','polo','str')">Polo</th>
       <th onclick="sortTable('ger-det-tbody','tutor','str')">Tutor</th>
       <th>Curso / Lab</th>
-      <th style="text-align:center">O.1</th>
-      <th style="text-align:center">O.2</th>
-      <th style="text-align:center">O.3</th>
-      <th style="text-align:center">O.4</th>
-      <th style="text-align:right">CH Cont.</th>
-      <th style="text-align:right">CH Ger.</th>
-      <th style="text-align:right">CH Rest.</th>
+      <th style="text-align:center" title="Práticas gerenciadas na Ordem 1">O.1<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
+      <th style="text-align:center" title="Práticas gerenciadas na Ordem 2">O.2<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
+      <th style="text-align:center" title="Práticas gerenciadas na Ordem 3">O.3<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
+      <th style="text-align:center" title="Práticas gerenciadas na Ordem 4">O.4<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
+      <th style="text-align:right" title="CH contratada semanal (4/8/12/20/24h)">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">contrat.</span></th>
+      <th style="text-align:right" title="CH realizada = práticas gerenciadas × 1,5h">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">realizada</span></th>
+      <th style="text-align:right" title="CH não aproveitada = (capacidade - realizadas) × 1,5h. Requer Planilha de Lotação.">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">restante</span></th>
       <th>% Ger.</th>
     </tr></thead><tbody id="ger-det-tbody"></tbody></table></div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══ GERENCIAMENTO — POR ESTADO ══════════════════════════════════════ -->
+<div class="page" id="page-ger-estados">
+<div class="container">
+  <div class="ph"><div class="ph-title">Gerenciamento — Visão por Estado</div></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar estado…" oninput="filterGerEstados(this.value)" id="ger-estados-search"/>
+      <span class="tbl-count" id="ger-estados-count">—</span>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th class="th-sort" data-sort-table="ger-estados-tbody" data-sort-col="uf" onclick="sortTable('ger-estados-tbody','uf','str')">Estado<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-estados-tbody" data-sort-col="ofertas" style="text-align:right" onclick="sortTable('ger-estados-tbody','ofertas','num')">Polos<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-estados-tbody" data-sort-col="ofertas" style="text-align:right" onclick="sortTable('ger-estados-tbody','ofertas','num')">Ofertas<span class="sort-ind"> ▼</span></th>
+      <th class="th-sort" data-sort-table="ger-estados-tbody" data-sort-col="ger" style="text-align:right" onclick="sortTable('ger-estados-tbody','ger','num')">Gerenciadas<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-estados-tbody" data-sort-col="pct" onclick="sortTable('ger-estados-tbody','pct','num')">% Ger.<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-estados-tbody" data-sort-col="st" style="text-align:right" onclick="sortTable('ger-estados-tbody','st','num')">Sem Tutor<span class="sort-ind"></span></th>
+      <th class="th-sort" data-sort-table="ger-estados-tbody" data-sort-col="mat" style="text-align:right" onclick="sortTable('ger-estados-tbody','mat','num')">Al. Mat.<span class="sort-ind"></span></th>
+    </tr></thead><tbody id="ger-estados-tbody"></tbody></table></div>
   </div>
 </div>
 </div>
@@ -738,7 +764,8 @@ const pageTitles={
   'port-praticas':['Práticas','Portfólios'],'port-polos':['Polos','Portfólios'],
   'port-tutores':['Tutores','Portfólios'],
   'ger-visao':['Visão Geral','Gerenciamento'],'ger-ofertas':['Ofertas','Gerenciamento'],
-  'ger-contratacao':['Contratação','Gerenciamento'],'ger-agendas':['Agendas','Gerenciamento'],
+  'ger-contratacao':['Contratação','Gerenciamento'],'ger-estados':['Por Estado','Gerenciamento'],
+  'ger-agendas':['Agendas','Gerenciamento'],
   'ger-detalhe':['Detalhe','Gerenciamento'],
 };
 
@@ -791,7 +818,11 @@ function renderKPIs(){
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')" title="Ver tutores atrasados">
       <div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div>
       <div class="kpi-hint">clique para ver lista</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Total Alunos</div><div class="kpi-value">${fmtNum(k.total_alunos)}</div></div>
+    <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()" title="Clique para ver alunos reais por curso (requer Planilha de Lotação)">
+      <div class="kpi-label">Alunos (por prática)</div>
+      <div class="kpi-value">${fmtNum(k.total_alunos)}</div>
+      <div class="kpi-detail" style="color:var(--yellow)">⚠ clique p/ ver por curso</div>
+    </div>
     <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')" title="Ver ranking de polos">
       <div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div>
       <div class="kpi-hint">clique para ver lista</div></div>
@@ -1292,7 +1323,11 @@ function renderGerenciamento(){
     <div class="kpi kpi-green"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
     <div class="kpi kpi-ok"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">${fmtNum(k.ofertas_gerenciadas)}</div><div class="kpi-detail">${k.pct_gerenciado}% do total</div></div>
     <div class="kpi kpi-red"><div class="kpi-label">Sem Tutor</div><div class="kpi-value">${fmtNum(k.ofertas_sem_tutor)}</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Alunos Matriculados</div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div></div>
+    <div class="kpi kpi-teal" title="Soma de matrículas por oferta — cada aluno contado múltiplas vezes (uma por prática)">
+      <div class="kpi-label">Alunos Mat. (por oferta)</div>
+      <div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div>
+      <div class="kpi-detail" style="color:var(--yellow)">⚠ contagem por prática</div>
+    </div>
     <div class="kpi kpi-yellow"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>
     <div class="kpi kpi-green"><div class="kpi-label">Ocupação</div><div class="kpi-value">${k.pct_ocupacao}%</div></div>
   `;
@@ -1360,6 +1395,10 @@ function renderGerenciamento(){
 
   // Populate sub-pages
   gerPoloData=DB.ger_polo||[]; renderGerPoloTbl(gerPoloData);
+  // Visão por estado
+  var estadosData=agruparPorEstado(gerPoloData);
+  window._estadosData=estadosData;
+  renderEstadosTbl(estadosData);
   gerContrData=DB.ger_contratacao||[]; renderGerContrTbl(gerContrData);
   gerAgendaData=DB.ger_agendas||[]; renderAgendaKPIs(); renderGerAgendaTbl(gerAgendaData); renderCalendario();
   gerDetData=DB.ger_ofertas||[];
@@ -1674,10 +1713,20 @@ function renderGerAgendaTbl(data){
     document.getElementById('m-sub').textContent='Agendamentos: '+a.com_agenda+' com agenda · '+a.sem_agenda+' sem agenda';
     document.getElementById('m-body').innerHTML=kpiHtml+calHtml+legendaHtml;
     document.getElementById('modal-overlay').classList.add('show');
-  };
+  document.getElementById('m-body').onclick = function(e) {
+    var row = e.target.closest('[data-polo-est]');
+    if (row) { closeModal(); setTimeout(function(){ openGerPoloModal(row.dataset.poloEst); }, 100); }
+  };  };
   var cnt=document.getElementById('ger-agenda-count');
   if(cnt) cnt.textContent=data.length+' polos';
 }
+function filterGerEstados(q){
+  q=q.toLowerCase();
+  var d=window._estadosData||[];
+  if(q) d=d.filter(function(e){return (e.uf+e.nome).toLowerCase().includes(q);});
+  renderEstadosTbl(d);
+}
+
 function filterGerAgenda(q){
   q=q.toLowerCase();
   var stv=(document.getElementById('ag-status-sel')||{}).value||'';
@@ -1747,24 +1796,22 @@ function filterGerDetalhe(q){
     var praticasSemana=chCont?Math.floor((chCont*0.75)/1.5):null;  // ex: 8h→4/semana
     var capOrdem=praticasSemana?praticasSemana*4:null;               // ex: 4×4=16/ordem
 
-    // Células por ordem: gerenciou / capacidade
+    // Células por ordem — mostra gerenciadas com semáforo de cor
+    // Tooltip explica o contexto completo
     var ordCells='';
     ['Ordem 1','Ordem 2','Ordem 3','Ordem 4'].forEach(function(o){
       var od=t.ordens[o];
-      var ger=od?od.ger:0;
-      var total=od?od.total:0;
-      if(!od&&!capOrdem){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}
-      if(capOrdem){
-        // Mostrar: gerenciou / capacidade máxima da CH
-        var corO=ger>=capOrdem?'var(--ok)':ger>0?'var(--yellow-d)':'var(--red)';
-        ordCells+='<td style="text-align:center;font-size:11px" title="'+ger+' gerenciadas de '+total+' atribuídas (cap: '+capOrdem+'/ordem)">'
-          +'<span style="font-weight:700;color:'+corO+'">'+ger+'</span>'
-          +'<span style="color:var(--dim)">/'+capOrdem+'</span></td>';
-      } else {
-        var pO2=total?Math.round(ger/total*100):0;
-        var corO2=pO2===100?'var(--ok)':pO2>0?'var(--yellow-d)':'var(--red)';
-        ordCells+='<td style="text-align:center;font-size:11px"><span style="font-weight:700;color:'+corO2+'">'+ger+'/'+total+'</span></td>';
-      }
+      if(!od){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}
+      var ger=od.ger, total=od.total;
+      var pO=total?Math.round(ger/total*100):0;
+      var corO=pO===100?'var(--ok)':pO>0?'var(--yellow-d)':'var(--red)';
+      // Com CH: comparar tb com capacidade
+      var tooltip=ger+' gerenciadas de '+total+' atribuídas';
+      if(capOrdem) tooltip+=' (cap. CH: '+capOrdem+'/ordem)';
+      ordCells+='<td style="text-align:center" title="'+tooltip+'">'
+        +'<div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'</div>'
+        +'<div style="font-size:9px;color:var(--dim)">'+total+' atrib.</div>'
+        +'</td>';
     });
 
     // CH Gerenciada = práticas gerenciadas × 1.5h
@@ -2408,6 +2455,141 @@ function catParaCurso(cat){
     if(cat.toUpperCase().includes(k.split('(')[0].trim().toUpperCase())) return CAT_CURSO[k];
   }
   return cat;
+}
+
+
+// ── VISÃO POR ESTADO ──────────────────────────────────────────────────────────
+// UF padrão completa para fallback
+var UF_NOMES = {
+  'AC':'Acre','AL':'Alagoas','AP':'Amapá','AM':'Amazonas','BA':'Bahia',
+  'CE':'Ceará','DF':'Distrito Federal','ES':'Espírito Santo','GO':'Goiás',
+  'MA':'Maranhão','MT':'Mato Grosso','MS':'Mato Grosso do Sul',
+  'MG':'Minas Gerais','PA':'Pará','PB':'Paraíba','PR':'Paraná',
+  'PE':'Pernambuco','PI':'Piauí','RJ':'Rio de Janeiro',
+  'RN':'Rio Grande do Norte','RS':'Rio Grande do Sul','RO':'Rondônia',
+  'RR':'Roraima','SC':'Santa Catarina','SP':'São Paulo',
+  'SE':'Sergipe','TO':'Tocantins',
+};
+
+function extrairUF(polo) {
+  // Formato: "LAP - Cidade/UF - Bairro" ou "LAP - Cidade/UF"
+  var m = polo.match(/\/([A-Z]{2})(?:\s*-|$)/);
+  return m ? m[1] : '??';
+}
+
+function agruparPorEstado(poloData) {
+  var estados = {};
+  poloData.forEach(function(p) {
+    var uf = extrairUF(p.polo||p.n||'');
+    if (!estados[uf]) estados[uf] = {
+      uf: uf, nome: UF_NOMES[uf]||uf,
+      polos: 0, ofertas: 0, gerenciadas: 0,
+      sem_tutor: 0, mat: 0, agend: 0, lista: []
+    };
+    var e = estados[uf];
+    e.polos++;
+    e.ofertas    += p.total_ofertas||0;
+    e.gerenciadas+= p.gerenciadas||0;
+    e.sem_tutor  += p.sem_tutor||0;
+    e.mat        += p.alunos_matriculados||0;
+    e.agend      += p.alunos_agendados||0;
+    e.lista.push(p);
+  });
+  return Object.values(estados).sort(function(a,b){
+    return b.ofertas - a.ofertas;
+  });
+}
+
+function renderEstadosTbl(estadoData) {
+  var el = document.getElementById('ger-estados-tbody');
+  if (!el) return;
+  el.innerHTML = estadoData.map(function(e, i) {
+    var pct = e.ofertas ? Math.round(e.gerenciadas/e.ofertas*100) : 0;
+    return '<tr class="sort-row" style="cursor:pointer"'
+      + ' data-vuf="'+e.uf+'" data-vofertas="'+e.ofertas
+      + '" data-vger="'+e.gerenciadas+'" data-vpct="'+pct
+      + '" data-vst="'+e.sem_tutor+'" data-vmat="'+e.mat+'"'
+      + ' data-estado-uf="'+e.uf+'">'
+      + '<td><strong>'+e.uf+'</strong> <span style="color:var(--muted);font-size:11px">'+e.nome+'</span></td>'
+      + '<td style="text-align:right">'+e.polos+'</td>'
+      + '<td style="text-align:right">'+fmtNum(e.ofertas)+'</td>'
+      + '<td style="text-align:right">'+fmtNum(e.gerenciadas)+'</td>'
+      + '<td>'+progCell(pct)+'</td>'
+      + '<td style="text-align:right;color:var(--red)">'+fmtNum(e.sem_tutor)+'</td>'
+      + '<td style="text-align:right">'+fmtNum(e.mat)+'</td>'
+      + '</tr>';
+  }).join('');
+  var cnt = document.getElementById('ger-estados-count');
+  if (cnt) cnt.textContent = estadoData.length + ' estados';
+  // Event delegation
+  var tbody = document.getElementById('ger-estados-tbody');
+  if (tbody) tbody.onclick = function(e) {
+    var row = e.target.closest('[data-estado-uf]');
+    if (row) openEstadoModal(row.dataset.estadoUf);
+  };
+}
+
+function openEstadoModal(uf) {
+  var polos = gerPoloData.filter(function(p){ return extrairUF(p.polo||'') === uf; })
+    .sort(function(a,b){ return b.sem_tutor - a.sem_tutor; });
+  var nome = UF_NOMES[uf] || uf;
+  document.getElementById('m-title').textContent = uf + ' — ' + nome;
+  document.getElementById('m-sub').textContent = polos.length + ' polos · clique para detalhar';
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="background:var(--bg)">'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:left">Polo</th>'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Ofertas</th>'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Ger.</th>'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border)">% Ger.</th>'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Sem Tutor</th>'
+    + '</tr></thead><tbody>';
+  polos.forEach(function(p) {
+    var pct = p.total_ofertas ? Math.round(p.gerenciadas/p.total_ofertas*100) : 0;
+    html += '<tr style="border-bottom:1px solid var(--border);cursor:pointer" data-polo-est="'+esc(p.polo)+'">'
+      + '<td style="padding:5px 8px;font-weight:600">'+p.polo+'</td>'
+      + '<td style="padding:5px 8px;text-align:right">'+fmtNum(p.total_ofertas)+'</td>'
+      + '<td style="padding:5px 8px;text-align:right;color:var(--ok)">'+fmtNum(p.gerenciadas)+'</td>'
+      + '<td style="padding:5px 8px">'+progCell(pct)+'</td>'
+      + '<td style="padding:5px 8px;text-align:right;color:'+(p.sem_tutor>0?'var(--red)':'var(--ok)')+'">'+fmtNum(p.sem_tutor)+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('m-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+
+function openAlunosCursoModal(){
+  var cursos = DB.alunos_por_curso || [];
+  var total = cursos.reduce(function(s,c){return s+c.alunos;},0);
+  document.getElementById('m-title').textContent = 'Alunos por Curso';
+  document.getElementById('m-sub').textContent = fmtNum(total) + ' alunos únicos · sem repetição entre práticas';
+  if(!cursos.length){
+    document.getElementById('m-body').innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Planilha de Lotação não disponível.<br>Configure URL_LOTACAO para ver dados reais.</div>';
+    document.getElementById('modal-overlay').classList.add('show');
+    return;
+  }
+  var max = cursos[0].alunos || 1;
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="background:var(--bg)">'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:left">Curso</th>'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border)">Alunos Únicos</th>'
+    + '<th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Total</th>'
+    + '</tr></thead><tbody>';
+  cursos.forEach(function(c){
+    html += '<tr style="border-bottom:1px solid var(--border)">'
+      + '<td style="padding:6px 8px;font-weight:600">'+c.curso+'<br><span style="font-size:9px;color:var(--muted)">'+c.sigla+'</span></td>'
+      + '<td style="padding:6px 8px"><div style="height:8px;background:var(--bg);border-radius:4px"><div style="height:100%;width:'+(c.alunos/max*100)+'%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px"></div></div></td>'
+      + '<td style="padding:6px 8px;text-align:right;font-weight:700">'+fmtNum(c.alunos)+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="margin-top:12px;padding:10px;background:var(--ok-dim);border-radius:6px;font-size:11px;color:var(--ok)">'
+    + '✓ Total real: <strong>' + fmtNum(total) + ' alunos únicos</strong>'
+    + ' (cada aluno contado uma vez por curso, independente de quantas práticas fez)'
+    + '</div>';
+  document.getElementById('m-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('show');
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
