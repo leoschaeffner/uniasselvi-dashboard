@@ -1061,6 +1061,22 @@ def processar_gerenciamento_csv(p5):
         return {'ger_kpis': {}, 'ger_polo': [], 'ger_cat': [], 'ger_ordem': [],
                 'ger_contratacao': [], 'ger_agendas': [], 'ger_ofertas': []}
 
+    # ── Fix "Sem Tutor": nível polo+categoria ─────────────────────────────────
+    # Se um polo+categoria tem QUALQUER tutor alocado, todas as ofertas
+    # desse polo+categoria são consideradas "com tutor".
+    # "Sem tutor" = polo+categoria sem NENHUM tutor em nenhuma oferta.
+    polo_cat_tem_tutor = (
+        df_r[df_r['tem_tutor']]
+        .groupby(['polo', 'categoria'])
+        .size()
+        .reset_index(name='_qt')
+        .assign(_tem=True)
+        .set_index(['polo', 'categoria'])['_tem']
+    )
+    def _fix_tem_tutor(row):
+        return polo_cat_tem_tutor.get((row['polo'], row['categoria']), row['tem_tutor'])
+    df_r['tem_tutor'] = df_r.apply(_fix_tem_tutor, axis=1)
+
     # ── KPIs Globais ──────────────────────────────────────────────────────────
     total       = len(df_r)
     com_tutor   = int(df_r['tem_tutor'].sum())
