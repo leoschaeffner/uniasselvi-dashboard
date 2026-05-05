@@ -884,27 +884,69 @@ def carregar_lotacao(p4):
             continue
         nome_raw = str(r[8]).strip()
         nome_lower = nome_raw.lower()
+        try:
+            total_al = int(float(str(r[26] or 0)))
+        except:
+            total_al = 0
         lotacao[nome_lower] = {
-            'nome_oficial': nome_raw,
-            'perfil':       str(r[13] or '').strip(),
-            'cursos':       str(r[0]  or '').strip(),
-            'ch_semanal':   parse_ch(r[14]),
-            'ch_ideal':     parse_ch(r[15]),
-            'contratacao':  str(r[7]  or '').strip(),
-            'polo_hub':     str(r[4]  or '').strip(),
+            'nome_oficial':  nome_raw,
+            'perfil':        str(r[13] or '').strip(),
+            'cursos':        str(r[0]  or '').strip(),
+            'ch_semanal':    parse_ch(r[14]),
+            'ch_ideal':      parse_ch(r[15]),
+            'contratacao':   str(r[7]  or '').strip(),
+            'polo_hub':      str(r[4]  or '').strip(),
             'categoria_gio': str(r[29] or '').strip(),
+            'total_alunos':  total_al,
         }
     print(f"[{ts()}] Lotação: {len(lotacao)} tutores mapeados")
     return lotacao
 
 
+# Mapeamento de siglas de curso para nomes legíveis
+CURSOS_NOMES = {
+    'EMF-ISN':  'Enfermagem e Instrumentação Cirúrgica',
+    'EMF-ISN2': 'Enfermagem e Instrumentação Cirúrgica',
+    'BFR':      'Farmácia',
+    'BBI':      'Biomedicina',
+    'BFI':      'Fisioterapia',
+    'BTO':      'T. Ocupacional',
+    'COS-TIP':  'Estética e Cosmética',
+    'NTR':      'Nutrição',
+    'AGM':      'Agronomia',
+    'BAU':      'Arquitetura',
+    'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI': 'Engenharias e Licenciaturas',
+}
+
 def enriquecer_tutores(dados, lotacao):
-    """Enriquece tutores com perfil, cursos e CH da planilha de lotação."""
+    """Enriquece tutores com perfil, cursos e CH da planilha de lotação.
+    Também calcula alunos únicos por curso (sem repetição entre práticas)."""
     tutores = dados.get('tutores', [])
     matched = 0
+    # Acumular alunos por curso usando TOTAL_ALUNOS da Lotação (sem repetição)
+    alunos_por_curso_raw = {}  # sigla_curso -> total alunos únicos
+
+    for nome_lower, info in lotacao.items():
+        cursos_raw = info.get('cursos', '')
+        total_al   = info.get('total_alunos', 0)
+        if not cursos_raw or not total_al:
+            continue
+        for sigla in cursos_raw.replace(',', '+').split('+'):
+            sigla = sigla.strip().upper()
+            if sigla:
+                alunos_por_curso_raw[sigla] = alunos_por_curso_raw.get(sigla, 0) + total_al
+
+    # Converter para lista com nomes legíveis
+    alunos_por_curso = []
+    for sigla, total in sorted(alunos_por_curso_raw.items(), key=lambda x: -x[1]):
+        nome = CURSOS_NOMES.get(sigla, sigla)
+        alunos_por_curso.append({'sigla': sigla, 'curso': nome, 'alunos': total})
+    dados['alunos_por_curso'] = alunos_por_curso
+    print(f"[{ts()}] Alunos por curso: {len(alunos_por_curso)} cursos, total {sum(x['alunos'] for x in alunos_por_curso):,}")
+
+    # Enriquecer tutores individualmente
     for t in tutores:
         nome_lower = str(t.get('n', '')).lower()
-        # Tentar match exato; depois match parcial
         info = lotacao.get(nome_lower)
         if not info:
             for k, v in lotacao.items():
@@ -912,10 +954,10 @@ def enriquecer_tutores(dados, lotacao):
                     info = v
                     break
         if info:
-            t['perfil']     = info['perfil']
-            t['cursos']     = info['cursos']
-            t['ch_semanal'] = info['ch_semanal']
-            t['ch_ideal']   = info['ch_ideal']
+            t['perfil']          = info['perfil']
+            t['cursos']          = info['cursos']
+            t['ch_semanal']      = info['ch_semanal']
+            t['ch_ideal']        = info['ch_ideal']
             t['contratacao_lot'] = info['contratacao']
             matched += 1
     print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH")
@@ -1464,6 +1506,7 @@ def processar_gerenciamento(p3):
         'pct_com_tutor': round(ofertas_com_tutor / total_ofertas * 100, 1) if total_ofertas else 0,
         'ofertas_com_agenda': ofertas_com_agenda,
         'total_alunos_matriculados': total_alunos_mat,
+        'total_alunos_matriculados_nota': 'por oferta - mesmo aluno contado múltiplas vezes',
         'total_alunos_agendados': total_alunos_agend,
         'total_capacidade': total_capacidade,
         'pct_ocupacao': round(total_alunos_agend / total_capacidade * 100, 1) if total_capacidade else 0,
@@ -1688,8 +1731,10 @@ if __name__ == '__main__':
             dados['tem_lotacao'] = True
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar lotação: {e}")
+            dados['alunos_por_curso'] = []
             dados['tem_lotacao'] = False
     else:
+        dados['alunos_por_curso'] = []
         dados['tem_lotacao'] = False
 
         # Gerenciamento — detecta formato automaticamente pelo cabeçalho
