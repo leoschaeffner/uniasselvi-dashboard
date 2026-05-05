@@ -651,7 +651,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todas categorias</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem"><option value="">Todas ordens</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status">
-        <option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option><option value="tutor">Com tutor</option><option value="ntutor">Sem tutor</option>
+        <option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option>
       </select>
       <span class="tbl-count" id="ger-det-count">—</span>
       <button class="btn-export" onclick="exportDetalhe()" title="Exportar tutores sem gerenciamento">⬇ Sem Gerenciamento</button>
@@ -661,13 +661,13 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th onclick="sortTable('ger-det-tbody','polo','str')">Polo</th>
       <th onclick="sortTable('ger-det-tbody','tutor','str')">Tutor</th>
       <th>Curso / Lab</th>
-      <th style="text-align:center" title="Práticas gerenciadas na Ordem 1">O.1<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
-      <th style="text-align:center" title="Práticas gerenciadas na Ordem 2">O.2<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
-      <th style="text-align:center" title="Práticas gerenciadas na Ordem 3">O.3<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
-      <th style="text-align:center" title="Práticas gerenciadas na Ordem 4">O.4<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/atrib.</span></th>
-      <th style="text-align:right" title="CH contratada semanal (4/8/12/20/24h)">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">contrat.</span></th>
+      <th style="text-align:center" title="Ordem 1 — Gerenciadas pelo tutor / Capacidade baseada na CH contratada">O.1<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap.CH</span></th>
+      <th style="text-align:center" title="Ordem 2 — Gerenciadas pelo tutor / Capacidade baseada na CH contratada">O.2<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap.CH</span></th>
+      <th style="text-align:center" title="Ordem 3 — Gerenciadas pelo tutor / Capacidade baseada na CH contratada">O.3<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap.CH</span></th>
+      <th style="text-align:center" title="Ordem 4 — Gerenciadas pelo tutor / Capacidade baseada na CH contratada">O.4<br><span style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap.CH</span></th>
+      <th style="text-align:right" title="CH contratada semanal arredondada para padrão (4/8/12/20/24h)">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">contrat.</span></th>
       <th style="text-align:right" title="CH realizada = práticas gerenciadas × 1,5h">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">realizada</span></th>
-      <th style="text-align:right" title="CH não aproveitada = (capacidade - realizadas) × 1,5h. Requer Planilha de Lotação.">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">restante</span></th>
+      <th style="text-align:right" title="CH restante por ordem = (cap/ordem - gerenciadas) × 1,5h">CH<br><span style="font-size:8px;font-weight:400;color:var(--muted)">restante/ord.</span></th>
       <th>% Ger.</th>
     </tr></thead><tbody id="ger-det-tbody"></tbody></table></div>
   </div>
@@ -1796,21 +1796,24 @@ function filterGerDetalhe(q){
     var praticasSemana=chCont?Math.floor((chCont*0.75)/1.5):null;  // ex: 8h→4/semana
     var capOrdem=praticasSemana?praticasSemana*4:null;               // ex: 4×4=16/ordem
 
-    // Células por ordem — mostra gerenciadas com semáforo de cor
-    // Tooltip explica o contexto completo
+    // Células por ordem — ger / cap.CH (quando disponível) ou ger / atrib
     var ordCells='';
     ['Ordem 1','Ordem 2','Ordem 3','Ordem 4'].forEach(function(o){
       var od=t.ordens[o];
       if(!od){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}
       var ger=od.ger, total=od.total;
-      var pO=total?Math.round(ger/total*100):0;
-      var corO=pO===100?'var(--ok)':pO>0?'var(--yellow-d)':'var(--red)';
-      // Com CH: comparar tb com capacidade
-      var tooltip=ger+' gerenciadas de '+total+' atribuídas';
-      if(capOrdem) tooltip+=' (cap. CH: '+capOrdem+'/ordem)';
+      var denom=capOrdem||total;  // prefere cap.CH, senão usa atribuídas
+      var pO=denom?Math.round(ger/denom*100):0;
+      var corO=pO>=100?'var(--ok)':pO>50?'var(--yellow-d)':ger>0?'var(--yellow-d)':'var(--red)';
+      var restO=capOrdem?Math.max(0,capOrdem-ger):null;
+      var chRestO=restO!==null?(restO*1.5).toFixed(1)+'h disp.':'';
+      var tooltip=ger+' gerenciadas';
+      if(capOrdem) tooltip+=' de '+capOrdem+' cap./CH ('+total+' atribuídas)';
+      else tooltip+=' de '+total+' atribuídas';
+      if(chRestO) tooltip+=' — '+chRestO;
       ordCells+='<td style="text-align:center" title="'+tooltip+'">'
-        +'<div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'</div>'
-        +'<div style="font-size:9px;color:var(--dim)">'+total+' atrib.</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'
+        +(chRestO?'<div style="font-size:9px;color:'+(parseFloat(chRestO)>0?'var(--red)':'var(--ok)')+'">'+chRestO+'</div>':'<div style="font-size:9px;color:var(--dim)">'+total+' atrib.</div>')
         +'</td>';
     });
 
@@ -1826,9 +1829,12 @@ function filterGerDetalhe(q){
     var chContCell=chCont
       ?'<td style="text-align:right;font-size:11px;font-weight:700;color:var(--teal)" title="'+praticasSemana+' práticas/semana · '+capOrdem+' cap/ordem">'+chCont+'h</td>'
       :'<td style="text-align:right;color:var(--dim)">—</td>';
-    var chRestCell=chRestH!==null
-      ?'<td style="text-align:right;font-size:11px;font-weight:700;color:'+(parseFloat(chRestH)>0?'var(--red)':'var(--ok)')+'">'+chRestH+'h'+(praticasRest>0?' <span style="font-size:9px">('+praticasRest+' ag)</span>':'')+'</td>'
-      :'<td style="text-align:right;color:var(--dim)">—</td>';    rows+='<tr class="tr-polo-hdr" style="cursor:pointer" data-det="'+gi+'">'
+    // CH restante POR ORDEM (mais intuitivo)
+    var chRestOrdH=capOrdem!==null?(Math.max(0,capOrdem-Math.max(...['Ordem 1','Ordem 2','Ordem 3','Ordem 4'].map(function(o){return t.ordens[o]?t.ordens[o].ger:0;})))*1.5).toFixed(1):null;
+    var chRestOrdValido=capOrdem!==null;
+    var chRestCell=chRestOrdValido
+      ?'<td style="text-align:right;font-size:11px;font-weight:700;color:'+(parseFloat(chRestOrdH)>0?'var(--red)':'var(--ok)')+'" title="CH restante na última ordem: ('+capOrdem+' cap - gerenciadas) × 1,5h">'+chRestOrdH+'h</td>'
+      :'<td style="text-align:right;color:var(--dim)" title="Requer Planilha de Lotação">—</td>';    rows+='<tr class="tr-polo-hdr" style="cursor:pointer" data-det="'+gi+'">'
       +'<td class="polo-toggle"><strong>'+t.polo+'</strong></td>'
       +'<td style="font-size:11px">'+tutorDisplay+'</td>'
       +'<td style="font-size:11px">'+catParaCurso(t.categoria)+'</td>'
