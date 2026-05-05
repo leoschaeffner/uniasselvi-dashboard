@@ -861,6 +861,37 @@ def processar(p1, p2):
 
 
 
+def _detectar_e_corrigir_base64(p4):
+    """Detecta se arquivo foi salvo como base64 pelo Power Automate e corrige no disco."""
+    import base64 as _b64
+    try:
+        with open(str(p4), 'rb') as f:
+            raw = f.read(16)  # Só ler os primeiros bytes para checar
+        
+        # ZIP válido (xlsx/xlsm) começa com PK (50 4B 03 04)
+        if raw[:4] == b'PK\x03\x04':
+            return  # Já é ZIP válido
+        
+        # Ler arquivo completo e tentar decodificar base64
+        with open(str(p4), 'rb') as f:
+            full = f.read()
+        
+        for padded in [full.strip(), full.strip() + b'==']:
+            try:
+                decoded = _b64.b64decode(padded)
+                if decoded[:4] == b'PK\x03\x04':
+                    with open(str(p4), 'wb') as fw:
+                        fw.write(decoded)
+                    print(f"  [FIX] Base64 detectado e corrigido ({len(full)}->{len(decoded)} bytes)")
+                    return
+            except Exception:
+                continue
+        
+        print(f"  [INFO] Arquivo não é ZIP nem base64 reconhecível ({raw[:4].hex()})")
+    except Exception as e:
+        print(f"  [AVISO] Verificação base64 falhou: {e}")
+
+
 def _ler_lotacao_xlsx(p4):
     """Tenta ler com openpyxl (xlsx/xlsm)."""
     from openpyxl import load_workbook as _lwb
@@ -906,6 +937,7 @@ def carregar_lotacao(p4):
     fname = os.path.basename(str(p4))
     print(f"[{ts()}] Lendo lotação de tutores ({fname})...")
     
+    _detectar_e_corrigir_base64(p4)  # Corrige se Power Automate salvou como base64
     _rows = None
     for estrategia, fn in [('openpyxl', _ler_lotacao_xlsx), ('xlrd', _ler_lotacao_xls), ('pandas', _ler_lotacao_pandas)]:
         try:
