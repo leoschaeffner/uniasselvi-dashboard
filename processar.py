@@ -289,9 +289,10 @@ def verificar_e_localizar():
     else:  print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO.xlsx não encontrada (módulo desativado)")
 
     # Lotação de tutores (enriquecimento)
-    p4 = achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsx")
+    # Aceita .xlsm (original SharePoint) ou .xlsx (convertido)
+    p4 = achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsm") or achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsx")
     if p4: print(f"  [OK] {os.path.basename(p4)}")
-    else:  print(f"  [INFO] LOTACAO_TUTORES.xlsx não encontrada (dados de perfil indisponíveis)")
+    else:  print(f"  [INFO] LOTACAO_TUTORES não encontrada (.xlsx/.xlsm)")
 
     return p1, p2, tmpl, p3, p4
 
@@ -861,10 +862,12 @@ def processar(p1, p2):
 
 
 def carregar_lotacao(p4):
-    """Carrega LOTACAO_TUTORES.xlsx e retorna mapa nome_lower -> dados do tutor."""
+    """Carrega LOTACAO_TUTORES.xlsx ou .xlsm e retorna mapa nome_lower -> dados do tutor."""
     from openpyxl import load_workbook as _lwb
-    print(f"[{ts()}] Lendo lotação de tutores...")
-    _wb = _lwb(str(p4), read_only=True, data_only=True)
+    print(f"[{ts()}] Lendo lotação de tutores ({os.path.basename(str(p4))})...")
+    # keep_vba=False ignora macros do .xlsm, data_only lê valores calculados
+    _is_xlsm = str(p4).lower().endswith('.xlsm')
+    _wb = _lwb(str(p4), read_only=True, data_only=True, keep_vba=False) if _is_xlsm else _lwb(str(p4), read_only=True, data_only=True)
     _ws = _wb['Quadro Geral de Lotação'] if 'Quadro Geral de Lotação' in _wb.sheetnames else list(_wb.worksheets)[0]
     _rows = list(_ws.iter_rows(values_only=True))
 
