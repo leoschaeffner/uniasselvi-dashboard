@@ -992,17 +992,26 @@ def carregar_lotacao(p4):
 
 # Mapeamento de siglas de curso para nomes legíveis
 CURSOS_NOMES = {
-    'EMF-ISN':  'Enfermagem e Instrumentação Cirúrgica',
-    'EMF-ISN2': 'Enfermagem e Instrumentação Cirúrgica',
-    'BFR':      'Farmácia',
-    'BBI':      'Biomedicina',
-    'BFI':      'Fisioterapia',
-    'BTO':      'T. Ocupacional',
-    'COS-TIP':  'Estética e Cosmética',
-    'NTR':      'Nutrição',
-    'AGM':      'Agronomia',
-    'BAU':      'Arquitetura',
+    # Siglas
+    'EMF-ISN':   'Enfermagem e Instrumentação Cirúrgica',
+    'EMF-ISN2':  'Enfermagem e Instrumentação Cirúrgica',
+    'BFR':       'Farmácia',
+    'BBI':       'Biomedicina',
+    'BFI':       'Fisioterapia',
+    'BTO':       'T. Ocupacional',
+    'COS-TIP':   'Estética e Cosmética',
+    'NTR':       'Nutrição',
+    'AGM':       'Agronomia',
+    'BAU':       'Arquitetura e Urbanismo',
     'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI': 'Engenharias e Licenciaturas',
+    # Nomes por extenso (Lotação)
+    'BIOMEDICINA':    'Biomedicina',
+    'FARMÁCIA':       'Farmácia',
+    'FISIOTERAPIA':   'Fisioterapia',
+    'TERAPIA OCUPACIONAL': 'T. Ocupacional',
+    'NUTRIÇÃO':       'Nutrição',
+    'AGRONOMIA':      'Agronomia',
+    'ARQUITETURA E URBANISMO': 'Arquitetura e Urbanismo',
 }
 
 def enriquecer_tutores(dados, lotacao):
@@ -1015,20 +1024,34 @@ def enriquecer_tutores(dados, lotacao):
     # Usar o código de cursos como chave de lab (ex: "BFR+BBI" → "Biomedicina/Farmácia")
     
     # Mapa laboratório → categoria legível
+    # Chaves em MAIÚSCULAS pois a Lotação usa nomes por extenso em maiúsculas
     LAB_PARA_CAT = {
-        'EMF-ISN':  'Enfermagem e Instrumentação Cirúrgica',
-        'EMF-ISN2': 'Enfermagem e Instrumentação Cirúrgica',
-        'BFR+BBI':  'Biomedicina e Farmácia',
-        'BBI+BFR':  'Biomedicina e Farmácia',
-        'BFR':      'Farmácia',
-        'BBI':      'Biomedicina',
-        'BFI':      'Fisioterapia',
-        'BTO':      'T. Ocupacional',
-        'COS-TIP':  'Estética e Cosmética',
-        'BFI+BTO+COS-TIP': 'Fisioterapia, T.Ocup. e Estética',
-        'NTR':      'Nutrição',
-        'AGM':      'Agronomia',
-        'BAU':      'Arquitetura',
+        # Por extenso (como aparecem na coluna CURSOS da Lotação)
+        'ENFERMAGEM,INSTRUMENTAÇÃO CIRÚRGICA':  'Enfermagem e Instrumentação Cirúrgica',
+        'ENFERMAGEM,INSTRUMENTAÇÃO CIRÚRGICA2': 'Enfermagem e Instrumentação Cirúrgica',
+        'BIOMEDICINA':    'Biomedicina',
+        'FARMÁCIA':       'Farmácia',
+        'FISIOTERAPIA':   'Fisioterapia',
+        'TERAPIA OCUPACIONAL': 'T. Ocupacional',
+        'TECNOLOGIA EM ESTÉTICA E COSMÉTICA,ESTÉTICA E IMAGEM PESSOAL': 'Estética e Cosmética',
+        'NUTRIÇÃO':       'Nutrição',
+        'AGRONOMIA':      'Agronomia',
+        'ARQUITETURA E URBANISMO': 'Arquitetura e Urbanismo',
+        # Engenharias — grupo completo
+        'CONSTRUÇÃO DE EDIFÍCIOS,ENGENHARIA CIVIL,ENGENHARIA ELÉTRICA,ENGENHARIA DE PRODUÇÃO,ENGENHARIA MECÂNICA,ENGENHARIA AMBIENTAL E SANITÁRIA,FORMAÇÃO PEDAGÓGICA EM FÍSICA,FÍSICA,GESTÃO DA PRODUÇÃO INDUSTRIAL,CONTROLE DE OBRAS,QUÍMICA,SANEAMENTO AMBIENTAL,SEGUNDA LICENCIATURA EM FÍSICA,TECNOLOGIA EM ENERGIAS RENOVÁVEIS': 'Engenharias e Licenciaturas',
+        # Engenharias — grupo parcial
+        'ENGENHARIA CIVIL,ENGENHARIA ELÉTRICA,ENGENHARIA DE PRODUÇÃO,ENGENHARIA MECÂNICA': 'Engenharias (Civil/Elét./Prod./Mec.)',
+        # Por sigla (legado — para compatibilidade com dados antigos)
+        'EMF-ISN':   'Enfermagem e Instrumentação Cirúrgica',
+        'EMF-ISN2':  'Enfermagem e Instrumentação Cirúrgica',
+        'BFR':       'Farmácia',
+        'BBI':       'Biomedicina',
+        'BFI':       'Fisioterapia',
+        'BTO':       'T. Ocupacional',
+        'COS-TIP':   'Estética e Cosmética',
+        'NTR':       'Nutrição',
+        'AGM':       'Agronomia',
+        'BAU':       'Arquitetura e Urbanismo',
         'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI': 'Engenharias e Licenciaturas',
     }
     
@@ -1049,24 +1072,33 @@ def enriquecer_tutores(dados, lotacao):
             continue
         polo_lab_seen.add(chave_polo_lab)
         
-        # Normalizar código: ordenar componentes para "BBI+BFR" == "BFR+BBI"
-        componentes = sorted([c.strip() for c in cursos_raw.replace(',', '+').split('+')])
-        lab_key = '+'.join(componentes)
+        # Para nomes por extenso com vírgula, normalizar
+        # ex: "ENFERMAGEM,INSTRUMENTAÇÃO CIRÚRGICA" → ordenar componentes
+        sep = '+' if '+' in cursos_raw else ','
+        componentes = sorted([c.strip() for c in cursos_raw.split(sep)])
+        # Reconstituir com vírgula para nomes por extenso, com + para siglas
+        if any(len(c) > 8 for c in componentes):
+            lab_key = ','.join(componentes)  # nomes por extenso
+        else:
+            lab_key = '+'.join(componentes)  # siglas curtas
         alunos_por_lab_raw[lab_key] = alunos_por_lab_raw.get(lab_key, 0) + total_al
     
+    # Normalizar chaves do LAB_PARA_CAT para comparação
+    def _norm_lab_key(k):
+        sep = '+' if '+' in k else ','
+        partes = sorted([p.strip().upper() for p in k.split(sep)])
+        return (','.join(partes) if any(len(p)>8 for p in partes) else '+'.join(partes))
+    
+    lab_cat_norm = {_norm_lab_key(k): v for k, v in LAB_PARA_CAT.items()}
+
     # Converter para lista legível
     alunos_por_curso = []
     for lab_key, total in sorted(alunos_por_lab_raw.items(), key=lambda x: -x[1]):
-        # Buscar nome legível — tentar chave composta e chave simples
-        nome = LAB_PARA_CAT.get(lab_key)
+        nome = lab_cat_norm.get(lab_key)
         if not nome:
-            # Tentar variações de ordenação
-            for k, v in LAB_PARA_CAT.items():
-                if set(k.split('+')) == set(lab_key.split('+')):
-                    nome = v
-                    break
-        if not nome:
-            nome = CURSOS_NOMES.get(lab_key.split('+')[0], lab_key)
+            # Fallback: primeiro componente
+            primeiro = lab_key.split(',')[0].split('+')[0].strip()
+            nome = CURSOS_NOMES.get(primeiro, primeiro.title())
         alunos_por_curso.append({'sigla': lab_key, 'curso': nome, 'alunos': total})
     
     dados['alunos_por_curso'] = alunos_por_curso
