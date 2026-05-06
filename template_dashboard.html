@@ -603,7 +603,6 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     </tr></thead><tbody id="gv-estados-tbody"></tbody></table></div>
   </div>
 </div>
-</div>
 
 <!-- ═══ GERENCIAMENTO — OFERTAS ══════════════════════════════════════════ -->
 <div class="page" id="page-ger-ofertas">
@@ -1882,8 +1881,13 @@ function filterGerDetalhe(q){
     var capOrdem=praticasSemana?praticasSemana*4:null;               // ex: 4×4=16/ordem
 
     // Células por ordem — ger / cap.CH (quando disponível) ou ger / atrib
+     // Detectar se categoria tem Ordem 5 (exatas)
+     var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];
+     var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});
+     var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4'];
+     if(temOrdem5) ordensExibir.push('Ordem 5');
     var ordCells='';
-    ['Ordem 1','Ordem 2','Ordem 3','Ordem 4'].forEach(function(o){
+     ordensExibir.forEach(function(o){
       var od=t.ordens[o];
       if(!od){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}
       var ger=od.ger, total=od.total;
