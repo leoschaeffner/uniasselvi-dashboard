@@ -703,18 +703,32 @@ function renderGerAgendaTbl(data){
     var kpiHtml='<div class="kpi-row"><div class="kpi kpi-teal"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">'+a.total+'</div></div><div class="kpi kpi-ok"><div class="kpi-label">Com Agenda</div><div class="kpi-value">'+a.com_agenda+'</div></div><div class="kpi kpi-red"><div class="kpi-label">Sem Agenda</div><div class="kpi-value">'+a.sem_agenda+'</div></div><div class="kpi kpi-green"><div class="kpi-label">% Agendado</div><div class="kpi-value">'+a.pct_agendado+'%</div></div></div>';
     var datas=a.datas_agenda||[];var datCat=a.datas_por_cat||{};var datTutor=a.datas_por_tutor||{};var calHtml='';
     if(datas.length){var mesesMap={};datas.forEach(function(d){var m=d.slice(0,7);if(!mesesMap[m])mesesMap[m]=[];mesesMap[m].push(d);});var mesesNames=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];calHtml='<div style="font-size:11px;font-weight:700;margin:12px 0 8px">📅 Datas de Agendamento ('+datas.length+' datas)</div>';var mesKeys=Object.keys(mesesMap).sort();calHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px">';mesKeys.forEach(function(mes){var parts=mes.split('-');var yr=parseInt(parts[0]),mo=parseInt(parts[1])-1;var label=mesesNames[mo]+'/'+yr;var diasDoMes=new Date(yr,mo+1,0).getDate();var firstDay=new Date(yr,mo,1).getDay();var datasSet=new Set(mesesMap[mes]);calHtml+='<div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:4px">'+label+'</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">';['D','S','T','Q','Q','S','S'].forEach(function(d){calHtml+='<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:2px 0">'+d+'</div>';});for(var i=0;i<firstDay;i++)calHtml+='<div></div>';for(var d2=1;d2<=diasDoMes;d2++){var key=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d2).padStart(2,'0');var temAg=datasSet.has(key);var cats=(datCat[key]||[]);var bgColor=temAg?(cats.length?getCatColor(cats[0]):'var(--green)'):'var(--bg)';calHtml+='<div style="text-align:center;font-size:9px;padding:2px;border-radius:3px;'+(temAg?'background:'+bgColor+';color:#fff;font-weight:700':'color:var(--muted)')+'" title="'+(temAg?key:'')+'">'+d2+'</div>';  }calHtml+='</div></div>';});calHtml+='</div>';
-    // Legenda de tutores por data
+    // Legenda de tutores por data (formato: Primeiro Último · Cat)
     var tutoresDatas=Object.keys(datTutor).sort();
     if(tutoresDatas.length){
       calHtml+='<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;border-top:1px solid var(--border);padding-top:8px">👤 Tutores Agendados por Data</div>';
       tutoresDatas.forEach(function(d){
         var tuts=datTutor[d]||[];if(!tuts.length)return;
         var cats=datCat[d]||[];
-        var cor=cats.length?getCatColor(cats[0]):'var(--green)';
-        calHtml+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">'
-          +'<span style="font-size:10px;font-weight:700;color:var(--muted);min-width:80px">'+d.split("-").reverse().join("/")+'</span>'
-          +'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+cor+';flex-shrink:0"></span>'
-          +'<span style="font-size:11px;font-weight:500">'+tuts.join(', ')+'</span></div>';
+        // Deduplicar por nome formatado, atribuir cor por categoria
+        var seen=new Set();var linhas=[];
+        tuts.forEach(function(t){
+          var nFmt=formatTutorShort(t);
+          if(seen.has(nFmt))return;
+          seen.add(nFmt);
+          var catAbrev=getTutorCatAbrev(t,a.polo);
+          var display=nFmt+(catAbrev?' · '+catAbrev:'');
+          var cor=cats.length?getCatColor(cats[0]):'var(--green)';
+          linhas.push({display:display,cor:cor});
+        });
+        if(!linhas.length)return;
+        calHtml+='<div style="padding:4px 0;border-bottom:1px solid var(--border)">'
+          +'<span style="font-size:10px;font-weight:700;color:var(--muted);display:inline-block;min-width:82px">'+d.split("-").reverse().join("/")+'</span>'
+          +linhas.map(function(l){
+            return '<span style="display:inline-flex;align-items:center;gap:5px;margin-right:10px">'
+              +'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+l.cor+'"></span>'
+              +'<span style="font-size:11px;font-weight:500">'+l.display+'</span></span>';
+          }).join('')+'</div>';
       });
       calHtml+='</div>';}
   }else{calHtml='<div style="color:var(--muted);font-size:11px;margin-top:8px">Sem datas de agendamento.</div>';}
@@ -731,9 +745,9 @@ function filterGerDetalhe(q){
   sorted.forEach(function(t,gi){var pct=t.totalOfertas?Math.round(t.totalGer/t.totalOfertas*100):0;var semTutor=!t.tutor;var tutorDisplay=t.tutor||'<span style="color:var(--red)">Sem tutor</span>';
     var normT=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};var dbTutor=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normT(x.n)===normT(t.tutor);});var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont*0.75)/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
     var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4'];if(temOrdem5)ordensExibir.push('Ordem 5');var ordCells='';
-    ordensExibir.forEach(function(o){var od=t.ordens[o];if(!od){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}var ger=od.ger,total=od.total;var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;ordCells+='<td style="text-align:center"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+(chRestO?'<div style="font-size:9px;color:'+(parseFloat(chRestO)>0?'var(--red)':'var(--ok)')+'">'+chRestO+'</div>':'<div style="font-size:9px;color:var(--dim)">de '+total+'</div>')+'</td>';});
+    ordensExibir.forEach(function(o){var od=t.ordens[o];if(!od){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}var ger=od.ger,total=od.total;var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+(chRestO?'<div style="font-size:9px;line-height:1;color:'+(parseFloat(chRestO)>0?'var(--red)':'var(--ok)')+'">'+chRestO+'</div>':'')+\'</td>\';});
     var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
-    rows+='<tr class="tr-polo-hdr" style="cursor:pointer" data-det="'+gi+'"><td class="polo-toggle"><strong>'+t.polo+'</strong></td><td style="font-size:11px">'+tutorDisplay+'</td><td style="font-size:11px">'+catParaCurso(t.categoria)+'</td>'+ordCells
+    rows+='<tr class="tr-polo-hdr" style="cursor:pointer;vertical-align:middle" data-det="'+gi+'"><td class="polo-toggle"><strong>'+t.polo+'</strong></td><td style="font-size:11px">'+tutorDisplay+'</td><td style="font-size:11px">'+catParaCurso(t.categoria)+'</td>'+ordCells
       +'<td class="col-ch-lot" style="text-align:right;font-size:11px;font-weight:700;color:var(--teal)">'+(chCont?chCont+'h':'—')+'</td>'
       +'<td style="text-align:right;font-size:11px">'+chGer+'</td>'
       +'<td class="col-ch-lot" style="text-align:right;font-size:11px">'+(chRestH!==null?chRestH+'h':'—')+'</td>'
@@ -774,45 +788,210 @@ function openEstadoModal(uf){
   document.getElementById('modal-overlay').classList.add('show');
 }
 
-// ── MAPA DO BRASIL — paths geográficos ──────────────────────────────────────
-var BRAZIL_PATHS={
-'RR':'M 15,1 L 111,0 L 155,17 L 155,49 L 113,54 L 110,38 L 15,30 Z',
-'AP':'M 220,9 L 254,9 L 262,32 L 256,52 L 242,52 L 243,37 L 211,32 Z',
-'AM':'M 11,36 L 110,36 L 154,38 L 155,52 L 146,70 L 50,93 L 44,108 L 6,145 L 16,168 L 46,175 L 66,187 L 88,175 L 104,162 L 158,153 L 152,124 L 138,92 L 99,78 L 66,70 L 44,55 L 18,55 L 11,36 Z',
-'PA':'M 155,21 L 233,13 L 254,18 L 262,34 L 242,54 L 256,54 L 270,59 L 288,67 L 292,93 L 324,87 L 328,110 L 294,123 L 286,137 L 284,145 L 264,154 L 252,145 L 226,145 L 187,133 L 170,113 L 183,95 L 165,89 L 158,84 L 154,67 L 143,54 L 155,46 L 155,21 Z',
-'AC':'M 1,145 L 16,168 L 46,175 L 66,187 L 88,175 L 104,164 L 99,185 L 68,210 L 1,182 Z',
-'RO':'M 104,162 L 154,153 L 160,185 L 150,218 L 120,216 L 95,212 L 99,185 L 104,164 Z',
-'MT':'M 108,162 L 160,186 L 152,218 L 176,224 L 204,228 L 226,199 L 240,193 L 248,183 L 262,177 L 264,155 L 253,146 L 227,147 L 187,135 L 182,141 L 161,152 L 108,162 Z',
-'TO':'M 258,124 L 295,122 L 306,132 L 302,153 L 297,170 L 286,193 L 275,207 L 264,209 L 253,192 L 253,177 L 248,183 L 240,193 L 226,199 L 258,124 Z',
-'MA':'M 306,78 L 337,90 L 363,95 L 336,124 L 328,130 L 330,147 L 314,151 L 297,170 L 302,153 L 306,132 L 295,122 L 258,124 L 284,100 L 292,93 L 288,67 L 270,59 L 306,78 Z',
-'PI':'M 363,95 L 360,90 L 358,92 L 370,92 L 374,101 L 365,124 L 374,141 L 365,153 L 352,162 L 330,147 L 336,124 L 363,95 Z',
-'CE':'M 370,92 L 358,92 L 363,95 L 365,124 L 374,141 L 394,143 L 405,136 L 398,122 L 405,113 L 402,101 L 394,104 L 370,92 Z',
-'RN':'M 426,116 L 429,128 L 418,135 L 405,136 L 394,143 L 390,133 L 390,124 L 402,101 L 405,113 L 398,122 L 412,118 L 426,116 Z',
-'PB':'M 429,130 L 421,141 L 396,147 L 394,143 L 405,136 L 418,135 L 429,128 Z',
-'PE':'M 428,141 L 429,155 L 409,161 L 385,159 L 374,153 L 363,161 L 365,153 L 374,141 L 394,143 L 396,147 L 421,141 Z',
-'AL':'M 427,156 L 416,171 L 404,170 L 405,159 L 390,155 L 390,161 L 407,167 L 416,170 L 427,156 Z',
-'SE':'M 414,170 L 405,184 L 394,182 L 390,178 L 398,170 L 404,170 Z',
-'BA':'M 346,170 L 363,161 L 374,153 L 390,155 L 390,161 L 390,178 L 394,182 L 405,184 L 407,193 L 396,199 L 390,216 L 385,233 L 380,262 L 374,279 L 368,293 L 358,285 L 336,274 L 324,268 L 314,247 L 302,239 L 308,222 L 314,205 L 302,187 L 297,170 L 314,151 L 330,147 L 352,162 L 346,170 Z',
-'MG':'M 264,230 L 270,239 L 286,245 L 302,239 L 314,247 L 324,268 L 336,274 L 358,285 L 368,293 L 363,306 L 346,312 L 336,323 L 321,316 L 310,320 L 297,325 L 292,320 L 280,316 L 264,305 L 248,299 L 248,285 L 236,274 L 242,254 L 264,230 Z',
-'ES':'M 374,279 L 374,301 L 368,293 L 374,279 Z',
-'RJ':'M 336,323 L 363,322 L 364,314 L 363,306 L 368,293 L 374,319 L 341,330 L 336,323 Z',
-'SP':'M 321,316 L 336,323 L 330,331 L 314,331 L 297,331 L 280,331 L 264,331 L 248,324 L 248,299 L 264,305 L 280,316 L 292,320 L 297,325 L 310,320 Z',
-'PR':'M 280,331 L 280,360 L 270,366 L 253,366 L 236,366 L 226,366 L 214,360 L 214,348 L 226,337 L 242,325 L 248,320 L 248,331 L 264,331 L 280,331 Z',
-'SC':'M 280,360 L 280,394 L 270,400 L 253,394 L 236,394 L 226,389 L 214,377 L 214,360 L 226,366 L 236,366 L 253,366 L 270,366 Z',
-'RS':'M 270,400 L 270,448 L 242,448 L 226,446 L 222,429 L 220,412 L 198,412 L 182,400 L 198,391 L 220,384 L 226,389 L 236,394 L 253,394 Z',
-'MS':'M 264,230 L 242,254 L 236,274 L 248,285 L 248,299 L 248,324 L 214,312 L 204,297 L 176,291 L 176,268 L 182,251 L 187,239 L 198,239 L 226,239 L 236,239 L 248,239 Z',
-'GO':'M 264,209 L 275,207 L 286,193 L 297,170 L 302,187 L 314,205 L 308,222 L 302,239 L 286,245 L 270,239 L 264,230 L 248,239 L 226,199 L 236,205 L 248,187 L 253,177 Z',
-'DF':'M 294,239 L 297,239 L 302,239 L 294,247 L 286,245 L 294,239 Z'
+// ── MAPA DO BRASIL — D3 + IBGE API ──────────────────────────────────────────
+// Lookup IBGE codarea (2 dígitos) → sigla UF
+var IBGE_TO_UF = {
+  '11':'RO','12':'AC','13':'AM','14':'RR','15':'PA','16':'AP','17':'TO',
+  '21':'MA','22':'PI','23':'CE','24':'RN','25':'PB','26':'PE','27':'AL','28':'SE','29':'BA',
+  '31':'MG','32':'ES','33':'RJ','35':'SP','41':'PR','42':'SC','43':'RS',
+  '50':'MS','51':'MT','52':'GO','53':'DF'
 };
-var BRAZIL_CENTROIDS={
-'RR':[138,32],'AP':[244,40],'AM':[99,101],'PA':[242,101],
-'AC':[44,170],'RO':[126,187],'MT':[198,210],'TO':[280,178],
-'MA':[314,113],'PI':[352,136],'CE':[380,118],'RN':[409,128],
-'PB':[409,144],'PE':[398,159],'AL':[410,164],'SE':[402,178],
-'BA':[352,210],'GO':[270,220],'DF':[292,243],'MG':[324,274],
-'ES':[374,285],'RJ':[352,317],'SP':[280,320],'MS':[214,285],
-'PR':[248,348],'SC':[253,377],'RS':[236,412]
-};
+
+function _loadScript(url, cb) {
+  if (document.querySelector('script[data-msrc="'+url+'"]')) { cb(); return; }
+  var s = document.createElement('script');
+  s.dataset.msrc = url;
+  s.src = url;
+  s.onload = function() { cb(null); };
+  s.onerror = function() { cb(new Error('Falha ao carregar '+url)); };
+  document.head.appendChild(s);
+}
+
+function renderMapaBrasil(estadosData) {
+  var svgEl = document.getElementById('mapa-brasil');
+  if (!svgEl) return;
+  var mapa = {};
+  (estadosData||[]).forEach(function(e){ mapa[e.uf] = e; });
+
+  svgEl.innerHTML = '<text x="260" y="255" text-anchor="middle" fill="#9ca3af" '
+    + 'font-size="13" font-family="Plus Jakarta Sans,sans-serif">⏳ Carregando mapa...</text>';
+
+  // Carregar D3 do CDN
+  _loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js', function(err1) {
+    if (err1) { _renderMapaFallback(svgEl, mapa); return; }
+
+    // Buscar GeoJSON dos estados brasileiros via IBGE
+    var ibgeUrl = 'https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR'
+      + '?formato=application/geo+json&divisoes=UF&qualidade=minima';
+
+    d3.json(ibgeUrl).then(function(geo) {
+      _renderMapaD3(svgEl, mapa, geo);
+    }).catch(function() {
+      // Fallback: tentar fonte alternativa
+      d3.json('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
+      .then(function(geo2) { _renderMapaD3Alt(svgEl, mapa, geo2); })
+      .catch(function() { _renderMapaFallback(svgEl, mapa); });
+    });
+  });
+}
+
+function _corEstadoD3(pct) {
+  if (pct === null || pct === undefined) return '#e2e8f0';
+  if (pct >= 90) return '#14532d';
+  if (pct >= 70) return '#166534';
+  if (pct >= 50) return '#16a34a';
+  if (pct >= 30) return '#ca8a04';
+  if (pct >= 10) return '#dc2626';
+  return '#991b1b';
+}
+
+function _renderMapaD3(svgEl, mapa, geo) {
+  // Obter codarea de 2 dígitos do IBGE codarea completo (7 dígitos → 2 primeiros)
+  function getUF(feature) {
+    var cod = (feature.properties && (feature.properties.codarea || feature.properties.CD_GEOCUF || '')) + '';
+    if (cod.length >= 2) {
+      var uf2 = cod.substring(0, 2);
+      return IBGE_TO_UF[uf2] || null;
+    }
+    return null;
+  }
+
+  var w = svgEl.parentElement ? svgEl.parentElement.clientWidth : 480;
+  var h = Math.round(w * 1.02);
+  svgEl.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+
+  var projection = d3.geoMercator()
+    .fitSize([w - 20, h - 20], geo)
+    .translate([(w)/2, (h)/2]);
+
+  var path = d3.geoPath().projection(projection);
+  var tooltip = document.getElementById('mapa-tooltip');
+
+  // Limpar SVG
+  svgEl.innerHTML = '';
+
+  // Filtro sombra
+  var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = '<filter id="ms" x="-10%" y="-10%" width="120%" height="120%">'
+    + '<feDropShadow dx="1" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,.22)"/></filter>'
+    + '<filter id="ms-h" x="-15%" y="-15%" width="130%" height="130%">'
+    + '<feDropShadow dx="2" dy="4" stdDeviation="5" flood-color="rgba(0,0,0,.35)"/></filter>';
+  svgEl.appendChild(defs);
+
+  geo.features.forEach(function(feature) {
+    var uf = getUF(feature);
+    var e = uf ? mapa[uf] : null;
+    var pct = e && e.ofertas ? Math.round(e.gerenciadas / e.ofertas * 100) : null;
+    var cor = _corEstadoD3(pct);
+
+    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', path(feature));
+    p.setAttribute('fill', cor);
+    p.setAttribute('stroke', 'rgba(255,255,255,.85)');
+    p.setAttribute('stroke-width', '1.2');
+    p.setAttribute('stroke-linejoin', 'round');
+    p.style.cursor = 'pointer';
+    p.style.filter = 'url(#ms)';
+    p.style.transition = 'all .2s ease';
+    if (uf) p.dataset.uf = uf;
+
+    // Hover
+    p.addEventListener('mouseenter', function() {
+      svgEl.querySelectorAll('path').forEach(function(el){ el.style.opacity = '0.6'; });
+      this.style.opacity = '1';
+      this.style.filter = 'url(#ms-h) brightness(1.2)';
+    });
+    p.addEventListener('mouseleave', function() {
+      svgEl.querySelectorAll('path').forEach(function(el){ el.style.opacity = '1'; el.style.filter = 'url(#ms)'; });
+      if (tooltip) tooltip.style.display = 'none';
+    });
+    p.addEventListener('mousemove', function(ev) {
+      if (!tooltip || !uf || !e) return;
+      var pctTt = e.ofertas ? Math.round(e.gerenciadas/e.ofertas*100) : 0;
+      var corTt = pctTt>=50?'#16a34a':pctTt>=25?'#ca8a04':'#dc2626';
+      tooltip.innerHTML = '<strong style="font-size:12px">'+uf+' — '+e.nome+'</strong>'
+        +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'+e.polos+' polos · '+e.ofertas+' ofertas</div>'
+        +'<div style="font-size:11px;margin-top:2px">Gerenciado: <strong style="color:'+corTt+'">'+pctTt+'%</strong>'
+        +' &nbsp;|&nbsp; Sem tutor: <strong style="color:#dc2626">'+e.sem_tutor+'</strong></div>'
+        +'<div style="height:5px;background:#e5e7eb;border-radius:3px;margin-top:5px">'
+        +'<div style="height:100%;width:'+pctTt+'%;background:'+corTt+';border-radius:3px"></div></div>';
+      tooltip.style.display = 'block';
+      tooltip.style.left = (ev.clientX + 14) + 'px';
+      tooltip.style.top = (ev.clientY - 14) + 'px';
+    });
+    p.addEventListener('click', function() {
+      if (uf) openEstadoModal(uf);
+    });
+
+    svgEl.appendChild(p);
+
+    // Label UF + %
+    if (uf) {
+      var centroid = path.centroid(feature);
+      if (centroid && !isNaN(centroid[0])) {
+        var txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txt.setAttribute('x', centroid[0]);
+        txt.setAttribute('y', centroid[1] + 1);
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('font-size', w > 400 ? '8' : '6');
+        txt.setAttribute('font-weight', '800');
+        txt.setAttribute('font-family', 'Plus Jakarta Sans,sans-serif');
+        txt.setAttribute('fill', '#ffffff');
+        txt.setAttribute('pointer-events', 'none');
+        txt.style.filter = 'drop-shadow(0 1px 2px rgba(0,0,0,.7))';
+        txt.textContent = uf;
+        svgEl.appendChild(txt);
+
+        if (pct !== null) {
+          var pctLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          pctLabel.setAttribute('x', centroid[0]);
+          pctLabel.setAttribute('y', centroid[1] + (w > 400 ? 10 : 8));
+          pctLabel.setAttribute('text-anchor', 'middle');
+          pctLabel.setAttribute('font-size', w > 400 ? '7' : '5.5');
+          pctLabel.setAttribute('font-weight', '600');
+          pctLabel.setAttribute('font-family', 'Plus Jakarta Sans,sans-serif');
+          pctLabel.setAttribute('fill', pct>=50?'#bbf7d0':pct>=25?'#fef08a':'#fca5a5');
+          pctLabel.setAttribute('pointer-events', 'none');
+          pctLabel.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,.6))';
+          pctLabel.textContent = pct + '%';
+          svgEl.appendChild(pctLabel);
+        }
+      }
+    }
+  });
+}
+
+// Fallback: fonte alternativa (click_that_hood) com campo "name" diferente
+function _renderMapaD3Alt(svgEl, mapa, geo) {
+  // Mapa nome-estado → UF para fonte alternativa
+  var NOME_TO_UF = {
+    'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA',
+    'Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO',
+    'Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG',
+    'Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI',
+    'Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS',
+    'Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP',
+    'Sergipe':'SE','Tocantins':'TO'
+  };
+  // Mapear nome do feature para UF
+  var modified = { type: geo.type, features: geo.features.map(function(f) {
+    var nome = f.properties.name || f.properties.nome || '';
+    var uf = NOME_TO_UF[nome] || null;
+    var newProps = Object.assign({}, f.properties, { codarea: uf ? Object.keys(IBGE_TO_UF).find(function(k){ return IBGE_TO_UF[k]===uf; }) : '' });
+    return Object.assign({}, f, { properties: newProps });
+  })};
+  _renderMapaD3(svgEl, mapa, modified);
+}
+
+// Fallback geométrico (polígonos simples) caso D3/IBGE falhem
+function _renderMapaFallback(svgEl, mapa) {
+  svgEl.innerHTML = '<rect x="10" y="10" width="490" height="490" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>'
+    + '<text x="260" y="255" text-anchor="middle" fill="#94a3b8" font-size="14" font-family="Plus Jakarta Sans,sans-serif">'
+    + '🗺️ Mapa indisponível</text>'
+    + '<text x="260" y="275" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="Plus Jakarta Sans,sans-serif">'
+    + 'Verifique a conexão com a internet</text>';
+}
+
 function _corEstado(pct){
   if(pct===null||pct===undefined)return '#94a3b8';  // cinza — sem dados
   if(pct>=90)return '#14532d';   // verde muito escuro — excelente
@@ -832,117 +1011,7 @@ function _corLight(pct){
   return '#fca5a5';
 }
 function _gradId(uf){return 'grad_'+uf;}
-function renderMapaBrasil(estadosData){
-  var svg=document.getElementById('mapa-brasil');if(!svg)return;
-  var mapa={};(estadosData||[]).forEach(function(e){mapa[e.uf]=e;});
 
-  var defs='<defs>'
-    +'<filter id="sombra" x="-15%" y="-15%" width="130%" height="130%">'
-    +'<feGaussianBlur stdDeviation="2" result="blur"/>'
-    +'<feOffset dx="1.5" dy="2.5" in="blur" result="offsetBlur"/>'
-    +'<feComposite in="SourceGraphic" in2="offsetBlur" operator="over"/>'
-    +'</filter>'
-    +'<filter id="sombra-hover" x="-20%" y="-20%" width="140%" height="140%">'
-    +'<feGaussianBlur stdDeviation="4" result="blur"/>'
-    +'<feOffset dx="2" dy="4" in="blur" result="offsetBlur"/>'
-    +'<feComposite in="SourceGraphic" in2="offsetBlur" operator="over"/>'
-    +'</filter>';
-  Object.keys(BRAZIL_PATHS).forEach(function(uf){
-    var e=mapa[uf];var pct=e?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var c1=_corEstado(pct);
-    var c2=_corLight(pct);
-    // Gradiente radial do centro para as bordas
-    defs+='<radialGradient id="'+_gradId(uf)+'" cx="40%" cy="35%" r="65%" fx="40%" fy="35%">'
-      +'<stop offset="0%" style="stop-color:'+c2+';stop-opacity:0.9"/>'
-      +'<stop offset="100%" style="stop-color:'+c1+';stop-opacity:1"/>'
-      +'</radialGradient>';
-  });
-  defs+='</defs>';
-
-  var paths='';
-  Object.keys(BRAZIL_PATHS).forEach(function(uf){
-    var d=BRAZIL_PATHS[uf];
-    var e=mapa[uf];
-    var pct=e?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var strokeCor=pct===null?'rgba(148,163,184,.6)':'rgba(255,255,255,.85)';
-    var strokeW=1.5;
-    paths+='<path data-uf="'+uf+'" d="'+d+'"'
-      +' fill="url(#'+_gradId(uf)+')"'
-      +' stroke="'+strokeCor+'" stroke-width="'+strokeW+'" stroke-linejoin="round"'
-      +' style="cursor:pointer;transition:all .2s ease;filter:drop-shadow(1px 2px 3px rgba(0,0,0,.2))"'
-      +'/>';
-  });
-
-  var labels='';
-  // Sombra de texto: usar filter de blur para criar sombra nos labels
-  labels+='<filter id="text-shadow" x="-20%" y="-20%" width="140%" height="140%">'
-    +'<feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="rgba(0,0,0,.6)"/>'
-    +'</filter>';
-  Object.keys(BRAZIL_CENTROIDS).forEach(function(uf){
-    var c=BRAZIL_CENTROIDS[uf];var e=mapa[uf];
-    var pct=e?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var fillCor=pct===null?'#475569':'#fff';
-    // Fundo semi-transparente para legibilidade do label
-    labels+='<text x="'+c[0]+'" y="'+(c[1]+1)+'" text-anchor="middle"'
-      +' font-size="8" font-weight="900" font-family="Plus Jakarta Sans,sans-serif"'
-      +' fill="'+fillCor+'" pointer-events="none"'
-      +' filter="url(#text-shadow)">'+uf+'</text>';
-    if(pct!==null){
-      var pctCor=pct>=50?'#bbf7d0':pct>=25?'#fef08a':'#fca5a5';
-      labels+='<text x="'+c[0]+'" y="'+(c[1]+9)+'" text-anchor="middle"'
-        +' font-size="7" font-weight="700" font-family="Plus Jakarta Sans,sans-serif"'
-        +' fill="'+pctCor+'" pointer-events="none">'+pct+'%</text>';}
-  });
-
-  svg.innerHTML=defs+paths+labels;
-
-  var tooltip=document.getElementById('mapa-tooltip');
-  svg.addEventListener('mouseover',function(ev){
-    var p=ev.target.closest('path[data-uf]');
-    if(!p)return;
-    svg.querySelectorAll('path[data-uf]').forEach(function(el){
-      el.style.opacity='0.6';
-      el.style.transform='';
-    });
-    p.style.opacity='1';
-    p.style.filter='brightness(1.25) saturate(1.3) drop-shadow(0 4px 8px rgba(0,0,0,.4))';
-    p.style.transform='scale(1.01)';
-    p.style.transformOrigin='center';
-    p.style.zIndex='10';
-  });
-  svg.addEventListener('mouseleave',function(){
-    svg.querySelectorAll('path[data-uf]').forEach(function(el){
-      el.style.opacity='1';
-      el.style.filter='drop-shadow(1px 2px 3px rgba(0,0,0,.2))';
-      el.style.transform='';
-    });
-    if(tooltip)tooltip.style.display='none';
-  });
-  svg.onmousemove=function(ev){
-    var p=ev.target.closest('path[data-uf]');
-    if(p&&tooltip){
-      var uf=p.dataset.uf;var e=mapa[uf];
-      if(e){
-        var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;
-        var corPct=pct>=50?'#16a34a':pct>=25?'#f59e0b':'#dc2626';
-        var bar='<div style="height:6px;background:#e5e7eb;border-radius:3px;margin-top:4px"><div style="height:100%;width:'+pct+'%;background:'+corPct+';border-radius:3px"></div></div>';
-        tooltip.innerHTML='<strong style="font-size:12px">'+uf+' — '+e.nome+'</strong>'
-          +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'+e.polos+' polos · '+fmtNum(e.ofertas)+' ofertas</div>'
-          +'<div style="font-size:11px;margin-top:2px">Gerenciado: <strong style="color:'+corPct+'">'+pct+'%</strong>'
-          +' &nbsp;|&nbsp; Sem tutor: <strong style="color:#dc2626">'+fmtNum(e.sem_tutor)+'</strong></div>'+bar;
-        tooltip.style.display='block';
-        tooltip.style.left=(ev.clientX+14)+'px';
-        tooltip.style.top=(ev.clientY-14)+'px';
-      }else if(tooltip)tooltip.style.display='none';
-    }else if(tooltip)tooltip.style.display='none';
-  };
-  svg.onclick=function(ev){
-    var p=ev.target.closest('path[data-uf]');
-    if(p)openEstadoModal(p.dataset.uf);
-  };
-}
-
-// ── FILTROS, DARK, SENHA, UTILS ───────────────────────────────────────────────
 function populateFilters(){
   const tutorCats=[...new Set((DB.tutores||[]).map(t=>t.c).filter(Boolean))].sort();
   const tSel=document.getElementById('tutor-cat-sel');if(tSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tSel.appendChild(o)});
@@ -980,6 +1049,37 @@ var CAT_CURSO={'ENF-INS (Multidisciplinar II)':'Enfermagem e Instrumentação Ci
 function catParaCurso(cat){if(!cat)return cat;for(var k in CAT_CURSO){if(cat.toUpperCase().includes(k.split('(')[0].trim().toUpperCase()))return CAT_CURSO[k];}return cat;}
 var CAT_COLORS={'ENF-INS (Multidisciplinar II)':'#2196F3','BIO-FAR (Multidisciplinar I)':'#4CAF50','BIO-FISIO-EST-TO (Multidisciplinar III)':'#FF9800','QUÍMICA E FÍSICA':'#9C27B0','ENGMAKER':'#F44336','NUTRI (Multidisciplinar IV)':'#00BCD4'};
 function getCatColor(cat){if(!cat)return 'var(--green)';for(var k in CAT_COLORS){if(cat.toLowerCase().includes(k.toLowerCase().split('(')[0].trim().toLowerCase()))return CAT_COLORS[k];}return 'var(--teal)';}
+
+
+// ── HELPERS AGENDA ────────────────────────────────────────────────────────────
+function formatTutorShort(nome) {
+  var clean = (nome||'').replace(/\s*\(\d+\)\s*$/, '').trim();
+  var p = clean.split(/\s+/).filter(Boolean);
+  if (p.length <= 2) return clean;
+  return p[0] + ' ' + p[p.length - 1];
+}
+var _CAT_ABREV = {
+  'ENF':'ENF', 'INSTRUMENTA':'ENF', 'ENFERMAGEM':'ENF',
+  'BIO-FAR':'Bio-Far', 'BIOMEDICINA':'Bio-Far', 'FARMÁCIA':'Bio-Far', 'FARMACIA':'Bio-Far',
+  'FISIOTERAPIA':'Fisio', 'TERAPIA':'Fisio', 'ESTÉTICA':'Fisio', 'ESTETICA':'Fisio',
+  'NUTRIÇÃO':'Nutri', 'NUTRICAO':'Nutri', 'NUTRI':'Nutri',
+  'ENGENHARIA':'Eng', 'ENGMAKER':'Eng', 'LICENCIAT':'Eng',
+  'QUÍMICA':'Quím', 'QUIMICA':'Quím', 'FÍSICA':'Quím', 'FISICA':'Quím', 'AGRONOMIA':'Agro',
+};
+function getTutorCatAbrev(tutorNome, polo) {
+  var normN = function(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s*\(\d+\)\s*$/,'').trim(); };
+  var tNorm = normN(tutorNome);
+  var contr = (DB.ger_contratacao||[]).find(function(c){
+    return normN(c.polo)===normN(polo) &&
+           (c.tutores||[]).some(function(t){ return normN(t)===tNorm; });
+  });
+  if (!contr) return '';
+  var cat = (contr.categoria||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for (var kw in _CAT_ABREV) {
+    if (cat.includes(kw)) return _CAT_ABREV[kw];
+  }
+  return '';
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
