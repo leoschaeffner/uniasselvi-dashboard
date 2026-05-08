@@ -834,20 +834,467 @@ function openEstadoModal(uf){
 }
 
 // ── MAPA DO BRASIL — paths geográficos calibrados ───────────────────────────
-// ── MAPA DO BRASIL — Tile Map (grade cartográfica) ───────────────────────────
-// Layout geográfico em grade: cada estado = 1 célula colorida por % gerenciamento
 
-// Posição [row, col] de cada estado no grid cartográfico
-var BRAZIL_TILE_MAP = [
-  ['RR',0,3],['AP',0,5],
-  ['AM',1,1],['PA',1,3],['MA',1,5],['PI',1,6],['CE',1,7],['RN',1,8],
-  ['AC',2,0],['RO',2,1],['TO',2,3],['BA',2,5],            ['PB',2,8],
-             ['MT',3,2],['GO',3,3],['MG',3,4],['ES',3,5],  ['PE',3,7],
-             ['MS',4,2],['DF',4,3],['SP',4,4],['RJ',4,5],  ['AL',4,7],
-                        ['PR',5,3],                         ['SE',5,7],
-                        ['SC',6,3],
-                        ['RS',7,3],
-];
+// ── MAPA PIXEL ART DO BRASIL ─────────────────────────────────────────────────
+// Grid 30x26, cada pixel = 16px, ~1.5° geográficos
+
+var BRAZIL_PIXEL_GRID = {};
+var BRAZIL_PIXEL_GRID = {
+  "1_1":"RR",
+  "1_2":"RR",
+  "1_3":"RR",
+  "1_4":"RR",
+  "1_5":"RR",
+  "1_6":"RR",
+  "1_7":"RR",
+  "1_8":"RR",
+  "1_9":"PA",
+  "1_10":"PA",
+  "1_14":"AP",
+  "2_0":"AM",
+  "2_1":"RR",
+  "2_2":"RR",
+  "2_3":"RR",
+  "2_4":"RR",
+  "2_5":"RR",
+  "2_6":"RR",
+  "2_7":"RR",
+  "2_8":"RR",
+  "2_9":"PA",
+  "2_10":"PA",
+  "2_11":"PA",
+  "2_12":"PA",
+  "2_13":"AP",
+  "2_14":"AP",
+  "2_15":"AP",
+  "3_1":"AM",
+  "3_2":"AM",
+  "3_3":"AM",
+  "3_4":"AM",
+  "3_5":"AM",
+  "3_6":"AM",
+  "3_7":"AM",
+  "3_8":"AM",
+  "3_9":"PA",
+  "3_10":"PA",
+  "3_11":"PA",
+  "3_12":"PA",
+  "3_13":"PA",
+  "3_14":"AP",
+  "3_15":"AP",
+  "4_1":"AM",
+  "4_2":"AM",
+  "4_3":"AM",
+  "4_4":"AM",
+  "4_5":"AM",
+  "4_6":"AM",
+  "4_7":"AM",
+  "4_8":"AM",
+  "4_9":"PA",
+  "4_10":"PA",
+  "4_11":"PA",
+  "4_12":"PA",
+  "4_13":"PA",
+  "4_14":"PA",
+  "4_15":"PA",
+  "4_16":"PA",
+  "4_17":"PA",
+  "5_0":"AM",
+  "5_1":"AM",
+  "5_2":"AM",
+  "5_3":"AM",
+  "5_4":"AM",
+  "5_5":"AM",
+  "5_6":"AM",
+  "5_7":"AM",
+  "5_8":"AM",
+  "5_9":"PA",
+  "5_10":"PA",
+  "5_11":"PA",
+  "5_12":"PA",
+  "5_13":"PA",
+  "5_14":"PA",
+  "5_15":"PA",
+  "5_16":"PA",
+  "5_17":"PA",
+  "5_18":"PA",
+  "5_19":"PA",
+  "6_0":"AM",
+  "6_1":"AM",
+  "6_2":"AM",
+  "6_3":"AM",
+  "6_4":"AM",
+  "6_5":"AM",
+  "6_6":"AM",
+  "6_7":"AM",
+  "6_8":"AM",
+  "6_9":"PA",
+  "6_10":"PA",
+  "6_11":"PA",
+  "6_12":"PA",
+  "6_13":"PA",
+  "6_14":"PA",
+  "6_15":"PA",
+  "6_16":"PA",
+  "6_17":"PA",
+  "6_18":"PA",
+  "6_19":"PA",
+  "6_20":"MA",
+  "6_21":"MA",
+  "6_22":"PI",
+  "6_23":"CE",
+  "6_24":"RN",
+  "7_0":"AM",
+  "7_1":"AM",
+  "7_2":"AM",
+  "7_3":"AM",
+  "7_4":"AM",
+  "7_5":"AM",
+  "7_6":"AM",
+  "7_7":"AM",
+  "7_8":"AM",
+  "7_9":"PA",
+  "7_10":"PA",
+  "7_11":"PA",
+  "7_12":"PA",
+  "7_13":"PA",
+  "7_14":"PA",
+  "7_15":"PA",
+  "7_16":"PA",
+  "7_17":"PA",
+  "7_18":"MA",
+  "7_19":"MA",
+  "7_20":"MA",
+  "7_21":"PI",
+  "7_22":"CE",
+  "7_23":"CE",
+  "7_24":"RN",
+  "7_25":"RN",
+  "8_0":"AM",
+  "8_1":"AM",
+  "8_2":"AM",
+  "8_3":"AM",
+  "8_4":"AM",
+  "8_5":"AM",
+  "8_6":"AM",
+  "8_7":"AM",
+  "8_8":"AM",
+  "8_9":"PA",
+  "8_10":"PA",
+  "8_11":"PA",
+  "8_12":"PA",
+  "8_13":"PA",
+  "8_14":"PA",
+  "8_15":"PA",
+  "8_16":"PA",
+  "8_17":"TO",
+  "8_18":"MA",
+  "8_19":"MA",
+  "8_20":"PI",
+  "8_21":"PI",
+  "8_23":"CE",
+  "8_24":"PB",
+  "8_25":"PB",
+  "9_0":"AC",
+  "9_1":"AM",
+  "9_2":"AM",
+  "9_3":"AM",
+  "9_4":"AM",
+  "9_5":"AM",
+  "9_6":"AM",
+  "9_7":"AM",
+  "9_8":"RO",
+  "9_9":"MT",
+  "9_10":"MT",
+  "9_11":"MT",
+  "9_12":"MT",
+  "9_13":"MT",
+  "9_14":"MT",
+  "9_15":"TO",
+  "9_16":"TO",
+  "9_17":"TO",
+  "9_18":"MA",
+  "9_19":"BA",
+  "9_20":"BA",
+  "9_21":"BA",
+  "9_22":"PE",
+  "9_23":"PE",
+  "9_24":"PE",
+  "9_25":"PE",
+  "10_0":"AC",
+  "10_1":"AC",
+  "10_2":"AM",
+  "10_3":"AM",
+  "10_4":"AM",
+  "10_5":"AM",
+  "10_6":"RO",
+  "10_7":"RO",
+  "10_8":"RO",
+  "10_9":"MT",
+  "10_10":"MT",
+  "10_11":"MT",
+  "10_12":"MT",
+  "10_13":"MT",
+  "10_14":"MT",
+  "10_15":"TO",
+  "10_16":"TO",
+  "10_17":"TO",
+  "10_18":"BA",
+  "10_19":"BA",
+  "10_20":"BA",
+  "10_21":"BA",
+  "10_22":"BA",
+  "10_23":"BA",
+  "10_24":"SE",
+  "11_2":"AC",
+  "11_3":"AC",
+  "11_4":"AC",
+  "11_5":"RO",
+  "11_6":"RO",
+  "11_7":"RO",
+  "11_8":"RO",
+  "11_9":"MT",
+  "11_10":"MT",
+  "11_11":"MT",
+  "11_12":"MT",
+  "11_13":"MT",
+  "11_14":"MT",
+  "11_15":"TO",
+  "11_16":"TO",
+  "11_17":"GO",
+  "11_18":"BA",
+  "11_19":"BA",
+  "11_20":"BA",
+  "11_21":"BA",
+  "11_22":"BA",
+  "11_23":"BA",
+  "11_24":"BA",
+  "12_5":"AC",
+  "12_6":"RO",
+  "12_7":"RO",
+  "12_8":"RO",
+  "12_9":"MT",
+  "12_10":"MT",
+  "12_11":"MT",
+  "12_12":"MT",
+  "12_13":"MT",
+  "12_14":"GO",
+  "12_15":"TO",
+  "12_16":"GO",
+  "12_17":"GO",
+  "12_18":"BA",
+  "12_19":"BA",
+  "12_20":"BA",
+  "12_21":"BA",
+  "12_22":"BA",
+  "12_23":"BA",
+  "13_11":"MT",
+  "13_12":"MT",
+  "13_13":"TO",
+  "13_14":"TO",
+  "13_15":"GO",
+  "13_16":"GO",
+  "13_17":"GO",
+  "13_18":"BA",
+  "13_19":"BA",
+  "13_20":"BA",
+  "13_21":"BA",
+  "13_22":"BA",
+  "13_23":"BA",
+  "14_12":"MS",
+  "14_13":"TO",
+  "14_14":"TO",
+  "14_15":"MG",
+  "14_16":"MG",
+  "14_17":"DF",
+  "14_19":"BA",
+  "14_20":"BA",
+  "14_21":"BA",
+  "14_22":"BA",
+  "15_11":"MS",
+  "15_12":"MS",
+  "15_13":"MS",
+  "15_14":"MS",
+  "15_15":"MG",
+  "15_16":"MG",
+  "15_17":"MG",
+  "15_18":"MG",
+  "15_20":"BA",
+  "15_21":"BA",
+  "15_22":"BA",
+  "16_11":"MS",
+  "16_12":"MS",
+  "16_13":"MS",
+  "16_14":"MS",
+  "16_15":"MG",
+  "16_16":"MG",
+  "16_17":"MG",
+  "16_18":"MG",
+  "16_19":"MG",
+  "16_20":"MG",
+  "16_21":"BA",
+  "16_22":"BA",
+  "17_11":"MS",
+  "17_12":"MS",
+  "17_13":"MS",
+  "17_14":"MS",
+  "17_15":"MG",
+  "17_16":"MG",
+  "17_17":"MG",
+  "17_18":"MG",
+  "17_19":"MG",
+  "17_20":"MG",
+  "17_21":"MG",
+  "17_22":"ES",
+  "18_15":"SP",
+  "18_16":"MG",
+  "18_17":"MG",
+  "18_18":"MG",
+  "18_19":"MG",
+  "18_20":"MG",
+  "19_16":"SP",
+  "20_15":"PR",
+  "20_16":"PR",
+  "21_13":"PR",
+  "21_14":"PR",
+  "21_15":"PR",
+  "21_16":"PR",
+  "22_13":"SC",
+  "22_14":"SC",
+  "22_15":"SC",
+  "22_16":"SC",
+  "23_12":"RS",
+  "23_13":"RS",
+  "23_14":"RS",
+  "23_15":"RS",
+  "24_11":"RS",
+  "24_12":"RS",
+  "24_13":"RS",
+  "24_14":"RS",
+  "24_15":"RS",
+  "25_13":"RS",
+  "25_14":"RS",
+  "25_15":"RS"
+};
+
+
+var _PIXEL_SIZE = 16;
+var _PIXEL_ROWS = 26;
+var _PIXEL_COLS = 30;
+
+function _corPixel(pct){
+  if(pct===null||pct===undefined)return '#94a3b8';
+  if(pct>=75)return '#166534';
+  if(pct>=50)return '#16a34a';
+  if(pct>=25)return '#ca8a04';
+  if(pct>0)return '#dc2626';
+  return '#7f1d1d';
+}
+
+function renderMapaBrasil(estadosData){
+  var svgEl=document.getElementById('mapa-brasil');if(!svgEl)return;
+  var mapa={};(estadosData||[]).forEach(function(e){mapa[e.uf]=e;});
+  var tooltip=document.getElementById('mapa-tooltip');
+  var PS=_PIXEL_SIZE;
+  var W=_PIXEL_COLS*PS, H=_PIXEL_ROWS*PS;
+  svgEl.setAttribute('viewBox','0 0 '+W+' '+H);
+
+  // Agrupar pixels por estado para desempenho
+  var byUF={};
+  Object.keys(BRAZIL_PIXEL_GRID).forEach(function(k){
+    var uf=BRAZIL_PIXEL_GRID[k];
+    if(!byUF[uf])byUF[uf]=[];
+    byUF[uf].push(k);
+  });
+
+  var defs='<defs>'
+    +'<filter id="pxs" x="-2%" y="-2%" width="104%" height="104%">'
+    +'<feDropShadow dx="0" dy="1" stdDeviation="0.8" flood-color="rgba(0,0,0,.35)"/></filter>'
+    +'</defs>';
+
+  var pixels='';
+  Object.keys(byUF).forEach(function(uf){
+    var e=mapa[uf];
+    var pct=e&&e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):null;
+    var cor=_corPixel(pct);
+    // Todos os pixels do estado são do mesmo grupo/cor
+    byUF[uf].forEach(function(k){
+      var parts=k.split('_');
+      var r=parseInt(parts[0]),c=parseInt(parts[1]);
+      var x=c*PS, y=r*PS;
+      pixels+='<rect class="px-uf" data-uf="'+uf+'"'
+        +' x="'+x+'" y="'+y+'" width="'+(PS-1)+'" height="'+(PS-1)+'"'
+        +' fill="'+cor+'"'
+        +' rx="2" ry="2"/>';
+    });
+
+    // Label da UF no centroide
+    var xs=byUF[uf].map(function(k){return parseInt(k.split('_')[1]);});
+    var rs=byUF[uf].map(function(k){return parseInt(k.split('_')[0]);});
+    var cx=(Math.min.apply(null,xs)+Math.max.apply(null,xs))/2*PS+PS/2;
+    var cy=(Math.min.apply(null,rs)+Math.max.apply(null,rs))/2*PS+PS/2;
+    var nPixels=byUF[uf].length;
+    if(nPixels>=2){
+      pixels+='<text x="'+cx+'" y="'+(cy+1)+'" text-anchor="middle"'
+        +' font-size="'+(nPixels>=6?8:7)+'" font-weight="900"'
+        +' font-family="Plus Jakarta Sans,monospace"'
+        +' fill="#fff" pointer-events="none"'
+        +' style="text-shadow:0 1px 2px rgba(0,0,0,.8)">'+uf+'</text>';
+      if(pct!==null&&nPixels>=4){
+        var pctCor=pct>=50?'#bbf7d0':pct>=25?'#fef08a':'#fca5a5';
+        pixels+='<text x="'+cx+'" y="'+(cy+9)+'" text-anchor="middle"'
+          +' font-size="6" font-weight="700"'
+          +' font-family="Plus Jakarta Sans,monospace"'
+          +' fill="'+pctCor+'" pointer-events="none">'+pct+'%</text>';
+      }
+    }else if(nPixels===1){
+      // Estado pequeno: só 2-letter code bem pequenininho
+      pixels+='<text x="'+cx+'" y="'+(cy+2)+'" text-anchor="middle"'
+        +' font-size="5" font-weight="900"'
+        +' font-family="monospace" fill="#fff" pointer-events="none">'+uf+'</text>';
+    }
+  });
+
+  svgEl.innerHTML=defs+pixels;
+
+  // Hover: iluminar todos os pixels do estado
+  var _huf=null;
+  svgEl.addEventListener('mouseover',function(ev){
+    var r=ev.target.closest('.px-uf');if(!r)return;
+    var uf=r.dataset.uf;if(uf===_huf)return;_huf=uf;
+    svgEl.querySelectorAll('.px-uf').forEach(function(el){
+      el.style.opacity=el.dataset.uf===uf?'1':'0.45';
+      el.style.filter=el.dataset.uf===uf?'brightness(1.25)':'';
+    });
+  });
+  svgEl.addEventListener('mouseleave',function(){
+    _huf=null;
+    svgEl.querySelectorAll('.px-uf').forEach(function(el){
+      el.style.opacity='1';el.style.filter='';
+    });
+    if(tooltip)tooltip.style.display='none';
+  });
+  svgEl.onmousemove=function(ev){
+    var r=ev.target.closest('.px-uf');if(!r||!tooltip)return;
+    var uf=r.dataset.uf,e=mapa[uf];
+    if(!e){tooltip.style.display='none';return;}
+    var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;
+    var cor=pct>=50?'#16a34a':pct>=25?'#ca8a04':'#dc2626';
+    tooltip.innerHTML='<strong>'+uf+' — '+e.nome+'</strong>'
+      +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'+e.polos+' polos · '+(e.ofertas||0)+' ofertas</div>'
+      +'<div style="font-size:11px;margin-top:2px">Ger.: <strong style="color:'+cor+'">'+pct+'%</strong>'
+      +' · Sem tutor: <strong style="color:#dc2626">'+(e.sem_tutor||0)+'</strong></div>'
+      +'<div style="height:5px;background:#e5e7eb;border-radius:3px;margin-top:5px">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+cor+';border-radius:3px"></div></div>';
+    tooltip.style.display='block';
+    tooltip.style.left=(ev.clientX+14)+'px';
+    tooltip.style.top=(ev.clientY-14)+'px';
+  };
+  svgEl.onclick=function(ev){
+    var r=ev.target.closest('.px-uf');
+    if(r)openEstadoModal(r.dataset.uf);
+  };
+}
 
 function _corEstado(pct){
   if(pct===null||pct===undefined)return '#cbd5e1';
