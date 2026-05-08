@@ -834,219 +834,118 @@ function openEstadoModal(uf){
 }
 
 // ── MAPA DO BRASIL — paths geográficos calibrados ───────────────────────────
-var BRAZIL_PATHS={
-  'RR':'M 17.0,22.0 L 38.4,14.7 L 65.4,9.1 L 108.6,6.0 L 141.0,6.0 L 158.9,6.0 L 158.9,26.0 L 158.9,54.0 L 135.6,54.0 L 119.4,48.6 L 97.8,43.0 L 65.4,48.6 L 17.0,51.8 Z',
-  'AP':'M 214.7,37.3 L 232.8,26.0 L 238.2,18.1 L 249.0,14.7 L 256.6,20.4 L 262.0,26.0 L 265.2,43.0 L 265.2,54.3 L 264.1,59.9 L 254.4,62.2 L 245.8,63.3 L 238.2,56.5 L 227.4,48.6 Z',
-  'AM':'M 14.6,40.7 L 17.0,22.0 L 38.4,14.7 L 65.4,9.1 L 108.6,6.0 L 158.9,6.0 L 158.9,26.0 L 158.9,54.0 L 135.6,54.0 L 119.4,48.6 L 97.8,43.0 L 65.4,48.6 L 17.0,51.8 L 12.5,59.9 L 14.6,88.2 L 22.2,116.4 L 33.0,139.0 L 43.8,150.3 L 54.6,161.6 L 65.4,172.9 L 76.2,184.2 L 81.6,189.9 L 97.8,184.2 L 105.4,172.9 L 108.6,165.0 L 124.8,156.0 L 146.4,156.0 L 154.0,156.0 L 151.8,122.1 L 141.0,99.5 L 124.8,88.2 L 103.2,82.5 L 76.2,76.9 L 49.2,71.2 L 27.6,65.6 Z',
-  'PA':'M 158.9,26.0 L 158.9,6.0 L 214.7,37.3 L 227.4,48.6 L 238.2,56.5 L 245.8,63.3 L 254.4,62.2 L 264.1,59.9 L 265.2,54.3 L 265.2,43.0 L 262.0,26.0 L 256.6,20.4 L 249.0,14.7 L 238.2,18.1 L 232.8,26.0 L 214.7,37.3 L 283.6,70.1 L 289.0,71.2 L 303.0,71.2 L 321.4,82.5 L 324.6,91.5 L 327.8,114.1 L 308.4,124.3 L 297.6,126.6 L 284.6,148.0 L 265.2,158.2 L 254.4,149.2 L 228.5,150.3 L 211.2,142.4 L 189.6,137.9 L 184.2,144.7 L 162.6,150.3 L 154.0,156.0 L 146.4,156.0 L 124.8,156.0 L 108.6,165.0 L 124.8,156.0 L 146.4,156.0 L 154.0,156.0 L 151.8,122.1 L 141.0,99.5 L 124.8,88.2 L 103.2,82.5 L 76.2,76.9 L 49.2,71.2 L 154.0,71.2 L 158.9,54.0 Z',
-  'RO':'M 108.6,165.0 L 105.4,172.9 L 97.8,184.2 L 98.9,214.7 L 119.4,218.1 L 135.6,218.1 L 152.9,222.6 L 154.0,189.9 L 154.0,156.0 L 146.4,156.0 L 124.8,156.0 Z',
-  'AC':'M 8.2,145.8 L 14.6,156.0 L 22.2,170.6 L 43.8,176.3 L 65.4,187.6 L 76.2,189.9 L 81.6,189.9 L 97.8,184.2 L 105.4,172.9 L 98.9,214.7 L 87.0,212.5 L 65.4,195.5 L 49.2,189.9 L 14.6,184.2 L 8.2,184.2 Z',
-  'TO':'M 295.4,125.4 L 301.9,135.6 L 303.0,156.0 L 297.6,172.9 L 286.8,195.5 L 276.0,210.2 L 263.0,211.3 L 254.4,194.4 L 254.4,179.7 L 249.0,185.3 L 241.4,195.5 L 227.4,201.2 L 205.8,229.4 L 249.0,263.3 L 254.4,223.8 L 265.2,201.2 L 265.2,158.2 L 284.6,148.0 L 297.6,126.6 Z',
-  'MA':'M 283.6,70.1 L 289.0,71.2 L 303.0,71.2 L 321.4,82.5 L 324.6,91.5 L 336.5,93.8 L 362.4,99.5 L 335.4,127.7 L 327.8,133.4 L 330.0,150.3 L 313.8,153.7 L 297.6,172.9 L 303.0,156.0 L 301.9,135.6 L 297.6,126.6 L 308.4,124.3 L 327.8,114.1 Z',
-  'PI':'M 362.4,99.5 L 336.5,93.8 L 324.6,91.5 L 327.8,114.1 L 308.4,124.3 L 301.9,135.6 L 303.0,156.0 L 297.6,172.9 L 313.8,153.7 L 330.0,150.3 L 351.6,165.0 L 364.6,156.0 L 373.2,144.7 L 364.6,127.7 L 373.2,105.1 L 368.9,96.1 L 359.2,93.8 Z',
-  'CE':'M 368.9,96.1 L 387.2,105.1 L 392.6,107.4 L 400.2,105.1 L 411.0,116.4 L 416.4,122.1 L 403.4,127.7 L 403.4,139.0 L 392.6,145.8 L 373.2,144.7 L 364.6,127.7 L 373.2,105.1 L 368.9,96.1 Z',
-  'RN':'M 424.0,119.8 L 427.2,122.1 L 428.3,127.7 L 427.2,131.1 L 421.8,139.0 L 416.4,137.9 L 403.4,139.0 L 392.6,145.8 L 389.4,136.7 L 389.4,127.7 L 389.4,116.4 L 400.2,105.1 L 411.0,116.4 L 416.4,122.1 L 421.8,122.1 Z',
-  'PB':'M 427.2,133.4 L 427.2,139.0 L 419.6,146.9 L 411.0,150.3 L 394.8,150.3 L 392.6,145.8 L 403.4,139.0 L 416.4,137.9 L 421.8,139.0 L 427.2,131.1 Z',
-  'PE':'M 426.1,146.9 L 427.2,150.3 L 428.3,156.0 L 427.2,161.6 L 416.4,165.0 L 405.6,169.5 L 389.4,163.9 L 378.6,156.0 L 367.8,156.0 L 362.4,163.9 L 364.6,156.0 L 373.2,144.7 L 392.6,145.8 L 394.8,150.3 L 411.0,150.3 L 419.6,146.9 Z',
-  'AL':'M 425.0,159.3 L 427.2,161.6 L 427.2,150.3 L 426.1,146.9 L 419.6,146.9 L 416.4,165.0 L 405.6,169.5 L 389.4,163.9 L 402.4,172.9 L 414.2,174.0 Z',
-  'SE':'M 412.1,172.9 L 414.2,174.0 L 402.4,172.9 L 389.4,163.9 L 389.4,172.9 L 392.6,184.2 L 400.2,184.2 L 403.4,186.5 Z',
-  'BA':'M 389.4,163.9 L 378.6,156.0 L 389.4,163.9 L 389.4,172.9 L 392.6,184.2 L 400.2,184.2 L 403.4,186.5 L 405.6,195.5 L 394.8,206.8 L 389.4,218.1 L 386.2,229.4 L 384.0,240.7 L 381.8,252.0 L 378.6,263.3 L 375.4,274.6 L 371.0,280.3 L 367.8,293.8 L 357.0,285.9 L 346.2,280.3 L 335.4,274.6 L 324.6,269.0 L 319.2,257.7 L 313.8,252.0 L 303.0,240.7 L 308.4,223.8 L 313.8,206.8 L 308.4,195.5 L 303.0,189.9 L 297.6,172.9 L 330.0,150.3 L 351.6,165.0 L 364.6,156.0 L 367.8,156.0 L 378.6,156.0 L 389.4,163.9 Z',
-  'MT':'M 152.9,222.6 L 151.8,195.5 L 154.0,167.3 L 154.0,156.0 L 162.6,150.3 L 184.2,144.7 L 195.0,144.7 L 211.2,142.4 L 228.5,150.3 L 254.4,149.2 L 254.4,179.7 L 249.0,185.3 L 241.4,195.5 L 227.4,201.2 L 205.8,229.4 L 178.8,226.0 L 152.9,222.6 Z',
-  'GO':'M 263.0,211.3 L 276.0,210.2 L 286.8,195.5 L 297.6,172.9 L 303.0,189.9 L 313.8,206.8 L 308.4,223.8 L 303.0,240.7 L 292.2,252.0 L 286.8,246.4 L 270.6,240.7 L 265.2,231.7 L 243.6,255.4 L 238.2,240.7 L 227.4,240.7 L 205.8,229.4 L 227.4,201.2 L 241.4,195.5 L 249.0,185.3 L 254.4,179.7 L 254.4,194.4 L 263.0,211.3 Z',
-  'DF':'M 292.2,240.7 L 297.6,240.7 L 303.0,240.7 L 292.2,252.0 L 286.8,246.4 L 292.2,240.7 Z',
-  'MS':'M 249.0,263.3 L 243.6,255.4 L 238.2,274.6 L 249.0,285.9 L 249.0,299.5 L 238.2,308.5 L 216.6,308.5 L 205.8,297.2 L 195.0,291.6 L 184.2,291.6 L 178.8,291.6 L 173.4,285.9 L 173.4,274.6 L 178.8,269.0 L 184.2,257.7 L 189.6,246.4 L 205.8,229.4 L 227.4,240.7 L 238.2,240.7 L 249.0,240.7 Z',
-  'MG':'M 265.2,231.7 L 270.6,240.7 L 286.8,246.4 L 292.2,252.0 L 303.0,240.7 L 313.8,252.0 L 324.6,269.0 L 335.4,274.6 L 346.2,280.3 L 357.0,285.9 L 367.8,293.8 L 362.4,306.2 L 346.2,311.9 L 335.4,323.2 L 321.4,316.4 L 310.6,319.8 L 297.6,325.5 L 292.2,319.8 L 281.4,316.4 L 265.2,305.1 L 249.0,299.5 L 238.2,274.6 L 243.6,255.4 L 265.2,231.7 Z',
-  'ES':'M 378.6,266.7 L 373.2,274.6 L 367.8,285.9 L 367.8,293.8 L 362.4,306.2 L 346.2,311.9 L 362.4,306.2 L 367.8,293.8 L 373.2,280.3 L 378.6,263.3 Z',
-  'RJ':'M 321.4,316.4 L 335.4,323.2 L 335.4,331.1 L 340.8,325.5 L 351.6,325.5 L 362.4,319.8 L 363.5,314.2 L 362.4,306.2 L 346.2,311.9 Z',
-  'SP':'M 321.4,316.4 L 310.6,319.8 L 297.6,325.5 L 292.2,319.8 L 281.4,316.4 L 265.2,305.1 L 249.0,299.5 L 238.2,308.5 L 238.2,319.8 L 232.8,325.5 L 232.8,331.1 L 249.0,331.1 L 265.2,331.1 L 276.0,331.1 L 281.4,331.1 L 297.6,331.1 L 319.2,331.1 L 330.0,331.1 L 335.4,331.1 L 321.4,316.4 Z',
-  'PR':'M 281.4,331.1 L 265.2,331.1 L 249.0,331.1 L 238.2,319.8 L 249.0,299.5 L 238.2,308.5 L 216.6,308.5 L 205.8,319.8 L 216.6,348.1 L 216.6,359.4 L 227.4,365.0 L 249.0,365.0 L 270.6,365.0 L 281.4,359.4 L 281.4,348.1 L 281.4,331.1 Z',
-  'SC':'M 281.4,359.4 L 270.6,365.0 L 249.0,365.0 L 227.4,365.0 L 216.6,359.4 L 216.6,376.3 L 227.4,387.6 L 238.2,393.3 L 249.0,393.3 L 265.2,393.3 L 270.6,398.9 L 276.0,393.3 L 281.4,387.6 L 281.4,370.7 L 281.4,359.4 Z',
-  'RS':'M 270.6,398.9 L 249.0,393.3 L 238.2,393.3 L 227.4,387.6 L 216.6,376.3 L 205.8,384.2 L 189.6,398.9 L 184.2,404.6 L 184.2,410.2 L 189.6,415.9 L 200.4,415.9 L 216.6,421.5 L 227.4,438.5 L 227.4,444.1 L 238.2,446.4 L 254.4,446.4 L 265.2,446.4 L 268.4,440.7 L 268.4,427.2 L 270.6,410.2 L 270.6,398.9 Z'
-};
+// ── MAPA DO BRASIL — Tile Map (grade cartográfica) ───────────────────────────
+// Layout geográfico em grade: cada estado = 1 célula colorida por % gerenciamento
 
-var BRAZIL_CENTROIDS={
-  'RR':[82,34],
-  'AP':[244,45],
-  'AM':[109,105],
-  'PA':[244,105],
-  'AC':[49,173],
-  'RO':[125,190],
-  'MT':[200,212],
-  'TO':[281,179],
-  'MA':[319,120],
-  'PI':[346,142],
-  'CE':[379,122],
-  'RN':[408,131],
-  'PB':[406,147],
-  'PE':[397,162],
-  'AL':[408,170],
-  'SE':[400,182],
-  'BA':[354,207],
-  'GO':[271,224],
-  'DF':[292,244],
-  'MG':[325,278],
-  'ES':[368,286],
-  'RJ':[343,318],
-  'SP':[281,320],
-  'MS':[213,289],
-  'PR':[249,342],
-  'SC':[254,376],
-  'RS':[233,410]
-};
-
+// Posição [row, col] de cada estado no grid cartográfico
+var BRAZIL_TILE_MAP = [
+  ['RR',0,3],['AP',0,5],
+  ['AM',1,1],['PA',1,3],['MA',1,5],['PI',1,6],['CE',1,7],['RN',1,8],
+  ['AC',2,0],['RO',2,1],['TO',2,3],['BA',2,5],            ['PB',2,8],
+             ['MT',3,2],['GO',3,3],['MG',3,4],['ES',3,5],  ['PE',3,7],
+             ['MS',4,2],['DF',4,3],['SP',4,4],['RJ',4,5],  ['AL',4,7],
+                        ['PR',5,3],                         ['SE',5,7],
+                        ['SC',6,3],
+                        ['RS',7,3],
+];
 
 function _corEstado(pct){
   if(pct===null||pct===undefined)return '#cbd5e1';
   if(pct>=75)return '#15803d';
   if(pct>=50)return '#16a34a';
   if(pct>=25)return '#ca8a04';
-  if(pct>0) return '#dc2626';
+  if(pct>0)  return '#dc2626';
   return '#991b1b';
-}
-function _corLight(pct){
-  if(pct===null||pct===undefined)return '#f1f5f9';
-  if(pct>=75)return '#86efac';
-  if(pct>=50)return '#4ade80';
-  if(pct>=25)return '#fde047';
-  return '#fca5a5';
 }
 
 function renderMapaBrasil(estadosData){
-  var svg=document.getElementById('mapa-brasil');if(!svg)return;
+  var svgEl=document.getElementById('mapa-brasil');
+  if(!svgEl)return;
   var mapa={};(estadosData||[]).forEach(function(e){mapa[e.uf]=e;});
   var tooltip=document.getElementById('mapa-tooltip');
 
-  var defs='<defs>'
-    +'<filter id="ms" x="-12%" y="-12%" width="124%" height="124%">'
-    +'<feDropShadow dx="1" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,.22)"/></filter>'
-    +'<filter id="ms-h" x="-15%" y="-15%" width="130%" height="130%">'
-    +'<feDropShadow dx="2" dy="4" stdDeviation="5" flood-color="rgba(0,0,0,.38)"/></filter>';
+  var CW=52, CH=42, PAD=6;
+  var maxRow=7, maxCol=8;
+  var W=(maxCol+1)*CW+PAD*2, H=(maxRow+1)*CH+PAD*2;
+  svgEl.setAttribute('viewBox','0 0 '+W+' '+H);
+  svgEl.setAttribute('width','100%');
+  svgEl.setAttribute('height','auto');
 
-  // Gradientes radiais por estado
-  Object.keys(BRAZIL_PATHS).forEach(function(uf){
+  var html='<defs>'
+    +'<filter id="ts" x="-20%" y="-20%" width="140%" height="140%">'
+    +'<feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="rgba(0,0,0,.5)"/></filter>'
+    +'</defs>';
+
+  // Fundo com contorno do Brasil (placeholder visual simples)
+  BRAZIL_TILE_MAP.forEach(function(item){
+    var uf=item[0],row=item[1],col=item[2];
     var e=mapa[uf];
     var pct=e&&e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var c1=_corEstado(pct),c2=_corLight(pct);
-    defs+='<radialGradient id="rg_'+uf+'" cx="40%" cy="35%" r="65%">'
-      +'<stop offset="0%" style="stop-color:'+c2+';stop-opacity:0.85"/>'
-      +'<stop offset="100%" style="stop-color:'+c1+';stop-opacity:1"/>'
-      +'</radialGradient>';
-  });
-  defs+='</defs>';
+    var cor=_corEstado(pct);
+    var x=PAD+col*CW, y=PAD+row*CH;
+    var rw=CW-3, rh=CH-3;
 
-  var paths='';
-  Object.keys(BRAZIL_PATHS).forEach(function(uf){
-    var d=BRAZIL_PATHS[uf];
-    var e=mapa[uf];
-    var pct=e&&e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var stroke=pct===null?'rgba(180,180,180,.7)':'rgba(255,255,255,.88)';
-    paths+='<path data-uf="'+uf+'" d="'+d+'"'
-      +' fill="url(#rg_'+uf+')"'
-      +' stroke="'+stroke+'" stroke-width="1.4" stroke-linejoin="round"'
-      +' style="cursor:pointer;transition:all .18s ease"'
-      +' filter="url(#ms)"/>';
-  });
+    // Retângulo do estado
+    html+='<rect data-uf="'+uf+'" x="'+x+'" y="'+y+'" width="'+rw+'" height="'+rh+'"'
+      +' rx="5" ry="5"'
+      +' fill="'+cor+'"'
+      +' stroke="rgba(255,255,255,.9)" stroke-width="1.5"'
+      +' style="cursor:pointer;transition:all .15s"'
+      +' filter="url(#ts)"/>';
 
-  var labels='';
-  Object.keys(BRAZIL_CENTROIDS).forEach(function(uf){
-    var c=BRAZIL_CENTROIDS[uf];
-    var e=mapa[uf];
-    var pct=e&&e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var fillCor=pct===null?'#64748b':'#fff';
-    labels+='<text x="'+c[0]+'" y="'+c[1]+'" text-anchor="middle"'
-      +' font-size="8" font-weight="900" font-family="Plus Jakarta Sans,sans-serif"'
-      +' fill="'+fillCor+'" pointer-events="none"'
-      +' style="text-shadow:0 1px 3px rgba(0,0,0,.75)">'+uf+'</text>';
+    // Label UF
+    var cx=x+rw/2, cy=y+rh/2;
+    html+='<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle"'
+      +' font-size="9" font-weight="900" font-family="Plus Jakarta Sans,sans-serif"'
+      +' fill="#fff" pointer-events="none" filter="url(#ts)">'+uf+'</text>';
+
+    // Percentual
     if(pct!==null){
       var pctCor=pct>=50?'#bbf7d0':pct>=25?'#fef08a':'#fca5a5';
-      labels+='<text x="'+c[0]+'" y="'+(c[1]+9)+'" text-anchor="middle"'
-        +' font-size="7" font-weight="700" font-family="Plus Jakarta Sans,sans-serif"'
+      html+='<text x="'+cx+'" y="'+(cy+9)+'" text-anchor="middle"'
+        +' font-size="8" font-weight="700" font-family="Plus Jakarta Sans,sans-serif"'
         +' fill="'+pctCor+'" pointer-events="none">'+pct+'%</text>';
     }
   });
 
-  svg.innerHTML=defs+paths+labels;
+  svgEl.innerHTML=html;
 
-  // Eventos
-  svg.addEventListener('mouseover',function(ev){
-    var p=ev.target.closest('path[data-uf]');
-    if(!p)return;
-    svg.querySelectorAll('path[data-uf]').forEach(function(el){el.style.opacity='0.55';});
-    p.style.opacity='1';
-    p.style.filter='url(#ms-h) brightness(1.22) saturate(1.2)';
-    p.style.transform='scale(1.008)';
-    p.style.transformOrigin='center';
+  // Eventos interativos
+  svgEl.addEventListener('mouseover',function(ev){
+    var r=ev.target.closest('rect[data-uf]');
+    if(!r)return;
+    svgEl.querySelectorAll('rect[data-uf]').forEach(function(el){el.style.opacity='0.55';});
+    r.style.opacity='1';
+    r.style.filter='url(#ts) brightness(1.25)';
   });
-  svg.addEventListener('mouseleave',function(){
-    svg.querySelectorAll('path[data-uf]').forEach(function(el){
-      el.style.opacity='1';el.style.filter='url(#ms)';el.style.transform='';
+  svgEl.addEventListener('mouseleave',function(){
+    svgEl.querySelectorAll('rect[data-uf]').forEach(function(el){
+      el.style.opacity='1';el.style.filter='url(#ts)';
     });
     if(tooltip)tooltip.style.display='none';
   });
-  svg.onmousemove=function(ev){
-    var p=ev.target.closest('path[data-uf]');
-    if(!p||!tooltip)return;
-    var uf=p.dataset.uf,e=mapa[uf];
+  svgEl.onmousemove=function(ev){
+    var r=ev.target.closest('rect[data-uf]');
+    if(!r||!tooltip)return;
+    var uf=r.dataset.uf,e=mapa[uf];
     if(!e){tooltip.style.display='none';return;}
     var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;
-    var corTt=pct>=50?'#16a34a':pct>=25?'#ca8a04':'#dc2626';
-    tooltip.innerHTML='<strong style="font-size:12px">'+uf+' — '+e.nome+'</strong>'
-      +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'+e.polos+' polos · '+
-      (e.ofertas||0).toLocaleString('pt-BR')+' ofertas</div>'
-      +'<div style="font-size:11px;margin-top:2px">Ger.: <strong style="color:'+corTt+'">'+pct+'%</strong>'
+    var cor=pct>=50?'#16a34a':pct>=25?'#ca8a04':'#dc2626';
+    tooltip.innerHTML='<strong>'+uf+' — '+e.nome+'</strong>'
+      +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'+e.polos+' polos · '+(e.ofertas||0)+' ofertas</div>'
+      +'<div style="font-size:11px;margin-top:2px">Ger.: <strong style="color:'+cor+'">'+pct+'%</strong>'
       +' · Sem tutor: <strong style="color:#dc2626">'+(e.sem_tutor||0)+'</strong></div>'
       +'<div style="height:5px;background:#e5e7eb;border-radius:3px;margin-top:5px">'
-      +'<div style="height:100%;width:'+pct+'%;background:'+corTt+';border-radius:3px"></div></div>';
+      +'<div style="height:100%;width:'+pct+'%;background:'+cor+';border-radius:3px"></div></div>';
     tooltip.style.display='block';
     tooltip.style.left=(ev.clientX+14)+'px';
     tooltip.style.top=(ev.clientY-14)+'px';
   };
-  svg.onclick=function(ev){
-    var p=ev.target.closest('path[data-uf]');
-    if(p)openEstadoModal(p.dataset.uf);
+  svgEl.onclick=function(ev){
+    var r=ev.target.closest('rect[data-uf]');
+    if(r)openEstadoModal(r.dataset.uf);
   };
 }
-
-// ── ESTADOS ───────────────────────────────────────────────────────────────────
-var UF_NOMES={'AC':'Acre','AL':'Alagoas','AP':'Amapá','AM':'Amazonas','BA':'Bahia','CE':'Ceará','DF':'Distrito Federal','ES':'Espírito Santo','GO':'Goiás','MA':'Maranhão','MT':'Mato Grosso','MS':'Mato Grosso do Sul','MG':'Minas Gerais','PA':'Pará','PB':'Paraíba','PR':'Paraná','PE':'Pernambuco','PI':'Piauí','RJ':'Rio de Janeiro','RN':'Rio Grande do Norte','RS':'Rio Grande do Sul','RO':'Rondônia','RR':'Roraima','SC':'Santa Catarina','SP':'São Paulo','SE':'Sergipe','TO':'Tocantins'};
-function extrairUF(polo){var m=polo.match(/\/([A-Z]{2})(?:\s*-|$)/);return m?m[1]:'??';}
-function agruparPorEstado(poloData){var estados={};poloData.forEach(function(p){var uf=extrairUF(p.polo||p.n||'');if(!estados[uf])estados[uf]={uf:uf,nome:UF_NOMES[uf]||uf,polos:0,ofertas:0,gerenciadas:0,sem_tutor:0,mat:0,agend:0};var e=estados[uf];e.polos++;e.ofertas+=p.total_ofertas||0;e.gerenciadas+=p.gerenciadas||0;e.sem_tutor+=p.sem_tutor||0;e.mat+=p.alunos_matriculados||0;e.agend+=p.alunos_agendados||0;});return Object.values(estados).sort(function(a,b){return b.ofertas-a.ofertas;});}
-function renderEstadosInline(estadoData){
-  var el=document.getElementById('gv-estados-tbody');if(!el)return;
-  el.innerHTML=estadoData.map(function(e){var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;return '<tr class="sort-row" style="cursor:pointer" data-estado-uf="'+e.uf+'" data-vuf="'+e.uf+'" data-vpolos="'+e.polos+'" data-vofertas="'+e.ofertas+'" data-vger="'+e.gerenciadas+'" data-vpct="'+pct+'" data-vst="'+e.sem_tutor+'" data-vmat="'+e.mat+'"><td><strong>'+e.uf+'</strong> <span style="color:var(--muted);font-size:11px">'+e.nome+'</span></td><td style="text-align:right">'+e.polos+'</td><td style="text-align:right">'+fmtNum(e.ofertas)+'</td><td style="text-align:right">'+fmtNum(e.gerenciadas)+'</td><td>'+progCell(pct)+'</td><td style="text-align:right;color:var(--red)">'+fmtNum(e.sem_tutor)+'</td><td style="text-align:right">'+fmtNum(e.mat)+'</td></tr>';}).join('');
-  var cnt=document.getElementById('gv-estados-count');if(cnt)cnt.textContent=estadoData.length+' estados';
-  el.onclick=function(e){var row=e.target.closest('[data-estado-uf]');if(row)openEstadoModal(row.dataset.estadoUf);};
-}
-function filterGerEstadosInline(q){q=q.toLowerCase();var d=window._estadosData||[];if(q)d=d.filter(function(e){return (e.uf+e.nome).toLowerCase().includes(q);});renderEstadosInline(d);}
-function openEstadoModal(uf){
-  var polos=gerPoloData.filter(function(p){return extrairUF(p.polo||'')===uf;}).sort(function(a,b){return b.sem_tutor-a.sem_tutor;});var nome=UF_NOMES[uf]||uf;
-  document.getElementById('m-title').textContent=uf+' — '+nome;document.getElementById('m-sub').textContent=polos.length+' polos · clique para detalhar';
-  var html='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg)"><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:left">Polo</th><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Ofertas</th><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Ger.</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">% Ger.</th><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Sem Tutor</th></tr></thead><tbody>';
-  polos.forEach(function(p){var pct=p.total_ofertas?Math.round(p.gerenciadas/p.total_ofertas*100):0;html+='<tr style="border-bottom:1px solid var(--border);cursor:pointer" data-polo-est="'+esc(p.polo)+'"><td style="padding:5px 8px;font-weight:600">'+p.polo+'</td><td style="padding:5px 8px;text-align:right">'+fmtNum(p.total_ofertas)+'</td><td style="padding:5px 8px;text-align:right;color:var(--ok)">'+fmtNum(p.gerenciadas)+'</td><td style="padding:5px 8px">'+progCell(pct)+'</td><td style="padding:5px 8px;text-align:right;color:'+(p.sem_tutor>0?'var(--red)':'var(--ok)')+'">'+fmtNum(p.sem_tutor)+'</td></tr>';});
-  html+='</tbody></table>';document.getElementById('m-body').innerHTML=html;
-  document.getElementById('m-body').onclick=function(e){var row=e.target.closest('[data-polo-est]');if(row){closeModal();setTimeout(function(){openGerPoloModal(row.dataset.poloEst);},100);}};
-  document.getElementById('modal-overlay').classList.add('show');
-}
-
-// ── MAPA DO BRASIL — D3 + IBGE API ──────────────────────────────────────────
-// Lookup IBGE codarea (2 dígitos) → sigla UF
-var IBGE_TO_UF = {
-  '11':'RO','12':'AC','13':'AM','14':'RR','15':'PA','16':'AP','17':'TO',
-  '21':'MA','22':'PI','23':'CE','24':'RN','25':'PB','26':'PE','27':'AL','28':'SE','29':'BA',
-  '31':'MG','32':'ES','33':'RJ','35':'SP','41':'PR','42':'SC','43':'RS',
-  '50':'MS','51':'MT','52':'GO','53':'DF'
-};
-
-function _loadScript(url, cb) {
-  if (document.querySelector('script[data-msrc="'+url+'"]')) { cb(); return; }
-  var s = document.createElement('script');
-  s.dataset.msrc = url;
-  s.src = url;
-  s.onload = function() { cb(null); };
-  s.onerror = function() { cb(new Error('Falha ao carregar '+url)); };
-  document.head.appendChild(s);
-}
-
 
 function _corEstadoD3(pct) {
   if (pct === null || pct === undefined) return '#e2e8f0';
