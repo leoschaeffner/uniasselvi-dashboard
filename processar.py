@@ -973,7 +973,8 @@ def _processar_gerenciamento_novo(df_g):
     df['_OFE']   = pd.to_numeric(df[c_ofe],  errors='coerce').fillna(0).astype(int) if c_ofe   else 0
     df['_TEM_TUTOR'] = df['_TUTOR'].str.len() > 0
     _situ_col = df[c_situ].fillna('').astype(str).str.strip() if c_situ else pd.Series([''] * len(df))
-    df['_GERENCIADO'] = (df['_OFE'] > 0) | _situ_col.str.upper().str.contains('CONCLU', na=False)
+    # GERENCIADO = tem tutor E (tem ofertas cadastradas OU status CONCLUÍDO)
+    df['_GERENCIADO'] = df['_TEM_TUTOR'] & ((df['_OFE'] > 0) | _situ_col.str.upper().str.contains('CONCLU', na=False))
     dt_col = df[c_dt_ag] if c_dt_ag else pd.Series([''] * len(df))
     def to_iso(v):
         if v is None: return ''
@@ -1144,8 +1145,11 @@ def processar_gerenciamento(p3):
         parsed = df_g[c_lab].apply(extrair_ordem)
         df_g['_ORDEM_G'] = parsed.apply(lambda x: x[0])
         df_g['_PRATICA_G'] = parsed.apply(lambda x: x[1])
-    df_g['_GERENCIADO'] = pd.to_numeric(df_g.get(c_ofe_cad, 0), errors='coerce').fillna(0) > 0
+    # FIX BUG 1: _TEM_TUTOR deve ser definido ANTES de _GERENCIADO
     df_g['_TEM_TUTOR'] = df_g[c_tutor].notna() & (df_g[c_tutor].astype(str).str.strip() != '') & (df_g[c_tutor].astype(str).str.strip().str.upper() != 'NAN')
+    # GERENCIADO = tem tutor E (tem ofertas cadastradas OU status CONCLUÍDO)
+    _situ_g = df_g[c_situ].fillna('').astype(str).str.strip() if c_situ and c_situ in df_g.columns else pd.Series([''] * len(df_g))
+    df_g['_GERENCIADO'] = df_g['_TEM_TUTOR'] & ((pd.to_numeric(df_g.get(c_ofe_cad, 0), errors='coerce').fillna(0) > 0) | _situ_g.str.upper().str.contains('CONCLU', na=False))
     df_g['_TEM_AGENDA'] = df_g.get(c_dt_agenda, pd.Series(dtype='object')).notna()
     df_g['_ALUNOS_MAT'] = pd.to_numeric(df_g.get(c_alunos, 0), errors='coerce').fillna(0).astype(int)
     df_g['_QTD_ALUN'] = pd.to_numeric(df_g.get(c_qtd_alun, 0), errors='coerce').fillna(0).astype(int)
@@ -1267,6 +1271,7 @@ def processar_gerenciamento(p3):
     }
 
 
+
 def gerar_html(dados):
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
@@ -1333,6 +1338,32 @@ if __name__ == '__main__':
             ger_dados = processar_gerenciamento(p3)
             dados.update(ger_dados)
             dados['tem_gerenciamento'] = True
+            # Enriquecer ger_ofertas com ch_semanal (join por nome normalizado)
+            def _norm_nome(s):
+                import unicodedata
+                s = str(s or '').lower().split('(')[0].strip()
+                s = unicodedata.normalize('NFD', s)
+                s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+                return ' '.join(s.split())
+            def _nome_fl(s):
+                pts = _norm_nome(s).split()
+                return (pts[0] + ' ' + pts[-1]) if len(pts) >= 2 else _norm_nome(s)
+            # Mapear ch_semanal por nome completo E por primeiro+último nome
+            _ch_map = {}; _ch_map_fl = {}
+            for t in dados.get('tutores', []):
+                if t.get('ch_semanal') and t.get('n'):
+                    _ch_map[_norm_nome(t['n'])] = t['ch_semanal']
+                    _ch_map_fl[_nome_fl(t['n'])] = t['ch_semanal']
+            # Injetar ch_semanal em cada oferta
+            enr = 0
+            for oferta in dados.get('ger_ofertas', []):
+                tutor = oferta.get('tutor', '')
+                if not tutor: continue
+                tn = _norm_nome(tutor); tfl = _nome_fl(tutor)
+                ch = _ch_map.get(tn) or _ch_map.get(tfl) or _ch_map_fl.get(tn) or _ch_map_fl.get(tfl)
+                if ch:
+                    oferta['ch_semanal'] = ch; enr += 1
+            print(f"[{ts()}] CH enriquecida: {enr}/{len(dados.get('ger_ofertas',[]))} ofertas")
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar gerenciamento: {e}")
             import traceback; traceback.print_exc()
