@@ -1005,8 +1005,21 @@ def _processar_gerenciamento_novo(df_g):
     df['_PRATICA'] = parsed.apply(lambda x: x[1])
     df = df[df['_POLO'].str.len() > 0].copy()
     total = len(df); com_tutor = int(df['_TEM_TUTOR'].sum()); gerenciadas = int(df['_GERENCIADO'].sum())
-    com_agenda = int(df['_TEM_AGENDA'].sum()); tot_mat = int(df['_MAT'].sum())
-    tot_agend = int(df['_AGEND'].sum()); tot_capa = int(df['_CAPA'].sum())
+    com_agenda = int(df['_TEM_AGENDA'].sum())
+    # FIX: Alunos Matriculados — deduplicar por polo×categoria (mesmos alunos em ordens distintas)
+    # Pegar o maior valor por polo×categoria para evitar contar os mesmos alunos múltiplas vezes
+    _mat_col = '_MAT'; _agend_col = '_AGEND'; _capa_col = '_CAPA'
+    _grp_cols = ['_POLO','_CAT']
+    if all(c in df.columns for c in _grp_cols):
+        _dedup = df.groupby(_grp_cols)[[_mat_col, _agend_col, _capa_col]].max()
+        tot_mat = int(_dedup[_mat_col].sum())
+        tot_agend = int(_dedup[_agend_col].sum())
+        tot_capa = int(_dedup[_capa_col].sum())
+        print(f"[{ts()}] Alunos deduplicados: {tot_mat} mat. / {tot_agend} agend. (vs. soma bruta: {int(df[_mat_col].sum())})")
+    else:
+        tot_mat = int(df['_MAT'].sum())
+        tot_agend = int(df['_AGEND'].sum())
+        tot_capa = int(df['_CAPA'].sum())
     print(f"[{ts()}] Gerenciamento: {total} ofertas, {gerenciadas} ger., {total-com_tutor} sem tutor")
     print(f"[{ts()}] Agendas: {com_agenda} · datas: {sorted(df[df['_TEM_AGENDA']]['_DT_AG_ISO'].head(3).tolist())}")
     print(f"[{ts()}] {df['_POLO'].nunique()} polos, {df['_CAT'].nunique()} cats, {df['_ORDEM'].nunique()} ordens")
@@ -1156,8 +1169,17 @@ def processar_gerenciamento(p3):
     df_g['_CAPA'] = pd.to_numeric(df_g.get(c_capa_exp, 0), errors='coerce').fillna(0).astype(int)
     total_ofertas = len(df_g); gerenciadas = int(df_g['_GERENCIADO'].sum())
     com_tutor = int(df_g['_TEM_TUTOR'].sum()); sem_tutor = total_ofertas - com_tutor
-    tot_mat = int(df_g['_ALUNOS_MAT'].sum()); tot_agend = int(df_g['_QTD_ALUN'].sum())
-    tot_capa = int(df_g['_CAPA'].sum())
+    # FIX: Alunos Matriculados — deduplicar por polo×categoria (evita contar mesmos alunos por ordem)
+    if c_polo in df_g.columns and c_cat in df_g.columns:
+        _dedup_g = df_g.groupby([c_polo, c_cat])[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max()
+        tot_mat = int(_dedup_g['_ALUNOS_MAT'].sum())
+        tot_agend = int(_dedup_g['_QTD_ALUN'].sum())
+        tot_capa = int(_dedup_g['_CAPA'].sum())
+        print(f"[{ts()}] Alunos deduplicados: {tot_mat} mat. (vs. soma bruta: {int(df_g['_ALUNOS_MAT'].sum())})")
+    else:
+        tot_mat = int(df_g['_ALUNOS_MAT'].sum())
+        tot_agend = int(df_g['_QTD_ALUN'].sum())
+        tot_capa = int(df_g['_CAPA'].sum())
     polos_total = df_g[c_polo].nunique() if c_polo in df_g.columns else 0
     polos_sem_tutor_count = int(df_g[~df_g['_TEM_TUTOR']].groupby(c_polo).ngroups) if c_polo in df_g.columns else 0
     ger_kpis = {
