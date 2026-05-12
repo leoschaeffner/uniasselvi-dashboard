@@ -224,7 +224,39 @@ def verificar_e_localizar():
     p4 = achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsm") or achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsx")
     if p4: print(f"  [OK] {os.path.basename(p4)}")
     else:  print(f"  [INFO] LOTACAO_TUTORES não encontrada (.xlsx/.xlsm)")
-    return p1, p2, tmpl, p3, p4
+    # ── CSV de alunos por hub (igual aos outros arquivos: URL no Secret/env) ──
+    p5 = None
+    # 1. Tentar achar na pasta planilhas/ (já baixado anteriormente)
+    p5 = achar_arquivo(SCRIPT_DIR, "Relatorio_alunos_por_hub.csv")
+    if p5:
+        print(f"  [OK] {os.path.basename(p5)}")
+    else:
+        # 2. Tentar baixar via variável de ambiente URL_ALUNOS_HUB (Secret GitHub)
+        url_hub = os.environ.get("URL_ALUNOS_HUB", "").strip()
+        if url_hub:
+            print(f"  [Baixando] Relatorio_alunos_por_hub.csv via URL_ALUNOS_HUB...")
+            try:
+                import urllib.request
+                # Converter link de compartilhamento OneDrive para download direto
+                url_dl = url_hub
+                if 'sharepoint.com' in url_hub or '1drv.ms' in url_hub:
+                    sep = '&' if '?' in url_hub else '?'
+                    url_dl = url_hub + sep + 'download=1'
+                dest = os.path.join(pasta_planilhas, "Relatorio_alunos_por_hub.csv")
+                req = urllib.request.Request(url_dl, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    data = r.read()
+                if len(data) > 1000 and b'<!DOCTYPE' not in data[:200]:
+                    with open(dest, 'wb') as f_out: f_out.write(data)
+                    p5 = dest
+                    print(f"  [OK] Relatorio_alunos_por_hub.csv ({len(data):,} bytes)")
+                else:
+                    print(f"  [ERRO] Download retornou conteúdo inválido")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar CSV de alunos: {e}")
+        else:
+            print(f"  [INFO] Relatorio_alunos_por_hub.csv não encontrado (defina URL_ALUNOS_HUB)")
+    return p1, p2, tmpl, p3, p4, p5
 
 
 def ler_excel(path, **kwargs):
@@ -1006,20 +1038,21 @@ def _processar_gerenciamento_novo(df_g):
     df = df[df['_POLO'].str.len() > 0].copy()
     total = len(df); com_tutor = int(df['_TEM_TUTOR'].sum()); gerenciadas = int(df['_GERENCIADO'].sum())
     com_agenda = int(df['_TEM_AGENDA'].sum())
-    # FIX: Alunos Matriculados — deduplicar por polo×categoria (mesmos alunos em ordens distintas)
-    # Pegar o maior valor por polo×categoria para evitar contar os mesmos alunos múltiplas vezes
+    # FIX: Alunos Matriculados — deduplicar por polo×categoria (remove contagem múltipla por ordem)
     _mat_col = '_MAT'; _agend_col = '_AGEND'; _capa_col = '_CAPA'
-    _grp_cols = ['_POLO','_CAT']
-    if all(c in df.columns for c in _grp_cols):
-        _dedup = df.groupby(_grp_cols)[[_mat_col, _agend_col, _capa_col]].max()
-        tot_mat = int(_dedup[_mat_col].sum())
+    _raw_mat = int(df[_mat_col].sum()) if _mat_col in df.columns else 0
+    _grp_cols_ok = ['_POLO','_CAT']
+    if all(c in df.columns for c in _grp_cols_ok + [_mat_col, _agend_col, _capa_col]):
+        _dedup = df.groupby(_grp_cols_ok)[[_mat_col, _agend_col, _capa_col]].max()
+        tot_mat   = int(_dedup[_mat_col].sum())
         tot_agend = int(_dedup[_agend_col].sum())
-        tot_capa = int(_dedup[_capa_col].sum())
-        print(f"[{ts()}] Alunos deduplicados: {tot_mat} mat. / {tot_agend} agend. (vs. soma bruta: {int(df[_mat_col].sum())})")
+        tot_capa  = int(_dedup[_capa_col].sum())
+        print(f"[{ts()}] Alunos DEDUPLICADOS por polo×cat: {tot_mat:,} (bruto era {_raw_mat:,}, redução: {_raw_mat-tot_mat:,})")
     else:
-        tot_mat = int(df['_MAT'].sum())
-        tot_agend = int(df['_AGEND'].sum())
-        tot_capa = int(df['_CAPA'].sum())
+        tot_mat   = _raw_mat
+        tot_agend = int(df[_agend_col].sum()) if _agend_col in df.columns else 0
+        tot_capa  = int(df[_capa_col].sum())  if _capa_col  in df.columns else 0
+        print(f"[{ts()}] Alunos sem dedup: {tot_mat:,}")
     print(f"[{ts()}] Gerenciamento: {total} ofertas, {gerenciadas} ger., {total-com_tutor} sem tutor")
     print(f"[{ts()}] Agendas: {com_agenda} · datas: {sorted(df[df['_TEM_AGENDA']]['_DT_AG_ISO'].head(3).tolist())}")
     print(f"[{ts()}] {df['_POLO'].nunique()} polos, {df['_CAT'].nunique()} cats, {df['_ORDEM'].nunique()} ordens")
@@ -1169,17 +1202,27 @@ def processar_gerenciamento(p3):
     df_g['_CAPA'] = pd.to_numeric(df_g.get(c_capa_exp, 0), errors='coerce').fillna(0).astype(int)
     total_ofertas = len(df_g); gerenciadas = int(df_g['_GERENCIADO'].sum())
     com_tutor = int(df_g['_TEM_TUTOR'].sum()); sem_tutor = total_ofertas - com_tutor
-    # FIX: Alunos Matriculados — deduplicar por polo×categoria (evita contar mesmos alunos por ordem)
-    if c_polo in df_g.columns and c_cat in df_g.columns:
-        _dedup_g = df_g.groupby([c_polo, c_cat])[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max()
-        tot_mat = int(_dedup_g['_ALUNOS_MAT'].sum())
+    # FIX: Alunos Matriculados — deduplicar por polo×categoria (soma bruta conta os mesmos alunos por ordem)
+    # Usar apenas colunas que REALMENTE existem (não fallbacks)
+    _c_polo_real = c_polo if (c_polo and c_polo in df_g.columns) else None
+    _c_cat_real  = c_cat  if (c_cat  and c_cat  in df_g.columns) else None
+    # Se nenhuma das buscas primárias funcionou, tentar qualquer coluna polo/cat
+    if not _c_polo_real:
+        _c_polo_real = next((c for c in df_g.columns if 'POLO' in str(c).upper() or 'CEEM' in str(c).upper()), None)
+    if not _c_cat_real:
+        _c_cat_real = next((c for c in df_g.columns if 'CATEG' in str(c).upper() or 'CATP' in str(c).upper()), None)
+    _raw_mat = int(df_g['_ALUNOS_MAT'].sum())
+    if _c_polo_real and _c_cat_real:
+        _dedup_g = df_g.groupby([_c_polo_real, _c_cat_real])[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max()
+        tot_mat   = int(_dedup_g['_ALUNOS_MAT'].sum())
         tot_agend = int(_dedup_g['_QTD_ALUN'].sum())
-        tot_capa = int(_dedup_g['_CAPA'].sum())
-        print(f"[{ts()}] Alunos deduplicados: {tot_mat} mat. (vs. soma bruta: {int(df_g['_ALUNOS_MAT'].sum())})")
+        tot_capa  = int(_dedup_g['_CAPA'].sum())
+        print(f"[{ts()}] Alunos DEDUPLICADOS por polo×cat: {tot_mat:,} (bruto era {_raw_mat:,}, redução: {_raw_mat-tot_mat:,})")
     else:
-        tot_mat = int(df_g['_ALUNOS_MAT'].sum())
+        tot_mat = _raw_mat
         tot_agend = int(df_g['_QTD_ALUN'].sum())
-        tot_capa = int(df_g['_CAPA'].sum())
+        tot_capa  = int(df_g['_CAPA'].sum())
+        print(f"[{ts()}] Alunos sem dedup (colunas polo/cat não encontradas): {tot_mat:,}")
     polos_total = df_g[c_polo].nunique() if c_polo in df_g.columns else 0
     polos_sem_tutor_count = int(df_g[~df_g['_TEM_TUTOR']].groupby(c_polo).ngroups) if c_polo in df_g.columns else 0
     ger_kpis = {
@@ -1294,6 +1337,78 @@ def processar_gerenciamento(p3):
 
 
 
+
+
+def carregar_alunos_hub(path_csv):
+    """
+    Lê Relatorio_alunos_por_hub.csv e retorna dict com matrículas distintas
+    por polo e por categoria — substitui a contagem inflacionada do GIOCONDA.
+    """
+    import unicodedata as _ud, re as _re
+    if not path_csv or not os.path.isfile(path_csv):
+        print(f"[{ts()}] Alunos hub: arquivo não encontrado ({path_csv})")
+        return None
+    print(f"[{ts()}] Lendo alunos por hub: {os.path.basename(path_csv)}")
+    for enc in ['latin-1', 'utf-8', 'cp1252']:
+        try:
+            df = pd.read_csv(path_csv, sep=';', encoding=enc, dtype=str)
+            if 'MATRICULA' in df.columns: break
+        except: continue
+    else:
+        print(f"[{ts()}] ERRO: não foi possível ler {path_csv}")
+        return None
+
+    # Apenas matrículas confirmadas
+    if 'SITUACAO_SEMESTRE' in df.columns:
+        df = df[df['SITUACAO_SEMESTRE'].str.strip() == 'Matrícula Confirmada'].copy()
+
+    def _norm(s):
+        s = _ud.normalize('NFD', str(s or '').upper().strip())
+        s = ''.join(c for c in s if _ud.category(c) != 'Mn')
+        s = _re.sub(r'^LAP\s*[-–]\s*', '', s).strip()
+        return _re.sub(r'\s+', ' ', s)
+
+    # Mapear GRUPO_HUB → nossas categorias
+    GRUPO_CAT = {
+        'MULTIDISCIPLINAR II':        'ENF-INS (Multidisciplinar II)',
+        'MULTIDISCIPLINAR I':         'BIO-FAR (Multidisciplinar I)',
+        'MULTIDISCIPLINAR III':       'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'ENGMAKER+QUIMICA E FISICA':  'QUÍMICA E FÍSICA',
+        'ENGMAKER':                   'ENGMAKER',
+        'MULTIDISCIPLINAR IV':        'NUTRI (Multidisciplinar IV)',
+    }
+    def _grupo_para_cat(g):
+        gn = _norm(g)
+        for k, v in GRUPO_CAT.items():
+            if _norm(k) in gn or gn in _norm(k): return v
+        return g
+
+    df['_POLO_NORM'] = df['POLO_HUB'].apply(_norm)
+    df['_CAT']       = df['GRUPO_HUB'].apply(_grupo_para_cat)
+
+    total_distintos = df['MATRICULA'].nunique()
+    print(f"[{ts()}] Matrículas DISTINTAS (ativos): {total_distintos:,}")
+
+    # Por polo (chave normalizada)
+    por_polo = (df.groupby('_POLO_NORM')['MATRICULA']
+                  .nunique().to_dict())
+
+    # Por polo × categoria
+    por_polo_cat = {}
+    for (polo, cat), grp in df.groupby(['_POLO_NORM', '_CAT']):
+        por_polo_cat[f"{polo}||{cat}"] = int(grp['MATRICULA'].nunique())
+
+    # Por categoria (totais)
+    por_cat = (df.groupby('_CAT')['MATRICULA']
+                 .nunique().to_dict())
+
+    return {
+        'total_distintos': int(total_distintos),
+        'por_polo': {k: int(v) for k, v in por_polo.items()},
+        'por_polo_cat': por_polo_cat,
+        'por_cat': {k: int(v) for k, v in por_cat.items()},
+    }
+
 def gerar_html(dados):
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
@@ -1331,7 +1446,7 @@ if __name__ == '__main__':
     print()
     print(" Verificando arquivos...")
     print()
-    p1, p2, tmpl, p3, p4 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p4, p5 = verificar_e_localizar()
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
@@ -1392,6 +1507,21 @@ if __name__ == '__main__':
             dados['tem_gerenciamento'] = False
     else:
         dados['tem_gerenciamento'] = False
+    # ── ALUNOS HUB: matrículas distintas ──────────────────────────────────────
+    if p5:
+        try:
+            alunos_hub = carregar_alunos_hub(p5)
+            if alunos_hub:
+                dados['alunos_hub'] = alunos_hub
+                # Sobrescrever total_alunos_matriculados nos ger_kpis
+                if 'ger_kpis' in dados:
+                    dados['ger_kpis']['total_alunos_matriculados'] = alunos_hub['total_distintos']
+                    dados['ger_kpis']['alunos_mat_fonte'] = 'hub_csv'
+                    print(f"[{ts()}] KPI alunos substituído: {alunos_hub['total_distintos']:,} (matrículas distintas)")
+        except Exception as e:
+            print(f"[{ts()}] AVISO: erro ao ler alunos hub: {e}")
+    else:
+        print(f"[{ts()}] INFO: Relatorio_alunos_por_hub.csv não encontrado — usando contagem GIOCONDA")
     html = gerar_html(dados)
     if '--sem-browser' not in sys.argv:
         print(f"[{ts()}] Abrindo navegador...")
