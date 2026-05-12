@@ -780,7 +780,7 @@ function filterGerDetalhe(q){
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
   var rows='';
-  sorted.forEach(function(t,gi){var pct=t.totalOfertas?Math.round(t.totalGer/t.totalOfertas*100):0;var semTutor=!t.tutor;var tutorDisplay=t.tutor||'<span style="color:var(--red)">Sem tutor</span>';
+  var _prevPoloTutor='';sorted.forEach(function(t,gi){var pct=t.totalOfertas?Math.round(t.totalGer/t.totalOfertas*100):0;var semTutor=!t.tutor;var tutorDisplay=t.tutor||'<span style="color:var(--red)">Sem tutor</span>';
     // Formatar nome: "Primeiro Último" sem número de matrícula
     var tutorFmt=(function(nome){
       if(!nome)return nome;
@@ -820,9 +820,14 @@ function filterGerDetalhe(q){
       :'<span style="color:var(--red);font-size:10px">⚠ Sem tutor</span>';
     // Curso/Lab: limitar
     var cuLabDisp=_trunc(cuLab,26);
-    rows+='<tr class="tr-polo-hdr" style="cursor:pointer;height:46px;overflow:hidden" data-det="'+gi+'">'
-      +'<td class="polo-toggle" title="'+t.polo+'" style="overflow:hidden;padding:6px 8px"><strong style="font-size:11px">'+poloDisp+'</strong></td>'
-      +'<td title="'+t.tutor+'" style="overflow:hidden;padding:6px 4px;font-size:11px">'+tutorDisplay+'</td>'
+    var _curPoloTutor=t.polo+'|||'+(t.tutor||'');
+      var _isRepeat=(_curPoloTutor===_prevPoloTutor);
+      _prevPoloTutor=_curPoloTutor;
+      var _poloCss=_isRepeat?'opacity:.35;':'';
+      var _tutorCss=_isRepeat?'opacity:.35;':'';
+      rows+='<tr class="tr-polo-hdr" style="cursor:pointer;height:46px;overflow:hidden" data-det="'+gi+'">'
+      +'<td class="polo-toggle" title="'+t.polo+'" style="overflow:hidden;padding:6px 8px;'+_poloCss+'"><strong style="font-size:11px">'+(_isRepeat?'↳ ':'')+poloDisp+'</strong></td>'
+      +'<td title="'+t.tutor+'" style="overflow:hidden;padding:6px 4px;font-size:11px;'+_tutorCss+'">'+(_isRepeat?'':tutorDisplay)+'</td>'
       +'<td title="'+cuLab+'" style="overflow:hidden;padding:6px 4px;font-size:10px;color:var(--muted)">'+cuLabDisp+'</td>'+ordCells
       +'<td class="col-ch-lot" style="text-align:right;font-size:11px;font-weight:700;color:var(--teal)">'+(chCont?chCont+'h':'—')+'</td>'
       +'<td style="text-align:right;font-size:11px">'+chGer+'</td>'
@@ -939,6 +944,8 @@ function renderMapaBrasil(estadosData){
   var mapa={};(estadosData||[]).forEach(function(e){mapa[e.uf]=e;});
   var tooltip=document.getElementById('mapa-tooltip');
   svgEl.setAttribute('viewBox','0 0 520 520');
+  svgEl.setAttribute('overflow','hidden');
+  svgEl.style.overflow='hidden';
   svgEl.setAttribute('width','100%');svgEl.setAttribute('height','auto');
 
   var defs='<defs>'
@@ -1225,11 +1232,20 @@ function formatTutorShort(nome) {
   return p[0] + ' ' + p[p.length - 1];
 }
 var _CAT_ABREV = {
+  // ENF-INS (Multidisciplinar II)
   'ENF':'ENF', 'INSTRUMENTA':'ENF', 'ENFERMAGEM':'ENF',
+  // BIO-FAR (Multidisciplinar I)
   'BIO-FAR':'Bio-Far', 'BIOMEDICINA':'Bio-Far', 'FARMÁCIA':'Bio-Far', 'FARMACIA':'Bio-Far',
-  'FISIOTERAPIA':'Fisio', 'TERAPIA':'Fisio', 'ESTÉTICA':'Fisio', 'ESTETICA':'Fisio',
+  // BIO-FISIO-EST-TO (Multidisciplinar III) — keyword que aparece na categoria do GIOCONDA
+  'MULTIDISCIPLINAR III':'Multi 3', 'BIO-FISIO':'Multi 3',
+  'FISIOTERAPIA':'Fisio',
+  'OCUPACIONAL':'T.Oc',   // Terapia Ocupacional
+  'ESTÉTICA':'Est', 'ESTETICA':'Est',
+  // NUTRI (Multidisciplinar IV)
   'NUTRIÇÃO':'Nutri', 'NUTRICAO':'Nutri', 'NUTRI':'Nutri',
+  // ENGMAKER
   'ENGENHARIA':'Eng', 'ENGMAKER':'Eng', 'LICENCIAT':'Eng',
+  // QUÍMICA E FÍSICA
   'QUÍMICA':'Quím', 'QUIMICA':'Quím', 'FÍSICA':'Quím', 'FISICA':'Quím', 'AGRONOMIA':'Agro',
 };
 function getTutorCatAbrev(tutorNome, polo) {
