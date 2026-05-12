@@ -733,16 +733,19 @@ function renderGerAgendaTbl(data){
           var nFmt=formatTutorShort(t);
           if(tutorLegenda[nFmt])return;                    // já registrado
           var ca=getTutorCatAbrev(t,a.polo);
-          // Usar categoria REAL do tutor para a cor (não a 1ª cat do dia)
-          var cats=datCat[d]||[];
-          var catFull=cats.length?cats[0]:'';
-          // Tentar encontrar a categoria completa pelo tutor em gerDetData
+          // Cor: buscar categoria real do tutor em gerDetData
+          var _tNrm=(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s*\(\d+\)\s*$/,'').trim();
           var tutorEntry=(gerDetData||[]).find(function(r){
-            return r.tutor&&r.polo===a.polo&&
-              (r.tutor||'').toLowerCase().replace(/\s*\(\d+\)\s*$/,'').trim()
-              ===(t||'').toLowerCase().replace(/\s*\(\d+\)\s*$/,'').trim();
+            var rn=(r.tutor||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s*\(\d+\)\s*$/,'').trim();
+            return rn===_tNrm||(rn.split(' ').filter(Boolean)[0]===_tNrm.split(' ')[0]&&rn.split(' ').filter(Boolean).slice(-1)[0]===_tNrm.split(' ').slice(-1)[0]);
           });
-          if(tutorEntry)catFull=tutorEntry.categoria||catFull;
+          var catFull=tutorEntry?tutorEntry.categoria||'':'';
+          if(!catFull){var cats=datCat[d]||[];catFull=cats.length?cats[0]:'';}
+          // Se ca vazio mas temos catFull, derivar abreviatura
+          if(!ca&&catFull){
+            var _cu=catFull.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+            for(var _kw in _CAT_ABREV){if(_cu.includes(_kw)){ca=_CAT_ABREV[_kw];break;}}
+          }
           var cor=catFull?getCatColor(catFull):'var(--teal)';
           tutorLegenda[nFmt]={display:nFmt+(ca?' · '+ca:''),cor:cor};
         });
@@ -1230,17 +1233,41 @@ var _CAT_ABREV = {
   'QUÍMICA':'Quím', 'QUIMICA':'Quím', 'FÍSICA':'Quím', 'FISICA':'Quím', 'AGRONOMIA':'Agro',
 };
 function getTutorCatAbrev(tutorNome, polo) {
-  var normN = function(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s*\(\d+\)\s*$/,'').trim(); };
-  var tNorm = normN(tutorNome);
-  var contr = (DB.ger_contratacao||[]).find(function(c){
-    return normN(c.polo)===normN(polo) &&
-           (c.tutores||[]).some(function(t){ return normN(t)===tNorm; });
-  });
-  if (!contr) return '';
-  var cat = (contr.categoria||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  for (var kw in _CAT_ABREV) {
-    if (cat.includes(kw)) return _CAT_ABREV[kw];
+  var normN = function(s){
+    return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/\s*\(\d+\)\s*$/,'').replace(/\s+/g,' ').trim();
+  };
+  var normFL = function(s){
+    var p=normN(s).split(' ').filter(Boolean);
+    return p.length>=2?p[0]+' '+p[p.length-1]:normN(s);
+  };
+  var tNorm=normN(tutorNome); var tFL=normFL(tutorNome);
+  function catToAbrev(cat){
+    var c=(cat||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    for(var kw in _CAT_ABREV){ if(c.includes(kw)) return _CAT_ABREV[kw]; }
+    return '';
   }
+  // Estratégia 1: ger_contratacao com polo
+  var contr=(DB.ger_contratacao||[]).find(function(c){
+    return normN(c.polo)===normN(polo)&&
+      (c.tutores||[]).some(function(t){return normN(t)===tNorm||normFL(t)===tFL;});
+  });
+  if(contr) return catToAbrev(contr.categoria);
+  // Estratégia 2: ger_contratacao sem polo (qualquer polo)
+  contr=(DB.ger_contratacao||[]).find(function(c){
+    return (c.tutores||[]).some(function(t){return normN(t)===tNorm||normFL(t)===tFL;});
+  });
+  if(contr) return catToAbrev(contr.categoria);
+  // Estratégia 3: gerDetData por polo+nome
+  var det=(gerDetData||[]).find(function(r){
+    return normN(r.polo)===normN(polo)&&(normN(r.tutor||'')===tNorm||normFL(r.tutor||'')===tFL);
+  });
+  if(det) return catToAbrev(det.categoria||'');
+  // Estratégia 4: gerDetData só por nome
+  det=(gerDetData||[]).find(function(r){
+    return normN(r.tutor||'')===tNorm||normFL(r.tutor||'')===tFL;
+  });
+  if(det) return catToAbrev(det.categoria||'');
   return '';
 }
 
