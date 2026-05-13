@@ -271,7 +271,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
           </div>
         </div>
         <div class="card-body" style="padding:8px;text-align:center">
-          <svg id="mapa-brasil" viewBox="0 0 520 530" style="width:100%;max-width:480px;cursor:pointer" xmlns="http://www.w3.org/2000/svg"></svg>
+          <svg id="mapa-brasil" viewBox="0 0 520 530" style="width:100%;max-width:700px;cursor:pointer" xmlns="http://www.w3.org/2000/svg"></svg>
           <div id="mapa-tooltip" style="display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;pointer-events:none;z-index:400;box-shadow:var(--shadow-md);max-width:220px"></div>
         </div>
       </div>
@@ -626,6 +626,74 @@ function openPoloModal(nome){
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
 
 // ── GERENCIAMENTO ─────────────────────────────────────────────────────────────
+
+function openAlunosModal(){
+  // Usar dados do CSV de alunos (DB.alunos_hub) se disponível, senão usar ger_kpis por categoria
+  var hub = DB.alunos_hub || null;
+  var kpis = DB.ger_kpis || {};
+  var cats = DB.ger_cat || [];
+  
+  var fonte = hub ? 'Relatório de Alunos por Hub (matrículas únicas por POLO_HUB × GRUPO_HUB)' 
+                  : 'Estimativa baseada no GIOCONDA (pode ter contagem múltipla)';
+  
+  var rows = '';
+  if(hub && hub.por_cat){
+    var total = hub.total_distintos || 0;
+    Object.entries(hub.por_cat).sort((a,b)=>b[1]-a[1]).forEach(([cat,n])=>{
+      var pct = total ? Math.round(n/total*100) : 0;
+      rows += `<tr><td style="padding:8px 12px;font-size:13px">${cat}</td>`
+        + `<td style="padding:8px 12px;font-size:13px;font-weight:700;text-align:right">${n.toLocaleString('pt-BR')}</td>`
+        + `<td style="padding:8px 12px;font-size:12px;color:var(--muted);text-align:right">${pct}%</td></tr>`;
+    });
+    rows += `<tr style="border-top:2px solid var(--border)"><td style="padding:8px 12px;font-weight:700">Total distintos</td>`
+          + `<td style="padding:8px 12px;font-weight:700;text-align:right">${total.toLocaleString('pt-BR')}</td><td></td></tr>`;
+  } else if(cats.length){
+    var totalEst = cats.reduce((s,c)=>s+(c.alunos_mat||0), 0);
+    cats.slice().sort((a,b)=>(b.alunos_mat||0)-(a.alunos_mat||0)).forEach(c=>{
+      var n = c.alunos_mat || 0;
+      var pct = totalEst ? Math.round(n/totalEst*100) : 0;
+      rows += `<tr><td style="padding:8px 12px;font-size:13px">${c.categoria||c.cat||'—'}</td>`
+        + `<td style="padding:8px 12px;font-size:13px;font-weight:700;text-align:right">${n.toLocaleString('pt-BR')}</td>`
+        + `<td style="padding:8px 12px;font-size:12px;color:var(--muted);text-align:right">${pct}%</td></tr>`;
+    });
+    rows += `<tr style="border-top:2px solid var(--border)"><td style="padding:8px 12px;font-weight:700">Total</td>`
+          + `<td style="padding:8px 12px;font-weight:700;text-align:right">${totalEst.toLocaleString('pt-BR')}</td><td></td></tr>`;
+  } else {
+    rows = '<tr><td colspan="3" style="padding:16px;color:var(--muted);text-align:center">Dados por categoria não disponíveis</td></tr>';
+  }
+
+  var html = `<div style="padding:20px 24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <h3 style="margin:0;font-size:18px">Alunos Matriculados por Categoria</h3>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${fonte}</div>
+      </div>
+      <button onclick="document.getElementById('modal-alunos').style.display='none'" 
+        style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px">✕ Fechar</button>
+    </div>
+    ${!hub?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:11px;margin-bottom:12px">⚠ Sem o Relatório de Alunos por Hub — os valores abaixo são estimativas e podem ter contagem múltipla (mesmo aluno em mais de um curso).</div>':''}
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--bg)">
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600">CATEGORIA</th>
+        <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);font-weight:600">ALUNOS</th>
+        <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);font-weight:600">%</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+
+  var modal = document.getElementById('modal-alunos');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'modal-alunos';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+    modal.innerHTML = '<div style="background:var(--card);border-radius:12px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)" id="modal-alunos-inner"></div>';
+    modal.onclick = function(e){ if(e.target===modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  document.getElementById('modal-alunos-inner').innerHTML = html;
+  modal.style.display = 'flex';
+}
 function renderGerenciamento(){
   if(!DB.tem_gerenciamento)return;
   document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';
@@ -634,7 +702,7 @@ function renderGerenciamento(){
     <div class="kpi kpi-green" title="Total de combinações tutor × laboratório × ordem no GIOCONDA"><div class="kpi-label">Total Ofertas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
     <div class="kpi kpi-ok" title="Ofertas com agenda configurada no GIOCONDA: datas, capacidade e locais definidos"><div class="kpi-label">Gerenciadas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_gerenciadas)}</div><div class="kpi-detail">${k.pct_gerenciado}% do total</div></div>
     <div class="kpi kpi-red" title="Polos/labs sem nenhum tutor alocado — bloqueante total para gerenciamento"><div class="kpi-label">Sem Tutor <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_sem_tutor)}</div></div>
-    <div class="kpi kpi-teal" title="Alunos matriculados nos cursos com prática. ⚠ Contagem por oferta — um aluno pode aparecer em mais de uma oferta"><div class="kpi-label">Alunos Mat. <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div><div class="kpi-detail" style="color:var(--yellow)">⚠ por oferta</div></div>
+    <div class="kpi kpi-teal" style="cursor:pointer" onclick="openAlunosModal()" title="Clique para ver detalhes por categoria"><div class="kpi-label">Alunos Mat. <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div><div class="kpi-detail" style="color:var(--teal);font-size:9px">${k.alunos_mat_fonte==='hub_csv'?'✓ matrículas únicas':'estimativa · clique p/ detalhar'}</div></div>
     <div class="kpi kpi-yellow" title="Alunos com prática agendada (práticas gerenciadas × capacidade estimada por ordem)"><div class="kpi-label">Alunos Agendados <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>
     <div class="kpi kpi-green" title="% de alunos matriculados com prática agendada: Agendados ÷ Matriculados × 100"><div class="kpi-label">Ocupação <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${k.pct_ocupacao}%</div></div>`;
   const catColors=['#006B5E','#00A88F','#00C9A7','#FFD100','#E5BC00','#dc2626'];
@@ -800,7 +868,12 @@ function filterGerDetalhe(q){
     var dbTutor=preJoinCH?{ch_semanal:preJoinCH}:(DB.tutores||[]).find(function(x){
       if(!x.n||!t.tutor)return false;
       var xn=normT(x.n),xFL=normFL(x.n);
-      return xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL;
+      // Match exato, primeiro+último, ou qualquer um dos nomes contém o outro (fuzzy)
+      if(xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL) return true;
+      // Fuzzy: todos os tokens do nome curto presentes no nome longo
+      var shortTokens=_tnFL.split(' ').filter(Boolean);
+      var longNorm=xn;
+      return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
     });var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont*0.75)/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
     var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];var ordCells='';
     ordensExibir.forEach(function(o){var od=t.ordens[o];if(!od){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}var ger=od.ger,total=od.total;var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+'</td>';});    var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
@@ -1294,12 +1367,29 @@ function getTutorCatAbrev(tutorNome, polo) {
   });
   if(det){
     var cat3=det.categoria||'';
+    // Para Multi 3: buscar subcurso específico nas PRÁTICAS do tutor
     if(cat3.toUpperCase().indexOf('FISIO')>=0||cat3.toUpperCase().indexOf('MULTI')>=0){
-      var pratica=(det.pratica||det.curso||'').toUpperCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      if(pratica.indexOf('FISIOTERAPIA')>=0) return 'Fisio';
-      if(pratica.indexOf('OCUPACIONAL')>=0) return 'T.Oc';
-      if(pratica.indexOf('ESTETICA')>=0) return 'Est';
+      // Coletar TODAS as práticas deste tutor no polo
+      var allPraticas=(gerDetData||[]).filter(function(r){
+        return normFL(r.tutor||'')===tFL || normN(r.tutor||'')===tNorm;
+      }).map(function(r){ return (r.pratica||r.curso||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }).join(' ');
+      // Fisioterapia: keywords de práticas fisio
+      var isFisio=allPraticas.indexOf('FISIOTERAPIA')>=0||allPraticas.indexOf('ORTOPEDIC')>=0||
+                  allPraticas.indexOf('NEUROLOGICA')>=0||allPraticas.indexOf('CARDIORRESPIR')>=0||
+                  allPraticas.indexOf('CINESIOLOGIA')>=0||allPraticas.indexOf('EXAME FISICO')>=0;
+      // Terapia Ocupacional
+      var isTO=allPraticas.indexOf('OCUPACIONAL')>=0||allPraticas.indexOf('VIDA DIARIA')>=0||
+               allPraticas.indexOf('T.OC')>=0||allPraticas.indexOf('TERAPIA OC')>=0;
+      // Estética
+      var isEst=allPraticas.indexOf('ESTETICA')>=0||allPraticas.indexOf('COSMET')>=0||
+                allPraticas.indexOf('FACIAL')>=0||allPraticas.indexOf('CORPORAL')>=0||
+                allPraticas.indexOf('DEPILAC')>=0||allPraticas.indexOf('PIGMENT')>=0;
+      if(isFisio&&!isTO&&!isEst) return 'Fisio';
+      if(isTO&&!isFisio&&!isEst) return 'T.Oc';
+      if(isEst&&!isFisio&&!isTO) return 'Est';
+      if(isFisio) return 'Fisio';  // prioridade se múltiplos
+      if(isTO) return 'T.Oc';
+      if(isEst) return 'Est';
     }
     return catToAbrev(cat3);
   }
