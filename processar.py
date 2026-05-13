@@ -1495,9 +1495,20 @@ if __name__ == '__main__':
             enr = 0
             for oferta in dados.get('ger_ofertas', []):
                 tutor = oferta.get('tutor', '')
-                if not tutor: continue
+                if not tutor or oferta.get('ch_semanal'): continue
                 tn = _norm_nome(tutor); tfl = _nome_fl(tutor)
                 ch = _ch_map.get(tn) or _ch_map.get(tfl) or _ch_map_fl.get(tn) or _ch_map_fl.get(tfl)
+                # Fallback fuzzy: todos os tokens do nome curto no nome longo
+                if not ch:
+                    tokens = tfl.split()
+                    if len(tokens) >= 2:
+                        for k, v in _ch_map.items():
+                            if all(tok in k for tok in tokens):
+                                ch = v; break
+                        if not ch:
+                            for k, v in _ch_map_fl.items():
+                                if all(tok in k for tok in tokens):
+                                    ch = v; break
                 if ch:
                     oferta['ch_semanal'] = ch; enr += 1
             print(f"[{ts()}] CH enriquecida: {enr}/{len(dados.get('ger_ofertas',[]))} ofertas")
