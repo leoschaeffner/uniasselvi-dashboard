@@ -743,6 +743,12 @@ def carregar_lotacao(p4):
             'categoria_gio': str(r[29] or '').strip(),
             'total_alunos': total_al,
         }
+        # Indexar também por nome primeiro+último para match mais abrangente
+        _parts = nome_lower.split()
+        if len(_parts) >= 2:
+            _nfl = _parts[0] + ' ' + _parts[-1]
+            if _nfl not in lotacao:
+                lotacao[_nfl] = lotacao[nome_lower]
     print(f"[{ts()}] Lotação: {len(lotacao)} tutores mapeados")
     return lotacao
 
@@ -815,6 +821,8 @@ def enriquecer_tutores(dados, lotacao):
                 t['ch_semanal'] = info['ch_semanal']
             t['ch_ideal'] = info.get('ch_ideal', 0)
             t['contratacao_lot'] = info['contratacao']
+            t['lab'] = info.get('cursos', '')  # curso da planilha de lotação (para Multi 3)
+            t['polo_hub_lot'] = info.get('polo_hub', '')
             matched += 1
     print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH")
     dados['tutores'] = tutores
