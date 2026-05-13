@@ -232,26 +232,53 @@ def verificar_e_localizar():
         print(f"  [OK] {os.path.basename(p5)}")
     else:
         # 2. Tentar baixar via variável de ambiente URL_ALUNOS_HUB (Secret GitHub)
+        import re
         url_hub = os.environ.get("URL_ALUNOS_HUB", "").strip()
         if url_hub:
             print(f"  [Baixando] Relatorio_alunos_por_hub.csv via URL_ALUNOS_HUB...")
             try:
                 import urllib.request
-                # Converter link de compartilhamento OneDrive para download direto
-                url_dl = url_hub
-                if 'sharepoint.com' in url_hub or '1drv.ms' in url_hub:
-                    sep = '&' if '?' in url_hub else '?'
-                    url_dl = url_hub + sep + 'download=1'
+                # Converter link SharePoint/OneDrive para download direto
+                # Tentar múltiplos formatos de URL
+                def _build_dl_urls(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        # Formato 1: adicionar &download=1
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        # Formato 2: download.aspx com token
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)  # URL original como último recurso
+                    return urls
+
                 dest = os.path.join(pasta_planilhas, "Relatorio_alunos_por_hub.csv")
-                req = urllib.request.Request(url_dl, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=60) as r:
-                    data = r.read()
-                if len(data) > 1000 and b'<!DOCTYPE' not in data[:200]:
-                    with open(dest, 'wb') as f_out: f_out.write(data)
-                    p5 = dest
-                    print(f"  [OK] Relatorio_alunos_por_hub.csv ({len(data):,} bytes)")
-                else:
-                    print(f"  [ERRO] Download retornou conteúdo inválido")
+                downloaded = False
+                for url_dl in _build_dl_urls(url_hub):
+                    try:
+                        req = urllib.request.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with urllib.request.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 10000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest, 'wb') as f_out: f_out.write(data)
+                            p5 = dest
+                            print(f"  [OK] Relatorio_alunos_por_hub.csv ({len(data):,} bytes)")
+                            downloaded = True
+                            break
+                        else:
+                            print(f"  [AVISO] URL retornou conteúdo inválido ({len(data)} bytes): {url_dl[:80]}")
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar: {ex} | URL: {url_dl[:80]}")
+                if not downloaded:
+                    print(f"  [ERRO] Não foi possível baixar o CSV de alunos — verifique URL_ALUNOS_HUB")
             except Exception as e:
                 print(f"  [ERRO] Não foi possível baixar CSV de alunos: {e}")
         else:
@@ -1410,11 +1437,43 @@ def carregar_alunos_hub(path_csv):
     por_cat = (df.groupby('_CAT')['MATRICULA']
                  .nunique().to_dict())
 
+    # ── Mapear TUTOR_PRATICA → subcurso para Multi 3 ────────────────────
+    tutor_subcurso = {}  # nome_norm → 'Fisio'/'T.Oc'/'Est'
+    if 'TUTOR_PRATICA' in df.columns and 'DISCIPLINA' in df.columns and 'GRUPO_HUB' in df.columns:
+        import re as _re
+        from collections import Counter as _Counter
+        _FISIO = ['FISIOTERAPIA','CINESIOTERAPIA','ELETROTERM','CARDIORRESPIR',
+                  'PROTESE','ORTESE','RECURSOS TERAPEUTICOS','MOVIMENTO FUNCIONAL',
+                  'AVALIACAO FISICO','REABILITACAO','NEUROFUNC','ORTOPEDIC','RESPIRATORIA']
+        _TO    = ['TERAPIA OCUPACIONAL','PSICOMOTRICIDADE','INTEGRACAO SENSORIAL',
+                  'TRANSTORNOS MENTAIS','COMPORTAMENTO HUMANO','VIDA DIARIA','TRABALHO EM GRUPO']
+        _EST   = ['ESTETICA','COSMETOLOGIA','BIOMEDICINA ESTETICA','PIGMENTAC',
+                  'DEPILAC','FACIAL CORPORAL','MICROAGULH']
+        def _classif_disc(d):
+            d2 = _norm(d) if d else ''
+            if any(k in d2 for k in _FISIO): return 'Fisio'
+            if any(k in d2 for k in _TO):    return 'T.Oc'
+            if any(k in d2 for k in _EST):   return 'Est'
+            return None
+        def _norm_tutor(s):
+            s = _re.sub(r'\s*\(\d+\)\s*$', '', str(s or '')).strip()
+            return _norm(s)
+        df3 = df[df['GRUPO_HUB'].str.upper().str.contains('MULTIDISCIPLINAR III|MULTI.*3|BIO-FISIO', na=False)].copy()
+        df3 = df3[df3['TUTOR_PRATICA'].notna() & (df3['TUTOR_PRATICA'].astype(str).str.strip().str.upper() != 'NAN')]
+        df3['_sub'] = df3['DISCIPLINA'].apply(_classif_disc)
+        df3['_tnorm'] = df3['TUTOR_PRATICA'].apply(_norm_tutor)
+        for tutor, grp in df3[df3['_sub'].notna()].groupby('_tnorm'):
+            subs = list(grp['_sub'])
+            if subs:
+                tutor_subcurso[tutor] = _Counter(subs).most_common(1)[0][0]
+        print(f"[{ts()}] Subcursos Multi 3 mapeados: {len(tutor_subcurso)} tutores")
+
     return {
         'total_distintos': int(total_distintos),
         'por_polo': {k: int(v) for k, v in por_polo.items()},
         'por_polo_cat': por_polo_cat,
         'por_cat': {k: int(v) for k, v in por_cat.items()},
+        'tutor_subcurso': tutor_subcurso,  # Multi 3: nome_tutor → Fisio/T.Oc/Est
     }
 
 def gerar_html(dados):
