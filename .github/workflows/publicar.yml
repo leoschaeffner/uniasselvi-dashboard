@@ -24,65 +24,57 @@ jobs:
 
       - name: Baixar planilhas
         env:
-          URL_CONTROLE:   ${{ secrets.URL_CONTROLE }}
-          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
+          # Tenta ambos os nomes possíveis de cada secret
+          URL_CONTROLE:   ${{ secrets.URL_CONTROLE || secrets.URL_CONTROLE_TUTORIA }}
+          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO || secrets.URL_PORTFOLIO_TUTOR }}
           URL_GIOCONDA:   ${{ secrets.URL_GIOCONDA }}
           URL_LOTACAO:    ${{ secrets.URL_LOTACAO }}
           URL_ALUNOS_HUB: ${{ secrets.URL_ALUNOS_HUB }}
         run: |
           mkdir -p planilhas
           python3 - << 'PYEOF'
-          import os, urllib.request, re, time
+          import os, urllib.request, re
 
           def baixar(env_var, destino, nome):
               url = os.environ.get(env_var, '').strip()
               if not url:
-                  print(f"  SKIP {nome}: secret '{env_var}' não configurado")
+                  print(f"  SKIP {nome}: secret '{env_var}' vazio")
                   return False
-              # Converter link SharePoint/OneDrive para download direto
-              urls_tentar = []
+              urls = []
               if 'sharepoint.com' in url:
-                  # Formato 1: &download=1
                   sep = '&' if '?' in url else '?'
-                  urls_tentar.append(url + sep + 'download=1')
-                  # Formato 2: download.aspx com token da URL
-                  m = re.search(r'/([A-Za-z0-9_\-]{20,})[?]', url)
-                  base = re.match(r'(https://[^/]+)', url)
-                  user = re.search(r'/personal/([^/]+)/', url)
-                  if m and base and user:
-                      urls_tentar.append(f"{base.group(1)}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
-              elif '1drv.ms' in url or 'onedrive' in url:
+                  urls.append(url + sep + 'download=1')
+                  m  = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                  b  = re.match(r'(https://[^/]+)', url)
+                  u2 = re.search(r'/personal/([^/]+)/', url)
+                  if m and b and u2:
+                      urls.append(f"{b.group(1)}/personal/{u2.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+              else:
                   sep = '&' if '?' in url else '?'
-                  urls_tentar.append(url + sep + 'download=1')
-              urls_tentar.append(url)
-
-              for u in urls_tentar:
+                  urls.append(url + sep + 'download=1')
+              urls.append(url)
+              for u in urls:
                   try:
-                      req = urllib.request.Request(u, headers={
-                          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-                          'Accept': '*/*'})
+                      req = urllib.request.Request(u, headers={'User-Agent':'Mozilla/5.0'})
                       with urllib.request.urlopen(req, timeout=180) as r:
                           data = r.read()
-                      # Verificar se é arquivo real (não HTML de erro)
-                      if len(data) > 50000 and b'<!DOCTYPE' not in data[:500] and b'<html' not in data[:200].lower():
-                          with open(destino, 'wb') as f:
-                              f.write(data)
+                      if len(data) > 50000 and b'<!DOCTYPE' not in data[:300]:
+                          open(destino,'wb').write(data)
                           print(f"  [OK] {nome}: {len(data):,} bytes")
                           return True
-                      elif len(data) > 0:
-                          print(f"  [AVISO] {nome}: resposta de {len(data)} bytes parece HTML — tentando próxima URL")
+                      print(f"  [AVISO] {nome}: {len(data)} bytes (parece HTML) — próxima URL")
                   except Exception as e:
                       print(f"  [AVISO] {nome}: {e}")
               print(f"  [ERRO] {nome}: todas as URLs falharam")
               return False
 
-          baixar('URL_CONTROLE',   'planilhas/01_CONTROLE_TUTORIA.xlsx',        '01_CONTROLE_TUTORIA.xlsx')
-          baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR.xlsx')
-          baixar('URL_GIOCONDA',   'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERAL_DE_GERENCIAMENTO.xlsx')
-          baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES.xlsm')
-          baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'Relatorio_alunos_por_hub.csv')
+          baixar('URL_CONTROLE',   'planilhas/01_CONTROLE_TUTORIA.xlsx',        '01_CONTROLE_TUTORIA')
+          baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR')
+          baixar('URL_GIOCONDA',   'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERAL_GERENCIAMENTO')
+          baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES')
+          baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'ALUNOS_HUB')
           PYEOF
-          echo "=== Planilhas disponíveis ==="
+          echo "=== Planilhas ==="
           ls -lh planilhas/
 
       - name: Gerar dashboard
