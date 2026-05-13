@@ -1560,22 +1560,32 @@ if __name__ == '__main__':
                     _ch_map_fl[_nome_fl(t['n'])] = t['ch_semanal']
             # Injetar ch_semanal em cada oferta
             enr = 0
+            # Pré-computar lista de (nome_normalizado, nome_fl, ch) para lookup rápido
+            _lot_list = [(k, _nome_fl(k), v) for k, v in _ch_map.items()]
+
             for oferta in dados.get('ger_ofertas', []):
                 tutor = oferta.get('tutor', '')
                 if not tutor or oferta.get('ch_semanal'): continue
                 tn = _norm_nome(tutor); tfl = _nome_fl(tutor)
+
+                # Match 1: exato ou FL
                 ch = _ch_map.get(tn) or _ch_map.get(tfl) or _ch_map_fl.get(tn) or _ch_map_fl.get(tfl)
-                # Fallback fuzzy: todos os tokens do nome curto no nome longo
+
+                # Match 2: tokens do GIOCONDA presentes no nome da lotação
                 if not ch:
-                    tokens = tfl.split()
-                    if len(tokens) >= 2:
-                        for k, v in _ch_map.items():
-                            if all(tok in k for tok in tokens):
-                                ch = v; break
-                        if not ch:
-                            for k, v in _ch_map_fl.items():
-                                if all(tok in k for tok in tokens):
-                                    ch = v; break
+                    _tokens = [t for t in tfl.split() if len(t) > 2]
+                    if len(_tokens) >= 2:
+                        for lot_n, lot_fl, lot_ch in _lot_list:
+                            if all(tok in lot_n for tok in _tokens) or all(tok in lot_fl for tok in _tokens):
+                                ch = lot_ch; break
+
+                # Match 3: tokens da LOTAÇÃO presentes no nome do GIOCONDA (inverso)
+                if not ch:
+                    for lot_n, lot_fl, lot_ch in _lot_list:
+                        lot_tokens = [t for t in lot_fl.split() if len(t) > 2]
+                        if len(lot_tokens) >= 2 and all(tok in tn for tok in lot_tokens):
+                            ch = lot_ch; break
+
                 if ch:
                     oferta['ch_semanal'] = ch; enr += 1
             print(f"[{ts()}] CH enriquecida: {enr}/{len(dados.get('ger_ofertas',[]))} ofertas")
