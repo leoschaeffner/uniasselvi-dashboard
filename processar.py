@@ -1384,6 +1384,16 @@ def carregar_alunos_hub(path_csv):
         print(f"[{ts()}] Alunos hub: arquivo não encontrado ({path_csv})")
         return None
     print(f"[{ts()}] Lendo alunos por hub: {os.path.basename(path_csv)}")
+    # Verificar se o arquivo é HTML (download falhou) e não CSV real
+    try:
+        with open(path_csv, 'rb') as _f: _head = _f.read(500)
+        if b'<!DOCTYPE' in _head or b'<html' in _head.lower() or b'<HTML' in _head:
+            sz = os.path.getsize(path_csv)
+            print(f"[{ts()}] ERRO: Relatorio_alunos_por_hub.csv é HTML ({sz} bytes) — o download falhou")
+            print(f"[{ts()}] SOLUÇÃO: Atualize o secret URL_ALUNOS_HUB para o formato download.aspx:")
+            print(f"[{ts()}]   https://uniasselvi01-my.sharepoint.com/personal/[USUARIO]/_layouts/15/download.aspx?share=[TOKEN]")
+            return None
+    except: pass
     for enc in ['latin-1', 'utf-8', 'cp1252']:
         try:
             df = pd.read_csv(path_csv, sep=';', encoding=enc, dtype=str)
