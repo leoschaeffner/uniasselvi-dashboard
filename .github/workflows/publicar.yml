@@ -24,25 +24,65 @@ jobs:
 
       - name: Baixar planilhas
         env:
-          URL_CONTROLE:   ${{ secrets.URL_CONTROLE_TUTORIA }}
-          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO_TUTOR }}
+          URL_CONTROLE:   ${{ secrets.URL_CONTROLE }}
+          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
           URL_GIOCONDA:   ${{ secrets.URL_GIOCONDA }}
           URL_LOTACAO:    ${{ secrets.URL_LOTACAO }}
           URL_ALUNOS_HUB: ${{ secrets.URL_ALUNOS_HUB }}
         run: |
           mkdir -p planilhas
-          baixar() {
-            [ -z "$1" ] && echo "SKIP $3" && return
-            URL=$(echo "$1" | grep -q '?' && echo "${1}&download=1" || echo "${1}?download=1")
-            curl -sS -L -o "$2" -H "User-Agent: Mozilla/5.0" --max-time 180 "$URL"
-            SIZE=$(stat -c%s "$2" 2>/dev/null || echo 0)
-            [ "$SIZE" -gt "10000" ] && echo "OK $3 ($SIZE bytes)" || { echo "ERRO $3 ($SIZE bytes)"; rm -f "$2"; }
-          }
-          baixar "$URL_CONTROLE"   planilhas/01_CONTROLE_TUTORIA.xlsx        "CONTROLE_TUTORIA"
-          baixar "$URL_PORTFOLIO"  planilhas/PORTIFOLIO_TUTOR.xlsx           "PORTFOLIO"
-          baixar "$URL_GIOCONDA"   planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx "GIOCONDA"
-          baixar "$URL_LOTACAO"    planilhas/LOTACAO_TUTORES.xlsm            "LOTACAO"
-          baixar "$URL_ALUNOS_HUB" planilhas/Relatorio_alunos_por_hub.csv   "ALUNOS_HUB"
+          python3 - << 'PYEOF'
+          import os, urllib.request, re, time
+
+          def baixar(env_var, destino, nome):
+              url = os.environ.get(env_var, '').strip()
+              if not url:
+                  print(f"  SKIP {nome}: secret '{env_var}' não configurado")
+                  return False
+              # Converter link SharePoint/OneDrive para download direto
+              urls_tentar = []
+              if 'sharepoint.com' in url:
+                  # Formato 1: &download=1
+                  sep = '&' if '?' in url else '?'
+                  urls_tentar.append(url + sep + 'download=1')
+                  # Formato 2: download.aspx com token da URL
+                  m = re.search(r'/([A-Za-z0-9_\-]{20,})[?]', url)
+                  base = re.match(r'(https://[^/]+)', url)
+                  user = re.search(r'/personal/([^/]+)/', url)
+                  if m and base and user:
+                      urls_tentar.append(f"{base.group(1)}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+              elif '1drv.ms' in url or 'onedrive' in url:
+                  sep = '&' if '?' in url else '?'
+                  urls_tentar.append(url + sep + 'download=1')
+              urls_tentar.append(url)
+
+              for u in urls_tentar:
+                  try:
+                      req = urllib.request.Request(u, headers={
+                          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                          'Accept': '*/*'})
+                      with urllib.request.urlopen(req, timeout=180) as r:
+                          data = r.read()
+                      # Verificar se é arquivo real (não HTML de erro)
+                      if len(data) > 50000 and b'<!DOCTYPE' not in data[:500] and b'<html' not in data[:200].lower():
+                          with open(destino, 'wb') as f:
+                              f.write(data)
+                          print(f"  [OK] {nome}: {len(data):,} bytes")
+                          return True
+                      elif len(data) > 0:
+                          print(f"  [AVISO] {nome}: resposta de {len(data)} bytes parece HTML — tentando próxima URL")
+                  except Exception as e:
+                      print(f"  [AVISO] {nome}: {e}")
+              print(f"  [ERRO] {nome}: todas as URLs falharam")
+              return False
+
+          baixar('URL_CONTROLE',   'planilhas/01_CONTROLE_TUTORIA.xlsx',        '01_CONTROLE_TUTORIA.xlsx')
+          baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR.xlsx')
+          baixar('URL_GIOCONDA',   'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERAL_DE_GERENCIAMENTO.xlsx')
+          baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES.xlsm')
+          baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'Relatorio_alunos_por_hub.csv')
+          PYEOF
+          echo "=== Planilhas disponíveis ==="
           ls -lh planilhas/
 
       - name: Gerar dashboard
@@ -54,4 +94,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           cp saida/dashboard.html index.html
           git add index.html
-          git diff --cached --quiet || git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT" && git push
+          git diff --cached --quiet || (git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT" && git push)
