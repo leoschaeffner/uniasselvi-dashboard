@@ -1,89 +1,107 @@
 name: Atualizar Dashboard
-
 on:
-  schedule:
-    - cron: '0 */2 * * *'
   push:
     branches: [main]
   workflow_dispatch:
-
+  schedule:
+    # Roda a cada 2 horas, 24h/dia, 7 dias/semana
+    - cron: '0 */2 * * *'
+# Só uma execução por vez — se chegar outra, cancela a anterior
+concurrency:
+  group: dashboard-deploy
+  cancel-in-progress: true
 jobs:
   publicar:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
-
-      - run: pip install pandas openpyxl xlrd requests --quiet
-
-      - name: Baixar planilhas
+          fetch-depth: 0
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dependências
+        run: pip install pandas openpyxl xlrd requests --quiet
+      - name: Baixar planilhas do OneDrive
         env:
-          # Tenta ambos os nomes possíveis de cada secret
-          URL_CONTROLE:   ${{ secrets.URL_CONTROLE || secrets.URL_CONTROLE_TUTORIA }}
-          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO || secrets.URL_PORTFOLIO_TUTOR }}
-          URL_GIOCONDA:   ${{ secrets.URL_GIOCONDA }}
-          URL_LOTACAO:    ${{ secrets.URL_LOTACAO }}
-          URL_ALUNOS_HUB: ${{ secrets.URL_ALUNOS_HUB }}
+          URL_CONTROLE:    ${{ secrets.URL_CONTROLE }}
+          URL_PORTFOLIO:   ${{ secrets.URL_PORTFOLIO }}
+          URL_GERENCIAL:   ${{ secrets.URL_GERENCIAL }}
+          URL_LOTACAO:     ${{ secrets.URL_LOTACAO }}
+          URL_REL_NOVO:    ${{ secrets.URL_REL_NOVO }}
+          URL_ALUNOS_HUB:  ${{ secrets.URL_ALUNOS_HUB }}
         run: |
           mkdir -p planilhas
-          python3 - << 'PYEOF'
-          import os, urllib.request, re
-
-          def baixar(env_var, destino, nome):
-              url = os.environ.get(env_var, '').strip()
-              if not url:
-                  print(f"  SKIP {nome}: secret '{env_var}' vazio")
-                  return False
-              urls = []
-              if 'sharepoint.com' in url:
-                  sep = '&' if '?' in url else '?'
-                  urls.append(url + sep + 'download=1')
-                  m  = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
-                  b  = re.match(r'(https://[^/]+)', url)
-                  u2 = re.search(r'/personal/([^/]+)/', url)
-                  if m and b and u2:
-                      urls.append(f"{b.group(1)}/personal/{u2.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
-              else:
-                  sep = '&' if '?' in url else '?'
-                  urls.append(url + sep + 'download=1')
-              urls.append(url)
-              for u in urls:
-                  try:
-                      req = urllib.request.Request(u, headers={'User-Agent':'Mozilla/5.0'})
-                      with urllib.request.urlopen(req, timeout=180) as r:
-                          data = r.read()
-                      if len(data) > 50000 and b'<!DOCTYPE' not in data[:300]:
-                          open(destino,'wb').write(data)
-                          print(f"  [OK] {nome}: {len(data):,} bytes")
-                          return True
-                      print(f"  [AVISO] {nome}: {len(data)} bytes (parece HTML) — próxima URL")
-                  except Exception as e:
-                      print(f"  [AVISO] {nome}: {e}")
-              print(f"  [ERRO] {nome}: todas as URLs falharam")
-              return False
-
-          baixar('URL_CONTROLE',   'planilhas/01_CONTROLE_TUTORIA.xlsx',        '01_CONTROLE_TUTORIA')
-          baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR')
-          baixar('URL_GIOCONDA',   'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERAL_GERENCIAMENTO')
-          baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES')
-          baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'ALUNOS_HUB')
-          PYEOF
-          echo "=== Planilhas ==="
+          baixar() {
+            local url="$1" dest="$2" obrig="$3"
+            if [ -z "$url" ]; then
+              echo "[AVISO] URL não configurada para $dest"
+              [ "$obrig" = "sim" ] && exit 1 || return 0
+            fi
+            # Para links SharePoint: adicionar &download=1 para forçar download direto
+            if echo "$url" | grep -q 'sharepoint.com'; then
+              if echo "$url" | grep -q '?'; then
+                url="${url}&download=1"
+              else
+                url="${url}?download=1"
+              fi
+            fi
+            echo "[INFO] Baixando $dest..."
+            curl -L --max-time 120 --retry 3 --retry-delay 5 \
+              -H "User-Agent: Mozilla/5.0" -o "planilhas/$dest" "$url"
+            SIZE=$(wc -c < "planilhas/$dest")
+            echo "[INFO] $dest: $SIZE bytes"
+            if [ "$SIZE" -lt 5000 ]; then
+              echo "[ERRO] Arquivo muito pequeno — provavelmente HTML de erro"
+              cat "planilhas/$dest"
+              [ "$obrig" = "sim" ] && exit 1
+            fi
+          }
+          baixar "$URL_CONTROLE"   "01_CONTROLE_TUTORIA.xlsx"            "sim"
+          baixar "$URL_PORTFOLIO"  "PORTIFOLIO_TUTOR.xlsx"               "sim"
+          baixar "$URL_GERENCIAL"  "REL_GERAL_DE_GERENCIAMENTO.xlsx"     "nao"
+          baixar "$URL_LOTACAO"    "LOTACAO_TUTORES.xlsm"                "nao"
+          baixar "$URL_REL_NOVO"   "REL_DETALHADO.csv"                   "nao"
+          baixar "$URL_ALUNOS_HUB" "Relatorio_alunos_por_hub.csv"        "nao"
+          echo "=== Planilhas disponíveis ==="
           ls -lh planilhas/
-
-      - name: Gerar dashboard
-        run: python3 processar.py --sem-browser
-
-      - name: Publicar
+      - name: Processar dashboard
+        run: python processar.py --sem-browser
+      - name: Publicar index.html
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           cp saida/dashboard.html index.html
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
           git add index.html
-          git diff --cached --quiet || (git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT" && git push)
+          git diff --cached --quiet && echo "Sem mudancas" || {
+            git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT"
+            # Estratégia: em conflito de index.html, sempre usar a versão recém-gerada
+            git pull --rebase -X ours origin main || {
+              git rebase --abort
+              git fetch origin main
+              git reset --soft origin/main
+              git add index.html
+              git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT [retry]"
+            }
+            git push
+          }
+      # ── Manter repositório ativo (evita GitHub desativar o cron) ──────────
+      - name: Keepalive — evitar desativação do cron
+        if: github.event_name == 'schedule'
+        run: |
+          DAY=$(TZ='America/Sao_Paulo' date '+%u')  # 1=seg ... 7=dom
+          if [ "$DAY" = "1" ]; then
+            echo "Última execução automática: $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT" > .github/last_run.txt
+            git config user.email "actions@github.com"
+            git config user.name "GitHub Actions"
+            git add .github/last_run.txt
+            git diff --cached --quiet || {
+              git commit -m "keepalive $(date '+%Y-%m-%d')"
+              git pull --rebase -X ours origin main
+              git push
+            }
+          fi
