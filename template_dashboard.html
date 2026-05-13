@@ -1347,6 +1347,20 @@ function getTutorCatAbrev(tutorNome, polo) {
     return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
       .replace(/\s*\(\d+\)\s*$/,'').replace(/\s+/g,' ').trim();
   };
+  // ── Estratégia 0: DB.alunos_hub.tutor_subcurso (fonte mais confiável)
+  // Mapeamento construído direto do CSV de alunos — TUTOR_PRATICA × DISCIPLINA
+  if(DB.alunos_hub && DB.alunos_hub.tutor_subcurso){
+    var _tn0=normN(tutorNome);
+    var _sub0=DB.alunos_hub.tutor_subcurso[_tn0];
+    if(_sub0) return _sub0;
+    // Tentar primeiro+último
+    var _parts0=_tn0.split(' ').filter(Boolean);
+    if(_parts0.length>=2){
+      var _nfl0=_parts0[0]+' '+_parts0[_parts0.length-1];
+      var _sub0fl=DB.alunos_hub.tutor_subcurso[_nfl0];
+      if(_sub0fl) return _sub0fl;
+    }
+  }
   var normFL = function(s){
     var p=normN(s).split(' ').filter(Boolean);
     return p.length>=2?p[0]+' '+p[p.length-1]:normN(s);
