@@ -976,30 +976,30 @@ var BRAZIL_GEO_PATHS={
 
 var BRAZIL_GEO_CENTROIDS={
   'AC':[65.1,266.4],
-  'AL':[654,365],
+  'AL':[665.0,275.0],
   'AM':[177.4,177.8],
-  'AP':[524,102],
+  'AP':[427.0,79.0],
   'BA':[620.3,343.9],
   'CE':[614.2,186.3],
-  'DF':[374,492],
-  'ES':[567,463],
+  'DF':[465.0,378.0],
+  'ES':[582.0,454.0],
   'GO':[435.3,385.4],
   'MA':[527.0,146.9],
   'MG':[523.8,422.6],
   'MS':[342.9,460.0],
   'MT':[320.8,331.2],
   'PA':[460.6,111.5],
-  'PB':[649,330],
-  'PE':[605,345],
+  'PB':[665.0,228.0],
+  'PE':[641.0,250.0],
   'PI':[550.8,241.9],
   'PR':[395.4,535.4],
-  'RJ':[528,495],
-  'RN':[648,295],
+  'RJ':[542.0,496.0],
+  'RN':[665.0,205.0],
   'RO':[203.4,298.3],
   'RR':[225.8,61.4],
   'RS':[365.5,622.2],
   'SC':[446.1,589.3],
-  'SE':[646,395],
+  'SE':[652.0,291.0],
   'SP':[499.5,524.8],
   'TO':[456.2,273.1]
 };
@@ -1039,15 +1039,15 @@ function renderMapaBrasil(estadosData){
 
   // Labels NE apontam para DENTRO do Brasil (offsets negativos = label à esquerda)
   var SMALL_OFFSET={
-    'DF':[0,-25],
-    'RN':[-80,-25],  // label dentro de PI/CE, linha aponta para costa
-    'PB':[-80,-15],
-    'AL':[-80,5],
-    'SE':[-80,15],
-    'PE':[-30,0],    // PE é maior, só desloca um pouco
-    'ES':[-60,5],    // label dentro de MG
-    'RJ':[-50,30],   // label abaixo de SP
-    'AP':[-30,-20]
+    'RN':[-120,0],   // label dentro de PI/CE
+    'PB':[-115,15],
+    'AL':[-110,30],
+    'SE':[-100,40],
+    'PE':[-60,10],
+    'ES':[-70,0],
+    'RJ':[-80,20],
+    'DF':[0,-20],
+    'AP':[-20,-20]
   };
   Object.keys(BRAZIL_GEO_CENTROIDS).forEach(function(uf){
     var c=BRAZIL_GEO_CENTROIDS[uf];
