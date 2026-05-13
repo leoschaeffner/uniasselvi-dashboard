@@ -963,19 +963,28 @@ function renderMapaBrasil(estadosData){
       +' style="cursor:pointer;transition:opacity .15s" filter="url(#sh)"/>';
   });
 
+  var SMALL_OFFSET={'DF':[14,-10],'SE':[22,0],'AL':[24,0],'PB':[26,-8],'RN':[26,-10],'ES':[18,0],'RJ':[0,16],'PE':[20,0],'AP':[0,-12]};
   Object.keys(BRAZIL_GEO_CENTROIDS).forEach(function(uf){
     var c=BRAZIL_GEO_CENTROIDS[uf];
     var e=mapa[uf];
     var pct=e&&e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):null;
     var sm=smallUFs[uf];
-    var fs=sm?6:8.5; var fsp=sm?5:6.5;
-    var sh='text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.7)';
-    html+='<text x="'+c[0]+'" y="'+(c[1]+1)+'" text-anchor="middle"'
+    var off=SMALL_OFFSET[uf]||[0,0];
+    var lx=c[0]+off[0], ly=c[1]+off[1];
+    var fs=sm?8:11, fsp=sm?6.5:8.5;
+    var sh='text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 6px rgba(0,0,0,.85)';
+    if(off[0]||off[1]){
+      html+='<line x1="'+c[0]+'" y1="'+c[1]+'" x2="'+lx+'" y2="'+(ly-2)+'"'
+        +' stroke="rgba(255,255,255,0.8)" stroke-width="1" pointer-events="none"/>';
+      html+='<circle cx="'+c[0]+'" cy="'+c[1]+'" r="2.5"'
+        +' fill="rgba(255,255,255,0.9)" stroke="rgba(0,0,0,.2)" stroke-width="0.5" pointer-events="none"/>';
+    }
+    html+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle"'
       +' font-size="'+fs+'" font-weight="900" font-family="Plus Jakarta Sans,sans-serif"'
       +' fill="#fff" pointer-events="none" style="'+sh+'">'+uf+'</text>';
     if(pct!==null){
       var pc=pct>=50?'#bbf7d0':pct>=25?'#fef08a':'#fca5a5';
-      html+='<text x="'+c[0]+'" y="'+(c[1]+fsp+3)+'" text-anchor="middle"'
+      html+='<text x="'+lx+'" y="'+(ly+fsp+2)+'" text-anchor="middle"'
         +' font-size="'+fsp+'" font-weight="700" font-family="Plus Jakarta Sans,sans-serif"'
         +' fill="'+pc+'" pointer-events="none" style="'+sh+'">'+pct+'%</text>';
     }
@@ -1283,7 +1292,17 @@ function getTutorCatAbrev(tutorNome, polo) {
   det=(gerDetData||[]).find(function(r){
     return normN(r.tutor||'')===tNorm||normFL(r.tutor||'')===tFL;
   });
-  if(det) return catToAbrev(det.categoria||'');
+  if(det){
+    var cat3=det.categoria||'';
+    if(cat3.toUpperCase().indexOf('FISIO')>=0||cat3.toUpperCase().indexOf('MULTI')>=0){
+      var pratica=(det.pratica||det.curso||'').toUpperCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(pratica.indexOf('FISIOTERAPIA')>=0) return 'Fisio';
+      if(pratica.indexOf('OCUPACIONAL')>=0) return 'T.Oc';
+      if(pratica.indexOf('ESTETICA')>=0) return 'Est';
+    }
+    return catToAbrev(cat3);
+  }
   return '';
 }
 
