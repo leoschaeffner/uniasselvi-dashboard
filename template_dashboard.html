@@ -648,7 +648,7 @@ function openAlunosModal(){
     rows += `<tr style="border-top:2px solid var(--border)"><td style="padding:8px 12px;font-weight:700">Total distintos</td>`
           + `<td style="padding:8px 12px;font-weight:700;text-align:right">${total.toLocaleString('pt-BR')}</td><td></td></tr>`;
   } else if(cats.length){
-    var totalEst = cats.reduce((s,c)=>s+(c.alunos_mat||0), 0);
+    var totalEst = cats.reduce((s,c)=>s+(c.alunos_matriculados||c.alunos_mat||0), 0);
     cats.slice().sort((a,b)=>((b.alunos_matriculados||b.alunos_mat||0))-((a.alunos_matriculados||a.alunos_mat||0))).forEach(c=>{
       var n = c.alunos_matriculados || c.alunos_mat || 0;
       var pct = totalEst ? Math.round(n/totalEst*100) : 0;
@@ -656,8 +656,9 @@ function openAlunosModal(){
         + `<td style="padding:8px 12px;font-size:13px;font-weight:700;text-align:right">${n.toLocaleString('pt-BR')}</td>`
         + `<td style="padding:8px 12px;font-size:12px;color:var(--muted);text-align:right">${pct}%</td></tr>`;
     });
-    rows += `<tr style="border-top:2px solid var(--border)"><td style="padding:8px 12px;font-weight:700">Total</td>`
-          + `<td style="padding:8px 12px;font-weight:700;text-align:right">${totalEst.toLocaleString('pt-BR')}</td><td></td></tr>`;
+    rows += `<tr style="border-top:2px solid var(--border)"><td style="padding:8px 12px;font-weight:700">Total (estimativa)</td>`
+          + `<td style="padding:8px 12px;font-weight:700;text-align:right">${totalEst.toLocaleString('pt-BR')}</td>`
+          + `<td style="padding:8px 12px;font-size:11px;color:var(--muted);text-align:right">100%</td></tr>`;
   } else {
     rows = '<tr><td colspan="3" style="padding:16px;color:var(--muted);text-align:center">Dados por categoria não disponíveis</td></tr>';
   }
@@ -1036,7 +1037,18 @@ function renderMapaBrasil(estadosData){
       +' style="cursor:pointer;transition:opacity .15s" filter="url(#sh)"/>';
   });
 
-  var SMALL_OFFSET={'DF':[20,-15],'SE':[30,0],'AL':[32,0],'PB':[34,-12],'RN':[34,-14],'ES':[25,0],'RJ':[0,22],'PE':[28,0],'AP':[0,-16]};
+  // Labels NE apontam para DENTRO do Brasil (offsets negativos = label à esquerda)
+  var SMALL_OFFSET={
+    'DF':[0,-25],
+    'RN':[-80,-25],  // label dentro de PI/CE, linha aponta para costa
+    'PB':[-80,-15],
+    'AL':[-80,5],
+    'SE':[-80,15],
+    'PE':[-30,0],    // PE é maior, só desloca um pouco
+    'ES':[-60,5],    // label dentro de MG
+    'RJ':[-50,30],   // label abaixo de SP
+    'AP':[-30,-20]
+  };
   Object.keys(BRAZIL_GEO_CENTROIDS).forEach(function(uf){
     var c=BRAZIL_GEO_CENTROIDS[uf];
     var e=mapa[uf];
@@ -1375,9 +1387,16 @@ function getTutorCatAbrev(tutorNome, polo) {
       });
       if(tutLot&&tutLot.lab){
         var labN=tutLot.lab.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        if(labN.indexOf('FISIOTERAPIA')>=0) return 'Fisio';
-        if(labN.indexOf('OCUPACIONAL')>=0||labN.indexOf('T.OC')>=0) return 'T.Oc';
-        if(labN.indexOf('ESTETICA')>=0||labN.indexOf('COSMET')>=0) return 'Est';
+        // Checar tanto nome completo quanto código abreviado da planilha de lotação
+        var isFisio=labN.indexOf('FISIOTERAPIA')>=0||labN==='BFI'||labN.indexOf('BFI')===0;
+        var isTO=labN.indexOf('OCUPACIONAL')>=0||labN==='BTO'||labN.indexOf('BTO')===0||labN.indexOf('T.OC')>=0;
+        var isEst=labN.indexOf('ESTETICA')>=0||labN.indexOf('COSMET')>=0||labN==='COS'||labN.indexOf('COS-TIP')>=0;
+        if(isFisio&&!isTO&&!isEst) return 'Fisio';
+        if(isTO&&!isFisio&&!isEst) return 'T.Oc';
+        if(isEst&&!isFisio&&!isTO) return 'Est';
+        if(isFisio) return 'Fisio';
+        if(isTO) return 'T.Oc';
+        if(isEst) return 'Est';
       }
       // Fonte 2: curso no gerDetData
       var allCursos=(gerDetData||[]).filter(function(r){
