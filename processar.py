@@ -1424,8 +1424,13 @@ def carregar_alunos_hub(path_csv):
     }
     def _grupo_para_cat(g):
         gn = _norm(g)
+        # Match EXATO primeiro (evita 'MULTIDISCIPLINAR I' casar com 'MULTIDISCIPLINAR II')
         for k, v in GRUPO_CAT.items():
-            if _norm(k) in gn or gn in _norm(k): return v
+            if _norm(k) == gn: return v
+        # Fallback: contém (só para casos como 'ENGMAKER+...' vs 'ENGMAKER')
+        for k, v in GRUPO_CAT.items():
+            kn = _norm(k)
+            if kn in gn and len(kn) > 8: return v
         return g
 
     df['_POLO_NORM'] = df['POLO_HUB'].apply(_norm)
@@ -1475,7 +1480,15 @@ def carregar_alunos_hub(path_csv):
         for tutor, grp in df3[df3['_sub'].notna()].groupby('_tnorm'):
             subs = list(grp['_sub'])
             if subs:
-                tutor_subcurso[tutor] = _Counter(subs).most_common(1)[0][0]
+                # Guardar em MINÚSCULAS para o JS (que usa normN = toLowerCase)
+                tutor_lower = tutor.lower()
+                tutor_subcurso[tutor_lower] = _Counter(subs).most_common(1)[0][0]
+                # Também guardar primeiro+último nome (fallback)
+                parts = tutor_lower.split()
+                if len(parts) >= 2:
+                    fl = parts[0] + ' ' + parts[-1]
+                    if fl not in tutor_subcurso:
+                        tutor_subcurso[fl] = tutor_subcurso[tutor_lower]
         print(f"[{ts()}] Subcursos Multi 3 mapeados: {len(tutor_subcurso)} tutores")
 
     return {
