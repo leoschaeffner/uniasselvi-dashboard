@@ -1039,15 +1039,15 @@ function renderMapaBrasil(estadosData){
 
   // Labels NE apontam para DENTRO do Brasil (offsets negativos = label à esquerda)
   var SMALL_OFFSET={
-    'RN':[-120,0],   // label dentro de PI/CE
-    'PB':[-115,15],
-    'AL':[-110,30],
-    'SE':[-100,40],
-    'PE':[-60,10],
-    'ES':[-70,0],
-    'RJ':[-80,20],
+    'RN':[-80,0],
+    'PB':[-80,15],
+    'AL':[-75,30],
+    'SE':[-65,40],
+    'PE':[-40,5],
+    'ES':[-55,0],
+    'RJ':[-55,20],
     'DF':[0,-20],
-    'AP':[-20,-20]
+    'AP':[-15,-15]
   };
   Object.keys(BRAZIL_GEO_CENTROIDS).forEach(function(uf){
     var c=BRAZIL_GEO_CENTROIDS[uf];
