@@ -1577,10 +1577,23 @@ if __name__ == '__main__':
                 return (pts[0] + ' ' + pts[-1]) if len(pts) >= 2 else _norm_nome(s)
             # Mapear ch_semanal por nome completo E por primeiro+último nome
             _ch_map = {}; _ch_map_fl = {}
+            # Fonte 1: portfólio tutores (com CH já enriquecida pela lotação)
             for t in dados.get('tutores', []):
                 if t.get('ch_semanal') and t.get('n'):
                     _ch_map[_norm_nome(t['n'])] = t['ch_semanal']
                     _ch_map_fl[_nome_fl(t['n'])] = t['ch_semanal']
+            # Fonte 2: lotação DIRETAMENTE (589 tutores vs 298 do portfólio)
+            # Fix principal: tutores que estão no GIOCONDA mas não no portfólio
+            if lotacao:
+                for lot_nome, lot_info in lotacao.items():
+                    lot_ch = lot_info.get('ch_semanal', 0) if isinstance(lot_info, dict) else 0
+                    if lot_ch:
+                        if lot_nome not in _ch_map:
+                            _ch_map[lot_nome] = lot_ch
+                        lot_fl = _nome_fl(lot_nome)
+                        if lot_fl not in _ch_map_fl:
+                            _ch_map_fl[lot_fl] = lot_ch
+            print(f"[{ts()}] CH map Gerenciamento: {len(_ch_map)} entradas")
             # Injetar ch_semanal em cada oferta
             enr = 0
             # Pré-computar lista de (nome_normalizado, nome_fl, ch) para lookup rápido
