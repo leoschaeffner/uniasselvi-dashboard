@@ -898,11 +898,12 @@ function filterGerDetalhe(q){
     var _curPoloTutor=t.polo+'|||'+(t.tutor||'');
       var _isRepeat=(_curPoloTutor===_prevPoloTutor);
       _prevPoloTutor=_curPoloTutor;
-      var _poloCss=_isRepeat?'opacity:.35;':'';
-      var _tutorCss=_isRepeat?'opacity:.35;':'';
+      // ↳ linhas de continuação: mostrar polo/tutor em cinza claro (não esconder)
+      var _poloCss=_isRepeat?'color:var(--muted);':'';
+      var _tutorCss=_isRepeat?'color:var(--muted);':'';
       rows+='<tr class="tr-polo-hdr" style="cursor:pointer;height:46px;overflow:hidden" data-det="'+gi+'">'
       +'<td class="polo-toggle" title="'+t.polo+'" style="overflow:hidden;padding:6px 8px;'+_poloCss+'"><strong style="font-size:11px">'+(_isRepeat?'↳ ':'')+poloDisp+'</strong></td>'
-      +'<td title="'+t.tutor+'" style="overflow:hidden;padding:6px 4px;font-size:11px;'+_tutorCss+'">'+(_isRepeat?'':tutorDisplay)+'</td>'
+      +'<td title="'+t.tutor+'" style="overflow:hidden;padding:6px 4px;font-size:11px;'+_tutorCss+'">'+tutorDisplay+'</td>'
       +'<td title="'+cuLab+'" style="overflow:hidden;padding:6px 4px;font-size:10px;color:var(--muted)">'+cuLabDisp+'</td>'+ordCells
       +'<td class="col-ch-lot" style="text-align:right;font-size:11px;font-weight:700;color:var(--teal)">'+(chCont?chCont+'h':'—')+'</td>'
       +'<td style="text-align:right;font-size:11px">'+chGer+'</td>'
