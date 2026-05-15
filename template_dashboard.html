@@ -292,6 +292,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
           <th style="text-align:right" onclick="sortTable('gv-estados-tbody','ger','num')">Ger.</th>
           <th onclick="sortTable('gv-estados-tbody','pct','num')">%</th>
           <th style="text-align:right;color:var(--red)" onclick="sortTable('gv-estados-tbody','st','num')">-Tutor</th>
+          <th style="text-align:right;color:var(--muted)" onclick="sortTable('gv-estados-tbody','mat','num')">Al. Mat.</th>
         </tr></thead><tbody id="gv-estados-tbody"></tbody></table></div>
       </div>
 
@@ -925,7 +926,8 @@ function toggleDetGrp(hdr,gid){hdr.classList.toggle('open');document.querySelect
 // ── ESTADOS ───────────────────────────────────────────────────────────────────
 var UF_NOMES={'AC':'Acre','AL':'Alagoas','AP':'Amapá','AM':'Amazonas','BA':'Bahia','CE':'Ceará','DF':'Distrito Federal','ES':'Espírito Santo','GO':'Goiás','MA':'Maranhão','MT':'Mato Grosso','MS':'Mato Grosso do Sul','MG':'Minas Gerais','PA':'Pará','PB':'Paraíba','PR':'Paraná','PE':'Pernambuco','PI':'Piauí','RJ':'Rio de Janeiro','RN':'Rio Grande do Norte','RS':'Rio Grande do Sul','RO':'Rondônia','RR':'Roraima','SC':'Santa Catarina','SP':'São Paulo','SE':'Sergipe','TO':'Tocantins'};
 function extrairUF(polo){var m=polo.match(/\/([A-Z]{2})(?:\s*-|$)/);return m?m[1]:'??';}
-function agruparPorEstado(poloData){var estados={};poloData.forEach(function(p){var uf=extrairUF(p.polo||p.n||'');if(!estados[uf])estados[uf]={uf:uf,nome:UF_NOMES[uf]||uf,polos:0,ofertas:0,gerenciadas:0,sem_tutor:0,mat:0,agend:0};var e=estados[uf];e.polos++;e.ofertas+=p.total_ofertas||0;e.gerenciadas+=p.gerenciadas||0;e.sem_tutor+=p.sem_tutor||0;e.mat+=p.alunos_matriculados||0;e.agend+=p.alunos_agendados||0;});return Object.values(estados).sort(function(a,b){return b.ofertas-a.ofertas;});}
+function agruparPorEstado(poloData){var estados={};poloData.forEach(function(p){var uf=extrairUF(p.polo||p.n||'');if(!uf||uf==='??'||!UF_NOMES[uf])return;// ignorar polos sem UF válido
+if(!estados[uf])estados[uf]={uf:uf,nome:UF_NOMES[uf],polos:0,ofertas:0,gerenciadas:0,sem_tutor:0,mat:0,agend:0};var e=estados[uf];e.polos++;e.ofertas+=p.total_ofertas||0;e.gerenciadas+=p.gerenciadas||0;e.sem_tutor+=p.sem_tutor||0;e.mat+=p.alunos_matriculados||0;e.agend+=p.alunos_agendados||0;});return Object.values(estados).sort(function(a,b){return b.ofertas-a.ofertas;});}
 function renderEstadosInline(estadoData){
   var el=document.getElementById('gv-estados-tbody');if(!el)return;
   el.innerHTML=estadoData.map(function(e){var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;return '<tr class="sort-row" style="cursor:pointer" data-estado-uf="'+e.uf+'" data-vuf="'+e.uf+'" data-vpolos="'+e.polos+'" data-vofertas="'+e.ofertas+'" data-vger="'+e.gerenciadas+'" data-vpct="'+pct+'" data-vst="'+e.sem_tutor+'" data-vmat="'+e.mat+'"><td><strong>'+e.uf+'</strong> <span style="color:var(--muted);font-size:11px">'+e.nome+'</span></td><td style="text-align:right">'+e.polos+'</td><td style="text-align:right">'+fmtNum(e.ofertas)+'</td><td style="text-align:right">'+fmtNum(e.gerenciadas)+'</td><td>'+progCell(pct)+'</td><td style="text-align:right;color:var(--red)">'+fmtNum(e.sem_tutor)+'</td><td style="text-align:right">'+fmtNum(e.mat)+'</td></tr>';}).join('');
