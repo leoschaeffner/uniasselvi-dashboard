@@ -559,6 +559,7 @@ def processar(p1, p2):
         return None
 
     enviados = defaultdict(list)
+    polo_sem_tutor = defaultdict(list)  # polo+cat → práticas de tutores desligados
     for _, r in df_p.iterrows():
         chave = r['_CHAVE']; proto = r['_PROTO']
         if not chave or chave == 'nan' or not proto or proto == 'nan': continue
@@ -630,14 +631,6 @@ def processar(p1, p2):
                             _p = _p.strip()
                             if _p: enviados[_sc].append({'p':_p[:80],'d':str(_extra_data)[:10] if pd.notna(_extra_data) else None,'a':_extra_aluno,'o':_extra_ordem})
 
-        # Fallback 5 (Opção B): vincular ao polo ativo — tutor desligado/código diferente
-        if chave not in chave_to_cf:
-            _cat_subm = str(r.get('_CAT', '') or '')
-            _polo_match = _encontrar_por_polo(chave, _cat_subm)
-            if _polo_match:
-                chave = _polo_match
-                match_por_nome += 1
-
         if chave in chave_to_cf:
             com_match += 1
         else:
@@ -659,6 +652,13 @@ def processar(p1, p2):
             if _aviso_key not in _avisos_raw:
                 _avisos_raw[_aviso_key] = {'email':_email_subm,'nome':_nome_subm,'chave':chave,'tipo':_tipo,'msg':_msg,'count':0}
             _avisos_raw[_aviso_key]['count'] += 1
+            # Guardar práticas em polo_sem_tutor para entry anônimo no polo
+            _polo_part = chave  # chave = polo+código sem separador
+            for _pfb in str(r.get('_PROTO','') or '').split(';'):
+                _pfb = _pfb.strip()
+                if _pfb:
+                    _ordem_pfb = str(r.get('_ORDEM','Ordem 1') or 'Ordem 1').strip()
+                    polo_sem_tutor[_polo_part].append({'p':_pfb[:80],'d':None,'a':0,'o':_ordem_pfb})
 
         data = r['_DATA']; aluno = int(r['_ALUNOS'])
         for p in proto.split(';'):
@@ -670,6 +670,31 @@ def processar(p1, p2):
                 enviados[chave].append({'p': p[:80], 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
     # Finalizar avisos
     avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
+    # Criar entries anônimos para práticas de tutores desligados (vinculado ao polo)
+    for chave_polo, hist_polo in polo_sem_tutor.items():
+        if not hist_polo: continue
+        # Tentar extrair polo e categoria da chave
+        _reais_polo = set(h['p'] for h in hist_polo)
+        # Encontrar categoria mais provável pela prática
+        _cf_polo = ''
+        for _p_polo in _reais_polo:
+            _cf_polo = oficial_p_to_cat.get(_p_polo, '')
+            if _cf_polo: break
+        _praticas_polo = catalogo.get(_cf_polo, [])
+        _pend_polo = [p for p in _praticas_polo if p not in _reais_polo]
+        tutores.append({
+            'n': '',  # sem nome — tutor desligado/não identificado
+            'p': chave_polo,  # usar chave como polo (será exibido)
+            'c': _cf_polo, 'cf': _cf_polo or 'Sem categoria',
+            'tp': len(_praticas_polo), 'te': len(_reais_polo),
+            'pend': _pend_polo, 'real': sorted(_reais_polo), 'hist': hist_polo,
+            'pct': round(len(_reais_polo)/len(_praticas_polo)*100,1) if _praticas_polo else 0,
+            'ch_semanal': None,
+            '_anonimo': True,  # flag para template
+        })
+    if polo_sem_tutor:
+        print(f"[{ts()}] Entries anônimos criados: {len(polo_sem_tutor)} polos com práticas de tutores desligados")
+
     print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
     if sem_match > 0:
         print(f"[{ts()}] Avisos de portfólio gerados: {len(avisos_portfolio)}")
