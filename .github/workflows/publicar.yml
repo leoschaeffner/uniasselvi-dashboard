@@ -1,85 +1,134 @@
 name: Atualizar Dashboard
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Roda a cada 2 horas, 24h/dia, 7 dias/semana
     - cron: '0 */2 * * *'
-# Só uma execução por vez — se chegar outra, cancela a anterior
+
 concurrency:
   group: dashboard-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
+
 jobs:
   publicar:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Python 3.11
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Dependências
-        run: pip install pandas openpyxl xlrd requests --quiet
+
+      - run: pip install pandas openpyxl xlrd requests --quiet
+
       - name: Baixar planilhas do OneDrive
         env:
-          URL_CONTROLE:    ${{ secrets.URL_CONTROLE }}
-          URL_PORTFOLIO:   ${{ secrets.URL_PORTFOLIO }}
-          URL_GERENCIAL:   ${{ secrets.URL_GERENCIAL }}
-          URL_LOTACAO:     ${{ secrets.URL_LOTACAO }}
-          URL_REL_NOVO:    ${{ secrets.URL_REL_NOVO }}
-          URL_ALUNOS_HUB:  ${{ secrets.URL_ALUNOS_HUB }}
+          URL_CONTROLE:   ${{ secrets.URL_CONTROLE }}
+          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
+          URL_GERENCIAL:  ${{ secrets.URL_GERENCIAL }}
+          URL_LOTACAO:    ${{ secrets.URL_LOTACAO }}
+          URL_REL_NOVO:   ${{ secrets.URL_REL_NOVO }}
+          URL_ALUNOS_HUB: ${{ secrets.URL_ALUNOS_HUB }}
         run: |
           mkdir -p planilhas
-          baixar() {
-            local url="$1" dest="$2" obrig="$3"
-            if [ -z "$url" ]; then
-              echo "[AVISO] URL não configurada para $dest"
-              [ "$obrig" = "sim" ] && exit 1 || return 0
-            fi
-            # Para links SharePoint: adicionar &download=1 para forçar download direto
-            if echo "$url" | grep -q 'sharepoint.com'; then
-              if echo "$url" | grep -q '?'; then
-                url="${url}&download=1"
-              else
-                url="${url}?download=1"
-              fi
-            fi
-            echo "[INFO] Baixando $dest..."
-            curl -L --max-time 120 --retry 3 --retry-delay 5 \
-              -H "User-Agent: Mozilla/5.0" -o "planilhas/$dest" "$url"
-            SIZE=$(wc -c < "planilhas/$dest")
-            echo "[INFO] $dest: $SIZE bytes"
-            if [ "$SIZE" -lt 5000 ]; then
-              echo "[ERRO] Arquivo muito pequeno — provavelmente HTML de erro"
-              cat "planilhas/$dest"
-              [ "$obrig" = "sim" ] && exit 1
-            fi
-          }
-          baixar "$URL_CONTROLE"   "01_CONTROLE_TUTORIA.xlsx"            "sim"
-          baixar "$URL_PORTFOLIO"  "PORTIFOLIO_TUTOR.xlsx"               "sim"
-          baixar "$URL_GERENCIAL"  "REL_GERAL_DE_GERENCIAMENTO.xlsx"     "nao"
-          baixar "$URL_LOTACAO"    "LOTACAO_TUTORES.xlsm"                "nao"
-          baixar "$URL_REL_NOVO"   "REL_DETALHADO.csv"                   "nao"
-          baixar "$URL_ALUNOS_HUB" "Relatorio_alunos_por_hub.csv"        "nao"
-          echo "=== Planilhas disponíveis ==="
+          python3 - << 'PYEOF'
+          import os, urllib.request, re, sys
+
+          def sp_download_url(url):
+              """
+              Converte link de compartilhamento SharePoint para URL de download direto.
+              Formato que funciona neste tenant: download.aspx?share=TOKEN
+              """
+              if not url or 'sharepoint.com' not in url:
+                  return [url] if url else []
+
+              urls = []
+
+              # Formato 1: download.aspx (funciona neste tenant UNIASSELVI)
+              # Extrai TOKEN do path: /personal/USER/TOKEN?...
+              m_token = re.search(r'/([A-Za-z0-9_\-]{20,})(?:\?|$)', url)
+              m_user  = re.search(r'/personal/([^/]+)/', url)
+              m_base  = re.match(r'(https://[^/]+)', url)
+              if m_token and m_user and m_base:
+                  dl = f"{m_base.group(1)}/personal/{m_user.group(1)}/_layouts/15/download.aspx?share={m_token.group(1)}"
+                  urls.append(dl)
+
+              # Formato 2: adicionar &download=1 como fallback
+              sep = '&' if '?' in url else '?'
+              urls.append(url + sep + 'download=1')
+
+              # Formato 3: URL original como último recurso
+              urls.append(url)
+              return urls
+
+          def baixar(env_var, destino, nome, obrigatorio=True):
+              url = os.environ.get(env_var, '').strip()
+              if not url:
+                  msg = f"  [SKIP] {nome}: secret '{env_var}' não configurado"
+                  print(msg)
+                  if obrigatorio:
+                      print(f"  [ERRO] {nome} é obrigatório — abortando")
+                      sys.exit(1)
+                  return False
+
+              for tentativa, u in enumerate(sp_download_url(url), 1):
+                  try:
+                      req = urllib.request.Request(u, headers={
+                          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                      })
+                      with urllib.request.urlopen(req, timeout=180) as r:
+                          data = r.read()
+
+                      # Rejeitar HTML (página de login ou erro)
+                      head = data[:500].lower()
+                      if b'<!doctype' in head or b'<html' in head or b'sign in' in head:
+                          print(f"  [T{tentativa}] {nome}: retornou HTML ({len(data)} bytes) — próxima URL")
+                          continue
+
+                      # Arquivo válido
+                      with open(destino, 'wb') as f:
+                          f.write(data)
+                      print(f"  [OK] {nome}: {len(data):,} bytes (tentativa {tentativa})")
+                      return True
+
+                  except Exception as e:
+                      print(f"  [T{tentativa}] {nome}: {e}")
+
+              print(f"  [ERRO] {nome}: todas as URLs falharam")
+              if obrigatorio:
+                  sys.exit(1)
+              return False
+
+          print("[INFO] Baixando planilhas...")
+          baixar('URL_CONTROLE',   'planilhas/01_CONTROLE_TUTORIA.xlsx',        '01_CONTROLE_TUTORIA',        True)
+          baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR',           True)
+          baixar('URL_GERENCIAL',  'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERENCIAMENTO',          False)
+          baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES',            False)
+          baixar('URL_REL_NOVO',   'planilhas/REL_DETALHADO.csv',               'REL_DETALHADO',              False)
+          baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'ALUNOS_HUB',                 False)
+          print("[INFO] Downloads concluídos")
+          PYEOF
+          echo "=== Planilhas ==="
           ls -lh planilhas/
+
       - name: Processar dashboard
         run: python processar.py --sem-browser
+
       - name: Publicar index.html
         run: |
           cp saida/dashboard.html index.html
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add index.html
-          git diff --cached --quiet && echo "Sem mudancas" || {
+          git diff --cached --quiet && echo "Sem mudanças" || {
             git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT"
-            # Estratégia: em conflito de index.html, sempre usar a versão recém-gerada
             git pull --rebase -X ours origin main || {
               git rebase --abort
               git fetch origin main
@@ -89,13 +138,13 @@ jobs:
             }
             git push
           }
-      # ── Manter repositório ativo (evita GitHub desativar o cron) ──────────
-      - name: Keepalive — evitar desativação do cron
+
+      - name: Keepalive
         if: github.event_name == 'schedule'
         run: |
-          DAY=$(TZ='America/Sao_Paulo' date '+%u')  # 1=seg ... 7=dom
+          DAY=$(TZ='America/Sao_Paulo' date '+%u')
           if [ "$DAY" = "1" ]; then
-            echo "Última execução automática: $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT" > .github/last_run.txt
+            echo "keepalive $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M')" > .github/last_run.txt
             git config user.email "actions@github.com"
             git config user.name "GitHub Actions"
             git add .github/last_run.txt
