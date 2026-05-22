@@ -670,31 +670,6 @@ def processar(p1, p2):
                 enviados[chave].append({'p': p[:80], 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
     # Finalizar avisos
     avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
-    # Criar entries anônimos para práticas de tutores desligados (vinculado ao polo)
-    for chave_polo, hist_polo in polo_sem_tutor.items():
-        if not hist_polo: continue
-        # Tentar extrair polo e categoria da chave
-        _reais_polo = set(h['p'] for h in hist_polo)
-        # Encontrar categoria mais provável pela prática
-        _cf_polo = ''
-        for _p_polo in _reais_polo:
-            _cf_polo = oficial_p_to_cat.get(_p_polo, '')
-            if _cf_polo: break
-        _praticas_polo = catalogo.get(_cf_polo, [])
-        _pend_polo = [p for p in _praticas_polo if p not in _reais_polo]
-        tutores.append({
-            'n': '',  # sem nome — tutor desligado/não identificado
-            'p': chave_polo,  # usar chave como polo (será exibido)
-            'c': _cf_polo, 'cf': _cf_polo or 'Sem categoria',
-            'tp': len(_praticas_polo), 'te': len(_reais_polo),
-            'pend': _pend_polo, 'real': sorted(_reais_polo), 'hist': hist_polo,
-            'pct': round(len(_reais_polo)/len(_praticas_polo)*100,1) if _praticas_polo else 0,
-            'ch_semanal': None,
-            '_anonimo': True,  # flag para template
-        })
-    if polo_sem_tutor:
-        print(f"[{ts()}] Entries anônimos criados: {len(polo_sem_tutor)} polos com práticas de tutores desligados")
-
     print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
     if sem_match > 0:
         print(f"[{ts()}] Avisos de portfólio gerados: {len(avisos_portfolio)}")
@@ -735,6 +710,27 @@ def processar(p1, p2):
         else:
             seen[key] = t; tutores_dedup.append(t)
     tutores = tutores_dedup
+
+    # Criar entries anônimos para práticas de tutores desligados (vinculado ao polo)
+    for chave_polo, hist_polo in polo_sem_tutor.items():
+        if not hist_polo: continue
+        _reais_polo = set(h['p'] for h in hist_polo)
+        _cf_polo = ''
+        for _p_polo in _reais_polo:
+            _cf_polo = oficial_p_to_cat.get(_p_polo, '')
+            if _cf_polo: break
+        _praticas_polo = catalogo.get(_cf_polo, [])
+        _pend_polo = [p for p in _praticas_polo if p not in _reais_polo]
+        tutores.append({
+            'n': '', 'p': chave_polo, 'c': _cf_polo, 'cf': _cf_polo or 'Sem categoria',
+            'tp': len(_praticas_polo), 'te': len(_reais_polo),
+            'pend': _pend_polo, 'real': sorted(_reais_polo), 'hist': hist_polo,
+            'pct': round(len(_reais_polo)/len(_praticas_polo)*100,1) if _praticas_polo else 0,
+            'ch_semanal': None, '_anonimo': True,
+        })
+    if polo_sem_tutor:
+        print(f"[{ts()}] Entries anônimos criados: {len(polo_sem_tutor)} polos com práticas de tutores desligados")
+
     p_to_cat = {}
     for cat, pracs in catalogo.items():
         for p in pracs:
