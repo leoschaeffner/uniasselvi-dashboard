@@ -163,6 +163,27 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div class="card"><div class="card-hdr"><div class="card-title">Situação dos Tutores</div></div><div class="stat-bar" id="pv-stat-bar"></div><div class="card-body" id="pv-ofensores"></div></div>
     <div class="card"><div class="card-hdr"><div class="card-title">Envios por Mês</div></div><div class="card-body" id="pv-mes"></div></div>
+  <!-- Avisos de portfólio -->
+  <div id="pf-avisos-wrap" style="display:none">
+    <div class="card" style="border-left:4px solid var(--amarelo,#FFD100)">
+      <div class="card-hdr">
+        <div class="card-title">⚠️ Avisos de Portfólio</div>
+        <div class="card-sub" id="pf-avisos-count"></div>
+      </div>
+      <div class="card-body">
+        <div class="tbl-wrap" style="max-height:260px">
+          <table><thead><tr>
+            <th>Tipo</th>
+            <th>E-mail</th>
+            <th>Nome / Polo</th>
+            <th style="text-align:right">Envios</th>
+            <th>Mensagem</th>
+          </tr></thead>
+          <tbody id="pf-avisos-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
   </div>
   <div class="card"><div class="card-hdr"><div class="card-title">Categorias</div></div><div class="card-body" id="pv-cats"></div></div>
 </div></div>
@@ -1429,6 +1450,35 @@ function getTutorCatAbrev(tutorNome, polo) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+function renderAvisosPortfolio(){
+  var avisos = DB.avisos_portfolio || [];
+  var wrap = document.getElementById('pf-avisos-wrap');
+  var tbody = document.getElementById('pf-avisos-tbody');
+  var count = document.getElementById('pf-avisos-count');
+  if(!wrap || !tbody) return;
+  if(!avisos.length){wrap.style.display='none';return;}
+  wrap.style.display='';
+  if(count) count.textContent = avisos.length + ' aviso(s) · ' + avisos.reduce(function(s,a){return s+a.count;},0) + ' envio(s) afetado(s)';
+  var tipoLabel = {
+    'email_incorreto': '📧 E-mail incorreto',
+    'preenchimento_incorreto': '✏️ Preench. incorreto',
+    'chave_invalida': '🔑 Polo não encontrado'
+  };
+  var rows = '';
+  avisos.forEach(function(av){
+    var tipo = tipoLabel[av.tipo] || av.tipo;
+    var bgColor = av.tipo==='email_incorreto'?'#fff7ed':av.tipo==='preenchimento_incorreto'?'#fef9c3':'#f0f9ff';
+    rows += '<tr style="background:'+bgColor+';font-size:12px">'
+      + '<td style="white-space:nowrap;padding:4px 8px"><strong>'+tipo+'</strong></td>'
+      + '<td style="padding:4px 8px;font-family:monospace;font-size:11px">'+av.email+'</td>'
+      + '<td style="padding:4px 8px">'+av.nome+'</td>'
+      + '<td style="text-align:right;padding:4px 8px;font-weight:700">'+av.count+'</td>'
+      + '<td style="padding:4px 8px;color:#64748b;font-size:11px">'+av.msg+'</td>'
+      + '</tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
   DB=DATA_JSON_PLACEHOLDER;
@@ -1437,6 +1487,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
   const _tsEl=document.getElementById('topbar-ts');if(_tsEl)_tsEl.textContent='Atualizado: '+DB.gerado_em;
   renderKPIs();renderOfensores();renderMes();renderCatOverview();
+  renderAvisosPortfolio();
   renderOrdens();filterOrdemTbl('');
   renderPracKPIs();renderCatPracBars();renderTopPrac();filterPrac('');
   filterPolos('');filterTutores('');
