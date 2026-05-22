@@ -495,10 +495,39 @@ def processar(p1, p2):
 
     sem_match = 0; com_match = 0; match_por_email = 0; match_por_nome = 0
 
+    # ── Constantes de tratamento de portfólios ───────────────────────────────
+    # Emails a ignorar completamente (gestão — não são tutores de prática)
+    EMAILS_IGNORAR = {'elienai.cesar@uniasselvi.com.br'}
+
+    # Domínio válido para tutores de prática
+    DOMINIO_TUTORIA = 'tutorpratica.uniasselvi.com.br'
+
+    # Avisos de portfólio (email incorreto, preenchimento incorreto, etc.)
+    _avisos_raw = {}  # key → {email, nome, polo, tipo, msg, count}
+
+    def _dividir_codigo_composto(chave):
+        """Divide chave com código composto (BFR-BBI) em sub-chaves individuais."""
+        import re as _re2
+        m = _re2.search(r'([A-Z]{2,4}-[A-Z]{2,4})$', chave)
+        if m:
+            polo_base = chave[:-len(m.group(1))]
+            partes = m.group(1).split('-')
+            candidatos = [polo_base + p for p in partes]
+            encontrados = [c for c in candidatos if c in chave_to_cf]
+            if encontrados:
+                return encontrados
+        return []
+
     enviados = defaultdict(list)
     for _, r in df_p.iterrows():
         chave = r['_CHAVE']; proto = r['_PROTO']
         if not chave or chave == 'nan' or not proto or proto == 'nan': continue
+
+        # Ignorar emails de gestão
+        _email_subm = str(r.get(col_email_p, '') or '').strip().lower() if col_email_p else ''
+        if _email_subm in EMAILS_IGNORAR:
+            continue
+
         chave = chave_alias.get(chave, chave)
 
         if chave not in chave_to_cf:
@@ -532,10 +561,44 @@ def processar(p1, p2):
                 if _norm_nome_match(k.replace(' ', '')) == chave_norm:
                     chave = k; match_por_nome += 1; break
 
+        # Fallback 4: código composto (ex: BFR-BBI → BFR e BBI)
+        if chave not in chave_to_cf:
+            _sub_chaves = _dividir_codigo_composto(chave)
+            if _sub_chaves:
+                chave = _sub_chaves[0]  # usar primeira sub-chave
+                match_por_nome += 1
+                # Se houver mais de uma sub-chave, adicionar às demais depois
+                for _sc in _sub_chaves[1:]:
+                    if _sc in chave_to_cf:
+                        _extra_proto = str(r.get('_PROTO', '') or '').strip()
+                        _extra_data  = r['_DATA']
+                        _extra_aluno = int(r['_ALUNOS'])
+                        _extra_ordem = str(r.get('_ORDEM', 'Ordem 1') or 'Ordem 1').strip()
+                        for _p in _extra_proto.split(';'):
+                            _p = _p.strip()
+                            if _p: enviados[_sc].append({'p':_p[:80],'d':str(_extra_data)[:10] if pd.notna(_extra_data) else None,'a':_extra_aluno,'o':_extra_ordem})
+
         if chave in chave_to_cf:
             com_match += 1
         else:
             sem_match += 1
+            # Criar aviso de portfólio
+            _nome_subm  = str(r.get(col_nome_tutor_p, '') or '-') if col_nome_tutor_p else '-'
+            _polo_subm  = chave  # chave contém polo+código
+            if _email_subm.endswith('@regentedepolo.uniasselvi.com.br'):
+                _tipo = 'preenchimento_incorreto'
+                _msg  = 'Portfólio enviado por Regente de Polo — não é tutor de prática'
+            elif _email_subm and not _email_subm.endswith('@' + DOMINIO_TUTORIA):
+                _dom = _email_subm.split('@')[1] if '@' in _email_subm else 'desconhecido'
+                _tipo = 'email_incorreto'
+                _msg  = f'E-mail incorreto: @{_dom} ao invés de @{DOMINIO_TUTORIA}'
+            else:
+                _tipo = 'chave_invalida'
+                _msg  = f'Polo/categoria não encontrado no CONTROLE: {chave}'
+            _aviso_key = f"{_email_subm}||{_tipo}"
+            if _aviso_key not in _avisos_raw:
+                _avisos_raw[_aviso_key] = {'email':_email_subm,'nome':_nome_subm,'chave':chave,'tipo':_tipo,'msg':_msg,'count':0}
+            _avisos_raw[_aviso_key]['count'] += 1
 
         data = r['_DATA']; aluno = int(r['_ALUNOS'])
         for p in proto.split(';'):
@@ -545,37 +608,13 @@ def processar(p1, p2):
                 if not any(o in ordem_val for o in ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5']):
                     ordem_val = 'Ordem 1'
                 enviados[chave].append({'p': p[:80], 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
-    print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome, {sem_match} sem match")
+    # Finalizar avisos
+    avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
+    print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
     if sem_match > 0:
-        print(f"[{ts()}] AVISO: {sem_match} submissões sem tutor correspondente — detalhes abaixo:")
-        # Coletar e exibir detalhes das submissões sem match
-        sem_match_detalhes = {}
-        for _, r in df_p.iterrows():
-            chave_orig = str(r.get('_CHAVE', '') or '').strip()
-            proto = str(r.get('_PROTO', '') or '').strip()
-            if not chave_orig or chave_orig == 'nan' or not proto or proto == 'nan': continue
-            chave_test = chave_alias.get(chave_orig, chave_orig)
-            # Replicar toda a lógica de fallback
-            if chave_test not in chave_to_cf and col_email_p:
-                em = str(r.get(col_email_p, '') or '').strip().lower()
-                if em in email_to_chave_tutor: continue  # foi resolvido
-            if chave_test not in chave_to_cf and col_nome_tutor_p:
-                nome_p = _norm_nome_match(str(r.get(col_nome_tutor_p, '') or ''))
-                if nome_p in nome_to_chave_tutor: continue
-                parts_p = nome_p.split()
-                if len(parts_p) >= 2:
-                    if parts_p[0]+' '+parts_p[-1] in nome_to_chave_tutor: continue
-            chave_norm = _norm_nome_match(chave_test.replace(' ', ''))
-            matched_norm = any(_norm_nome_match(k.replace(' ', '')) == chave_norm for k in chave_to_cf)
-            if matched_norm: continue
-            # Chegou aqui = realmente sem match
-            nome_tutor_val = str(r.get(col_nome_tutor_p, '') or '') if col_nome_tutor_p else ''
-            email_val = str(r.get(col_email_p, '') or '') if col_email_p else ''
-            key = f"{chave_orig}||{nome_tutor_val}||{email_val}"
-            sem_match_detalhes[key] = sem_match_detalhes.get(key, 0) + 1
-        for info, cnt in sorted(sem_match_detalhes.items(), key=lambda x: -x[1])[:30]:
-            chave_d, nome_d, email_d = (info.split('||') + ['','',''])[:3]
-            print(f"[{ts()}]   SEM MATCH ({cnt}x): chave='{chave_d}' | tutor='{nome_d}' | email='{email_d}'")
+        print(f"[{ts()}] Avisos de portfólio gerados: {len(avisos_portfolio)}")
+        for av in avisos_portfolio:
+            print(f"[{ts()}]   {av['tipo'].upper()} ({av['count']}x): {av['email']} | {av['nome']} | {av['msg']}")
     tutores = []
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
@@ -952,6 +991,7 @@ def enriquecer_tutores(dados, lotacao):
             matched += 1
     print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH")
     dados['tutores'] = tutores
+    dados['avisos_portfolio'] = avisos_portfolio if 'avisos_portfolio' in dir() else []
     return dados
 
 
