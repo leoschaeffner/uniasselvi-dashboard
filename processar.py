@@ -537,6 +537,18 @@ def processar(p1, p2):
                 if em_p in email_to_chave_tutor:
                     chave = email_to_chave_tutor[em_p]
                     match_por_email += 1
+                    # Sinalizar envio por e-mail de Regente de Polo (informativo)
+                    if '@regentedepolo.' in em_p:
+                        _nome_rp = str(r.get(col_nome_tutor_p, '') or '') if col_nome_tutor_p else ''
+                        _aviso_key_rp = f"{em_p}||regente_de_polo"
+                        if _aviso_key_rp not in _avisos_raw:
+                            _avisos_raw[_aviso_key_rp] = {
+                                'email': em_p, 'nome': _nome_rp, 'chave': chave,
+                                'tipo': 'regente_de_polo',
+                                'msg': 'Envio realizado pelo e-mail de Regente de Polo — tutor também é regente',
+                                'count': 0
+                            }
+                        _avisos_raw[_aviso_key_rp]['count'] += 1
 
         if chave not in chave_to_cf:
             # Fallback 2: por nome do tutor na coluna específica
@@ -585,9 +597,9 @@ def processar(p1, p2):
             # Criar aviso de portfólio
             _nome_subm  = str(r.get(col_nome_tutor_p, '') or '-') if col_nome_tutor_p else '-'
             _polo_subm  = chave  # chave contém polo+código
-            if _email_subm.endswith('@regentedepolo.uniasselvi.com.br'):
-                _tipo = 'preenchimento_incorreto'
-                _msg  = 'Portfólio enviado por Regente de Polo — não é tutor de prática'
+            if '@regentedepolo.' in _email_subm:
+                _tipo = 'regente_de_polo'
+                _msg  = 'Envio por e-mail de Regente de Polo sem correspondência no CONTROLE_TUTORIA'
             elif _email_subm and not _email_subm.endswith('@' + DOMINIO_TUTORIA):
                 _dom = _email_subm.split('@')[1] if '@' in _email_subm else 'desconhecido'
                 _tipo = 'email_incorreto'
@@ -990,6 +1002,28 @@ def enriquecer_tutores(dados, lotacao):
             t['polo_hub_lot'] = info.get('polo_hub', '')
             matched += 1
     print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH")
+    # ── Adicionar tutores sintéticos para avisos (aparecem na aba Tutores) ────
+    if 'avisos_portfolio' in dir() and avisos_portfolio:
+        for av in avisos_portfolio:
+            if av['nome'] and av['nome'] not in ('nan', '-', ''):
+                nome_display = av['nome']
+            else:
+                # Extrair nome do email
+                local = av['email'].split('@')[0] if '@' in av['email'] else av['email']
+                nome_display = local.replace('.', ' ').replace('_', ' ').title()
+            tutores.append({
+                'n': nome_display,
+                'p': av.get('chave', '').replace('BFR-BBI','').replace('EMF-ISN','').replace('NTR','').strip(),
+                'c': 'Aviso de Portfólio', 'cf': 'Aviso de Portfólio',
+                'tp': 0, 'te': av['count'],
+                'pend': [], 'real': [], 'hist': [],
+                'pct': 0,
+                'ch_semanal': None,
+                'aviso_tipo': av['tipo'],
+                'aviso_msg': av['msg'],
+                'aviso_email': av['email'],
+                'aviso_count': av['count'],
+            })
     dados['tutores'] = tutores
     dados['avisos_portfolio'] = avisos_portfolio if 'avisos_portfolio' in dir() else []
     return dados
