@@ -322,7 +322,16 @@ def processar(p1, p2):
         print(f"[{ts()}] Amostra CH SEMANAL: {list(ch_vals.head(5))}")
     else:
         print(f"[{ts()}] CH SEMANAL não encontrada — colunas CH disponíveis: {[c for c in df_t.columns if 'CH' in str(c).upper()]}")
-    df_at = df_t[df_t[col_sit].astype(str).str.strip() == 'Ativo'].copy() if col_sit else df_t.copy()
+    # Filtrar tutores ativos: incluir Ativo + afastamentos temporários (Licença Maternidade, etc.)
+    # Excluir apenas Inativo e Desligado explicitamente
+    _SITUACOES_EXCLUIR = {'inativo', 'desligado', 'rescindido', 'demitido', 'encerrado'}
+    if col_sit:
+        _sit_norm = df_t[col_sit].astype(str).str.strip().str.lower()
+        df_at = df_t[~_sit_norm.isin(_SITUACOES_EXCLUIR)].copy()
+        _contagem = df_at[col_sit].value_counts().to_dict()
+        print(f"[{ts()}] Situações incluídas: {_contagem}")
+    else:
+        df_at = df_t.copy()
     df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
     print(f"[{ts()}] Lendo portfolios...")
     df_p = ler_excel(p2, sheet_name='Sheet1')
