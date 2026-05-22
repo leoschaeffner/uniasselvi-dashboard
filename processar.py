@@ -547,7 +547,35 @@ def processar(p1, p2):
                 enviados[chave].append({'p': p[:80], 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
     print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome, {sem_match} sem match")
     if sem_match > 0:
-        print(f"[{ts()}] AVISO: {sem_match} submissões não encontraram tutor correspondente — verifique CHAVE LINK POLO")
+        print(f"[{ts()}] AVISO: {sem_match} submissões sem tutor correspondente — detalhes abaixo:")
+        # Coletar e exibir detalhes das submissões sem match
+        sem_match_detalhes = {}
+        for _, r in df_p.iterrows():
+            chave_orig = str(r.get('_CHAVE', '') or '').strip()
+            proto = str(r.get('_PROTO', '') or '').strip()
+            if not chave_orig or chave_orig == 'nan' or not proto or proto == 'nan': continue
+            chave_test = chave_alias.get(chave_orig, chave_orig)
+            # Replicar toda a lógica de fallback
+            if chave_test not in chave_to_cf and col_email_p:
+                em = str(r.get(col_email_p, '') or '').strip().lower()
+                if em in email_to_chave_tutor: continue  # foi resolvido
+            if chave_test not in chave_to_cf and col_nome_tutor_p:
+                nome_p = _norm_nome_match(str(r.get(col_nome_tutor_p, '') or ''))
+                if nome_p in nome_to_chave_tutor: continue
+                parts_p = nome_p.split()
+                if len(parts_p) >= 2:
+                    if parts_p[0]+' '+parts_p[-1] in nome_to_chave_tutor: continue
+            chave_norm = _norm_nome_match(chave_test.replace(' ', ''))
+            matched_norm = any(_norm_nome_match(k.replace(' ', '')) == chave_norm for k in chave_to_cf)
+            if matched_norm: continue
+            # Chegou aqui = realmente sem match
+            nome_tutor_val = str(r.get(col_nome_tutor_p, '') or '') if col_nome_tutor_p else ''
+            email_val = str(r.get(col_email_p, '') or '') if col_email_p else ''
+            key = f"{chave_orig}||{nome_tutor_val}||{email_val}"
+            sem_match_detalhes[key] = sem_match_detalhes.get(key, 0) + 1
+        for info, cnt in sorted(sem_match_detalhes.items(), key=lambda x: -x[1])[:30]:
+            chave_d, nome_d, email_d = (info.split('||') + ['','',''])[:3]
+            print(f"[{ts()}]   SEM MATCH ({cnt}x): chave='{chave_d}' | tutor='{nome_d}' | email='{email_d}'")
     tutores = []
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
