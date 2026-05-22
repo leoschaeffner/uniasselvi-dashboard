@@ -1460,9 +1460,10 @@ function renderAvisosPortfolio(){
   wrap.style.display='';
   if(count) count.textContent = avisos.length + ' aviso(s) · ' + avisos.reduce(function(s,a){return s+a.count;},0) + ' envio(s) afetado(s)';
   var tipoLabel = {
-    'email_incorreto': '📧 E-mail incorreto',
+    'email_incorreto':       '📧 E-mail incorreto',
     'preenchimento_incorreto': '✏️ Preench. incorreto',
-    'chave_invalida': '🔑 Polo não encontrado'
+    'chave_invalida':        '🔑 Polo não encontrado',
+    'regente_de_polo':       '🏫 Regente de Polo'
   };
   var rows = '';
   avisos.forEach(function(av){
