@@ -721,8 +721,12 @@ def processar(p1, p2):
             if _cf_polo: break
         _praticas_polo = catalogo.get(_cf_polo, [])
         _pend_polo = [p for p in _praticas_polo if p not in _reais_polo]
+        # Extrair nome do polo (remover código de curso do fim da chave)
+        import re as _re_anon
+        _polo_limpo = _re_anon.sub(r'[A-Z]{2,6}(-[A-Z]{2,6})?$', '', chave_polo).strip()
+        if not _polo_limpo: _polo_limpo = chave_polo
         tutores.append({
-            'n': '', 'p': chave_polo, 'c': _cf_polo, 'cf': _cf_polo or 'Sem categoria',
+            'n': 'Tutor desligado', 'p': _polo_limpo, 'c': _cf_polo, 'cf': _cf_polo or 'Sem categoria',
             'tp': len(_praticas_polo), 'te': len(_reais_polo),
             'pend': _pend_polo, 'real': sorted(_reais_polo), 'hist': hist_polo,
             'pct': round(len(_reais_polo)/len(_praticas_polo)*100,1) if _praticas_polo else 0,
