@@ -461,14 +461,82 @@ def processar(p1, p2):
             if em and em != 'nan':
                 email_to_cf[em] = cf_; email_to_chave_tutor[em] = chave_t
     col_email_p = next((c for c in df_p.columns if c.upper() in ('EMAIL', 'E-MAIL')), None)
+    # ── Mapeamentos de fallback adicionais ──────────────────────────────────
+    # Fallback 3: por nome do tutor (coluna "Nome do tutor" no Forms)
+    col_nome_tutor_p = None
+    for c in df_p.columns:
+        cu = str(c).upper()
+        if 'NOME' in cu and 'TUTOR' in cu: col_nome_tutor_p = c; break
+    if not col_nome_tutor_p:
+        for c in df_p.columns:
+            cu = str(c).upper()
+            if 'TUTOR' in cu and 'PONTOS' not in cu and 'COMENT' not in cu:
+                col_nome_tutor_p = c; break
+
+    def _norm_nome_match(s):
+        import unicodedata
+        s = str(s or '').strip().lower()
+        s = unicodedata.normalize('NFD', s)
+        s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+        return s
+
+    # Mapear: nome_normalizado → chave CONTROLE
+    nome_to_chave_tutor = {}
+    for _, t in df_at.iterrows():
+        nome_t = str(t.get(col_nome, '') or '').strip()
+        chave_t = t['_CHAVE']
+        if nome_t and chave_t:
+            nome_to_chave_tutor[_norm_nome_match(nome_t)] = chave_t
+            # Também mapear primeiro+último nome
+            parts = _norm_nome_match(nome_t).split()
+            if len(parts) >= 2:
+                fl = parts[0] + ' ' + parts[-1]
+                nome_to_chave_tutor.setdefault(fl, chave_t)
+
+    sem_match = 0; com_match = 0; match_por_email = 0; match_por_nome = 0
+
     enviados = defaultdict(list)
     for _, r in df_p.iterrows():
         chave = r['_CHAVE']; proto = r['_PROTO']
         if not chave or chave == 'nan' or not proto or proto == 'nan': continue
         chave = chave_alias.get(chave, chave)
-        if chave not in chave_to_cf and col_email_p:
-            em_p = str(r.get(col_email_p, '') or '').strip().lower()
-            if em_p in email_to_chave_tutor: chave = email_to_chave_tutor[em_p]
+
+        if chave not in chave_to_cf:
+            # Fallback 1: por email
+            if col_email_p:
+                em_p = str(r.get(col_email_p, '') or '').strip().lower()
+                if em_p in email_to_chave_tutor:
+                    chave = email_to_chave_tutor[em_p]
+                    match_por_email += 1
+
+        if chave not in chave_to_cf:
+            # Fallback 2: por nome do tutor na coluna específica
+            if col_nome_tutor_p:
+                nome_p = _norm_nome_match(str(r.get(col_nome_tutor_p, '') or ''))
+                if nome_p in nome_to_chave_tutor:
+                    chave = nome_to_chave_tutor[nome_p]
+                    match_por_nome += 1
+                else:
+                    # Tentar primeiro+último nome
+                    parts_p = nome_p.split()
+                    if len(parts_p) >= 2:
+                        fl_p = parts_p[0] + ' ' + parts_p[-1]
+                        if fl_p in nome_to_chave_tutor:
+                            chave = nome_to_chave_tutor[fl_p]
+                            match_por_nome += 1
+
+        if chave not in chave_to_cf:
+            # Fallback 3: normalizar a própria chave (diferenças de espaços/acentos)
+            chave_norm = _norm_nome_match(chave.replace(' ', ''))
+            for k in chave_to_cf:
+                if _norm_nome_match(k.replace(' ', '')) == chave_norm:
+                    chave = k; match_por_nome += 1; break
+
+        if chave in chave_to_cf:
+            com_match += 1
+        else:
+            sem_match += 1
+
         data = r['_DATA']; aluno = int(r['_ALUNOS'])
         for p in proto.split(';'):
             p = p.strip()
@@ -477,6 +545,9 @@ def processar(p1, p2):
                 if not any(o in ordem_val for o in ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5']):
                     ordem_val = 'Ordem 1'
                 enviados[chave].append({'p': p[:80], 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
+    print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome, {sem_match} sem match")
+    if sem_match > 0:
+        print(f"[{ts()}] AVISO: {sem_match} submissões não encontraram tutor correspondente — verifique CHAVE LINK POLO")
     tutores = []
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
