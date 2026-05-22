@@ -527,6 +527,37 @@ def processar(p1, p2):
                 return encontrados
         return []
 
+    def _encontrar_por_polo(chave, cat_subm=''):
+        """Opção B: vincula submissão ao tutor ativo no mesmo polo.
+        Remove sufixos progressivos da chave para encontrar o polo base."""
+        cat_up = str(cat_subm).upper()
+        # Palavras-chave por categoria para priorizar match
+        _cat_kw = {
+            'BIO': ['BFR','BBI','BIO'],
+            'FAR': ['BFR','BBI','BIO'],
+            'ENF': ['ENF','ISN','INS'],
+            'NTR': ['NTR','NUTRI'],
+            'ENG': ['EMF','ENG','MEC'],
+            'FIS': ['BFI','FIS','FISIO'],
+        }
+        # Determinar categoria da submissão para priorizar candidatos
+        _pref_codigos = []
+        for kw, codigos in _cat_kw.items():
+            if kw in cat_up:
+                _pref_codigos = codigos; break
+
+        for code_len in range(3, min(len(chave), 12)):
+            polo_prefix = chave[:-code_len]
+            if len(polo_prefix) < 6: break
+            candidatos = [k for k in chave_to_cf if k.startswith(polo_prefix)]
+            if candidatos:
+                # Priorizar por categoria
+                if _pref_codigos:
+                    pref = [c for c in candidatos if any(cod in c for cod in _pref_codigos)]
+                    if pref: return pref[0]
+                return candidatos[0]
+        return None
+
     enviados = defaultdict(list)
     for _, r in df_p.iterrows():
         chave = r['_CHAVE']; proto = r['_PROTO']
@@ -598,6 +629,14 @@ def processar(p1, p2):
                         for _p in _extra_proto.split(';'):
                             _p = _p.strip()
                             if _p: enviados[_sc].append({'p':_p[:80],'d':str(_extra_data)[:10] if pd.notna(_extra_data) else None,'a':_extra_aluno,'o':_extra_ordem})
+
+        # Fallback 5 (Opção B): vincular ao polo ativo — tutor desligado/código diferente
+        if chave not in chave_to_cf:
+            _cat_subm = str(r.get('_CAT', '') or '')
+            _polo_match = _encontrar_por_polo(chave, _cat_subm)
+            if _polo_match:
+                chave = _polo_match
+                match_por_nome += 1
 
         if chave in chave_to_cf:
             com_match += 1
