@@ -719,6 +719,20 @@ def processar(p1, p2):
         for _p_polo in _reais_polo:
             _cf_polo = oficial_p_to_cat.get(_p_polo, '')
             if _cf_polo: break
+        # Normalizar nome da categoria para o padrão do dashboard (usando CAT_MAP invertido)
+        _CAT_MAP_INV = {v: k for k, v in CAT_MAP.items()}
+        # Também mapear nomes parciais
+        _cf_polo_norm = _cf_polo
+        for _full, _short in _CAT_MAP_INV.items():
+            if _full.lower() in _cf_polo.lower() or _cf_polo.lower() in _full.lower():
+                _cf_polo_norm = _short; break
+        # Verificar se já está no formato correto (chave do CAT_MAP)
+        if _cf_polo_norm not in CAT_MAP:
+            for _short in CAT_MAP:
+                if _cf_polo.lower() in CAT_MAP[_short].lower():
+                    _cf_polo_norm = _short; break
+        if _cf_polo_norm in CAT_MAP:
+            _cf_polo = _cf_polo_norm
         _praticas_polo = catalogo.get(_cf_polo, [])
         _pend_polo = [p for p in _praticas_polo if p not in _reais_polo]
         # Extrair nome do polo (remover código de curso do fim da chave)
