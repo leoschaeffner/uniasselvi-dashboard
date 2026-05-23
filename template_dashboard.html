@@ -594,7 +594,7 @@ function renderPoloTbl(data){
 }
 
 // ── PORTFÓLIOS TUTORES ────────────────────────────────────────────────────────
-function filterTutores(q){q=q.toLowerCase();const st=document.getElementById('tutor-status-sel').value;const cat=document.getElementById('tutor-cat-sel').value;let d=DB.tutores||[];if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(st==='ok')d=d.filter(t=>t.te>0);if(st==='pend')d=d.filter(t=>t.te===0);if(cat)d=d.filter(t=>t.c===cat);tutorData=d;tutoresFiltrados=d;renderTutorTbl(d);}
+function filterTutores(q){q=q.toLowerCase();const st=document.getElementById('tutor-status-sel').value;const cat=document.getElementById('tutor-cat-sel').value;let d=DB.tutores||[];if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(st==='ok')d=d.filter(t=>t.te>0);if(st==='pend')d=d.filter(t=>t.te===0);if(cat){const _CAT_NORM_MAP={'Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I - Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I – Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II – Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV - Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV – Nutrição':'NUTRI (Multidisciplinar IV)','Engenharias e Licenciaturas':'ENGMAKER'};d=d.filter(t=>(_CAT_NORM_MAP[t.c||'']||t.c)===cat);}tutorData=d;tutoresFiltrados=d;renderTutorTbl(d);}
 function sortTutor(k){if(tutorSortK===k)tutorSortA=!tutorSortA;else{tutorSortK=k;tutorSortA=k==='n'}filterTutores(document.getElementById('tutor-search').value)}
 function renderTutorTbl(data){
   const sorted=[...data].sort((a,b)=>{const va=a[tutorSortK],vb=b[tutorSortK];if(typeof va==='string')return tutorSortA?va.localeCompare(vb):vb.localeCompare(va);return tutorSortA?va-vb:vb-va});
@@ -1304,7 +1304,23 @@ function _corLight(pct){
 function _gradId(uf){return 'grad_'+uf;}
 
 function populateFilters(){
-  const tutorCats=[...new Set((DB.tutores||[]).map(t=>t.c).filter(Boolean))].sort();
+  // Normalizar categorias: usar apenas o nome curto padronizado (ex: "BIO-FAR (Multidisciplinar I)")
+  const _CAT_NORM_MAP = {
+    'Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
+    'Multidisciplinar I - Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
+    'Multidisciplinar I – Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
+    'Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
+    'Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
+    'Multidisciplinar II – Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
+    'Fisioterapia, T.Ocupacional e Estética':'BIO-FISIO-EST-TO (Multidisciplinar III)',
+    'Multidisciplinar III':'BIO-FISIO-EST-TO (Multidisciplinar III)',
+    'Nutrição':'NUTRI (Multidisciplinar IV)',
+    'Multidisciplinar IV - Nutrição':'NUTRI (Multidisciplinar IV)',
+    'Multidisciplinar IV – Nutrição':'NUTRI (Multidisciplinar IV)',
+    'Engenharias e Licenciaturas':'ENGMAKER',
+  };
+  function _normCat(c){return _CAT_NORM_MAP[c]||c;}
+  const tutorCats=[...new Set((DB.tutores||[]).map(t=>_normCat(t.c||'')).filter(Boolean))].sort();
   const tSel=document.getElementById('tutor-cat-sel');if(tSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tSel.appendChild(o)});
   const pracCats=[...new Set(getPraticas().map(p=>p.c).filter(Boolean))].sort();
   const pSel=document.getElementById('prac-cat-sel');if(pSel)pracCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pSel.appendChild(o)});
