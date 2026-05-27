@@ -335,6 +335,8 @@ def processar(p1, p2):
     df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
     print(f"[{ts()}] Lendo portfolios...")
     df_p = ler_excel(p2, sheet_name='Sheet1')
+
+
     def col(df, *partes):
         for c in df.columns:
             cu = str(c).upper()
@@ -992,19 +994,41 @@ def carregar_lotacao(p4):
         except Exception as e: print(f"[{ts()}] Tentativa {estrategia}: {e}")
     if not _rows: raise RuntimeError(f"Não foi possível ler {fname}")
     lotacao = {}
+    # Diagnóstico: mostrar cabeçalhos (linha 0) e linha 2 para verificar estrutura
+    if _rows:
+        _hdrs = [str(c or '').strip()[:20] for c in _rows[0]] if _rows[0] else []
+        print(f"[{ts()}] Lotação colunas (linha 1): {_hdrs[:35]}")
+        if len(_rows) > 1:
+            _r2 = [str(c or '')[:15] for c in _rows[1]]
+            print(f"[{ts()}] Lotação linha 2: {_r2[:35]}")
+        # Detectar coluna de total_alunos automaticamente
+        _col_alunos = 26  # default
+        for _ci, _h in enumerate(_hdrs):
+            _hu = _h.upper()
+            if any(k in _hu for k in ['TOTAL', 'ALUNOS', 'MATR']):
+                _col_alunos = _ci
+                print(f"[{ts()}] Coluna alunos detectada: {_ci} = '{_h}'")
+                break
+    else:
+        _col_alunos = 26
+
     for r in _rows[2:]:
         if not r[8] or str(r[8]).strip() in ('', '-', 'None', 'nan'): continue
         nome_raw = str(r[8]).strip(); nome_lower = nome_raw.lower()
-        try: total_al = int(float(str(r[26] or 0)))
+        try: total_al = int(float(str(r[27] if len(r) > 27 else 0) or 0))
         except: total_al = 0
+        # Colunas detectadas da planilha Lotação de Tutores_2026_2:
+        # [5]=CURSOS, [7]=CONTRATAÇÃO, [8]=TUTOR, [14]=PERFIL, [15]=CH SEMANAL
+        # [16]=CH IDEAL, [27]=TOTAL ALUNOS, [30]=CATEGORIA GIOCONDA
         lotacao[nome_lower] = {
-            'nome_oficial': nome_raw, 'perfil': str(r[13] or '').strip(),
-            'cursos': str(r[0] or '').strip(),
-            'ch_semanal': _parse_ch(r[14]),  # reutiliza helper
-            'ch_ideal': _parse_ch(r[15]) or 0.0,
-            'contratacao': str(r[7] or '').strip(),
-            'polo_hub': str(r[4] or '').strip(),
-            'categoria_gio': str(r[29] or '').strip(),
+            'nome_oficial': nome_raw,
+            'perfil':       str(r[14] if len(r) > 14 else '') or '',
+            'cursos':       str(r[5]  if len(r) > 5  else '') or '',
+            'ch_semanal':   _parse_ch(r[15] if len(r) > 15 else None),
+            'ch_ideal':     _parse_ch(r[16] if len(r) > 16 else None) or 0.0,
+            'contratacao':  str(r[7]  if len(r) > 7  else '') or '',
+            'polo_hub':     str(r[4]  if len(r) > 4  else '') or '',
+            'categoria_gio':str(r[30] if len(r) > 30 else '') or '',
             'total_alunos': total_al,
         }
         # Indexar também por nome primeiro+último para match mais abrangente
@@ -1844,7 +1868,8 @@ if __name__ == '__main__':
                     _ch_map_fl[_nome_fl(t['n'])] = t['ch_semanal']
             # Fonte 2: lotação DIRETAMENTE (589 tutores vs 298 do portfólio)
             # Fix principal: tutores que estão no GIOCONDA mas não no portfólio
-            if lotacao:
+            _lotacao_safe = lotacao if 'lotacao' in dir() and lotacao else {}
+            if _lotacao_safe:
                 for lot_nome, lot_info in lotacao.items():
                     lot_ch = lot_info.get('ch_semanal', 0) if isinstance(lot_info, dict) else 0
                     if lot_ch:
