@@ -1958,6 +1958,27 @@ if __name__ == '__main__':
             print(f"[{ts()}] AVISO: erro ao ler alunos hub: {e}")
     else:
         print(f"[{ts()}] INFO: Relatorio_alunos_por_hub.csv não encontrado — usando contagem GIOCONDA")
+
+    # Preencher alunos_por_curso com hub CSV se ainda vazio (lotação sem TOTAL ALUNOS)
+    if not dados.get('alunos_por_curso') and 'alunos_hub' in dir():
+        _por_cat = alunos_hub.get('por_cat', {}) if alunos_hub else {}
+        _CAT_NOME = {
+            'ENF-INS (Multidisciplinar II)':          'Enfermagem e Instrumentação Cirúrgica',
+            'BIO-FAR (Multidisciplinar I)':           'Biomedicina e Farmácia',
+            'BIO-FISIO-EST-TO (Multidisciplinar III)':'Fisioterapia, T.Ocupacional e Estética',
+            'NUTRI (Multidisciplinar IV)':            'Nutrição',
+            'ENGMAKER':                               'Engenharias e Licenciaturas',
+            'QUÍMICA E FÍSICA':                       'Química e Física',
+        }
+        if _por_cat:
+            dados['alunos_por_curso'] = [
+                {'sigla': k, 'curso': _CAT_NOME.get(k, k), 'alunos': int(v)}
+                for k, v in sorted(_por_cat.items(), key=lambda x: -x[1])
+                if v > 0
+            ]
+            _tot = sum(x['alunos'] for x in dados['alunos_por_curso'])
+            print(f"[{ts()}] Alunos por curso (hub CSV): {len(dados['alunos_por_curso'])} categorias, total {_tot:,}")
+
     html = gerar_html(dados)
     if '--sem-browser' not in sys.argv:
         print(f"[{ts()}] Abrindo navegador...")
