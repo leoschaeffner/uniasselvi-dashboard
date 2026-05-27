@@ -1087,12 +1087,39 @@ def enriquecer_tutores(dados, lotacao):
         return (','.join(partes) if any(len(p) > 8 for p in partes) else '+'.join(partes))
     lab_cat_norm = {_norm_lab_key(k): v for k, v in LAB_PARA_CAT.items()}
     alunos_por_curso = []
-    for lab_key, total in sorted(alunos_por_lab_raw.items(), key=lambda x: -x[1]):
-        nome = lab_cat_norm.get(lab_key)
-        if not nome:
-            primeiro = lab_key.split(',')[0].split('+')[0].strip()
-            nome = CURSOS_NOMES.get(primeiro, primeiro.title())
-        alunos_por_curso.append({'sigla': lab_key, 'curso': nome, 'alunos': total})
+    if alunos_por_lab_raw:
+        # Fonte 1: TOTAL ALUNOS da lotação (quando preenchido)
+        for lab_key, total in sorted(alunos_por_lab_raw.items(), key=lambda x: -x[1]):
+            nome = lab_cat_norm.get(lab_key)
+            if not nome:
+                primeiro = lab_key.split(',')[0].split('+')[0].strip()
+                nome = CURSOS_NOMES.get(primeiro, primeiro.title())
+            alunos_por_curso.append({'sigla': lab_key, 'curso': nome, 'alunos': total})
+    else:
+        # Fonte 2 (fallback): agrupar matrículas do hub CSV por categoria
+        # Usa alunos_hub_por_grupo gerado no processar_alunos_hub()
+        # Fallback: usar por_cat do hub CSV (matrículas únicas por categoria)
+        # Disponível em dados['hub']['por_cat'] após processar_alunos_hub()
+        _hub_por_cat = (dados.get('hub') or {}).get('por_cat', {})
+        _CAT_NOME = {
+            'ENF-INS (Multidisciplinar II)':        'Enfermagem e Instrumentação Cirúrgica',
+            'BIO-FAR (Multidisciplinar I)':         'Biomedicina e Farmácia',
+            'BIO-FISIO-EST-TO (Multidisciplinar III)': 'Fisioterapia, T.Ocupacional e Estética',
+            'NUTRI (Multidisciplinar IV)':          'Nutrição',
+            'ENGMAKER':                             'Engenharias e Licenciaturas',
+            'QUÍMICA E FÍSICA':                     'Química e Física',
+        }
+        if _hub_por_cat:
+            for sigla, total in sorted(_hub_por_cat.items(), key=lambda x: -x[1]):
+                if total > 0:
+                    alunos_por_curso.append({
+                        'sigla': sigla,
+                        'curso': _CAT_NOME.get(sigla, sigla),
+                        'alunos': int(total)
+                    })
+            print(f"[{ts()}] Alunos por curso (hub CSV): {len(alunos_por_curso)} categorias, total {sum(x['alunos'] for x in alunos_por_curso)}")
+        else:
+            print(f"[{ts()}] Alunos por curso: sem dados disponíveis")
     dados['alunos_por_curso'] = alunos_por_curso
     total_al_sum = sum(x['alunos'] for x in alunos_por_curso)
     print(f"[{ts()}] Alunos por lab: {len(alunos_por_curso)} labs, total {total_al_sum:,}")
