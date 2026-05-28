@@ -704,7 +704,7 @@ def processar(p1, p2):
                         _extra_ordem = str(r.get('_ORDEM', 'Ordem 1') or 'Ordem 1').strip()
                         for _p in _extra_proto.split(';'):
                             _p = _p.strip()
-                            if _p: enviados[_sc].append({'p':_p[:80],'d':str(_extra_data)[:10] if pd.notna(_extra_data) else None,'a':_extra_aluno,'o':_extra_ordem})
+                            if _p: enviados[_sc].append({'p':_p,'d':str(_extra_data)[:10] if pd.notna(_extra_data) else None,'a':_extra_aluno,'o':_extra_ordem})
 
         if chave in chave_to_cf:
             com_match += 1
@@ -742,7 +742,7 @@ def processar(p1, p2):
                 ordem_val = str(r.get('_ORDEM', 'Ordem 1') or 'Ordem 1').strip()
                 if not any(o in ordem_val for o in ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5']):
                     ordem_val = 'Ordem 1'
-                enviados[chave].append({'p': p[:80], 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
+                enviados[chave].append({'p': p, 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
     # Finalizar avisos
     avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
     print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
