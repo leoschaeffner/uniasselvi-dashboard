@@ -435,6 +435,13 @@ def processar(p1, p2):
         if cursos_ in ('BBI', 'BFR') and 'BIO-FAR' in cat_.upper():
             if polo_ not in polo_biofar_cursos: polo_biofar_cursos[polo_] = set()
             polo_biofar_cursos[polo_].add(cursos_)
+    # Pré-calcular polos que têm tutor BFI legítimo (para não criar alias conflitante)
+    _polos_com_bfi = set()
+    for _, t in df_at.iterrows():
+        _cur_t = str(t.get(col_cur, '') or '').strip()
+        _pol_t = str(t.get(col_polo, '') or '').strip()
+        if _cur_t == 'BFI':
+            _polos_com_bfi.add(_pol_t)
     for _, t in df_at.iterrows():
         polo = str(t.get(col_polo, '') or '').strip()
         cursos = str(t.get(col_cur, '') or '').strip()
@@ -446,12 +453,64 @@ def processar(p1, p2):
             chave_to_cf[chave] = cf
             if cursos in ('BBI', 'BFR'):
                 outros = polo_biofar_cursos.get(polo, set()) - {cursos}
-                variantes = [polo + 'BFI']
+                # Só adicionar alias BFI se NÃO existe tutor BFI legítimo neste polo
+                # (evita colisão que faz portfólios BFI serem atribuídos a BIO-FAR)
+                variantes = [] if polo in _polos_com_bfi else [polo + 'BFI']
                 for outro in outros:
                     variantes += [polo+cursos+'-'+outro, polo+outro+'-'+cursos, polo+cursos+outro, polo+outro+cursos]
                 for v in variantes:
                     chave_to_cf.setdefault(v, cf)
                     chave_alias.setdefault(v, chave)
+    # ── DIAGNÓSTICO BFI ──────────────────────────────────────────────────────
+    _bfi_ctrl = sorted(set(k for k in chave_to_cf if 'BFI' in k))
+    _fisio_ctrl = sorted(set(k for k in chave_to_cf if 'FISIO' in k.upper() or 'BIO-F' in k.upper()))
+    print(f"[DEBUG-BFI] Chaves com 'BFI' no CONTROLE ({len(_bfi_ctrl)}): {_bfi_ctrl[:20]}")
+    print(f"[DEBUG-BFI] Chaves FISIO/BIO-F no CONTROLE ({len(_fisio_ctrl)}): {_fisio_ctrl[:10]}")
+    # Categoria mapeada para cada chave BFI
+    for k in _bfi_ctrl[:10]:
+        print(f"[DEBUG-BFI]   {k!r} → cf={chave_to_cf.get(k)!r}  alias={chave_alias.get(k)!r}")
+    # Chaves BFI no Forms (PORTIFOLIO)
+    _bfi_forms = sorted(set(
+        str(r.get('_CHAVE', '') or '').strip()
+        for _, r in df_p.iterrows()
+        if 'BFI' in str(r.get('_CHAVE', ''))
+    ))
+    print(f"[DEBUG-BFI] Chaves BFI no Forms ({len(_bfi_forms)} únicas): {_bfi_forms[:20]}")
+    # Verificar quais chaves do Forms NÃO existem no CONTROLE
+    _bfi_sem = [k for k in _bfi_forms if k not in chave_to_cf and k not in chave_alias]
+    print(f"[DEBUG-BFI] Chaves BFI Forms SEM match no CONTROLE ({len(_bfi_sem)}): {_bfi_sem[:20]}")
+    # Amostra de tutores BFI no CONTROLE (coluna CURSOS/CATEGORIA)
+    if col_cat:
+        _df_bfi = df_at[df_at.get(col_cat, pd.Series(dtype=str)).astype(str).str.upper().str.contains('BFI|FISIO|BIO-F', na=False)]
+        print(f"[DEBUG-BFI] Tutores BFI no CONTROLE (df_at): {len(_df_bfi)}")
+        if not _df_bfi.empty:
+            print(f"[DEBUG-BFI] Amostra _CHAVE BFI no CONTROLE: {_df_bfi['_CHAVE'].head(10).tolist()}")
+            print(f"[DEBUG-BFI] Amostra col_cat BFI no CONTROLE: {_df_bfi[col_cat].head(10).tolist()}")
+    # ── FIM DIAGNÓSTICO BFI ──────────────────────────────────────────────────
+    # ── DIAGNÓSTICO ESPECÍFICO: Fabiano e Lucas ──────────────────────────────
+    _EMAILS_DEBUG = {'fabiano.bartmann@tutorpratica.uniasselvi.com.br',
+                     'lucas.medeiros@tutorpratica.uniasselvi.com.br'}
+    _col_email_p_tmp = next((c for c in df_p.columns if str(c).upper() in ('EMAIL','E-MAIL')), None)
+    if _col_email_p_tmp:
+        for _, _r in df_p.iterrows():
+            _em = str(_r.get(_col_email_p_tmp, '') or '').strip().lower()
+            if _em in _EMAILS_DEBUG:
+                _ch_raw = str(_r.get('_CHAVE', '') or '').strip()
+                _ch_alias = chave_alias.get(_ch_raw, _ch_raw)
+                _in_cf = _ch_raw in chave_to_cf
+                _alias_in_cf = _ch_alias in chave_to_cf
+                print(f'[DEBUG-TUTOR] {_em}')
+                print(f'  CHAVE_FORMS={_ch_raw!r}  alias={_ch_alias!r}')
+                print(f'  in chave_to_cf={_in_cf}  alias in chave_to_cf={_alias_in_cf}')
+                print(f'  PROTO={str(_r.get("_PROTO",""))[:80]}')
+    if col_email:
+        for _, _t in df_at.iterrows():
+            _em_t = str(_t.get(col_email, '') or '').strip().lower()
+            if _em_t in _EMAILS_DEBUG:
+                print(f'[DEBUG-TUTOR-CTRL] {_em_t} -> _CHAVE={_t["_CHAVE"]!r}')
+    # ── FIM DIAGNÓSTICO ESPECÍFICO ───────────────────────────────────────────
+
+
     oficial_p_to_cat = {}
     for cat, pracs in catalogo_oficial.items():
         for p in pracs: oficial_p_to_cat.setdefault(p, cat)
