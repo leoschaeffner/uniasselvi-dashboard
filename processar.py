@@ -310,8 +310,12 @@ def processar(p1, p2):
     df_t = ler_excel(p1, sheet_name='Base de Tutores', header=1)
     col_sit  = next((c for c in df_t.columns if 'SITUA' in str(c).upper()), None)
     col_nome = next((c for c in df_t.columns if 'NOME'  in str(c).upper() and 'TUTOR' in str(c).upper()), None)
-    col_polo = next((c for c in df_t.columns if c == 'POLO'), 'POLO')
-    col_cur  = next((c for c in df_t.columns if c == 'CURSOS'), 'CURSOS')
+    # Busca flexível de colunas no CONTROLE_TUTORIA
+    col_polo = next((c for c in df_t.columns if str(c).strip().upper() == 'POLO'), None) or                next((c for c in df_t.columns if 'POLO' in str(c).upper() and 'HUB' not in str(c).upper()), None) or                next((c for c in df_t.columns if 'POLO' in str(c).upper()), None) or 'POLO'
+    col_cur  = next((c for c in df_t.columns if str(c).strip().upper() == 'CURSOS'), None) or                next((c for c in df_t.columns if 'CURSO' in str(c).upper() and 'VINC' not in str(c).upper()), None) or                next((c for c in df_t.columns if 'CURSO' in str(c).upper()), None) or 'CURSOS'
+    col_email= next((c for c in df_t.columns if 'E-MAIL' in str(c).upper() or 'EMAIL' in str(c).upper()), None)
+    print(f"[{ts()}] CONTROLE colunas detectadas: polo='{col_polo}' cursos='{col_cur}' email='{col_email}'")
+    print(f"[{ts()}] CONTROLE todas colunas: {list(df_t.columns[:20])}")
     col_cat  = next((c for c in df_t.columns if 'CATEGORIA' in str(c).upper()), None)
     # PATCH 1: Detectar coluna CH SEMANAL na planilha de controle
     col_ch = next((c for c in df_t.columns if str(c).upper().strip() == 'CH SEMANAL' or
@@ -333,6 +337,8 @@ def processar(p1, p2):
     else:
         df_at = df_t.copy()
     df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
+    _sample_chaves = df_at['_CHAVE'].dropna().head(5).tolist()
+    print(f"[{ts()}] CONTROLE chaves (amostra): {_sample_chaves}")
     print(f"[{ts()}] Lendo portfolios...")
     df_p = ler_excel(p2, sheet_name='Sheet1')
 
@@ -1025,7 +1031,11 @@ def carregar_lotacao(p4):
             'perfil':       str(r[14] if len(r) > 14 else '') or '',
             'cursos':       str(r[5]  if len(r) > 5  else '') or '',
             'ch_semanal':   _parse_ch(r[15] if len(r) > 15 else None),
-            'ch_ideal':     _parse_ch(r[16] if len(r) > 16 else None) or 0.0,
+            # CH IDEAL: usar r[16] se preenchido, senão CH PROPOSTA (r[13])
+            '_ch_ideal_raw': _parse_ch(r[16] if len(r) > 16 else None) or 0.0,
+            '_ch_prop_raw':  _parse_ch(r[13] if len(r) > 13 else None) or 0.0,
+            'ch_ideal': (_parse_ch(r[16] if len(r) > 16 else None) or
+                         _parse_ch(r[13] if len(r) > 13 else None) or 0.0),
             'contratacao':  str(r[7]  if len(r) > 7  else '') or '',
             'polo_hub':     str(r[4]  if len(r) > 4  else '') or '',
             'categoria_gio':str(r[30] if len(r) > 30 else '') or '',
