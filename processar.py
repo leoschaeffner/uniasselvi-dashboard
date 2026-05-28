@@ -461,54 +461,6 @@ def processar(p1, p2):
                 for v in variantes:
                     chave_to_cf.setdefault(v, cf)
                     chave_alias.setdefault(v, chave)
-    # ── DIAGNÓSTICO BFI ──────────────────────────────────────────────────────
-    _bfi_ctrl = sorted(set(k for k in chave_to_cf if 'BFI' in k))
-    _fisio_ctrl = sorted(set(k for k in chave_to_cf if 'FISIO' in k.upper() or 'BIO-F' in k.upper()))
-    print(f"[DEBUG-BFI] Chaves com 'BFI' no CONTROLE ({len(_bfi_ctrl)}): {_bfi_ctrl[:20]}")
-    print(f"[DEBUG-BFI] Chaves FISIO/BIO-F no CONTROLE ({len(_fisio_ctrl)}): {_fisio_ctrl[:10]}")
-    # Categoria mapeada para cada chave BFI
-    for k in _bfi_ctrl[:10]:
-        print(f"[DEBUG-BFI]   {k!r} → cf={chave_to_cf.get(k)!r}  alias={chave_alias.get(k)!r}")
-    # Chaves BFI no Forms (PORTIFOLIO)
-    _bfi_forms = sorted(set(
-        str(r.get('_CHAVE', '') or '').strip()
-        for _, r in df_p.iterrows()
-        if 'BFI' in str(r.get('_CHAVE', ''))
-    ))
-    print(f"[DEBUG-BFI] Chaves BFI no Forms ({len(_bfi_forms)} únicas): {_bfi_forms[:20]}")
-    # Verificar quais chaves do Forms NÃO existem no CONTROLE
-    _bfi_sem = [k for k in _bfi_forms if k not in chave_to_cf and k not in chave_alias]
-    print(f"[DEBUG-BFI] Chaves BFI Forms SEM match no CONTROLE ({len(_bfi_sem)}): {_bfi_sem[:20]}")
-    # Amostra de tutores BFI no CONTROLE (coluna CURSOS/CATEGORIA)
-    if col_cat:
-        _df_bfi = df_at[df_at.get(col_cat, pd.Series(dtype=str)).astype(str).str.upper().str.contains('BFI|FISIO|BIO-F', na=False)]
-        print(f"[DEBUG-BFI] Tutores BFI no CONTROLE (df_at): {len(_df_bfi)}")
-        if not _df_bfi.empty:
-            print(f"[DEBUG-BFI] Amostra _CHAVE BFI no CONTROLE: {_df_bfi['_CHAVE'].head(10).tolist()}")
-            print(f"[DEBUG-BFI] Amostra col_cat BFI no CONTROLE: {_df_bfi[col_cat].head(10).tolist()}")
-    # ── FIM DIAGNÓSTICO BFI ──────────────────────────────────────────────────
-    # ── DIAGNÓSTICO ESPECÍFICO: Fabiano e Lucas ──────────────────────────────
-    _EMAILS_DEBUG = {'fabiano.bartmann@tutorpratica.uniasselvi.com.br',
-                     'lucas.medeiros@tutorpratica.uniasselvi.com.br'}
-    _col_email_p_tmp = next((c for c in df_p.columns if str(c).upper() in ('EMAIL','E-MAIL')), None)
-    if _col_email_p_tmp:
-        for _, _r in df_p.iterrows():
-            _em = str(_r.get(_col_email_p_tmp, '') or '').strip().lower()
-            if _em in _EMAILS_DEBUG:
-                _ch_raw = str(_r.get('_CHAVE', '') or '').strip()
-                _ch_alias = chave_alias.get(_ch_raw, _ch_raw)
-                _in_cf = _ch_raw in chave_to_cf
-                _alias_in_cf = _ch_alias in chave_to_cf
-                print(f'[DEBUG-TUTOR] {_em}')
-                print(f'  CHAVE_FORMS={_ch_raw!r}  alias={_ch_alias!r}')
-                print(f'  in chave_to_cf={_in_cf}  alias in chave_to_cf={_alias_in_cf}')
-                print(f'  PROTO={str(_r.get("_PROTO",""))[:80]}')
-    if col_email:
-        for _, _t in df_at.iterrows():
-            _em_t = str(_t.get(col_email, '') or '').strip().lower()
-            if _em_t in _EMAILS_DEBUG:
-                print(f'[DEBUG-TUTOR-CTRL] {_em_t} -> _CHAVE={_t["_CHAVE"]!r}')
-    # ── FIM DIAGNÓSTICO ESPECÍFICO ───────────────────────────────────────────
 
 
     oficial_p_to_cat = {}
@@ -751,12 +703,38 @@ def processar(p1, p2):
         for av in avisos_portfolio:
             print(f"[{ts()}]   {av['tipo'].upper()} ({av['count']}x): {av['email']} | {av['nome']} | {av['msg']}")
     tutores = []
+    # Pré-computar: para cada polo+categoria, agregar TODOS os envios
+    # (resolve o caso de múltiplos tutores por polo que compartilham a mesma chave)
+    _polo_cat_enviados = {}  # (polo_str, cat_form) → lista merged de hist
+    for _, t in df_at.iterrows():
+        _ch = t['_CHAVE']
+        _cr = str(t.get(col_cat, '') or '').strip() if col_cat else ''
+        _cf = CAT_MAP.get(_cr, _cr)
+        _polo_str = str(t.get(col_polo, '') or '').strip()
+        _key_pc = (_polo_str, _cf)
+        if _key_pc not in _polo_cat_enviados:
+            # Buscar enviados pela chave canônica E por variantes de chave do mesmo polo+cat
+            _hist_merged = list(enviados.get(_ch, []))
+            # Buscar também outras chaves que começam com o mesmo polo e têm a mesma cf
+            for _k, _h in enviados.items():
+                if _k == _ch: continue
+                _cf_k = chave_to_cf.get(_k, '')
+                # Mesmo polo base (chave começa com polo_str) e mesma categoria
+                if _cf_k == _cf and _k.startswith(_polo_str):
+                    for _item in _h:
+                        if _item not in _hist_merged:
+                            _hist_merged.append(_item)
+            _polo_cat_enviados[_key_pc] = _hist_merged
+    print(f"[{ts()}] Polo×cat com envios: {len([v for v in _polo_cat_enviados.values() if v])}")
+
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
         cat_raw  = str(t.get(col_cat, '') or '').strip() if col_cat else ''
         cat_form = CAT_MAP.get(cat_raw, cat_raw)
         praticas = catalogo.get(cat_form, catalogo.get(cat_raw, []))
-        hist     = enviados.get(chave, [])
+        polo_str = str(t.get(col_polo, '') or '').strip()
+        # Usar hist agregado por polo+categoria (cobre múltiplos tutores no mesmo polo)
+        hist     = _polo_cat_enviados.get((polo_str, cat_form), enviados.get(chave, []))
         reais    = set(h['p'] for h in hist)
         pend     = [p for p in praticas if p not in reais]
         te = len(reais); tp = len(praticas)
@@ -1001,6 +979,7 @@ def processar(p1, p2):
         'pratica_stats': ps_list, 'praticas': praticas_template,
         'catalogo': catalogo, 'prazos': prazos,
         'por_mes': por_mes, 'gerado_em': gerado,
+        'avisos_portfolio': avisos_portfolio,
     })
 
 
@@ -1200,6 +1179,7 @@ def enriquecer_tutores(dados, lotacao):
     dados['alunos_por_curso'] = alunos_por_curso
     total_al_sum = sum(x['alunos'] for x in alunos_por_curso)
     print(f"[{ts()}] Alunos por lab: {len(alunos_por_curso)} labs, total {total_al_sum:,}")
+
     for t in tutores:
         nome_lower = str(t.get('n', '')).lower()
         info = lotacao.get(nome_lower)
@@ -1218,8 +1198,9 @@ def enriquecer_tutores(dados, lotacao):
             matched += 1
     print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH")
     # ── Adicionar tutores sintéticos para avisos (aparecem na aba Tutores) ────
-    if 'avisos_portfolio' in dir() and avisos_portfolio:
-        for av in avisos_portfolio:
+    _avisos_enr = dados.get('avisos_portfolio', [])
+    if _avisos_enr:
+        for av in _avisos_enr:
             if av['nome'] and av['nome'] not in ('nan', '-', ''):
                 nome_display = av['nome']
             else:
@@ -1240,7 +1221,9 @@ def enriquecer_tutores(dados, lotacao):
                 'aviso_count': av['count'],
             })
     dados['tutores'] = tutores
-    dados['avisos_portfolio'] = avisos_portfolio if 'avisos_portfolio' in dir() else []
+    # avisos_portfolio já está em dados (vindo de processar()) — não sobrescrever com []
+    if 'avisos_portfolio' not in dados:
+        dados['avisos_portfolio'] = []
     return dados
 
 
@@ -2031,6 +2014,25 @@ if __name__ == '__main__':
                     dados['ger_kpis']['total_alunos_matriculados'] = alunos_hub['total_distintos']
                     dados['ger_kpis']['alunos_mat_fonte'] = 'hub_csv'
                     print(f"[{ts()}] KPI alunos substituído: {alunos_hub['total_distintos']:,} (matrículas distintas)")
+                # BUG 3 FIX: enriquecer alunos por polo usando hub CSV (por_polo normalizado)
+                # Cobre polos com alunos=0 porque TOTAL_ALUNOS está zerado na lotação 2026_2
+                import unicodedata as _ud3, re as _re4
+                def _norm_polo_hub_main(s):
+                    s = _ud3.normalize('NFD', str(s or '').upper().strip())
+                    s = ''.join(c for c in s if _ud3.category(c) != 'Mn')
+                    s = _re4.sub(r'^LAP\s*[-–]\s*', '', s).strip()
+                    return _re4.sub(r'\s+', ' ', s)
+                _hub_por_polo = alunos_hub.get('por_polo', {})
+                _enr_polo = 0
+                for _ps in dados.get('polo_stats', []):
+                    if _ps.get('a', _ps.get('alunos', 0)) == 0:
+                        _pn = _norm_polo_hub_main(_ps.get('n', _ps.get('polo', _ps.get('POLO', ''))))
+                        _al_hub = _hub_por_polo.get(_pn, 0)
+                        if _al_hub:
+                            _ps['a'] = int(_al_hub)
+                            _ps['alunos'] = int(_al_hub)
+                            _enr_polo += 1
+                print(f"[{ts()}] Polos enriquecidos com alunos (hub CSV): {_enr_polo}")
         except Exception as e:
             print(f"[{ts()}] AVISO: erro ao ler alunos hub: {e}")
     else:
