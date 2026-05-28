@@ -336,8 +336,16 @@ def processar(p1, p2):
         print(f"[{ts()}] Situações incluídas: {_contagem}")
     else:
         df_at = df_t.copy()
-    df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
-    _sample_chaves = df_at['_CHAVE'].dropna().head(5).tolist()
+    # Usar CHAVE LOTAÇÃO do CONTROLE diretamente (mesma chave usada pelo Forms)
+    col_chave_lot = next((c for c in df_t.columns if 'CHAVE' in str(c).upper() and 'LOTA' in str(c).upper()
+                          and 'CLASSIF' not in str(c).upper()), None)
+    if col_chave_lot:
+        df_at['_CHAVE'] = df_at[col_chave_lot].astype(str).str.strip()
+        print(f"[{ts()}] CONTROLE usando coluna '{col_chave_lot}' como chave")
+    else:
+        df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
+        print(f"[{ts()}] CONTROLE chave construída de POLO + CURSOS")
+    _sample_chaves = df_at['_CHAVE'].dropna().head(8).tolist()
     print(f"[{ts()}] CONTROLE chaves (amostra): {_sample_chaves}")
     print(f"[{ts()}] Lendo portfolios...")
     df_p = ler_excel(p2, sheet_name='Sheet1')
