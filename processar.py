@@ -18,20 +18,84 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
-PRAZOS_ORDENS = {
-    'Ordem 1': '14/03/2026',
-    'Ordem 2': '11/04/2026',
-    'Ordem 3': '09/05/2026',
-    'Ordem 4': '06/06/2026',
-    'Ordem 5': '04/07/2026',
+# ── Configuração multi-semestre ─────────────────────────────────────────────
+# Lida de config_semestre.json. Fallback hardcoded para 2026/1.
+_SEMESTRES_DEFAULT = {
+    '2026/1': {
+        'prazos': {
+            'Ordem 1': '14/03/2026', 'Ordem 2': '11/04/2026',
+            'Ordem 3': '09/05/2026', 'Ordem 4': '06/06/2026', 'Ordem 5': '04/07/2026',
+        },
+        'periodos': {
+            'Ordem 1': {'inicio': '16/02/2026', 'fim': '14/03/2026', 'semanas': 4},
+            'Ordem 2': {'inicio': '16/03/2026', 'fim': '11/04/2026', 'semanas': 4},
+            'Ordem 3': {'inicio': '13/04/2026', 'fim': '09/05/2026', 'semanas': 4},
+            'Ordem 4': {'inicio': '11/05/2026', 'fim': '06/06/2026', 'semanas': 4},
+            'Ordem 5': {'inicio': '08/06/2026', 'fim': '04/07/2026', 'semanas': 4},
+        },
+    },
+    '2026/2': {
+        'prazos': {
+            'Ordem 1': '22/08/2026', 'Ordem 2': '19/09/2026',
+            'Ordem 3': '17/10/2026', 'Ordem 4': '14/11/2026', 'Ordem 5': '12/12/2026',
+        },
+        'periodos': {
+            'Ordem 1': {'inicio': '27/07/2026', 'fim': '22/08/2026', 'semanas': 4},
+            'Ordem 2': {'inicio': '24/08/2026', 'fim': '19/09/2026', 'semanas': 4},
+            'Ordem 3': {'inicio': '21/09/2026', 'fim': '17/10/2026', 'semanas': 4},
+            'Ordem 4': {'inicio': '19/10/2026', 'fim': '14/11/2026', 'semanas': 4},
+            'Ordem 5': {'inicio': '16/11/2026', 'fim': '12/12/2026', 'semanas': 4},
+        },
+    },
 }
-PERIODOS_ORDENS = {
-    'Ordem 1': {'inicio': '16/02/2026', 'fim': '14/03/2026', 'semanas': 4},
-    'Ordem 2': {'inicio': '16/03/2026', 'fim': '11/04/2026', 'semanas': 4},
-    'Ordem 3': {'inicio': '13/04/2026', 'fim': '09/05/2026', 'semanas': 4},
-    'Ordem 4': {'inicio': '11/05/2026', 'fim': '06/06/2026', 'semanas': 4},
-    'Ordem 5': {'inicio': '08/06/2026', 'fim': '04/07/2026', 'semanas': 4},
-}
+
+def _carregar_semestres():
+    import os as _os, json as _json
+    _cfg_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'config_semestre.json')
+    _sems = dict(_SEMESTRES_DEFAULT)
+    if _os.path.isfile(_cfg_path):
+        try:
+            with open(_cfg_path, encoding='utf-8') as _f: _cfg = _json.load(_f)
+            # config pode ter 'semestres' (dict) ou o formato antigo (semestre único)
+            if 'semestres' in _cfg:
+                _sems.update(_cfg['semestres'])
+            elif 'semestre' in _cfg:
+                _sem_key = _cfg['semestre']
+                _sems[_sem_key] = {'prazos': _cfg.get('prazos', {}), 'periodos': _cfg.get('periodos', {})}
+            print(f"  [CONFIG] Semestres carregados: {sorted(_sems.keys())}")
+        except Exception as _e:
+            print(f"  [AVISO] Erro ao ler config_semestre.json: {_e} — usando padrão")
+    return _sems
+
+ALL_SEMESTRES = _carregar_semestres()
+
+def _data_para_semestre(data_str):
+    """Dado '2026-03-15', retorna '2026/1' ou '2026/2' ou None."""
+    if not data_str or data_str == 'None': return None
+    try:
+        from datetime import datetime as _dt
+        d = _dt.strptime(str(data_str)[:10], '%Y-%m-%d').date()
+        for sem, cfg in sorted(ALL_SEMESTRES.items()):
+            for ord_cfg in cfg.get('periodos', {}).values():
+                try:
+                    ini = _dt.strptime(ord_cfg['inicio'], '%d/%m/%Y').date()
+                    fim = _dt.strptime(ord_cfg['fim'],    '%d/%m/%Y').date()
+                    if ini <= d <= fim: return sem
+                except: pass
+    except: pass
+    return None
+
+def _ordem_relativa(ordem_forms, semestre):
+    """Ordem 1 no Forms sempre = Ordem 1 do semestre em questão."""
+    return ordem_forms  # As ordens são relativas dentro de cada semestre
+
+# Para compatibilidade com o resto do código — usa o semestre mais recente como padrão
+_sem_atual = sorted(ALL_SEMESTRES.keys())[-1]
+PRAZOS_ORDENS   = ALL_SEMESTRES[_sem_atual]['prazos']
+PERIODOS_ORDENS = ALL_SEMESTRES[_sem_atual]['periodos']
+SEMESTRE_ATUAL  = _sem_atual
+print(f"  [CONFIG] Semestre ativo (dashboard): {SEMESTRE_ATUAL}")
+# ── Fim configuração multi-semestre ──────────────────────────────────────────
 CH_ADMIN_FATOR   = 0.25
 CH_PRATICA_DURAC = 1.5
 
@@ -694,7 +758,9 @@ def processar(p1, p2):
                 ordem_val = str(r.get('_ORDEM', 'Ordem 1') or 'Ordem 1').strip()
                 if not any(o in ordem_val for o in ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5']):
                     ordem_val = 'Ordem 1'
-                enviados[chave].append({'p': p, 'd': str(data)[:10] if pd.notna(data) else None, 'a': aluno, 'o': ordem_val})
+                _data_str = str(data)[:10] if pd.notna(data) else None
+                _sem_envio = _data_para_semestre(_data_str) or SEMESTRE_ATUAL
+                enviados[chave].append({'p': p, 'd': _data_str, 'a': aluno, 'o': ordem_val, 's': _sem_envio})
     # Finalizar avisos
     avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
     print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
@@ -960,6 +1026,105 @@ def processar(p1, p2):
             'pct': round(p['enviou'] / total_p * 100, 1) if total_p else 0,
             'nome': p['nome'], 'enviou': p['enviou'], 'nao_enviou': p['nao_enviou'], 'categoria': p['categoria'],
         })
+    # ── Estatísticas por semestre ────────────────────────────────────────────
+    def _stats_semestre(sem_key, tutores_list, catalogo_dict, prazos_dict, periodos_dict):
+        """Gera o mesmo bloco de dados que processar() retorna, mas filtrado por semestre."""
+        from datetime import datetime as _dt2
+        _hoje = datetime.now()
+        _status_ord = {}
+        for _o, _pz in prazos_dict.items():
+            try:
+                _pz_d = _dt2.strptime(_pz, '%d/%m/%Y')
+                _ini  = _dt2.strptime(periodos_dict.get(_o,{}).get('inicio',_pz), '%d/%m/%Y')
+                if _hoje > _pz_d: _status_ord[_o] = 'VENCIDO'
+                elif _hoje >= _ini: _status_ord[_o] = 'ABERTA'
+                else: _status_ord[_o] = 'FUTURA'
+            except: _status_ord[_o] = 'FUTURA'
+
+        _por_ordem = {}; _alunos_por_ordem = {}
+        _polo_map = {}; _cat_stats = {}
+
+        for _t in tutores_list:
+            _hist_sem = [h for h in _t.get('hist', []) if h.get('s', SEMESTRE_ATUAL) == sem_key]
+            _reais_sem = set(h['p'] for h in _hist_sem)
+            _te_sem = len(_reais_sem)
+            _tp = _t.get('tp', 0)
+            _pct_sem = round(_te_sem / _tp * 100, 1) if _tp else 0
+
+            # por_ordem deste semestre
+            _po = {}
+            for _h in _hist_sem:
+                _o = _h.get('o','Ordem 1') or 'Ordem 1'
+                _po[_o] = _po.get(_o, 0) + 1
+                _por_ordem[_o] = _por_ordem.get(_o, 0) + 1
+                _alunos_por_ordem[_o] = _alunos_por_ordem.get(_o, 0) + _h.get('a', 0)
+
+            # situação neste semestre
+            _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
+            if not _orv: _sit = 'ok' if _te_sem > 0 else 'atrasado'
+            elif all(_po.get(_o,0) > 0 for _o in _orv): _sit = 'ok'
+            elif any(_po.get(_o,0) > 0 for _o in _orv): _sit = 'atrasado'
+            else: _sit = 'urgente'
+
+            # polo
+            _p = _t.get('p','')
+            if _p not in _polo_map:
+                _polo_map[_p] = {'n':_p,'polo':_p,'POLO':_p,'total':0,'enviaram':0,'atrasados':0,'alunos':0,'pend':0,'pct':0,'envios':0,'t':0,'e':0,'a':0}
+            _polo_map[_p]['total'] += 1; _polo_map[_p]['t'] += 1
+            if _te_sem > 0: _polo_map[_p]['enviaram'] += 1; _polo_map[_p]['e'] += 1
+            if _sit == 'atrasado': _polo_map[_p]['atrasados'] += 1
+            _polo_map[_p]['alunos'] += sum(h.get('a',0) for h in _hist_sem)
+            _polo_map[_p]['a'] = _polo_map[_p]['alunos']
+
+            # cat_stats
+            _cf = _t.get('cf','')
+            if _cf not in _cat_stats:
+                _cat_stats[_cf] = {'total_tutores':0,'com_100pct':0,'total_previstas':0,'total_enviadas':0}
+            if _tp:
+                _cat_stats[_cf]['total_tutores'] += 1
+                if _pct_sem == 100: _cat_stats[_cf]['com_100pct'] += 1
+                _cat_stats[_cf]['total_previstas'] += _tp
+                _cat_stats[_cf]['total_enviadas'] += _te_sem
+
+        # Calcular pct e pend nos polos
+        for _ps in _polo_map.values():
+            _ps['pend'] = _ps['total'] - _ps['enviaram']
+            _ps['pct']  = round(_ps['enviaram']/_ps['total']*100) if _ps['total'] else 0
+
+        _total = len(tutores_list)
+        _enviaram = sum(1 for _t in tutores_list if any(h.get('s',SEMESTRE_ATUAL)==sem_key and h.get('p') for h in _t.get('hist',[])))
+        _urgentes = sum(1 for _t in tutores_list
+                       if (lambda _h=[h for h in _t.get('hist',[]) if h.get('s',SEMESTRE_ATUAL)==sem_key],
+                           _orv=[_o for _o,_s in _status_ord.items() if _s=='VENCIDO']:
+                           _orv and not any((sum(1 for _hh in _h if _hh.get('o','')==_o)>0) for _o in _orv))())
+
+        return {
+            'semestre': sem_key,
+            'kpis': {
+                'total': _total, 'enviaram': _enviaram, 'pendentes': _total - _enviaram,
+                'urgentes': _urgentes, 'atrasados': 0,
+                'total_polos': len(_polo_map),
+                'polos_ok': sum(1 for _ps in _polo_map.values() if _ps['pend']==0),
+            },
+            'polo_stats': sorted(_polo_map.values(), key=lambda x: -x.get('pend',0)),
+            'por_ordem': _por_ordem,
+            'alunos_por_ordem': _alunos_por_ordem,
+            'status_ordem': _status_ord,
+            'prazos': prazos_dict,
+            'periodos': periodos_dict,
+            'cat_stats': [{'categoria':k,**v} for k,v in _cat_stats.items()],
+        }
+
+    _dados_por_semestre = {}
+    for _sem_k, _sem_cfg in ALL_SEMESTRES.items():
+        _dados_por_semestre[_sem_k] = _stats_semestre(
+            _sem_k, tutores_out,
+            catalogo, _sem_cfg['prazos'], _sem_cfg['periodos']
+        )
+        _env_s = _dados_por_semestre[_sem_k]['kpis']['enviaram']
+        print(f"[{ts()}] Semestre {_sem_k}: {_env_s} tutores com envios")
+    # ── Fim estatísticas por semestre ─────────────────────────────────────────
+
     BRT = timezone(timedelta(hours=-3))
     gerado = datetime.now(BRT).strftime('%d/%m/%Y %H:%M')
     ch_ok = sum(1 for t in tutores_out if t.get('ch_semanal'))
@@ -980,6 +1145,9 @@ def processar(p1, p2):
         'catalogo': catalogo, 'prazos': prazos,
         'por_mes': por_mes, 'gerado_em': gerado,
         'avisos_portfolio': avisos_portfolio,
+        'semestre': SEMESTRE_ATUAL,
+        'todos_semestres': sorted(ALL_SEMESTRES.keys()),
+        'dados_por_semestre': _dados_por_semestre,
     })
 
 
