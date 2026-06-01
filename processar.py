@@ -774,9 +774,11 @@ def processar(p1, p2):
                 _data_str = str(data)[:10] if pd.notna(data) else None
                 _sem_envio = _data_para_semestre(_data_str)
                 if _sem_envio is None:
-                    # Data fora de qualquer janela de semestre configurada
-                    # → atribui ao semestre mais antigo (não contamina o mais recente)
+                    # Data fora de qualquer janela → semestre mais antigo
                     _sem_envio = sorted(ALL_SEMESTRES.keys())[0]
+                    # Log apenas se data estranha (debug)
+                    if _data_str and _data_str < '2026-02-01':
+                        pass  # silencioso — serão agrupados no 2026/1
                 enviados[chave].append({'p': p, 'd': _data_str, 'a': aluno, 'o': ordem_val, 's': _sem_envio})
     # Finalizar avisos
     avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
@@ -1086,7 +1088,8 @@ def processar(p1, p2):
         _polo_map = {}; _cat_stats = {}
 
         for _t in tutores_list:
-            _hist_sem = [h for h in _t.get('hist', []) if h.get('s', SEMESTRE_ATUAL) == sem_key]
+            _sem_antigo = sorted(ALL_SEMESTRES.keys())[0]
+            _hist_sem = [h for h in _t.get('hist', []) if h.get('s', _sem_antigo) == sem_key]
             _reais_sem = set(h['p'] for h in _hist_sem)
             _te_sem = len(_reais_sem)
             _tp = _t.get('tp', 0)
@@ -1133,17 +1136,30 @@ def processar(p1, p2):
             _ps['pct']  = round(_ps['enviaram']/_ps['total']*100) if _ps['total'] else 0
 
         _total = len(tutores_list)
-        _enviaram = sum(1 for _t in tutores_list if any(h.get('s',SEMESTRE_ATUAL)==sem_key and h.get('p') for h in _t.get('hist',[])))
-        _urgentes = sum(1 for _t in tutores_list
-                       if (lambda _h=[h for h in _t.get('hist',[]) if h.get('s',SEMESTRE_ATUAL)==sem_key],
-                           _orv=[_o for _o,_s in _status_ord.items() if _s=='VENCIDO']:
-                           _orv and not any((sum(1 for _hh in _h if _hh.get('o','')==_o)>0) for _o in _orv))())
+        _sem_ant = sorted(ALL_SEMESTRES.keys())[0]
+        _enviaram = sum(1 for _t in tutores_list if any(h.get('s',_sem_ant)==sem_key and h.get('p') for h in _t.get('hist',[])))
+        # Calcular urgentes e atrasados corretamente
+        _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
+        _urgentes = 0; _atrasados = 0
+        for _t in tutores_list:
+            _sem_ant2 = sorted(ALL_SEMESTRES.keys())[0]
+            _h = [h for h in _t.get('hist', []) if h.get('s', _sem_ant2) == sem_key]
+            _po = {}
+            for _hh in _h:
+                _o = _hh.get('o', 'Ordem 1') or 'Ordem 1'
+                _po[_o] = _po.get(_o, 0) + 1
+            if _orv:
+                _venc_ok = [_o for _o in _orv if _po.get(_o, 0) > 0]
+                if len(_venc_ok) == 0:
+                    _urgentes += 1
+                elif len(_venc_ok) < len(_orv):
+                    _atrasados += 1
 
         return {
             'semestre': sem_key,
             'kpis': {
                 'total': _total, 'enviaram': _enviaram, 'pendentes': _total - _enviaram,
-                'urgentes': _urgentes, 'atrasados': 0,
+                'urgentes': _urgentes, 'atrasados': _atrasados,
                 'total_polos': len(_polo_map),
                 'polos_ok': sum(1 for _ps in _polo_map.values() if _ps['pend']==0),
             },
