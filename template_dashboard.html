@@ -636,7 +636,29 @@ function openCatModal(idx){const entry=Object.entries(window._pvCats||{}).sort((
 function openTutorModal(nome){
   const t=(DB.tutores||[]).find(x=>x.n===nome);if(!t){document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent='Tutor não encontrado nos dados carregados';document.getElementById('m-body').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">Este tutor não foi localizado na base de dados atual. O arquivo pode ter sido atualizado.</div>';document.getElementById('modal-overlay').classList.add('show');return;}
   document.getElementById('m-title').textContent=t.n;document.getElementById('m-sub').textContent=`${t.p} · ${t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
-  let perfilHtml='';if(t.perfil||t.cursos||t.ch_semanal){perfilHtml='<div style="background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border)">';if(t.perfil)perfilHtml+=`<div style="font-size:12px;font-weight:700;margin-bottom:4px">👤 ${t.perfil}</div>`;if(t.cursos)perfilHtml+=`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 ${t.cursos}</div>`;if(t.ch_semanal||t.ch_ideal){const chS=t.ch_semanal?t.ch_semanal.toFixed(1)+'h':'—';const chI=t.ch_ideal?t.ch_ideal.toFixed(1)+'h':'—';const praticasPoss=t.ch_ideal?Math.floor(t.ch_ideal/1.5):0;perfilHtml+=`<div style="font-size:11px;color:var(--muted)">⏱ CH Semanal: <strong>${chS}</strong> · CH Ideal: <strong>${chI}</strong>`+(praticasPoss?` · Capacidade: <strong style="color:var(--teal)">${praticasPoss} práticas/sem</strong>`:'')+`</div>`;}perfilHtml+='</div>';}
+  let perfilHtml='';
+  {const _temDados=t.perfil||t.cursos||t.ch_semanal||t.titulacao||t.inicio||t.lattes_id||t.email;
+  if(_temDados){perfilHtml='<div style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--border)">';
+  const _perfTit=[];
+  if(t.perfil)_perfTit.push('👤 '+t.perfil);
+  if(t.titulacao)_perfTit.push('<span style="background:var(--green-dim);color:var(--green);padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700">'+t.titulacao+'</span>');
+  if(_perfTit.length)perfilHtml+='<div style="font-size:12px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px">'+_perfTit.join(' ')+'</div>';
+  if(t.graduacao)perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">🎓 Graduação: <strong>'+t.graduacao.substring(0,60)+'</strong></div>';
+  if(t.especializacao&&t.especializacao!=='—')perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">📋 Especialização: '+t.especializacao.substring(0,80)+'</div>';
+  if(t.mestrado&&t.mestrado!=='—')perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">🔬 Mestrado: '+t.mestrado.substring(0,80)+'</div>';
+  if(t.cursos)perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">🧪 Laboratório: <strong>'+t.cursos+'</strong></div>';
+  const _infos=[];
+  if(t.ch_semanal||t.ch_ideal){const chS=t.ch_semanal?t.ch_semanal.toFixed(1)+'h':'—';const chI=t.ch_ideal?t.ch_ideal.toFixed(1)+'h':'—';const pp=t.ch_ideal?Math.floor(t.ch_ideal/1.5):0;_infos.push('⏱ CH: <strong>'+chS+'</strong>'+(pp?' · '+pp+' práticas/sem':''));}
+  if(t.inicio){const _d=new Date(t.inicio);const _m=Math.round((new Date()-_d)/(1000*60*60*24*30.5));_infos.push('📅 Admissão: <strong>'+t.inicio.split('-').reverse().join('/')+'</strong> ('+(_m/12).toFixed(1)+' anos)');}
+  if(t.exp_tutor_uni_meses>0)_infos.push('🕐 Exp. tutoria: <strong>'+t.exp_tutor_uni_meses+' meses</strong>');
+  if(_infos.length)perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-top:4px">'+_infos.join(' &nbsp;·&nbsp; ')+'</div>';
+  const _ctts=[];
+  if(t.email)_ctts.push('✉️ '+t.email);
+  if(t.whatsapp&&t.whatsapp!=='None'&&t.whatsapp!=='nan'&&t.whatsapp.length>3)_ctts.push('📱 '+t.whatsapp);
+  if(t.chapa&&t.chapa!=='None'&&t.chapa!=='nan')_ctts.push('🪪 Chapa: '+t.chapa);
+  if(_ctts.length)perfilHtml+='<div style="font-size:10px;color:var(--muted);margin-top:5px;border-top:1px solid var(--border);padding-top:6px">'+_ctts.join(' &nbsp;|&nbsp; ')+'</div>';
+  if(t.lattes_id||t.lattes_url){const _u=t.lattes_id?'https://lattes.cnpq.br/'+t.lattes_id:(t.lattes_url||'');perfilHtml+='<div style="margin-top:6px"><a href="'+_u+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#1a3a5c;color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🔗 Currículo Lattes</a></div>';}
+  perfilHtml+='</div>';}}
   let html=perfilHtml+`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div></div>`;
   html+=`<div style="margin-bottom:12px"><div class="kpi-label" style="margin-bottom:6px">Progresso Geral</div>${progCell(t.pct)}</div>`;
   const po=t.por_ordem||t.porOrdem||{};if(Object.keys(po).length){html+=`<div class="sec-label">Portfólios por Ordem</div>`;html+=Object.entries(po).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0])).map(([o,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-size:11px;font-weight:600;min-width:60px">${o}</span><span style="font-size:11px;font-weight:700;color:var(--ok)">${v} envio${v>1?'s':''}</span></div>`).join('');}
