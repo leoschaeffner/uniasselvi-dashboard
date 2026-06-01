@@ -124,9 +124,15 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <body>
 <nav class="sidebar">
   <div class="sidebar-brand"><div class="sidebar-logo">UNIASSELVI</div><div class="sidebar-title">Gestão de Práticas</div><div class="sidebar-sub">Tutoria Laboratorial · 2026</div></div>
+  <!-- Seletor de semestre -->
+  <div id="sem-selector" style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.1);display:none">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.4);margin-bottom:6px">Semestre</div>
+    <div id="sem-tabs" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+  </div>
+
   <div class="sidebar-nav">
     <div class="sidebar-section">
-      <div class="sidebar-section-label">Portfólios</div>
+      <div class="sidebar-section-label" id="sidebar-port-label">Portfólios</div>
       <button class="sidebar-item active" onclick="navTo('port-visao')"><span class="si-icon">📊</span><span class="si-label">Visão Geral</span></button>
       <button class="sidebar-item" onclick="navTo('port-ordens')"><span class="si-icon">📅</span><span class="si-label">Ordens</span></button>
       <button class="sidebar-item" onclick="navTo('port-praticas')"><span class="si-icon">🔬</span><span class="si-label">Práticas</span></button>
@@ -153,7 +159,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="topbar">
   <span class="topbar-title" id="topbar-title">Visão Geral</span>
   <span class="topbar-breadcrumb" id="topbar-bread">Portfólios</span>
-  <span id="topbar-ts" style="margin-left:auto;font-size:10px;color:var(--dim);font-family:var(--mono)"></span>
+  <span id="sem-badge" style="margin-left:auto;font-size:11px;font-weight:700;background:var(--yellow);color:#1a1d23;padding:3px 10px;border-radius:6px;display:none"></span>
+  <span id="topbar-ts" style="margin-left:8px;font-size:10px;color:var(--dim);font-family:var(--mono)"></span>
 </div>
 
 <!-- ═══ PORTFÓLIOS — VISÃO GERAL ═════════════════════════════════════════ -->
@@ -473,9 +480,9 @@ function gPE(p){return p.e||p.enviaram||0}
 function gPA(p){return p.a||p.alunos||0}
 function gTS(t){return t.sit||t.situacao||"urgente"}
 function getPraticas(){var pr=DB.praticas;if(pr&&pr.length)return pr;return(DB.pratica_stats||[]).map(function(p){var tot=(p.enviou||0)+(p.nao_enviou||0);return{n:p.nome||"",c:p.categoria||"",env_n:p.enviou||0,pend_n:p.nao_enviou||0,pct:tot?Math.round(p.enviou/tot*100):0}})}
-function getOE(o){if(DB.por_ordem&&!Array.isArray(DB.por_ordem))return DB.por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
+function getOE(o){const _po=_getSemPorOrdem();if(_po&&!Array.isArray(_po))return _po[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
 function getOA(o){if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
-function getOS(o){if(DB.status_ordem)return DB.status_ordem[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
+function getOS(o){const _so=_getSemStatusOrdem();if(_so)return _so[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
 
 const pageTitles={
   'port-visao':['Visão Geral','Portfólios'],'port-ordens':['Ordens','Portfólios'],
@@ -504,7 +511,7 @@ function ordemNum(k){return{'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ord
 
 // ── PORTFÓLIOS VISÃO GERAL ────────────────────────────────────────────────────
 function renderKPIs(){
-  const k=DB.kpis||{};const pct=k.total?((k.enviaram/k.total)*100).toFixed(1):'0.0';
+  const k=_getSemKpis()||DB.kpis||{};const pct=k.total?((k.enviaram/k.total)*100).toFixed(1):'0.0';
   document.getElementById('pv-sub').textContent=`${k.total} tutores · ${k.enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
   document.getElementById('pv-kpis').innerHTML=`
     <div class="kpi kpi-green kpi-link" onclick="openListModal('todos')"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${k.total}</div><div class="kpi-hint">clique para ver lista</div></div>
@@ -548,7 +555,7 @@ function renderOrdens(){
 }
 function filterOrdemTbl(q){
   q=q.toLowerCase();const selO=document.getElementById('ordem-sel').value;const selC=(document.getElementById('ordem-cat-sel')||{}).value||'';
-  let d=DB.tutores||[];if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(selC)d=d.filter(t=>t.c===selC);if(selO)d=d.filter(t=>{const po=t.por_ordem||t.porOrdem||{};return (po[selO]||0)>0;});
+  let d=_getSemTutores();if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(selC)d=d.filter(t=>t.c===selC);if(selO)d=d.filter(t=>{const po=t.por_ordem||t.porOrdem||{};return (po[selO]||0)>0;});
   ordemData=d;renderOrdemTbl(d);
 }
 function sortOrdem(k){if(ordemSortK===k)ordemSortA=!ordemSortA;else{ordemSortK=k;ordemSortA=k==='n'}filterOrdemTbl(document.getElementById('ordem-search').value)}
@@ -582,7 +589,7 @@ function renderPracTbl(data){
 }
 
 // ── PORTFÓLIOS POLOS ──────────────────────────────────────────────────────────
-function filterPolos(q){q=q.toLowerCase();const st=document.getElementById('polo-status-sel').value;let d=DB.polo_stats||[];if(q)d=d.filter(p=>gPN(p).toLowerCase().includes(q));if(st==='pend')d=d.filter(p=>p.pend>0);if(st==='ok')d=d.filter(p=>p.pend===0);poloData=d;renderPoloTbl(d);}
+function filterPolos(q){q=q.toLowerCase();const st=document.getElementById('polo-status-sel').value;let d=_getSemPoloStats();if(q)d=d.filter(p=>gPN(p).toLowerCase().includes(q));if(st==='pend')d=d.filter(p=>p.pend>0);if(st==='ok')d=d.filter(p=>p.pend===0);poloData=d;renderPoloTbl(d);}
 function sortPolo(k){if(poloSortK===k)poloSortA=!poloSortA;else{poloSortK=k;poloSortA=k==='n'}filterPolos(document.getElementById('polo-search').value)}
 function renderPoloTbl(data){
   const sorted=[...data].sort((a,b)=>{const va=a[poloSortK],vb=b[poloSortK];if(typeof va==='string')return poloSortA?va.localeCompare(vb):vb.localeCompare(va);return poloSortA?va-vb:vb-va});
@@ -594,7 +601,7 @@ function renderPoloTbl(data){
 }
 
 // ── PORTFÓLIOS TUTORES ────────────────────────────────────────────────────────
-function filterTutores(q){q=q.toLowerCase();const st=document.getElementById('tutor-status-sel').value;const cat=document.getElementById('tutor-cat-sel').value;let d=DB.tutores||[];if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(st==='ok')d=d.filter(t=>t.te>0);if(st==='pend')d=d.filter(t=>t.te===0);if(cat){const _CAT_NORM_MAP={'Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I - Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I – Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II – Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV - Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV – Nutrição':'NUTRI (Multidisciplinar IV)','Engenharias e Licenciaturas':'ENGMAKER','ENGMAKER+QUÍMICA E FÍSICA':'QUÍMICA E FÍSICA','EngeMaker | Química e Física - Engenharias e Licenciaturas':'ENGMAKER','Química e Física - Agronomia':'QUÍMICA E FÍSICA'};d=d.filter(t=>(_CAT_NORM_MAP[t.c||'']||t.c)===cat);}tutorData=d;tutoresFiltrados=d;renderTutorTbl(d);}
+function filterTutores(q){q=q.toLowerCase();const st=document.getElementById('tutor-status-sel').value;const cat=document.getElementById('tutor-cat-sel').value;let d=_getSemTutores();if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(st==='ok')d=d.filter(t=>t.te>0);if(st==='pend')d=d.filter(t=>t.te===0);if(cat){const _CAT_NORM_MAP={'Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I - Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I – Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II – Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV - Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV – Nutrição':'NUTRI (Multidisciplinar IV)','Engenharias e Licenciaturas':'ENGMAKER','ENGMAKER+QUÍMICA E FÍSICA':'QUÍMICA E FÍSICA','EngeMaker | Química e Física - Engenharias e Licenciaturas':'ENGMAKER','Química e Física - Agronomia':'QUÍMICA E FÍSICA'};d=d.filter(t=>(_CAT_NORM_MAP[t.c||'']||t.c)===cat);}tutorData=d;tutoresFiltrados=d;renderTutorTbl(d);}
 function sortTutor(k){if(tutorSortK===k)tutorSortA=!tutorSortA;else{tutorSortK=k;tutorSortA=k==='n'}filterTutores(document.getElementById('tutor-search').value)}
 function renderTutorTbl(data){
   const sorted=[...data].sort((a,b)=>{const va=a[tutorSortK],vb=b[tutorSortK];if(typeof va==='string')return tutorSortA?va.localeCompare(vb):vb.localeCompare(va);return tutorSortA?va-vb:vb-va});
@@ -1499,6 +1506,172 @@ function renderAvisosPortfolio(){
   tbody.innerHTML = rows;
 }
 
+// ── CONTROLE DE SEMESTRE ────────────────────────────────────────────────────
+let _SEM_ATUAL = null;  // semestre selecionado no seletor
+let _SEM_DB    = null;  // dados do semestre selecionado
+
+function initSemestres() {
+  const sems = DB.todos_semestres || [];
+  if (!sems.length || sems.length < 2) return;  // só 1 semestre: não exibe seletor
+
+  // Exibir seletor
+  document.getElementById('sem-selector').style.display = '';
+  document.getElementById('sem-badge').style.display = '';
+
+  const tabs = document.getElementById('sem-tabs');
+  // Botão "Ambos" + um botão por semestre
+  const opcoes = ['Ambos', ...sems];
+  // Semestre padrão = o mais recente
+  _SEM_ATUAL = sems[sems.length - 1];
+
+  opcoes.forEach(sem => {
+    const btn = document.createElement('button');
+    btn.textContent = sem;
+    btn.dataset.sem = sem;
+    btn.style.cssText = 'flex:1;padding:5px 4px;border:none;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s';
+    btn.onclick = () => selecionarSemestre(sem);
+    tabs.appendChild(btn);
+  });
+
+  selecionarSemestre(_SEM_ATUAL);
+}
+
+function selecionarSemestre(sem) {
+  _SEM_ATUAL = sem;
+  const badge = document.getElementById('sem-badge');
+  if (badge) badge.textContent = sem === 'Ambos' ? '2026/1 + 2026/2' : sem;
+
+  // Estilo dos botões
+  document.querySelectorAll('#sem-tabs button').forEach(b => {
+    const ativo = b.dataset.sem === sem;
+    b.style.background = ativo ? 'var(--yellow)' : 'rgba(255,255,255,.12)';
+    b.style.color = ativo ? '#1a1d23' : 'rgba(255,255,255,.8)';
+  });
+
+  // Atualizar label da sidebar
+  const lbl = document.getElementById('sidebar-port-label');
+  if (lbl) lbl.textContent = sem === 'Ambos' ? 'Portfólios (Todos)' : `Portfólios ${sem}`;
+
+  // Montar _SEM_DB — dados do semestre (ou merged se Ambos)
+  if (sem === 'Ambos') {
+    _SEM_DB = _mergeAllSemestres();
+  } else {
+    _SEM_DB = (DB.dados_por_semestre || {})[sem] || null;
+  }
+
+  // Re-renderizar tudo
+  _renderComSemestre();
+}
+
+function _mergeAllSemestres() {
+  // Merge: soma KPIs de todos os semestres
+  const sems = Object.values(DB.dados_por_semestre || {});
+  if (!sems.length) return null;
+  const merged = {
+    semestre: 'Ambos',
+    kpis: { total:0, enviaram:0, pendentes:0, urgentes:0, atrasados:0, total_polos:0, polos_ok:0 },
+    polo_stats: [], por_ordem: {}, alunos_por_ordem: {}, status_ordem: {},
+    prazos: {}, periodos: {}, cat_stats: [],
+  };
+  const poloMap = {};
+  sems.forEach(s => {
+    const k = s.kpis || {};
+    merged.kpis.total     = Math.max(merged.kpis.total, k.total || 0);
+    merged.kpis.enviaram += (k.enviaram || 0);
+    merged.kpis.urgentes  = Math.max(merged.kpis.urgentes, k.urgentes || 0);
+    Object.entries(s.por_ordem || {}).forEach(([o,n]) => {
+      merged.por_ordem[`${s.semestre}·${o}`] = n;
+    });
+    Object.entries(s.alunos_por_ordem || {}).forEach(([o,n]) => {
+      merged.alunos_por_ordem[`${s.semestre}·${o}`] = n;
+    });
+    (s.polo_stats || []).forEach(p => {
+      const key = p.n || p.polo || '';
+      if (!poloMap[key]) poloMap[key] = { ...p, enviaram: 0, e: 0 };
+      poloMap[key].enviaram += (p.enviaram || p.e || 0);
+      poloMap[key].e = poloMap[key].enviaram;
+    });
+    // Status = mais crítico
+    Object.entries(s.status_ordem || {}).forEach(([o,st]) => {
+      merged.status_ordem[`${s.semestre}·${o}`] = st;
+    });
+  });
+  merged.kpis.pendentes = merged.kpis.total - merged.kpis.enviaram;
+  merged.polo_stats = Object.values(poloMap).sort((a,b) => (b.pend||0)-(a.pend||0));
+  merged.kpis.total_polos = merged.polo_stats.length;
+  merged.kpis.polos_ok = merged.polo_stats.filter(p => (p.pend||0)===0).length;
+  return merged;
+}
+
+function _getSemKpis() {
+  // Retorna kpis do semestre selecionado (ou DB.kpis se sem seletor)
+  if (_SEM_DB) return _SEM_DB.kpis || DB.kpis;
+  return DB.kpis;
+}
+
+function _getSemPoloStats() {
+  if (_SEM_DB) return _SEM_DB.polo_stats || DB.polo_stats;
+  return DB.polo_stats;
+}
+
+function _getSemPorOrdem() {
+  if (_SEM_DB) return _SEM_DB.por_ordem || DB.por_ordem;
+  return DB.por_ordem;
+}
+
+function _getSemPrazos() {
+  if (_SEM_DB && _SEM_DB.prazos && Object.keys(_SEM_DB.prazos).length) return _SEM_DB.prazos;
+  return DB.prazos;
+}
+
+function _getSemStatusOrdem() {
+  if (_SEM_DB) return _SEM_DB.status_ordem || DB.status_ordem;
+  return DB.status_ordem;
+}
+
+function _getSemTutores() {
+  // Filtra tutores pelo semestre selecionado — usa campo 's' nos envios
+  if (!_SEM_ATUAL || _SEM_ATUAL === 'Ambos') return DB.tutores;
+  const sem = _SEM_ATUAL;
+  return (DB.tutores || []).map(t => {
+    const histSem = (t.hist || []).filter(h => (h.s || DB.semestre || '') === sem);
+    const reais   = [...new Set(histSem.map(h => h.p))];
+    const te      = reais.length;
+    const tp      = t.tp || 0;
+    const pct     = tp ? Math.round(te/tp*100*10)/10 : 0;
+    // Situação do tutor neste semestre
+    const statusOrd = _getSemStatusOrdem();
+    const porOrdem  = {};
+    histSem.forEach(h => { porOrdem[h.o] = (porOrdem[h.o]||0)+1; });
+    const ordsVenc  = Object.keys(statusOrd).filter(o => statusOrd[o]==='VENCIDO');
+    let sit = 'urgente';
+    if (!ordsVenc.length) sit = te > 0 ? 'ok' : 'atrasado';
+    else if (ordsVenc.every(o => (porOrdem[o]||0)>0)) sit = 'ok';
+    else if (ordsVenc.some(o => (porOrdem[o]||0)>0)) sit = 'atrasado';
+
+    return { ...t, hist: histSem, real: reais, te, pct, sit, situacao: sit,
+             al: histSem.reduce((s,h)=>s+(h.a||0),0), por_ordem: porOrdem, porOrdem: porOrdem,
+             pend: (t.pend||[]).filter(p => !reais.includes(p)) };
+  });
+}
+
+function _renderComSemestre() {
+  // Re-renderiza as páginas que estão atualmente visíveis + atualiza KPIs
+  renderKPIs();
+  renderOfensores();
+  renderMes();
+  renderCatOverview();
+  renderOrdens();
+  filterOrdemTbl(document.getElementById('ordem-search')?.value||'');
+  renderPracKPIs();
+  renderCatPracBars();
+  renderTopPrac();
+  filterPrac(document.getElementById('prac-search')?.value||'');
+  filterPolos(document.getElementById('polo-search')?.value||'');
+  filterTutores(document.getElementById('tutor-search')?.value||'');
+}
+// ── FIM CONTROLE DE SEMESTRE ─────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
   DB=DATA_JSON_PLACEHOLDER;
@@ -1512,6 +1685,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderPracKPIs();renderCatPracBars();renderTopPrac();filterPrac('');
   filterPolos('');filterTutores('');
   renderGerenciamento();populateFilters();
+  initSemestres();
 });
 
 </script>
