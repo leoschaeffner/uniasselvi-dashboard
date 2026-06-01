@@ -380,7 +380,10 @@ def processar(p1, p2):
     col_email= next((c for c in df_t.columns if 'E-MAIL' in str(c).upper() or 'EMAIL' in str(c).upper()), None)
     print(f"[{ts()}] CONTROLE colunas detectadas: polo='{col_polo}' cursos='{col_cur}' email='{col_email}'")
     print(f"[{ts()}] CONTROLE todas colunas: {list(df_t.columns[:20])}")
-    col_cat  = next((c for c in df_t.columns if 'CATEGORIA' in str(c).upper()), None)
+    col_cat    = next((c for c in df_t.columns if 'CATEGORIA' in str(c).upper()), None)
+    col_inicio = next((c for c in df_t.columns if str(c).upper().strip() in ('INÍCIO','INICIO')), None)
+    col_whats  = next((c for c in df_t.columns if 'WHATSAPP' in str(c).upper()), None)
+    col_chapa  = next((c for c in df_t.columns if 'CHAPA' in str(c).upper()), None)
     # PATCH 1: Detectar coluna CH SEMANAL na planilha de controle
     col_ch = next((c for c in df_t.columns if str(c).upper().strip() == 'CH SEMANAL' or
                    ('CH' in str(c).upper() and 'SEMAL' in str(c).upper())), None)
@@ -392,7 +395,9 @@ def processar(p1, p2):
         print(f"[{ts()}] CH SEMANAL não encontrada — colunas CH disponíveis: {[c for c in df_t.columns if 'CH' in str(c).upper()]}")
     # Filtrar tutores ativos: incluir Ativo + afastamentos temporários (Licença Maternidade, etc.)
     # Excluir apenas Inativo e Desligado explicitamente
-    _SITUACOES_EXCLUIR = {'inativo', 'desligado', 'rescindido', 'demitido', 'encerrado'}
+    _SITUACOES_EXCLUIR = {'inativo', 'desligado', 'rescindido', 'demitido', 'encerrado',
+                           'admissão prox.mês', 'admissao prox.mes', 'em admissão',
+                           'pendente', 'aguardando'}
     if col_sit:
         _sit_norm = df_t[col_sit].astype(str).str.strip().str.lower()
         df_at = df_t[~_sit_norm.isin(_SITUACOES_EXCLUIR)].copy()
@@ -459,6 +464,14 @@ def processar(p1, p2):
     df_p['_ALUNOS'] = pd.to_numeric(df_p[c_aluno], errors='coerce').fillna(0).astype(int) if c_aluno else 0
     df_p['_CAT']    = df_p[c_cat].astype(str).str.strip() if c_cat else ''
     df_p['_ORDEM']  = df_p[c_ordem].astype(str).str.strip() if c_ordem else 'Ordem 1'
+    # ── MEC Cache ────────────────────────────────────────────────────────────
+    mec_cache = {}
+    mec_file = os.path.join(SCRIPT_DIR, 'mec_cache.json')
+    if os.path.isfile(mec_file):
+        with open(mec_file, encoding='utf-8') as f: mec_cache = json.load(f)
+        print(f"[{ts()}] MEC cache: {len(mec_cache)} tutores")
+    # ── Fim MEC Cache ─────────────────────────────────────────────────────────
+
     catalogo_oficial = {}
     cat_file = os.path.join(SCRIPT_DIR, 'catalogo_oficial.json')
     if os.path.isfile(cat_file):
@@ -759,7 +772,11 @@ def processar(p1, p2):
                 if not any(o in ordem_val for o in ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5']):
                     ordem_val = 'Ordem 1'
                 _data_str = str(data)[:10] if pd.notna(data) else None
-                _sem_envio = _data_para_semestre(_data_str) or SEMESTRE_ATUAL
+                _sem_envio = _data_para_semestre(_data_str)
+                if _sem_envio is None:
+                    # Data fora de qualquer janela de semestre configurada
+                    # → atribui ao semestre mais antigo (não contamina o mais recente)
+                    _sem_envio = sorted(ALL_SEMESTRES.keys())[0]
                 enviados[chave].append({'p': p, 'd': _data_str, 'a': aluno, 'o': ordem_val, 's': _sem_envio})
     # Finalizar avisos
     avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
@@ -804,6 +821,17 @@ def processar(p1, p2):
         reais    = set(h['p'] for h in hist)
         pend     = [p for p in praticas if p not in reais]
         te = len(reais); tp = len(praticas)
+        # Enriquecimento MEC
+        _email_t = str(t.get(col_email, '') or '').strip().lower() if col_email else ''
+        _mec = mec_cache.get(_email_t, {})
+        _inicio_ctrl = t.get(col_inicio) if col_inicio else None
+        _inicio_str = None
+        if _inicio_ctrl and str(_inicio_ctrl) not in ('nan','NaT','None',''):
+            try:
+                _inicio_str = _inicio_ctrl.strftime('%Y-%m-%d') if hasattr(_inicio_ctrl,'strftime') else str(_inicio_ctrl)[:10]
+            except: pass
+        if not _inicio_str: _inicio_str = _mec.get('admissao')
+
         tutores.append({
             'n': str(t.get(col_nome, '') or ''),
             'p': str(t.get(col_polo, '') or ''),
@@ -811,7 +839,20 @@ def processar(p1, p2):
             'tp': tp, 'te': te,
             'pend': pend, 'real': sorted(reais), 'hist': hist,
             'pct': round(te / tp * 100, 1) if tp else 0,
-            'ch_semanal': _parse_ch(t.get(col_ch)) if col_ch else None,  # PATCH 1
+            'ch_semanal': _parse_ch(t.get(col_ch)) if col_ch else None,
+            # Campos MEC / CONTROLE
+            'inicio': _inicio_str,
+            'lattes_url': _mec.get('lattes_url'),
+            'lattes_id': _mec.get('lattes_id'),
+            'titulacao': _mec.get('titulacao'),
+            'graduacao': _mec.get('graduacao'),
+            'especializacao': _mec.get('especializacao'),
+            'mestrado': _mec.get('mestrado'),
+            'doutorado': _mec.get('doutorado'),
+            'exp_fora_meses': _mec.get('exp_fora_meses'),
+            'exp_tutor_uni_meses': _mec.get('exp_tutor_uni_meses'),
+            'whatsapp': str(t.get(col_whats,'') or '') if col_whats else None,
+            'chapa': str(t.get(col_chapa,'') or '') if col_chapa else None,
         })
     seen = {}; tutores_dedup = []
     for t in tutores:
