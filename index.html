@@ -273,7 +273,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 </div></div>
 
 <!-- ═══ GERENCIAMENTO — VISÃO GERAL ══════════════════════════════════════ -->
-<div class="page" <div class="page" id="page-tutores-mec"><div class="container">
+<div class="page" id="page-tutores-mec"><div class="container">
   <div class="ph"><div class="ph-title">Gestão de Tutores</div><div class="ph-sub" id="tutmec-sub">—</div></div>
   <div class="card" style="margin-bottom:12px">
     <div class="toolbar">
@@ -557,7 +557,7 @@ function renderOfensores(){
   const el=document.getElementById('pv-ofensores');const sb=document.getElementById('pv-stat-bar');
   const k=DB.kpis||{total:0,enviaram:0,atrasados:0,urgentes:0};const total=k.total||1;
   sb.innerHTML=`<div style="width:${k.enviaram/total*100}%;background:var(--ok)"></div><div style="width:${k.atrasados/total*100}%;background:var(--yellow)"></div><div style="width:${k.urgentes/total*100}%;background:var(--red)"></div>`;
-  const urg=(DB.tutores||[]).filter(t=>gTS(t)==='urgente').slice(0,8);
+  const urg=(DB.tutores||[]).filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado').slice(0,8);
   el.innerHTML=urg.length?`<div class="sec-label">🚨 Tutores Urgentes (top 8)</div>`+urg.map(t=>`<div class="rank-item" style="cursor:pointer" onclick="openTutorModal('${esc(t.n)}')"><div class="rank-pos" style="color:var(--red)">!</div><div class="rank-name">${t.n}</div><div style="font-size:10px;color:var(--muted)">${t.p}</div></div>`).join(''):`<div style="color:var(--ok);font-size:13px;text-align:center;padding:20px">✓ Nenhum tutor urgente</div>`;
 }
 function renderMes(){
@@ -649,7 +649,7 @@ function openListModal(tipo){
   const tutores=DB.tutores||[];let lista,titulo,sub;
   if(tipo==='todos'){lista=tutores;titulo='Todos os Tutores';sub=lista.length+' tutores ativos';}
   else if(tipo==='enviaram'){lista=tutores.filter(t=>t.te>0);titulo='Tutores que Enviaram';sub=lista.length+' enviaram portfólio';}
-  else if(tipo==='urgentes'){lista=tutores.filter(t=>gTS(t)==='urgente');titulo='⚠️ Tutores Urgentes';sub=lista.length+' com prazo crítico';}
+  else if(tipo==='urgentes'){lista=tutores.filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado');titulo='⚠️ Tutores Urgentes';sub=lista.length+' com prazo crítico';}
   else if(tipo==='atrasados'){lista=tutores.filter(t=>gTS(t)==='atrasado');titulo='🕐 Tutores Atrasados';sub=lista.length+' com prazo vencido';}
   else if(tipo==='polos'){
     const polos=[...DB.polo_stats||[]].sort((a,b)=>(b.pend||0)-(a.pend||0));window._ml=polos;
@@ -1654,8 +1654,11 @@ function _mergeAllSemestres() {
 }
 
 function _getSemKpis() {
-  // Retorna kpis do semestre selecionado (ou DB.kpis se sem seletor)
-  if (_SEM_DB) return _SEM_DB.kpis || DB.kpis;
+  // Retorna kpis do semestre selecionado, com fallback para DB.kpis em campos ausentes
+  if (_SEM_DB && _SEM_DB.kpis) {
+    // Campos exclusivos do DB.kpis global (calculados no processar.py principal)
+    return Object.assign({}, DB.kpis, _SEM_DB.kpis);
+  }
   return DB.kpis;
 }
 
@@ -1684,7 +1687,7 @@ function _getSemTutores() {
   if (!_SEM_ATUAL || _SEM_ATUAL === 'Ambos') return DB.tutores;
   const sem = _SEM_ATUAL;
   return (DB.tutores || []).map(t => {
-    const histSem = (t.hist || []).filter(h => (h.s || DB.semestre || '') === sem);
+    const histSem = (t.hist || []).filter(h => (h.s || (DB.todos_semestres||[])[0] || DB.semestre || '') === sem);
     const reais   = [...new Set(histSem.map(h => h.p))];
     const te      = reais.length;
     const tp      = t.tp || 0;
@@ -1746,7 +1749,7 @@ function filterTutoresMec(q) {
 
   let d = tutores.filter(t => !t._anonimo);
   if (q) d = d.filter(t => (t.n + t.p + (t.c||'')).toLowerCase().includes(q));
-  if (cat) d = d.filter(t => (t.cf || t.c || '') === cat);
+  if (cat) d = d.filter(t => (t.cf||'')===cat||(t.c||'')===cat);
   if (tit === 'sem_lattes') d = d.filter(t => !t.lattes_id && !t.lattes_url);
   else if (tit) d = d.filter(t => t.titulacao === tit);
   if (port === 'ok') d = d.filter(t => t.te > 0);
@@ -1775,6 +1778,7 @@ function filterTutoresMec(q) {
         <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">CH</th>
         <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Admissão</th>
         <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Portfólio</th>
+        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Gerenc.</th>
         <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Lattes</th>
         <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Ações</th>
       </tr>
@@ -1822,6 +1826,17 @@ function filterTutoresMec(q) {
         <div style="height:4px;background:var(--border);border-radius:2px;margin-top:3px">
           <div style="height:4px;background:${portColor};border-radius:2px;width:${portPct}%"></div>
         </div>
+      </td>
+      <td style="padding:10px 8px;text-align:center">
+        ${(()=>{
+          const gerTutor=(DB.ger_ofertas||[]).filter(g=>(g.tutor||'').toLowerCase()===t.n.toLowerCase());
+          const gerTotal=gerTutor.length;
+          const gerOk=gerTutor.filter(g=>g.gerenciado).length;
+          if(!gerTotal)return '<span style="color:var(--muted);font-size:10px">—</span>';
+          const pct=Math.round(gerOk/gerTotal*100);
+          const cor=pct===100?'var(--green)':pct>0?'var(--yellow)':'var(--red)';
+          return `<span style="font-size:11px;font-weight:700;color:${cor}">${gerOk}/${gerTotal}</span><div style="font-size:9px;color:var(--muted)">${pct}%</div>`;
+        })()}
       </td>
       <td style="padding:10px 8px;text-align:center">${lattesBadge}</td>
       <td style="padding:10px 8px;text-align:center">
