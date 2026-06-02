@@ -544,6 +544,17 @@ function initSenha(){
 
 const DATA_JSON_PLACEHOLDER = 'DATA_GOES_HERE';
 let DB;
+// Inicializar senha imediatamente — não depende do DOMContentLoaded
+(function(){
+  try{
+    if(sessionStorage.getItem('uni_auth')==='1'||localStorage.getItem('uni_auth')==='1'){
+      const ov=document.getElementById('senha-overlay');
+      if(ov) ov.style.display='none';
+    } else {
+      setTimeout(()=>{const inp=document.getElementById('senha-input');if(inp)inp.focus();},200);
+    }
+  }catch(e){}
+})();
 let poloSortK='pend',poloSortA=false,tutorSortK='n',tutorSortA=true,pracSortK='pend_n',pracSortA=false,ordemSortK='n',ordemSortA=true;
 let poloData=[],tutorData=[],pracData=[],ordemData=[];
 let gerPoloData=[],gerContrData=[],gerAgendaData=[],gerDetData=[];
