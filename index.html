@@ -610,7 +610,7 @@ function renderOrdemTbl(data){
 
 // ── PORTFÓLIOS PRÁTICAS ───────────────────────────────────────────────────────
 function renderPracKPIs(){const pracs=getPraticas();const total=pracs.length;const complete=pracs.filter(p=>p.pend_n===0).length;document.getElementById('pp-kpis').innerHTML=`<div class="kpi kpi-green"><div class="kpi-label">Total Práticas</div><div class="kpi-value">${total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">100% Enviadas</div><div class="kpi-value">${complete}</div></div><div class="kpi kpi-red"><div class="kpi-label">Com Pendências</div><div class="kpi-value">${total-complete}</div></div>`;}
-function renderCatPracBars(){const el=document.getElementById('pp-cat-bars');const cats={};(getPraticas()).forEach(p=>{const c=p.c||'Outro';if(!cats[c])cats[c]={t:0,e:0};cats[c].t++;if(p.pend_n===0)cats[c].e++});el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{const pct=v.t?Math.round(v.e/v.t*100):0;return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</div><div style="font-size:10px;color:var(--muted)">${v.e}/${v.t} práticas completas</div></div>${progCell(pct)}</div>`;}).join('');}
+function renderCatPracBars(){const el=document.getElementById('pp-cat-bars');const cats={};const _normC=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;(getPraticas()).forEach(p=>{const c=_normC(p.c||'Outro');if(!cats[c])cats[c]={t:0,e:0};cats[c].t++;if(p.pend_n===0)cats[c].e++});el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{const pct=v.t?Math.round(v.e/v.t*100):0;return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</div><div style="font-size:10px;color:var(--muted)">${v.e}/${v.t} práticas completas</div></div>${progCell(pct)}</div>`;}).join('');}
 let _rankTab='pend';var tutoresFiltrados=[];
 function switchRankTab(tab){_rankTab=tab;document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('active'));document.getElementById('rtab-'+tab).classList.add('active');var btnExp=document.getElementById('btn-export-prac');if(btnExp)btnExp.onclick=function(){exportPraticas(tab);};renderTopPrac();}
 function renderTopPrac(){
@@ -622,11 +622,11 @@ function renderTopPrac(){
   const max=pracs.length?Math.max(...pracs.map(p=>_rankTab==='pend'?p.pend_n:p.env_n)):1;
   el.innerHTML=pracs.map((p,i)=>'<div class="rank-item"><div class="rank-pos">'+(i+1)+'</div><div style="flex:1;min-width:0"><div class="rank-name" title="'+p.n+'">'+p.n+'</div><div style="font-size:9px;color:var(--muted)">'+(p.c||'')+'</div></div><div class="rank-bar-wrap"><div class="rank-bar" style="width:'+(((_rankTab==='pend'?p.pend_n:p.env_n)/max*100))+'%;background:'+color+'"></div></div><div class="rank-val" style="color:'+color+'">'+valFn(p)+'</div></div>').join('');
 }
-function filterPrac(q){q=q.toLowerCase();const cat=document.getElementById('prac-cat-sel').value;let d=getPraticas();if(q)d=d.filter(p=>(p.n+p.c).toLowerCase().includes(q));if(cat)d=d.filter(p=>p.c===cat);pracData=d;renderPracTbl(d);}
+function filterPrac(q){q=q.toLowerCase();const cat=document.getElementById('prac-cat-sel').value;let d=getPraticas();if(q)d=d.filter(p=>(p.n+p.c).toLowerCase().includes(q));if(cat)d=d.filter(p=>(window._CAT_NORM_MAP&&window._CAT_NORM_MAP[p.c]||p.c)===cat);pracData=d;renderPracTbl(d);}
 function sortPrac(k){if(pracSortK===k)pracSortA=!pracSortA;else{pracSortK=k;pracSortA=k==='n'}filterPrac(document.getElementById('prac-search').value)}
 function renderPracTbl(data){
   const sorted=[...data].sort((a,b)=>{const va=a[pracSortK],vb=b[pracSortK];if(typeof va==='string')return pracSortA?va.localeCompare(vb):vb.localeCompare(va);return pracSortA?va-vb:vb-va});
-  document.getElementById('prac-tbody').innerHTML=sorted.map(p=>`<tr><td><strong>${p.n}</strong></td><td style="font-size:11px">${p.c||'—'}</td><td style="text-align:right">${p.env_n}</td><td style="text-align:right;color:var(--red)">${p.pend_n}</td><td>${progCell(p.pct)}</td></tr>`).join('');
+  document.getElementById('prac-tbody').innerHTML=sorted.map(p=>`<tr><td><strong>${p.n}</strong></td><td style="font-size:11px">${(window._CAT_NORM_MAP&&window._CAT_NORM_MAP[p.c])||p.c||'—'}</td><td style="text-align:right">${p.env_n}</td><td style="text-align:right;color:var(--red)">${p.pend_n}</td><td>${progCell(p.pct)}</td></tr>`).join('');
   document.getElementById('prac-count').textContent=data.length+' prática'+(data.length!==1?'s':'');if(!data.length)document.getElementById('prac-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma prática encontrada.</td></tr>';
 }
 
@@ -1375,7 +1375,7 @@ function _gradId(uf){return 'grad_'+uf;}
 
 function populateFilters(){
   // Normalizar categorias: usar apenas o nome curto padronizado (ex: "BIO-FAR (Multidisciplinar I)")
-  const _CAT_NORM_MAP = {
+  window._CAT_NORM_MAP = window._CAT_NORM_MAP || {}; const _CAT_NORM_MAP = window._CAT_NORM_MAP = {
     'Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
     'Multidisciplinar I - Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
     'Multidisciplinar I – Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
