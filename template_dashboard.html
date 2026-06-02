@@ -706,7 +706,10 @@ function openTutorModal(nome){
   document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');
 }
 function openPoloModal(nome){
-  const tutores=(DB.tutores||[]).filter(t=>t.p===nome);const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,pend:tutores.filter(t=>t.te===0).length,alunos:tutores.reduce((s,t)=>s+(t.al||0),0)};
+  const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
+  const poloStats=(DB.polo_stats||[]).find(p=>(p.n||p.polo||p.POLO||'')==nome)||{};
+  const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,pend:tutores.filter(t=>t.te===0).length,
+    alunos:poloStats.a||poloStats.alunos||tutores.reduce((s,t)=>s+(t.al||0),0)};
   document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
   let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div><div class="sec-label">Tutores</div>`;
   html+=tutores.map(t=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)"><div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c||'—'}</div></div><div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>${pctBadge(t.pct)}</div>`).join('');
