@@ -701,7 +701,7 @@ function renderCatPracBars(){
     const hubKey=Object.keys(hubCat).find(k=>_normC(k)===c||k===c)||'';
     const alunos=hubCat[hubKey]||0;
     const alunosStr=alunos?`<span style="color:var(--muted);font-size:10px">${fmtNum(alunos)} alunos</span>`:'';
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)" onclick="setFilterPrac('${c.replace(/'/g,'\\'')}')">
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" data-cat="${c.replace(/"/g,'&quot;')}" onclick="setFilterPrac(this.getAttribute('data-cat'))">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-weight:600;font-size:13px;white-space:nowrap">${c}</span>
