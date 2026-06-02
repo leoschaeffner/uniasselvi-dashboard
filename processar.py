@@ -1458,45 +1458,6 @@ def enriquecer_tutores(dados, lotacao):
             })
     dados['tutores'] = tutores
 
-    # ── Pré-calcular gerenciamento por tutor e injetar nos dados ─────────────
-    import unicodedata as _ud4, re as _re5
-    def _norm_ger(s):
-        s = _ud4.normalize('NFD', str(s or '').lower().strip())
-        s = ''.join(ch for ch in s if _ud4.category(ch) != 'Mn')
-        s = _re5.sub(r'\s*\(\d+\)\s*$', '', s).strip()
-        return _re5.sub(r'\s+', ' ', s)
-    def _fl_ger(s):
-        pts = _norm_ger(s).split()
-        return f"{pts[0]} {pts[-1]}" if len(pts) >= 2 else _norm_ger(s)
-
-    _ger_idx = {}
-    for _g in dados.get('ger_ofertas', []):
-        _gn = (_g.get('tutor') or '').strip()
-        if not _gn: continue
-        for _k in [_norm_ger(_gn), _fl_ger(_gn)]:
-            if _k not in _ger_idx:
-                _ger_idx[_k] = {'ger': 0, 'total': 0}
-            _ger_idx[_k]['total'] += 1
-            if _g.get('gerenciado'):
-                _ger_idx[_k]['ger'] += 1
-
-    _ger_matched = 0
-    for _t in dados['tutores']:
-        _tn = _t.get('n', '')
-        _gd = _ger_idx.get(_norm_ger(_tn)) or _ger_idx.get(_fl_ger(_tn))
-        if _gd:
-            _t['ger_total'] = _gd['total']
-            _t['ger_ok']    = _gd['ger']
-            _t['ger_pct']   = round(_gd['ger'] / _gd['total'] * 100) if _gd['total'] else 0
-            _ger_matched += 1
-        else:
-            _t['ger_total'] = 0
-            _t['ger_ok']    = 0
-            _t['ger_pct']   = None  # None = sem dados de gerenciamento
-
-    print(f"[{ts()}] Gerenciamento injetado: {_ger_matched}/{len(dados['tutores'])} tutores")
-    # ── Fim gerenciamento por tutor ───────────────────────────────────────────
-
     # avisos_portfolio já está em dados (vindo de processar()) — não sobrescrever com []
     if 'avisos_portfolio' not in dados:
         dados['avisos_portfolio'] = []
@@ -2212,6 +2173,40 @@ if __name__ == '__main__':
             ger_dados = processar_gerenciamento(p3)
             dados.update(ger_dados)
             dados['tem_gerenciamento'] = True
+            # ── Injetar gerenciamento nos tutores (ger_pct, ger_ok, ger_total) ──────
+            import unicodedata as _ud5, re as _re6
+            def _norm_ger2(s):
+                s = _ud5.normalize('NFD', str(s or '').lower().strip())
+                s = ''.join(ch for ch in s if _ud5.category(ch) != 'Mn')
+                s = _re6.sub(r'\s*\(\d+\)\s*$', '', s).strip()
+                return _re6.sub(r'\s+', ' ', s)
+            def _fl_ger2(s):
+                pts = _norm_ger2(s).split()
+                return f"{pts[0]} {pts[-1]}" if len(pts) >= 2 else _norm_ger2(s)
+            _ger_idx2 = {}
+            for _g2 in dados.get('ger_ofertas', []):
+                _gn2 = (_g2.get('tutor') or '').strip()
+                if not _gn2: continue
+                for _k2 in [_norm_ger2(_gn2), _fl_ger2(_gn2)]:
+                    if _k2 not in _ger_idx2:
+                        _ger_idx2[_k2] = {'ger': 0, 'total': 0}
+                    _ger_idx2[_k2]['total'] += 1
+                    if _g2.get('gerenciado'): _ger_idx2[_k2]['ger'] += 1
+            _ger_matched2 = 0
+            for _t2 in dados.get('tutores', []):
+                _tn2 = _t2.get('n', '')
+                _gd2 = _ger_idx2.get(_norm_ger2(_tn2)) or _ger_idx2.get(_fl_ger2(_tn2))
+                if _gd2 and _gd2['total'] > 0:
+                    _t2['ger_total'] = _gd2['total']
+                    _t2['ger_ok']    = _gd2['ger']
+                    _t2['ger_pct']   = round(_gd2['ger'] / _gd2['total'] * 100)
+                    _ger_matched2 += 1
+                else:
+                    _t2['ger_total'] = 0
+                    _t2['ger_ok']    = 0
+                    _t2['ger_pct']   = None
+            print(f"[{ts()}] Gerenciamento injetado nos tutores: {_ger_matched2}/{len(dados.get('tutores',[]))} matches")
+            # ────────────────────────────────────────────────────────────────────────
             # Enriquecer ger_ofertas com ch_semanal (join por nome normalizado)
             def _norm_nome(s):
                 import unicodedata
