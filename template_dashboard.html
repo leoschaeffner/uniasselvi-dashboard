@@ -516,6 +516,31 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
   </div>
 </div><script>
+const _HASH='49d386eb9415e992d18baf30a40078e85a0e1f36a7509d0c798f2aff4550b476';
+async function _calcHash(msg){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function verificarSenha(){
+  const val=document.getElementById('senha-input').value.trim();
+  if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
+  const hash=await _calcHash(val);
+  if(hash===_HASH){
+    try{sessionStorage.setItem('uni_auth','1');}catch(e){}
+    try{localStorage.setItem('uni_auth','1');}catch(e){}
+    document.getElementById('senha-overlay').style.display='none';
+    document.getElementById('senha-input').value='';
+  }else{
+    document.getElementById('senha-err').textContent='Senha incorreta.';
+    document.getElementById('senha-input').value='';
+    document.getElementById('senha-input').focus();
+  }
+}
+function initSenha(){
+  const ok=(()=>{try{return sessionStorage.getItem('uni_auth')||localStorage.getItem('uni_auth');}catch(e){return null;}})();
+  if(ok==='1'){document.getElementById('senha-overlay').style.display='none';}
+  else{setTimeout(()=>document.getElementById('senha-input').focus(),200);}
+}
 
 const DATA_JSON_PLACEHOLDER = 'DATA_GOES_HERE';
 let DB;
@@ -1537,31 +1562,6 @@ function populateFilters(){
 }
 function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');}
 function initDark(){if(localStorage.getItem('dark')==='1')document.body.classList.add('dark')}
-const _HASH='49d386eb9415e992d18baf30a40078e85a0e1f36a7509d0c798f2aff4550b476';
-async function _calcHash(msg){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-async function verificarSenha(){
-  const val=document.getElementById('senha-input').value.trim();
-  if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
-  const hash=await _calcHash(val);
-  if(hash===_HASH){
-    try{sessionStorage.setItem('uni_auth','1');}catch(e){}
-    try{localStorage.setItem('uni_auth','1');}catch(e){}
-    document.getElementById('senha-overlay').style.display='none';
-    document.getElementById('senha-input').value='';
-  }else{
-    document.getElementById('senha-err').textContent='Senha incorreta.';
-    document.getElementById('senha-input').value='';
-    document.getElementById('senha-input').focus();
-  }
-}
-function initSenha(){
-  const ok=(()=>{try{return sessionStorage.getItem('uni_auth')||localStorage.getItem('uni_auth');}catch(e){return null;}})();
-  if(ok==='1'){document.getElementById('senha-overlay').style.display='none';}
-  else{setTimeout(()=>document.getElementById('senha-input').focus(),200);}
-}
 
 // ── EXPORTAR CSV ──────────────────────────────────────────────────────────────
 function exportCSV(rows,filename){if(!rows||!rows.length){alert('Sem dados para exportar');return;}const headers=Object.keys(rows[0]);const escape=v=>{v=String(v===null||v===undefined?'':v);if(v.includes(';')||v.includes('"')||v.includes('\n'))v='"'+v.replace(/"/g,'""')+'"';return v;};const sep=';';const csv=[headers.map(escape).join(sep),...rows.map(r=>headers.map(h=>escape(r[h])).join(sep))].join('\n');const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);}
