@@ -49,6 +49,7 @@ _SEMESTRES_DEFAULT = {
     },
 }
 
+_DISCIPLINAS_POR_ORDEM_GLOBAL = {}
 def _carregar_semestres():
     import os as _os, json as _json
     _cfg_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'config_semestre.json')
@@ -63,6 +64,15 @@ def _carregar_semestres():
                 _sem_key = _cfg['semestre']
                 _sems[_sem_key] = {'prazos': _cfg.get('prazos', {}), 'periodos': _cfg.get('periodos', {})}
             print(f"  [CONFIG] Semestres carregados: {sorted(_sems.keys())}")
+            # Carregar mapeamento de disciplinas por ordem (opcional)
+            _disc_file = _cfg.get('disciplinas_por_ordem')
+            if _disc_file:
+                _disc_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _disc_file)
+                if _os.path.isfile(_disc_path):
+                    with open(_disc_path, encoding='utf-8') as _fd:
+                        _DISCIPLINAS_POR_ORDEM_GLOBAL.update(_json.load(_fd))
+                    _total_disc = sum(len(v) for ordens in _DISCIPLINAS_POR_ORDEM_GLOBAL.values() for v in ordens.values())
+                    print(f"  [CONFIG] Disciplinas por ordem: {_total_disc} total")
         except Exception as _e:
             print(f"  [AVISO] Erro ao ler config_semestre.json: {_e} — usando padrão")
     return _sems
@@ -1205,6 +1215,7 @@ def processar(p1, p2):
         'semestre': SEMESTRE_ATUAL,
         'todos_semestres': sorted(ALL_SEMESTRES.keys()),
         'dados_por_semestre': _dados_por_semestre,
+        'disciplinas_por_ordem': _DISCIPLINAS_POR_ORDEM_GLOBAL,
     })
 
 
@@ -1446,6 +1457,46 @@ def enriquecer_tutores(dados, lotacao):
                 'aviso_count': av['count'],
             })
     dados['tutores'] = tutores
+
+    # ── Pré-calcular gerenciamento por tutor e injetar nos dados ─────────────
+    import unicodedata as _ud4, re as _re5
+    def _norm_ger(s):
+        s = _ud4.normalize('NFD', str(s or '').lower().strip())
+        s = ''.join(ch for ch in s if _ud4.category(ch) != 'Mn')
+        s = _re5.sub(r'\s*\(\d+\)\s*$', '', s).strip()
+        return _re5.sub(r'\s+', ' ', s)
+    def _fl_ger(s):
+        pts = _norm_ger(s).split()
+        return f"{pts[0]} {pts[-1]}" if len(pts) >= 2 else _norm_ger(s)
+
+    _ger_idx = {}
+    for _g in dados.get('ger_ofertas', []):
+        _gn = (_g.get('tutor') or '').strip()
+        if not _gn: continue
+        for _k in [_norm_ger(_gn), _fl_ger(_gn)]:
+            if _k not in _ger_idx:
+                _ger_idx[_k] = {'ger': 0, 'total': 0}
+            _ger_idx[_k]['total'] += 1
+            if _g.get('gerenciado'):
+                _ger_idx[_k]['ger'] += 1
+
+    _ger_matched = 0
+    for _t in dados['tutores']:
+        _tn = _t.get('n', '')
+        _gd = _ger_idx.get(_norm_ger(_tn)) or _ger_idx.get(_fl_ger(_tn))
+        if _gd:
+            _t['ger_total'] = _gd['total']
+            _t['ger_ok']    = _gd['ger']
+            _t['ger_pct']   = round(_gd['ger'] / _gd['total'] * 100) if _gd['total'] else 0
+            _ger_matched += 1
+        else:
+            _t['ger_total'] = 0
+            _t['ger_ok']    = 0
+            _t['ger_pct']   = None  # None = sem dados de gerenciamento
+
+    print(f"[{ts()}] Gerenciamento injetado: {_ger_matched}/{len(dados['tutores'])} tutores")
+    # ── Fim gerenciamento por tutor ───────────────────────────────────────────
+
     # avisos_portfolio já está em dados (vindo de processar()) — não sobrescrever com []
     if 'avisos_portfolio' not in dados:
         dados['avisos_portfolio'] = []
@@ -2238,6 +2289,9 @@ if __name__ == '__main__':
                 if 'ger_kpis' in dados:
                     dados['ger_kpis']['total_alunos_matriculados'] = alunos_hub['total_distintos']
                     dados['ger_kpis']['alunos_mat_fonte'] = 'hub_csv'
+                    # Atualizar também DB.kpis.total_alunos com o valor correto do hub
+                    if 'kpis' in dados:
+                        dados['kpis']['total_alunos'] = alunos_hub['total_distintos']
                     print(f"[{ts()}] KPI alunos substituído: {alunos_hub['total_distintos']:,} (matrículas distintas)")
                 # BUG 3 FIX: enriquecer alunos por polo usando hub CSV (por_polo normalizado)
                 # Cobre polos com alunos=0 porque TOTAL_ALUNOS está zerado na lotação 2026_2
