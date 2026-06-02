@@ -566,7 +566,8 @@ function renderOfensores(){
   const el=document.getElementById('pv-ofensores');const sb=document.getElementById('pv-stat-bar');
   const k=_getSemKpis()||DB.kpis||{total:0,enviaram:0,atrasados:0,urgentes:0};const total=k.total||1;
   sb.innerHTML=`<div style="width:${k.enviaram/total*100}%;background:var(--ok)"></div><div style="width:${k.atrasados/total*100}%;background:var(--yellow)"></div><div style="width:${k.urgentes/total*100}%;background:var(--red)"></div>`;
-  const urg=(DB.tutores||[]).filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado'&&t.sit!=='?'&&t.situacao!=='?').slice(0,8);
+  const _tutUrgentes=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);
+  const urg=_tutUrgentes.filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado'&&t.c!=='Aviso de Portfólio').slice(0,8);
   el.innerHTML=urg.length?`<div class="sec-label">🚨 Tutores Urgentes (top 8)</div>`+urg.map(t=>`<div class="rank-item" style="cursor:pointer" onclick="openTutorModal('${esc(t.n)}')"><div class="rank-pos" style="color:var(--red)">!</div><div class="rank-name">${t.n}</div><div style="font-size:10px;color:var(--muted)">${t.p}</div></div>`).join(''):`<div style="color:var(--ok);font-size:13px;text-align:center;padding:20px">✓ Nenhum tutor urgente</div>`;
 }
 function renderMes(){
@@ -577,7 +578,7 @@ function renderMes(){
 }
 function renderCatOverview(){
   const el=document.getElementById('pv-cats');const cats={};
-  (DB.tutores||[]).forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
+  (_getSemTutores()||DB.tutores||[]).forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
   window._pvCats=cats;
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v],i)=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
@@ -658,7 +659,7 @@ function openListModal(tipo){
   const tutores=DB.tutores||[];let lista,titulo,sub;
   if(tipo==='todos'){lista=tutores;titulo='Todos os Tutores';sub=lista.length+' tutores ativos';}
   else if(tipo==='enviaram'){lista=tutores.filter(t=>t.te>0);titulo='Tutores que Enviaram';sub=lista.length+' enviaram portfólio';}
-  else if(tipo==='urgentes'){lista=tutores.filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado'&&t.sit!=='?'&&t.situacao!=='?');titulo='⚠️ Tutores Urgentes';sub=lista.length+' com prazo crítico';}
+  else if(tipo==='urgentes'){lista=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos'?_getSemTutores():DB.tutores||[]).filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado'&&t.c!=='Aviso de Portfólio');titulo='⚠️ Tutores Urgentes';sub=lista.length+' com prazo crítico';}
   else if(tipo==='atrasados'){lista=tutores.filter(t=>gTS(t)==='atrasado');titulo='🕐 Tutores Atrasados';sub=lista.length+' com prazo vencido';}
   else if(tipo==='polos'){
     const polos=[...DB.polo_stats||[]].sort((a,b)=>(b.pend||0)-(a.pend||0));window._ml=polos;
@@ -1679,7 +1680,17 @@ function _getSemKpis() {
 }
 
 function _getSemPoloStats() {
-  if (_SEM_DB) return _SEM_DB.polo_stats || DB.polo_stats;
+  // Para polo_stats: usar o global (DB.polo_stats) porque tem alunos enriquecidos pelo hub CSV
+  // O _SEM_DB.polo_stats calculado em _stats_semestre não tem dados de alunos
+  if (_SEM_DB && _SEM_DB.polo_stats && _SEM_DB.polo_stats.length) {
+    // Merge: usar envios/pendentes do semestre mas alunos do global
+    const globalMap = {};
+    (DB.polo_stats||[]).forEach(p => { globalMap[p.n||p.polo||''] = p; });
+    return _SEM_DB.polo_stats.map(p => {
+      const g = globalMap[p.n||p.polo||''] || {};
+      return { ...p, a: g.a||g.alunos||p.a||0, alunos: g.a||g.alunos||p.alunos||0 };
+    });
+  }
   return DB.polo_stats;
 }
 
