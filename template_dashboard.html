@@ -2045,17 +2045,20 @@ function filterTutoresMec(q) {
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
   DB=DATA_JSON_PLACEHOLDER;
-  initSenha();
   const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
   document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
   const _tsEl=document.getElementById('topbar-ts');if(_tsEl)_tsEl.textContent='Atualizado: '+DB.gerado_em;
-  renderKPIs();renderOfensores();renderMes();renderCatOverview();
-  renderAvisosPortfolio();
-  renderOrdens();filterOrdemTbl('');
-  renderPracKPIs();renderCatPracBars();renderPracCharts();renderTopPrac();filterPrac('');
-  filterPolos('');filterTutores('');
-  renderGerenciamento();populateFilters();
+  try{renderKPIs();}catch(e){console.error('renderKPIs',e);}
+  try{renderOfensores();}catch(e){console.error('renderOfensores',e);}
+  try{renderMes();}catch(e){console.error('renderMes',e);}
+  try{renderCatOverview();}catch(e){console.error('renderCatOverview',e);}
+  try{renderAvisosPortfolio();}catch(e){console.error('renderAvisosPortfolio',e);}
+  try{renderOrdens();filterOrdemTbl('');}catch(e){console.error('renderOrdens',e);}
+  try{renderPracKPIs();renderCatPracBars();renderPracCharts();renderTopPrac();filterPrac('');}catch(e){console.error('renderPrac',e);}
+  try{filterPolos('');filterTutores('');}catch(e){console.error('filterPolos/Tutores',e);}
+  try{renderGerenciamento();populateFilters();}catch(e){console.error('renderGer',e);}
   initSemestres();
+  initSenha();
 });
 
 </script>
