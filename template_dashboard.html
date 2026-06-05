@@ -289,7 +289,11 @@ body.dark .search,body.dark .sel{background:var(--surface)}
         <option value="Mestre">Mestre</option>
         <option value="Especialista">Especialista</option>
         <option value="Graduado">Graduado</option>
-        <option value="sem_lattes">Sem Lattes</option>
+      </select>
+      <select class="sel" onchange="filterTutoresMec(document.getElementById('tutmec-search').value)" id="tutmec-lattes-sel">
+        <option value="">Lattes: todos</option>
+        <option value="com">Com Lattes</option>
+        <option value="sem">Sem Lattes</option>
       </select>
       <select class="sel" onchange="filterTutoresMec(document.getElementById('tutmec-search').value)" id="tutmec-port-sel">
         <option value="">Portfólio: todos</option>
@@ -1901,12 +1905,14 @@ function filterTutoresMec(q) {
   const tit  = document.getElementById('tutmec-tit-sel')?.value || '';
   const port = document.getElementById('tutmec-port-sel')?.value || '';
   const ger  = document.getElementById('tutmec-ger-sel')?.value || '';
+  const lat  = document.getElementById('tutmec-lattes-sel')?.value || '';
 
   let d = tutores;
   if (q) d = d.filter(t => (t.n+t.p+(t.c||'')).toLowerCase().includes(q));
   if (cat) d = d.filter(t => (t.c||'') === cat);
-  if (tit === 'sem_lattes') d = d.filter(t => !t.lattes_id);
-  else if (tit) d = d.filter(t => t.titulacao === tit);
+  if (tit) d = d.filter(t => t.titulacao === tit);
+  if (lat === 'com') d = d.filter(t => !!t.lattes_id);
+  else if (lat === 'sem') d = d.filter(t => !t.lattes_id);
   if (port === 'ok')   d = d.filter(t => (t.te||0) > 0);
   else if (port === 'pend') d = d.filter(t => (t.te||0) === 0);
   if (ger === 'ok')        d = d.filter(t => t.ger_pct === 100);
@@ -1926,6 +1932,7 @@ function filterTutoresMec(q) {
     if (sk==='port')   { va=a.pct||0; vb=b.pct||0; return sa?va-vb:vb-va; }
     if (sk==='ger')    { va=a.ger_pct??-1; vb=b.ger_pct??-1; return sa?va-vb:vb-va; }
     if (sk==='admis')  { va=a.inicio||''; vb=b.inicio||''; return sa?va.localeCompare(vb):vb.localeCompare(va); }
+    if (sk==='lattes') { va=a.lattes_id?1:0; vb=b.lattes_id?1:0; return sa?va-vb:vb-va; }
     if (sk==='ch')     { va=a.ch_semanal||0; vb=b.ch_semanal||0; return sa?va-vb:vb-va; }
     return 0;
   });
@@ -1957,7 +1964,7 @@ function filterTutoresMec(q) {
         <th style="${thC}" onclick="_tutMecSort('admis')">Admissão ${arrow('admis')}</th>
         <th style="${thC}" onclick="_tutMecSort('port')">Portfólio ${arrow('port')}</th>
         <th style="${thC}" onclick="_tutMecSort('ger')">Gerenc. ${arrow('ger')}</th>
-        <th style="${thC}">Lattes</th>
+        <th style="${thC}" onclick="_tutMecSort('lattes')" style="cursor:pointer">Lattes ${arrow('lattes')}</th>
         <th style="${thC}">Ver</th>
       </tr>
     </thead>
@@ -2048,7 +2055,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   try{renderCatOverview();}catch(e){console.error('renderCatOverview',e);}
   try{renderAvisosPortfolio();}catch(e){console.error('renderAvisosPortfolio',e);}
   try{renderOrdens();filterOrdemTbl('');}catch(e){console.error('renderOrdens',e);}
-  try{renderPracKPIs();renderCatPracBars();renderPracCharts();renderTopPrac();filterPrac('');}catch(e){console.error('renderPrac',e);}
+  try{renderPracKPIs();renderCatPracBars();renderTopPrac();filterPrac('');}catch(e){console.error('renderPrac',e);}
   try{filterPolos('');filterTutores('');}catch(e){console.error('filterPolos/Tutores',e);}
   try{renderGerenciamento();populateFilters();}catch(e){console.error('renderGer',e);}
   initSemestres();
