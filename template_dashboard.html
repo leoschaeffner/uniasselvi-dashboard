@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Painel de Gestão · UNIASSELVI</title>
+<title>VinciLab · Gestão de Práticas</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--green:#006B5E;--green-l:#00A88F;--green-dim:rgba(0,107,94,.1);--yellow:#FFD100;--yellow-d:#E5BC00;--yellow-dim:rgba(255,209,0,.12);--teal:#00C9A7;--teal-dim:rgba(0,201,167,.1);--red:#dc2626;--red-dim:rgba(220,38,38,.08);--ok:#16a34a;--ok-dim:rgba(22,163,74,.1);--bg:#f4f6f8;--surface:#fff;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--dim:#9ca3af;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--radius:10px;--font:'Plus Jakarta Sans','Segoe UI',sans-serif;--mono:'Cascadia Code','Consolas',monospace;}
@@ -124,7 +124,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 </head>
 <body>
 <nav class="sidebar">
-  <div class="sidebar-brand"><div class="sidebar-logo">UNIASSELVI</div><div class="sidebar-title">Gestão de Práticas</div><div class="sidebar-sub">Tutoria Laboratorial · 2026</div></div>
+  <div class="sidebar-brand"><div class="sidebar-logo">VinciLab</div><div class="sidebar-title">Gestão de Práticas</div><div class="sidebar-sub">VinciLab · 2026</div></div>
   <!-- Seletor de semestre -->
   <div id="sem-selector" style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.1);display:none">
     <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.4);margin-bottom:6px">Semestre</div>
@@ -497,12 +497,12 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="modal-body" id="m-body"></div>
   </div>
 </div>
-<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · UNIASSELVI 2026</span><span id="lgpd-ts"></span></div>
+<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · VinciLab 2026</span><span id="lgpd-ts"></span></div>
 <div id="senha-overlay">
   <div class="senha-box">
-    <div class="senha-logo">UNIASSELVI</div>
+    <div class="senha-logo">VinciLab</div>
     <div class="senha-title">Gestão de Práticas Laboratoriais</div>
-    <div class="senha-sub">Painel de Gestão · 2026</div>
+    <div class="senha-sub">VinciLab · 2026</div>
     <input class="senha-input" type="password" id="senha-input" placeholder="Digite a senha de acesso" onkeydown="if(event.key==='Enter')verificarSenha()"/>
     <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
     <div class="senha-err" id="senha-err"></div>
@@ -1872,15 +1872,39 @@ function renderTutoresMec() {
     const _chVals=_tAll.filter(t=>t.ch_semanal).map(t=>t.ch_semanal);
     const _chMed=_chVals.length?(_chVals.reduce((a,b)=>a+b,0)/_chVals.length).toFixed(1):0;
     kpiEl.innerHTML=
+      // ── Linha 1: KPIs numéricos ─────────────────────────────────────────
       `<div class="kpi kpi-teal"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${_tAll.length}</div></div>`+
       `<div class="kpi kpi-ok"><div class="kpi-label">Com Lattes</div><div class="kpi-value">${_nLat}</div><div class="kpi-sub" style="font-size:10px;color:var(--muted)">${_nSemLat} sem Lattes</div></div>`+
-      `<div class="kpi" style="border-left:3px solid #7c3aed"><div class="kpi-label">Doutores</div><div class="kpi-value">${_nDou}</div></div>`+
-      `<div class="kpi" style="border-left:3px solid #1d4ed8"><div class="kpi-label">Mestres</div><div class="kpi-value">${_nMes}</div></div>`+
-      `<div class="kpi" style="border-left:3px solid #0369a1"><div class="kpi-label">Especialistas</div><div class="kpi-value">${_nEsp}</div></div>`+
-      `<div class="kpi" style="border-left:3px solid #374151"><div class="kpi-label">Graduados</div><div class="kpi-value">${_nGra}</div></div>`+
       `<div class="kpi kpi-green"><div class="kpi-label">Gerenc. 100%</div><div class="kpi-value">${_nGer100}</div><div class="kpi-sub" style="font-size:10px;color:var(--muted)">${_nGerPar} parcial</div></div>`+
-      `<div class="kpi kpi-teal"><div class="kpi-label">CH Média</div><div class="kpi-value">${_chMed}h</div></div>`;
-  }
+      `<div class="kpi kpi-teal"><div class="kpi-label">CH Média</div><div class="kpi-value">${_chMed}h</div></div>`+
+      // ── Donut chart de titulação ─────────────────────────────────────────
+      `<div class="kpi" style="min-width:260px;flex:1;padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+            ${(()=>{
+              const vals=[_nDou,_nMes,_nEsp,_nGra,_tAll.length-_nDou-_nMes-_nEsp-_nGra];
+              const colors=['#7c3aed','#1d4ed8','#0369a1','#374151','#e5e7eb'];
+              const total=_tAll.length||1;
+              let cum=0; const r=34,cx=40,cy=40,str=12;
+              const slices=vals.map((v,i)=>{
+                const pct=v/total; const start=cum; cum+=pct;
+                const a1=start*2*Math.PI-Math.PI/2;
+                const a2=(start+pct)*2*Math.PI-Math.PI/2;
+                if(v===0)return '';
+                const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1);
+                const x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+                const lg=pct>0.5?1:0;
+                return '<path d="M'+cx+','+cy+' L'+x1+','+y1+' A'+r+','+r+' 0 '+lg+',1 '+x2+','+y2+' Z" fill="'+colors[i]+'" opacity="0.9"/>';
+              }).join('');
+              return '<svg viewBox="0 0 80 80" width="80" height="80"><circle cx="40" cy="40" r="34" fill="var(--border)" opacity="0.3"/>'+slices+'<circle cx="40" cy="40" r="22" fill="var(--surface)"/><text x="40" y="45" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)" font-family="var(--font)">${_nDou+_nMes+_nEsp+_nGra}</text></svg>';
+            })()}
+          </div>
+          <div style="flex:1">
+            <div class="kpi-label" style="margin-bottom:8px;font-weight:700">Titulação</div>
+            ${[['Doutor',_nDou,'#7c3aed'],['Mestre',_nMes,'#1d4ed8'],['Especialista',_nEsp,'#0369a1'],['Graduado',_nGra,'#374151'],['Sem dados',_tAll.length-_nDou-_nMes-_nEsp-_nGra,'#e5e7eb']].filter(([,n])=>n>0).map(([l,n,c])=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div><span style="font-size:10px;color:var(--text)">${l}</span><span style="font-size:10px;font-weight:700;color:var(--text);margin-left:auto">${n}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>`; }
   // ── Popular filtro de categorias (usando c = nome curto do CONTROLE como value)
   const catSel = document.getElementById('tutmec-cat-sel');
   if (catSel && catSel.options.length === 1) {
