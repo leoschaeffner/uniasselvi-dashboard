@@ -226,18 +226,6 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="ph"><div class="ph-title">Portfólios — Práticas</div><div class="ph-sub">Análise por prática laboratorial</div></div>
   <div class="kpi-row" id="pp-kpis"></div>
   <div class="card"><div class="card-hdr"><div class="card-title">Por Categoria</div></div><div class="card-body" id="pp-cat-bars"></div></div>
-  <div class="card" style="padding:16px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-      <div>
-        <div class="card-title" style="margin-bottom:12px">Conclusão por Categoria</div>
-        <div id="pp-chart-cat"></div>
-      </div>
-      <div>
-        <div class="card-title" style="margin-bottom:12px">Top 8 — Mais Pendentes</div>
-        <div id="pp-chart-top"></div>
-      </div>
-    </div>
-  </div>
   <div class="card">
     <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:8px"><div class="card-title" id="pp-rank-title">🔴 Top 20 — Mais Pendências</div><button class="btn-export" id="btn-export-prac" onclick="exportPraticas('pend')" style="font-size:10px;padding:3px 8px">⬇ Exportar</button></div>
@@ -288,6 +276,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <!-- ═══ GERENCIAMENTO — VISÃO GERAL ══════════════════════════════════════ -->
 <div class="page" id="page-tutores-mec"><div class="container">
   <div class="ph"><div class="ph-title">Gestão de Tutores</div><div class="ph-sub" id="tutmec-sub">—</div></div>
+  <div class="kpi-row" id="tutmec-kpis" style="margin-bottom:12px"></div>
   <div class="card" style="margin-bottom:12px">
     <div class="toolbar" style="flex-wrap:wrap;gap:6px">
       <input class="search" type="text" placeholder="Buscar tutor, polo…" oninput="filterTutoresMec(this.value)" id="tutmec-search" style="min-width:180px;flex:1"/>
@@ -608,7 +597,7 @@ function renderKPIs(){
     <div class="kpi kpi-ok kpi-link" onclick="openListModal('enviaram')"><div class="kpi-label">Enviaram</div><div class="kpi-value">${k.enviaram}</div><div class="kpi-detail">${pct}% do total</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
-    <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos (por prática)</div><div class="kpi-value">${fmtNum(k.total_alunos||(DB.ger_kpis||{}).total_alunos_matriculados||0)}</div><div class="kpi-detail" style="color:var(--yellow)">⚠ clique p/ ver por curso</div></div>
+    <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos nas Práticas</div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
     <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div><div class="kpi-hint">clique para ver lista</div></div>`;
 }
 function renderOfensores(){
@@ -662,24 +651,10 @@ function renderPracKPIs(){
   const pracs=getPraticas();
   const total=pracs.length;
   const complete=pracs.filter(p=>p.pend_n===0).length;
-  const totalEnv=pracs.reduce((s,p)=>s+(p.env_n||0),0);
-  const totalTut=pracs.reduce((s,p)=>s+(p.env_n||0)+(p.pend_n||0),0);
-  const taxaGeral=totalTut?Math.round(totalEnv/totalTut*100):0;
-  const tutAtivos=(DB.tutores||[]).filter(t=>!t._anonimo&&(t.tp||0)>0);
-  const tutSem=tutAtivos.filter(t=>(t.te||0)===0).length;
-  const tut100=tutAtivos.filter(t=>(t.te||0)>0&&(t.te||0)===(t.tp||0)).length;
-  const maisTut=pracs.length?pracs.reduce((a,b)=>(a.env_n||0)>(b.env_n||0)?a:b):null;
-  const maisTutN=maisTut?(maisTut.env_n||0):0;
-  const _nc=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;
   document.getElementById('pp-kpis').innerHTML=
     `<div class="kpi kpi-green"><div class="kpi-label">Total Práticas</div><div class="kpi-value">${total}</div></div>`+
     `<div class="kpi kpi-ok"><div class="kpi-label">100% Concluídas</div><div class="kpi-value">${complete}</div></div>`+
-    `<div class="kpi kpi-red"><div class="kpi-label">Com Pendências</div><div class="kpi-value">${total-complete}</div></div>`+
-    `<div class="kpi kpi-teal"><div class="kpi-label">Taxa de Conclusão</div><div class="kpi-value">${taxaGeral}%</div><div class="kpi-sub">${fmtNum(totalEnv)}/${fmtNum(totalTut)} entregas</div></div>`+
-    `<div class="kpi kpi-yellow"><div class="kpi-label">Tutores Sem Envio</div><div class="kpi-value">${tutSem}</div><div class="kpi-sub">de ${tutAtivos.length} ativos</div></div>`+
-    `<div class="kpi kpi-green"><div class="kpi-label">Tutores 100%</div><div class="kpi-value">${tut100}</div><div class="kpi-sub">práticas completas</div></div>`+
-    
-    `<div class="kpi kpi-green" title="${maisTut?maisTut.n:''}"><div class="kpi-label">Prática + Aplicada</div><div class="kpi-value">${maisTutN} tutores</div><div class="kpi-sub" style="font-size:9px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${maisTut?_nc(maisTut.c||''):'—'}</div></div>`;
+    `<div class="kpi kpi-red"><div class="kpi-label">Com Pendências</div><div class="kpi-value">${total-complete}</div></div>`;
 }
 function renderCatPracBars(){
   const el=document.getElementById('pp-cat-bars');
@@ -717,57 +692,6 @@ function renderCatPracBars(){
   }).join('');
 }
 
-function renderPracCharts(){
-  const pracs=getPraticas();
-  const _nc=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;
-  const barH=26,gap=6,padL=130,padR=52,w=400;
-
-  // ── Gráfico 1: Conclusão por Categoria ────────────────────────────────
-  const cats={};
-  pracs.forEach(p=>{
-    const c=_nc(p.c||'Outro');
-    if(!cats[c])cats[c]={env:0,tot:0};
-    cats[c].env+=(p.env_n||0);
-    cats[c].tot+=(p.env_n||0)+(p.pend_n||0);
-  });
-  const catEntries=Object.entries(cats).sort((a,b)=>b[1].tot-a[1].tot);
-  const svgH=catEntries.length*(barH+gap)+10;
-  let svgCat=`<svg viewBox="0 0 ${w} ${svgH}" width="100%" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">`;
-  catEntries.forEach(([c,v],i)=>{
-    const pct=v.tot?v.env/v.tot:0;
-    const bw=Math.max(2,Math.round((w-padL-padR)*pct));
-    const y=i*(barH+gap);
-    const cor=pct>=0.75?'var(--green)':pct>=0.4?'var(--amarelo,#FFD100)':'var(--red)';
-    const label=c.length>17?c.substring(0,15)+'…':c;
-    svgCat+=`<text x="${padL-6}" y="${y+barH/2+4}" text-anchor="end" font-size="11" fill="var(--text)" font-family="var(--font)">${label}</text>`;
-    svgCat+=`<rect x="${padL}" y="${y}" width="${w-padL-padR}" height="${barH}" rx="3" fill="var(--border)" opacity="0.6"/>`;
-    svgCat+=`<rect x="${padL}" y="${y}" width="${bw}" height="${barH}" rx="3" fill="${cor}"/>`;
-    svgCat+=`<text x="${padL+bw+5}" y="${y+barH/2+4}" font-size="11" font-weight="700" fill="${cor}" font-family="var(--font)">${Math.round(pct*100)}%</text>`;
-    if(bw>40)svgCat+=`<text x="${padL+6}" y="${y+barH/2+4}" font-size="9" fill="rgba(255,255,255,0.85)" font-family="var(--font)">${fmtNum(v.env)}/${fmtNum(v.tot)}</text>`;
-  });
-  svgCat+='</svg>';
-  const elCat=document.getElementById('pp-chart-cat');
-  if(elCat)elCat.innerHTML=svgCat;
-
-  // ── Gráfico 2: Top 8 práticas mais pendentes ──────────────────────────
-  const top8=pracs.slice().sort((a,b)=>(b.pend_n||0)-(a.pend_n||0)).slice(0,8);
-  const maxPend=top8.length?(top8[0].pend_n||1):1;
-  const padL2=142;
-  const svgH2=top8.length*(barH+gap)+10;
-  let svgTop=`<svg viewBox="0 0 ${w} ${svgH2}" width="100%" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">`;
-  top8.forEach((p,i)=>{
-    const bw=Math.max(2,Math.round((w-padL2-padR)*(p.pend_n||0)/maxPend));
-    const y=i*(barH+gap);
-    const name=(p.n||'').length>21?(p.n||'').substring(0,19)+'…':(p.n||'');
-    svgTop+=`<text x="${padL2-6}" y="${y+barH/2+4}" text-anchor="end" font-size="10" fill="var(--text)" font-family="var(--font)"><title>${p.n||''}</title>${name}</text>`;
-    svgTop+=`<rect x="${padL2}" y="${y}" width="${w-padL2-padR}" height="${barH}" rx="3" fill="var(--border)" opacity="0.6"/>`;
-    svgTop+=`<rect x="${padL2}" y="${y}" width="${bw}" height="${barH}" rx="3" fill="var(--red)"/>`;
-    svgTop+=`<text x="${padL2+bw+5}" y="${y+barH/2+4}" font-size="11" font-weight="700" fill="var(--red)" font-family="var(--font)">${p.pend_n||0}</text>`;
-  });
-  svgTop+='</svg>';
-  const elTop=document.getElementById('pp-chart-top');
-  if(elTop)elTop.innerHTML=svgTop;
-}
 function switchRankTab(tab){_rankTab=tab;document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('active'));document.getElementById('rtab-'+tab).classList.add('active');var btnExp=document.getElementById('btn-export-prac');if(btnExp)btnExp.onclick=function(){exportPraticas(tab);};renderTopPrac();}
 function renderTopPrac(){
   const el=document.getElementById('pp-ranking');const all=getPraticas();let pracs,color,valFn,titleTxt;
@@ -1928,7 +1852,32 @@ function _renderComSemestre() {
 // PÁGINA TUTORES MEC — Gestão completa de tutores com MEC + portfólio + gerenciamento
 // ══════════════════════════════════════════════════════════════════════════
 function renderTutoresMec() {
-  // Popular filtro de categorias (usando c = nome curto do CONTROLE como value)
+  // ── KPIs da ficha ─────────────────────────────────────────────
+  const _tAll=(DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio');
+  const _tit=t=>t.titulacao||'';
+  const kpiEl=document.getElementById('tutmec-kpis');
+  if(kpiEl){
+    const _nLat=_tAll.filter(t=>t.lattes_id).length;
+    const _nSemLat=_tAll.filter(t=>!t.lattes_id).length;
+    const _nDou=_tAll.filter(t=>_tit(t)==='Doutor').length;
+    const _nMes=_tAll.filter(t=>_tit(t)==='Mestre').length;
+    const _nEsp=_tAll.filter(t=>_tit(t)==='Especialista').length;
+    const _nGra=_tAll.filter(t=>_tit(t)==='Graduado').length;
+    const _nGer100=_tAll.filter(t=>t.ger_pct===100).length;
+    const _nGerPar=_tAll.filter(t=>t.ger_pct!==null&&t.ger_pct!==undefined&&t.ger_pct>0&&t.ger_pct<100).length;
+    const _chVals=_tAll.filter(t=>t.ch_semanal).map(t=>t.ch_semanal);
+    const _chMed=_chVals.length?(_chVals.reduce((a,b)=>a+b,0)/_chVals.length).toFixed(1):0;
+    kpiEl.innerHTML=
+      `<div class="kpi kpi-teal"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${_tAll.length}</div></div>`+
+      `<div class="kpi kpi-ok"><div class="kpi-label">Com Lattes</div><div class="kpi-value">${_nLat}</div><div class="kpi-sub" style="font-size:10px;color:var(--muted)">${_nSemLat} sem Lattes</div></div>`+
+      `<div class="kpi" style="border-left:3px solid #7c3aed"><div class="kpi-label">Doutores</div><div class="kpi-value">${_nDou}</div></div>`+
+      `<div class="kpi" style="border-left:3px solid #1d4ed8"><div class="kpi-label">Mestres</div><div class="kpi-value">${_nMes}</div></div>`+
+      `<div class="kpi" style="border-left:3px solid #0369a1"><div class="kpi-label">Especialistas</div><div class="kpi-value">${_nEsp}</div></div>`+
+      `<div class="kpi" style="border-left:3px solid #374151"><div class="kpi-label">Graduados</div><div class="kpi-value">${_nGra}</div></div>`+
+      `<div class="kpi kpi-green"><div class="kpi-label">Gerenc. 100%</div><div class="kpi-value">${_nGer100}</div><div class="kpi-sub" style="font-size:10px;color:var(--muted)">${_nGerPar} parcial</div></div>`+
+      `<div class="kpi kpi-teal"><div class="kpi-label">CH Média</div><div class="kpi-value">${_chMed}h</div></div>`;
+  }
+  // ── Popular filtro de categorias (usando c = nome curto do CONTROLE como value)
   const catSel = document.getElementById('tutmec-cat-sel');
   if (catSel && catSel.options.length === 1) {
     // Usar t.c (nome curto) como value — é o que está correto e consistente
@@ -1946,10 +1895,8 @@ function renderTutoresMec() {
 }
 
 function filterTutoresMec(q) {
-  // Usar TODOS os tutores do DB (não filtrado por semestre para esta aba)
-  // pois MEC/gerenciamento são dados anuais, não por semestre
   const tutores = (DB.tutores||[]).filter(t => !t._anonimo && t.n !== 'Tutor desligado' && t.c !== 'Aviso de Portfólio');
-  q = (q||'').toLowerCase();
+  q = (q||'').toLowerCase().trim();
   const cat  = document.getElementById('tutmec-cat-sel')?.value || '';
   const tit  = document.getElementById('tutmec-tit-sel')?.value || '';
   const port = document.getElementById('tutmec-port-sel')?.value || '';
@@ -1958,20 +1905,29 @@ function filterTutoresMec(q) {
   let d = tutores;
   if (q) d = d.filter(t => (t.n+t.p+(t.c||'')).toLowerCase().includes(q));
   if (cat) d = d.filter(t => (t.c||'') === cat);
-  if (tit === 'sem_lattes') d = d.filter(t => !t.lattes_id && !t.lattes_url);
+  if (tit === 'sem_lattes') d = d.filter(t => !t.lattes_id);
   else if (tit) d = d.filter(t => t.titulacao === tit);
-  if (port === 'ok')   d = d.filter(t => t.te > 0);
-  else if (port === 'pend') d = d.filter(t => t.te === 0);
-  if (ger === 'ok')      d = d.filter(t => t.ger_pct === 100);
-  else if (ger === 'parcial') d = d.filter(t => t.ger_pct !== null && t.ger_pct > 0 && t.ger_pct < 100);
-  else if (ger === 'nao')     d = d.filter(t => t.ger_pct !== null && t.ger_pct === 0);
+  if (port === 'ok')   d = d.filter(t => (t.te||0) > 0);
+  else if (port === 'pend') d = d.filter(t => (t.te||0) === 0);
+  if (ger === 'ok')        d = d.filter(t => t.ger_pct === 100);
+  else if (ger === 'parcial')  d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct > 0 && t.ger_pct < 100);
+  else if (ger === 'nao')      d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct === 0);
   else if (ger === 'sem_dados') d = d.filter(t => t.ger_pct === null || t.ger_pct === undefined);
 
-  // Ordenar: sem portfólio e sem gerenciamento primeiro, depois por nome
+  // Ordenação
+  const sk = window._tutMecSortK || 'n';
+  const sa = window._tutMecSortA !== false;
   d.sort((a,b) => {
-    const scoreA = (a.te===0?2:0) + (a.ger_pct===null?1:0);
-    const scoreB = (b.te===0?2:0) + (b.ger_pct===null?1:0);
-    return scoreB - scoreA || a.n.localeCompare(b.n,'pt-BR');
+    let va, vb;
+    if (sk==='n')      { va=a.n||''; vb=b.n||''; return sa?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR'); }
+    if (sk==='p')      { va=a.p||''; vb=b.p||''; return sa?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR'); }
+    if (sk==='c')      { va=a.c||''; vb=b.c||''; return sa?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR'); }
+    if (sk==='tit')    { va=a.titulacao||'zzz'; vb=b.titulacao||'zzz'; return sa?va.localeCompare(vb):vb.localeCompare(va); }
+    if (sk==='port')   { va=a.pct||0; vb=b.pct||0; return sa?va-vb:vb-va; }
+    if (sk==='ger')    { va=a.ger_pct??-1; vb=b.ger_pct??-1; return sa?va-vb:vb-va; }
+    if (sk==='admis')  { va=a.inicio||''; vb=b.inicio||''; return sa?va.localeCompare(vb):vb.localeCompare(va); }
+    if (sk==='ch')     { va=a.ch_semanal||0; vb=b.ch_semanal||0; return sa?va-vb:vb-va; }
+    return 0;
   });
 
   const sub = document.getElementById('tutmec-sub');
@@ -1982,20 +1938,27 @@ function filterTutoresMec(q) {
   if (!d.length) { wrap.innerHTML='<div class="empty">Nenhum tutor encontrado</div>'; return; }
 
   const titColors = {'Doutor':'#7c3aed','Mestre':'#1d4ed8','Especialista':'#0369a1','Graduado':'#374151'};
+  const arrow = (col) => {
+    if (col !== (window._tutMecSortK||'n')) return '<span style="color:var(--muted);font-size:9px">↕</span>';
+    return window._tutMecSortA !== false ? '↑' : '↓';
+  };
+  const thStyle = 'padding:9px 10px;text-align:left;font-weight:700;border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none';
+  const thC = 'padding:9px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none';
 
   let html = `<div class="card" style="padding:0;overflow:hidden">
   <table style="width:100%;border-collapse:collapse;font-size:12px">
     <thead style="background:var(--bg);position:sticky;top:0;z-index:1">
       <tr>
-        <th style="padding:10px 12px;text-align:left;font-weight:700;border-bottom:2px solid var(--border)">Nome</th>
-        <th style="padding:10px 12px;text-align:left;font-weight:700;border-bottom:2px solid var(--border)">Polo / Categoria</th>
-        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border);white-space:nowrap">Titulação</th>
-        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">CH</th>
-        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Admissão</th>
-        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Portfólio</th>
-        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Gerenc.</th>
-        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Lattes</th>
-        <th style="padding:10px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border)">Ver</th>
+        <th style="${thStyle}" onclick="_tutMecSort('n')">Nome ${arrow('n')}</th>
+        <th style="${thStyle}" onclick="_tutMecSort('p')">Polo ${arrow('p')}</th>
+        <th style="${thStyle}" onclick="_tutMecSort('c')">Categoria ${arrow('c')}</th>
+        <th style="${thC}" onclick="_tutMecSort('tit')">Titulação ${arrow('tit')}</th>
+        <th style="${thC}" onclick="_tutMecSort('ch')">CH ${arrow('ch')}</th>
+        <th style="${thC}" onclick="_tutMecSort('admis')">Admissão ${arrow('admis')}</th>
+        <th style="${thC}" onclick="_tutMecSort('port')">Portfólio ${arrow('port')}</th>
+        <th style="${thC}" onclick="_tutMecSort('ger')">Gerenc. ${arrow('ger')}</th>
+        <th style="${thC}">Lattes</th>
+        <th style="${thC}">Ver</th>
       </tr>
     </thead>
     <tbody>`;
@@ -2004,58 +1967,53 @@ function filterTutoresMec(q) {
     const bg = i%2===0 ? 'var(--surface)' : 'var(--bg)';
 
     // Portfólio
-    const tp = t.tp||0;
-    const te = t.te||0;
-    const pct = tp ? Math.round(te/tp*100) : 0;
-    const portColor = pct===100?'var(--green)':pct>0?'var(--yellow)':'var(--red)';
+    const te=t.te||0, tp=t.tp||0;
+    const pct=tp?Math.round(te/tp*100):0;
+    const portColor=pct===100?'var(--green)':pct>0?'var(--yellow)':'var(--red)';
+    const portCell=`<span style="font-size:11px;font-weight:700;color:${portColor}">${te}/${tp}</span>
+      <div style="height:3px;background:var(--border);border-radius:2px;margin-top:3px;width:50px">
+        <div style="height:3px;background:${portColor};border-radius:2px;width:${pct}%"></div>
+      </div>`;
 
     // Gerenciamento
     let gerCell;
-    if (t.ger_pct === null || t.ger_pct === undefined) {
+    if (t.ger_pct===null||t.ger_pct===undefined) {
       gerCell = '<span style="color:var(--muted);font-size:10px">—</span>';
     } else {
-      const gc = t.ger_pct===100?'var(--green)':t.ger_pct>0?'var(--yellow)':'var(--red)';
-      gerCell = `<span style="font-size:11px;font-weight:700;color:${gc}">${t.ger_ok||0}/${t.ger_total||0}</span>`
-               +`<div style="font-size:9px;color:var(--muted)">${t.ger_pct}%</div>`;
+      const gc=t.ger_pct===100?'var(--green)':t.ger_pct>0?'var(--yellow)':'var(--red)';
+      gerCell = `<span style="font-size:11px;font-weight:700;color:${gc}">${t.ger_ok||0}/${t.ger_total||0}</span>
+        <div style="font-size:9px;color:var(--muted)">${t.ger_pct}%</div>`;
     }
 
-    // Titulação badge
-    const titBadge = t.titulacao
-      ? `<span style="background:${titColors[t.titulacao]||'#374151'};color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">${t.titulacao}</span>`
-      : '<span style="color:var(--muted);font-size:10px">—</span>';
+    // Titulação
+    const titBadge=t.titulacao
+      ?`<span style="background:${titColors[t.titulacao]||'#374151'};color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${t.titulacao}</span>`
+      :'<span style="color:var(--muted);font-size:10px">—</span>';
 
     // Admissão
-    let admStr = '—', expStr = '';
-    if (t.inicio) {
-      const meses = Math.round((new Date()-new Date(t.inicio))/(1000*60*60*24*30.5));
-      admStr = t.inicio.split('-').reverse().join('/');
-      expStr = `<div style="font-size:10px;color:var(--muted)">${(meses/12).toFixed(1)}a</div>`;
+    let admStr='—', expStr='';
+    if(t.inicio){
+      const meses=Math.round((new Date()-new Date(t.inicio))/(1000*60*60*24*30.5));
+      admStr=t.inicio.split('-').reverse().join('/');
+      expStr=`<div style="font-size:10px;color:var(--muted)">${(meses/12).toFixed(1)}a</div>`;
     }
 
     // Lattes
-    const lattesBadge = t.lattes_id
-      ? `<a href="https://lattes.cnpq.br/${t.lattes_id}" target="_blank"
-           style="display:inline-block;background:#1a3a5c;color:#fff;padding:2px 9px;border-radius:4px;font-size:10px;font-weight:700;text-decoration:none">🔗</a>`
-      : '<span style="color:var(--red);font-size:10px;font-weight:600">Sem</span>';
+    const lattesBadge=t.lattes_id
+      ?`<a href="https://lattes.cnpq.br/${t.lattes_id}" target="_blank"
+           style="display:inline-block;background:#1a3a5c;color:#fff;padding:2px 9px;border-radius:4px;font-size:10px;font-weight:700;text-decoration:none">Lattes</a>`
+      :'<span style="color:var(--red);font-size:10px;font-weight:600">Sem</span>';
 
-    // Escapar nome para uso em onclick
-    const nomeEsc = t.n.replace(/'/g,"\\'").replace(/`/g,"\\`");
+    const nomeEsc=t.n.replace(/'/g,"\\'");
 
-    html += `<tr style="background:${bg};border-bottom:1px solid var(--border)">
-      <td style="padding:8px 12px;font-weight:600;font-size:12px">${t.n}</td>
-      <td style="padding:8px 12px;font-size:11px">
-        <div style="color:var(--text)">${t.p}</div>
-        <div style="color:var(--muted);font-size:10px">${t.c||'—'}</div>
-      </td>
+    html+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
+      <td style="padding:8px 10px;font-weight:600;font-size:12px;max-width:180px">${t.n}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--muted);max-width:140px">${t.p}</td>
+      <td style="padding:8px 10px;font-size:11px;max-width:140px">${t.c||'—'}</td>
       <td style="padding:8px 8px;text-align:center">${titBadge}</td>
       <td style="padding:8px 8px;text-align:center;font-size:11px">${t.ch_semanal?t.ch_semanal.toFixed(0)+'h':'—'}</td>
       <td style="padding:8px 8px;text-align:center;font-size:11px">${admStr}${expStr}</td>
-      <td style="padding:8px 8px;text-align:center">
-        <span style="font-size:11px;font-weight:700;color:${portColor}">${te}/${tp}</span>
-        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:3px">
-          <div style="height:3px;background:${portColor};border-radius:2px;width:${pct}%"></div>
-        </div>
-      </td>
+      <td style="padding:8px 8px;text-align:center">${portCell}</td>
       <td style="padding:8px 8px;text-align:center">${gerCell}</td>
       <td style="padding:8px 8px;text-align:center">${lattesBadge}</td>
       <td style="padding:8px 8px;text-align:center">
@@ -2070,9 +2028,13 @@ function filterTutoresMec(q) {
   html += '</tbody></table></div>';
   wrap.innerHTML = html;
 }
+function _tutMecSort(col){
+  if(window._tutMecSortK===col){ window._tutMecSortA=!window._tutMecSortA; }
+  else { window._tutMecSortK=col; window._tutMecSortA=true; }
+  filterTutoresMec(document.getElementById('tutmec-search')?.value||'');
+}
 
 
-// ══════════════════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
