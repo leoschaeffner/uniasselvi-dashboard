@@ -1878,47 +1878,47 @@ function renderTutoresMec() {
       `<div class="kpi kpi-green"><div class="kpi-label">Gerenc. 100%</div><div class="kpi-value">${_nGer100}</div><div class="kpi-sub" style="font-size:10px;color:var(--muted)">${_nGerPar} parcial</div></div>`+
       `<div class="kpi kpi-teal"><div class="kpi-label">CH Média</div><div class="kpi-value">${_chMed}h</div></div>`+
       // ── Donut chart de titulação ─────────────────────────────────────────
-      `<div class="kpi" style="min-width:260px;flex:1;padding:12px 16px">
-        <div style="display:flex;align-items:center;gap:16px">
-          <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+      `<div class="kpi" style="min-width:300px;flex:2;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:20px">
+          <svg id="tutmec-donut" viewBox="0 0 80 80" width="80" height="80" style="flex-shrink:0;cursor:pointer">
             ${(()=>{
-              const vals=[_nDou,_nMes,_nEsp,_nGra,_tAll.length-_nDou-_nMes-_nEsp-_nGra];
-              const colors=['#7c3aed','#1d4ed8','#0369a1','#374151','#e5e7eb'];
-              const total=_tAll.length||1;
-              let cum=0; const r=34,cx=40,cy=40,str=12;
-              const slices=vals.map((v,i)=>{
-                const pct=v/total; const start=cum; cum+=pct;
-                const a1=start*2*Math.PI-Math.PI/2;
-                const a2=(start+pct)*2*Math.PI-Math.PI/2;
-                if(v===0)return '';
+              const vals  =[_nDou,_nMes,_nEsp,_nGra];
+              const labels=['Doutor','Mestre','Especialista','Graduado'];
+              const colors=['#7c3aed','#1d4ed8','#0369a1','#374151'];
+              const nSem  =_tAll.length-_nDou-_nMes-_nEsp-_nGra;
+              const allV  =[...vals,nSem];
+              const allC  =[...colors,'#d1d5db'];
+              const allL  =[...labels,'Sem dados'];
+              const total =_tAll.length||1;
+              let cum=0;
+              const paths=allV.map((v,i)=>{
+                if(!v)return '';
+                const pct=v/total;
+                const a1=cum*2*Math.PI-Math.PI/2;
+                const a2=(cum+pct)*2*Math.PI-Math.PI/2;
+                cum+=pct;
+                const r=32,cx=40,cy=40;
                 const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1);
                 const x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
                 const lg=pct>0.5?1:0;
-                return '<path d="M'+cx+','+cy+' L'+x1+','+y1+' A'+r+','+r+' 0 '+lg+',1 '+x2+','+y2+' Z" fill="'+colors[i]+'" opacity="0.9"/>';
+                return '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+lg+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+allC[i]+'" opacity="0.9" title="'+allL[i]+': '+v+'" style="cursor:pointer;transition:opacity .2s" onmouseover="this.setAttribute(\'opacity\',\'1\')" onmouseout="this.setAttribute(\'opacity\',\'0.9\')"><title>'+allL[i]+': '+v+'</title></path>';
               }).join('');
-              return '<svg viewBox="0 0 80 80" width="80" height="80"><circle cx="40" cy="40" r="34" fill="var(--border)" opacity="0.3"/>'+slices+'<circle cx="40" cy="40" r="22" fill="var(--surface)"/><text x="40" y="45" text-anchor="middle" font-size="11" font-weight="700" fill="var(--text)" font-family="var(--font)">${_nDou+_nMes+_nEsp+_nGra}</text></svg>';
+              const titulados=_nDou+_nMes+_nEsp+_nGra;
+              return paths+'<circle cx="40" cy="40" r="20" fill="var(--surface)"/><text x="40" y="37" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--font)">c/ tit.</text><text x="40" y="51" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" font-family="var(--font)">'+titulados+'</text>';
             })()}
-          </div>
+          </svg>
           <div style="flex:1">
-            <div class="kpi-label" style="margin-bottom:8px;font-weight:700">Titulação</div>
-            ${[['Doutor',_nDou,'#7c3aed'],['Mestre',_nMes,'#1d4ed8'],['Especialista',_nEsp,'#0369a1'],['Graduado',_nGra,'#374151'],['Sem dados',_tAll.length-_nDou-_nMes-_nEsp-_nGra,'#e5e7eb']].filter(([,n])=>n>0).map(([l,n,c])=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div><span style="font-size:10px;color:var(--text)">${l}</span><span style="font-size:10px;font-weight:700;color:var(--text);margin-left:auto">${n}</span></div>`).join('')}
+            <div class="kpi-label" style="font-weight:700;margin-bottom:6px">TITULAÇÃO</div>
+            ${[['Doutor',_nDou,'#7c3aed'],['Mestre',_nMes,'#1d4ed8'],['Especialista',_nEsp,'#0369a1'],['Graduado',_nGra,'#374151'],['Sem dados',_tAll.length-_nDou-_nMes-_nEsp-_nGra,'#d1d5db']].map(([l,n,c])=>`
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer"
+                   onclick="document.getElementById('tutmec-tit-sel').value='${l==='Sem dados'?'':l}';filterTutoresMec(document.getElementById('tutmec-search').value)">
+                <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
+                <span style="font-size:11px;color:var(--text);flex:1">${l}</span>
+                <span style="font-size:11px;font-weight:700;color:${c};min-width:24px;text-align:right">${n}</span>
+              </div>`).join('')}
           </div>
         </div>
       </div>`; }
-  // ── Popular filtro de categorias (usando c = nome curto do CONTROLE como value)
-  const catSel = document.getElementById('tutmec-cat-sel');
-  if (catSel && catSel.options.length === 1) {
-    // Usar t.c (nome curto) como value — é o que está correto e consistente
-    const cats = [...new Set(
-      (DB.tutores||[]).filter(t=>!t._anonimo&&t.c&&t.c!=='Aviso de Portfólio')
-                      .map(t=>t.c)
-    )].sort();
-    cats.forEach(c => {
-      const o = document.createElement('option');
-      o.value = c; o.textContent = c;
-      catSel.appendChild(o);
-    });
-  }
   filterTutoresMec('');
 }
 
