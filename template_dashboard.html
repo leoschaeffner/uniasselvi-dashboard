@@ -594,11 +594,17 @@ function ordemNum(k){return{'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ord
 
 // ── PORTFÓLIOS VISÃO GERAL ────────────────────────────────────────────────────
 function renderKPIs(){
-  const k=_getSemKpis()||DB.kpis||{};const pct=k.total?((k.enviaram/k.total)*100).toFixed(1):'0.0';
-  document.getElementById('pv-sub').textContent=`${k.total} tutores · ${k.enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
+  const k=_getSemKpis()||DB.kpis||{};
+  // Calcular total/enviaram excluindo anônimos e 'Aviso de Portfólio'
+  const _tutBase=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);
+  const _tutReais=_tutBase.filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio');
+  const _total=_tutReais.length;
+  const _enviaram=_tutReais.filter(t=>(t.te||0)>0).length;
+  const pct=_total?((_enviaram/_total)*100).toFixed(1):'0.0';
+  document.getElementById('pv-sub').textContent=`${_total} tutores · ${_enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
   document.getElementById('pv-kpis').innerHTML=`
-    <div class="kpi kpi-green kpi-link" onclick="openListModal('todos')"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${k.total}</div><div class="kpi-hint">clique para ver lista</div></div>
-    <div class="kpi kpi-ok kpi-link" onclick="openListModal('enviaram')"><div class="kpi-label">Enviaram</div><div class="kpi-value">${k.enviaram}</div><div class="kpi-detail">${pct}% do total</div><div class="kpi-hint">clique para ver lista</div></div>
+    <div class="kpi kpi-green kpi-link" onclick="openListModal('todos')"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${_total}</div><div class="kpi-hint">clique para ver lista</div></div>
+    <div class="kpi kpi-ok kpi-link" onclick="openListModal('enviaram')"><div class="kpi-label">Enviaram</div><div class="kpi-value">${_enviaram}</div><div class="kpi-detail">${pct}% do total</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos nas Práticas</div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
