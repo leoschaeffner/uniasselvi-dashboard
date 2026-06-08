@@ -1495,7 +1495,7 @@ function populateFilters(){
   function _normCat(c){return _CAT_NORM_MAP[c]||c;}
   const tutorCats=[...new Set((DB.tutores||[]).map(t=>_normCat(t.c||'')).filter(Boolean))].sort();
   const tSel=document.getElementById('tutor-cat-sel');if(tSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tSel.appendChild(o)});
-  const pracCats=[...new Set(getPraticas().map(p=>p.c).filter(Boolean))].sort();
+  const pracCats=[...new Set(getPraticas().map(p=>_normCat(p.c||'')).filter(Boolean))].sort();
   const pSel=document.getElementById('prac-cat-sel');if(pSel)pracCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pSel.appendChild(o)});
   const ocSel=document.getElementById('ordem-cat-sel');if(ocSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;ocSel.appendChild(o)});
 }
@@ -1513,10 +1513,50 @@ function exportDetalhe(){var cat=(document.getElementById('ger-det-cat')||{}).va
 function abrirSemGerenciamento(){var ord=(document.getElementById('ger-det-ordem')||{}).value||'';var cat=(document.getElementById('ger-det-cat')||{}).value||'';_renderSemGer(ord,cat);}
 function _renderSemGer(ord,cat){function normNome(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}function normPolo(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}var d=gerDetData||[];if(ord)d=d.filter(r=>r.ordem===ord);if(cat)d=d.filter(r=>r.categoria===cat);var poloTutorMap={};d.forEach(r=>{if(r.tutor&&r.polo){var pk=normPolo(r.polo);if(!poloTutorMap[pk])poloTutorMap[pk]=new Set();poloTutorMap[pk].add(normNome(r.tutor));}});var tutoresAtivos=DB.tutores||[];if(cat)tutoresAtivos=tutoresAtivos.filter(t=>t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0);var semGerMap={};tutoresAtivos.filter(t=>{var pk=normPolo(t.p);var poloSet=poloTutorMap[pk];if(poloSet)return !poloSet.has(normNome(t.n));return true;}).forEach(t=>{var key=normNome(t.n)+'|'+normPolo(t.p);if(!semGerMap[key])semGerMap[key]=t;});var semGer=Object.values(semGerMap).sort((a,b)=>a.p.localeCompare(b.p,'pt')||a.n.localeCompare(b.n,'pt'));var ordens=[...new Set((gerDetData||[]).map(r=>r.ordem).filter(Boolean))].sort();var cats=['ENF-INS (Multidisciplinar II)','BIO-FAR (Multidisciplinar I)','BIO-FISIO-EST-TO (Multidisciplinar III)','QUÍMICA E FÍSICA','ENGMAKER','NUTRI (Multidisciplinar IV)'];var filtroLabel=(ord||'Todas ordens')+(cat?' · '+catParaCurso(cat):'');document.getElementById('m-title').textContent='Tutores sem Gerenciamento';document.getElementById('m-sub').textContent=semGer.length+' tutores · '+filtroLabel;var headerHtml='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)"><select id="sgm-ord" style="flex:1;min-width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--bg);color:var(--text)"><option value="">Todas as ordens</option>';ordens.forEach(o=>{headerHtml+='<option value="'+o+'"'+(o===ord?' selected':'')+'>'+o+'</option>';});headerHtml+='</select><select id="sgm-cat" style="flex:2;min-width:180px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--bg);color:var(--text)"><option value="">Todos os laboratórios</option>';cats.forEach(c=>{headerHtml+='<option value="'+c+'"'+(c===cat?' selected':'')+'>'+catParaCurso(c)+'</option>';});headerHtml+='</select><button class="btn-export" onclick="exportarSemGer()" style="white-space:nowrap">⬇ Exportar</button></div>';var tableHtml='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Tutor</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Polo</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Curso / Laboratório</th></tr></thead><tbody>';semGer.forEach(t=>{tableHtml+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;font-weight:600">'+t.n+'</td><td style="padding:5px 8px;font-size:11px">'+t.p+'</td><td style="padding:5px 8px;font-size:11px">'+catParaCurso(t.c||'—')+'</td></tr>';});if(!semGer.length)tableHtml+='<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--ok)">✅ Todos os tutores gerenciaram!</td></tr>';tableHtml+='</tbody></table><div style="font-size:10px;color:var(--muted);margin-top:6px">* Selecione uma ordem específica para resultado mais preciso.</div>';window._semGerData=semGer;window._semGerFiltro=filtroLabel;document.getElementById('m-body').innerHTML=headerHtml+tableHtml;var sgOrd=document.getElementById('sgm-ord');var sgCat=document.getElementById('sgm-cat');if(sgOrd)sgOrd.addEventListener('change',function(){_renderSemGer(this.value,(sgCat||{}).value||'');});if(sgCat)sgCat.addEventListener('change',function(){_renderSemGer((sgOrd||{}).value||'',this.value);});document.getElementById('modal-overlay').classList.add('show');}
 function exportarSemGer(){var rows=(window._semGerData||[]).map(t=>({'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c||'—'),'Categoria':t.c||''}));exportCSV(rows,'sem_gerenciamento_'+(window._semGerFiltro||'').replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv');}
-function openAlunosCursoModal(){var cursos=DB.alunos_por_curso||[];var total=cursos.reduce((s,c)=>s+c.alunos,0);document.getElementById('m-title').textContent='Alunos por Curso';document.getElementById('m-sub').textContent=fmtNum(total)+' alunos únicos';if(!cursos.length){document.getElementById('m-body').innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">Planilha de Lotação não disponível.</div>';document.getElementById('modal-overlay').classList.add('show');return;}var max=cursos[0].alunos||1;var html='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg)"><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:left">Curso</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Distribuição</th><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Alunos</th></tr></thead><tbody>';cursos.forEach(c=>{html+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 8px;font-weight:600">'+c.curso+'<br><span style="font-size:9px;color:var(--muted)">'+c.sigla+'</span></td><td style="padding:6px 8px"><div style="height:8px;background:var(--bg);border-radius:4px"><div style="height:100%;width:'+(c.alunos/max*100)+'%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px"></div></div></td><td style="padding:6px 8px;text-align:right;font-weight:700">'+fmtNum(c.alunos)+'</td></tr>';});html+='</tbody></table>';document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');}
+function openAlunosCursoModal(){
+  // Calcular alunos das práticas enviadas por categoria (não da lotação)
+  const _nc=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;
+  const catMap={};
+  (DB.tutores||[]).forEach(t=>{
+    if(t._anonimo)return;
+    const cat=_nc(t.c||'Outro');
+    if(!catMap[cat])catMap[cat]=0;
+    (t.hist||[]).forEach(h=>{ catMap[cat]+=(h.a||0); });
+  });
+  const cursos=Object.entries(catMap)
+    .map(([cat,alunos])=>({cat,alunos}))
+    .sort((a,b)=>b.alunos-a.alunos);
+  const total=cursos.reduce((s,c)=>s+c.alunos,0);
 
-// ── SORT GENÉRICO ─────────────────────────────────────────────────────────────
-var _sortState={};
+  document.getElementById('m-title').textContent='Alunos por Categoria (Práticas)';
+  document.getElementById('m-sub').textContent=fmtNum(total)+' alunos nas práticas enviadas';
+  if(!cursos.length){
+    document.getElementById('m-body').innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">Sem dados de práticas</div>';
+    openModal();return;
+  }
+  const max=cursos[0].alunos||1;
+  document.getElementById('m-body').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr>
+        <th style="padding:8px 12px;text-align:left;font-weight:700;border-bottom:2px solid var(--border)">Categoria</th>
+        <th style="padding:8px 12px;text-align:left;font-weight:700;border-bottom:2px solid var(--border)">Distribuição</th>
+        <th style="padding:8px 12px;text-align:right;font-weight:700;border-bottom:2px solid var(--border)">Alunos</th>
+      </tr></thead>
+      <tbody>
+        ${cursos.map((c,i)=>`
+          <tr style="background:${i%2?'var(--bg)':'var(--surface)'}">
+            <td style="padding:10px 12px;font-weight:600">${c.cat}</td>
+            <td style="padding:10px 12px">
+              <div style="background:var(--border);border-radius:4px;height:8px;width:180px">
+                <div style="background:var(--teal);border-radius:4px;height:8px;width:${Math.round(c.alunos/max*180)}px"></div>
+              </div>
+            </td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700">${fmtNum(c.alunos)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  openModal();
+}
 function sortTable(tbodyId,col,tipo){var key=tbodyId+col;var asc=_sortState[key]!==true;_sortState[key]=asc;document.querySelectorAll('[data-sort-table="'+tbodyId+'"] .sort-ind').forEach(function(el){el.textContent='';});var thAtivo=document.querySelector('[data-sort-table="'+tbodyId+'"][data-sort-col="'+col+'"] .sort-ind');if(thAtivo)thAtivo.textContent=asc?' ▲':' ▼';var tbody=document.getElementById(tbodyId);if(!tbody)return;var dataAttr='data-v'+col;var rows=Array.from(tbody.querySelectorAll('tr['+dataAttr+']'));if(!rows.length)rows=Array.from(tbody.querySelectorAll('tr.sort-row'));if(!rows.length)return;rows.sort(function(a,b){var va=a.getAttribute(dataAttr)||'';var vb=b.getAttribute(dataAttr)||'';if(tipo==='num')return asc?parseFloat(va||0)-parseFloat(vb||0):parseFloat(vb||0)-parseFloat(va||0);return asc?va.localeCompare(vb,'pt'):vb.localeCompare(va,'pt');});rows.forEach(function(r){tbody.appendChild(r);});}
 document.addEventListener('click',function(e){var btn=e.target.closest('.btn-expand');if(!btn)return;var grp=btn.dataset.grp;if(!grp)return;var row=btn.closest('tr');if(!row)return;if(grp.startsWith('cg'))toggleContrGrp(row,grp);else if(grp.startsWith('dg'))toggleDetGrp(row,grp);});
 
