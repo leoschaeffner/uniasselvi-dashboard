@@ -1533,7 +1533,7 @@ function openAlunosCursoModal(){
   document.getElementById('m-sub').textContent=fmtNum(total)+' alunos nas práticas enviadas';
   if(!cursos.length){
     document.getElementById('m-body').innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">Sem dados de práticas</div>';
-    openModal();return;
+    document.getElementById('modal-overlay').classList.add('show');return;
   }
   const max=cursos[0].alunos||1;
   document.getElementById('m-body').innerHTML=`
@@ -1556,7 +1556,7 @@ function openAlunosCursoModal(){
           </tr>`).join('')}
       </tbody>
     </table>`;
-  openModal();
+  document.getElementById('modal-overlay').classList.add('show');
 }
 function sortTable(tbodyId,col,tipo){var key=tbodyId+col;var asc=_sortState[key]!==true;_sortState[key]=asc;document.querySelectorAll('[data-sort-table="'+tbodyId+'"] .sort-ind').forEach(function(el){el.textContent='';});var thAtivo=document.querySelector('[data-sort-table="'+tbodyId+'"][data-sort-col="'+col+'"] .sort-ind');if(thAtivo)thAtivo.textContent=asc?' ▲':' ▼';var tbody=document.getElementById(tbodyId);if(!tbody)return;var dataAttr='data-v'+col;var rows=Array.from(tbody.querySelectorAll('tr['+dataAttr+']'));if(!rows.length)rows=Array.from(tbody.querySelectorAll('tr.sort-row'));if(!rows.length)return;rows.sort(function(a,b){var va=a.getAttribute(dataAttr)||'';var vb=b.getAttribute(dataAttr)||'';if(tipo==='num')return asc?parseFloat(va||0)-parseFloat(vb||0):parseFloat(vb||0)-parseFloat(va||0);return asc?va.localeCompare(vb,'pt'):vb.localeCompare(va,'pt');});rows.forEach(function(r){tbody.appendChild(r);});}
 document.addEventListener('click',function(e){var btn=e.target.closest('.btn-expand');if(!btn)return;var grp=btn.dataset.grp;if(!grp)return;var row=btn.closest('tr');if(!row)return;if(grp.startsWith('cg'))toggleContrGrp(row,grp);else if(grp.startsWith('dg'))toggleDetGrp(row,grp);});
