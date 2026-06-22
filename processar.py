@@ -13,10 +13,11 @@ PATCHES v2 aplicados:
 """
 
 import pandas as pd
-import json, os, sys, math, webbrowser, time, threading, glob
+import json, os, sys, math, webbrowser, time, threading, glob, hashlib, base64
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # ── Configuração multi-semestre ─────────────────────────────────────────────
 # Lida de config_semestre.json. Fallback hardcoded para 2026/1.
@@ -2107,16 +2108,32 @@ def carregar_alunos_hub(path_csv):
         'tutor_subcurso': tutor_subcurso,  # Multi 3: nome_tutor → Fisio/T.Oc/Est
     }
 
+# Senha de acesso ao dashboard (mesma da tela de login)
+SENHA_DASHBOARD = "uniasselvi2026"
+
+# PATCH 8: cifra o JSON antes de injetar no HTML — sem isso, dava pra ver
+# tudo no Ctrl+U mesmo sem digitar a senha
+def cifrar_dados(dados_json_str, senha):
+    chave = hashlib.sha256(senha.encode('utf-8')).digest()  # 32 bytes → AES-256
+    aesgcm = AESGCM(chave)
+    iv = os.urandom(12)
+    ct = aesgcm.encrypt(iv, dados_json_str.encode('utf-8'), None)
+    iv_b64 = base64.b64encode(iv).decode('ascii')
+    ct_b64 = base64.b64encode(ct).decode('ascii')
+    return f"{iv_b64}:{ct_b64}"
+
 def gerar_html(dados):
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
     output = os.path.join(saida, "dashboard.html")
     tmpl   = os.path.join(SCRIPT_DIR, "template_dashboard.html")
     with open(tmpl, encoding='utf-8') as f: html = f.read()
-    html = html.replace("'DATA_GOES_HERE'", json.dumps(dados, ensure_ascii=False))
+    json_str = json.dumps(dados, ensure_ascii=False)
+    payload_cifrado = cifrar_dados(json_str, SENHA_DASHBOARD)
+    html = html.replace("'DATA_GOES_HERE'", json.dumps(payload_cifrado))
     html = html.replace("TIMESTAMP_GOES_HERE", dados['gerado_em'])
     with open(output, 'w', encoding='utf-8') as f: f.write(html)
-    print(f"[{ts()}] Salvo: {output}")
+    print(f"[{ts()}] Salvo: {output} (JSON cifrado com AES-256-GCM, {len(payload_cifrado)} chars)")
     return output
 
 
