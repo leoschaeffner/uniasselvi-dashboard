@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install pandas openpyxl xlrd requests --quiet
+      - run: pip install pandas openpyxl xlrd requests cryptography --quiet
 
       - name: Baixar planilhas do OneDrive
         env:
