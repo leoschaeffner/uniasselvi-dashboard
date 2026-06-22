@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow, noarchive"/>
 <title>VinciLab · Gestão de Práticas</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -106,6 +107,13 @@ tr:hover td{background:rgba(0,107,94,.02)}
 .col-ch-lot{}
 #lgpd-bar{position:fixed;bottom:0;left:240px;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--dim);display:flex;justify-content:space-between;z-index:100;}
 #senha-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green) 0%,#0d2b25 100%);}
+#moria-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#1a1a1f 0%,#000 80%);font-family:Georgia,'Times New Roman',serif;}
+.moria-box{max-width:520px;text-align:center;padding:40px;color:#9a9a9a;}
+.moria-runas{font-size:42px;letter-spacing:18px;color:#5a6e5e;margin-bottom:24px;text-shadow:0 0 18px rgba(90,110,94,.5);}
+.moria-texto{font-size:15px;line-height:1.9;color:#b8b8b8;margin-bottom:8px;}
+.moria-frase{font-size:13px;color:#6e8a72;font-style:italic;margin-top:20px;letter-spacing:1px;}
+.moria-btn{margin-top:32px;background:transparent;border:1px solid #4a4a4a;color:#9a9a9a;padding:10px 28px;border-radius:4px;font-family:var(--font);font-size:12px;cursor:pointer;letter-spacing:1px;}
+.moria-btn:hover{border-color:#6e8a72;color:#cfe0d0;}
 .senha-box{background:var(--card);border-radius:16px;padding:40px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
 .senha-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;letter-spacing:2px;padding:6px 16px;border-radius:6px;display:inline-block;margin-bottom:16px;}
 .senha-title{font-size:18px;font-weight:800;margin-bottom:4px}
@@ -498,6 +506,16 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   </div>
 </div>
 <div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · VinciLab 2026</span><span id="lgpd-ts"></span></div>
+<div id="moria-overlay">
+  <div class="moria-box">
+    <div class="moria-runas">⟁ ⟐ ⟁</div>
+    <div class="moria-texto">As portas de pedra permanecem fechadas.</div>
+    <div class="moria-texto">A senha que ecoou nas sombras não foi reconhecida.</div>
+    <div class="moria-texto">Apenas quem conhece a palavra certa atravessa este limiar.</div>
+    <div class="moria-frase">"Você não passará."</div>
+    <button class="moria-btn" onclick="document.getElementById('moria-overlay').style.display='none';document.getElementById('senha-overlay').style.display='flex';setTimeout(()=>document.getElementById('senha-input').focus(),100);">Tentar novamente</button>
+  </div>
+</div>
 <div id="senha-overlay">
   <div class="senha-box">
     <div class="senha-logo">VinciLab</div>
@@ -509,45 +527,78 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
   </div>
 </div><script>
-const _HASH='49d386eb9415e992d18baf30a40078e85a0e1f36a7509d0c798f2aff4550b476';
-async function _calcHash(msg){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(msg));
+// ── SENHA / DESCRIPTOGRAFIA ───────────────────────────────────────────────────
+async function _sha256Buf(msg){
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+}
+function _hexToBytes(hex){
+  const bytes = new Uint8Array(hex.length/2);
+  for(let i=0;i<bytes.length;i++) bytes[i] = parseInt(hex.substr(i*2,2),16);
+  return bytes;
+}
+function _bytesToHex(buf){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function _decifrarDados(cryptoKey){
+  const [ivB64, ctB64] = ENCRYPTED_PAYLOAD.split(':');
+  const iv = Uint8Array.from(atob(ivB64), c=>c.charCodeAt(0));
+  const ct = Uint8Array.from(atob(ctB64), c=>c.charCodeAt(0));
+  const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, cryptoKey, ct);
+  return JSON.parse(new TextDecoder().decode(plainBuf));
 }
 async function verificarSenha(){
   const val=document.getElementById('senha-input').value.trim();
   if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
-  const hash=await _calcHash(val);
-  if(hash===_HASH){
-    try{sessionStorage.setItem('uni_auth','1');}catch(e){}
-    try{localStorage.setItem('uni_auth','1');}catch(e){}
+  try{
+    const chaveBuf = await _sha256Buf(val);
+    const cryptoKey = await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+    DB = await _decifrarDados(cryptoKey);
+    const chaveHex = _bytesToHex(chaveBuf);
+    try{sessionStorage.setItem('uni_auth_key', chaveHex);}catch(e){}
+    try{localStorage.setItem('uni_auth_key', chaveHex);}catch(e){}
     document.getElementById('senha-overlay').style.display='none';
     document.getElementById('senha-input').value='';
-  }else{
+    _iniciarDashboard();
+  }catch(e){
     document.getElementById('senha-err').textContent='Senha incorreta.';
     document.getElementById('senha-input').value='';
     document.getElementById('senha-input').focus();
   }
 }
-function initSenha(){
-  const ok=(()=>{try{return sessionStorage.getItem('uni_auth')||localStorage.getItem('uni_auth');}catch(e){return null;}})();
-  if(ok==='1'){document.getElementById('senha-overlay').style.display='none';}
-  else{setTimeout(()=>document.getElementById('senha-input').focus(),200);}
+async function initSenha(){
+  let chaveHex=null;
+  try{chaveHex=sessionStorage.getItem('uni_auth_key')||localStorage.getItem('uni_auth_key');}catch(e){}
+  if(chaveHex){
+    try{
+      const chaveBuf=_hexToBytes(chaveHex);
+      const cryptoKey=await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+      DB = await _decifrarDados(cryptoKey);
+      const ov=document.getElementById('senha-overlay'); if(ov) ov.style.display='none';
+      _iniciarDashboard();
+      return;
+    }catch(e){
+      // chave guardada não decifra mais (senha mudou, ou dado corrompido) — pede de novo
+      try{sessionStorage.removeItem('uni_auth_key');}catch(_){}
+      try{localStorage.removeItem('uni_auth_key');}catch(_){}
+    }
+  }
+  setTimeout(()=>{const inp=document.getElementById('senha-input');if(inp)inp.focus();},200);
 }
 
-const DATA_JSON_PLACEHOLDER = 'DATA_GOES_HERE';
+// ── BLOQUEIO DE INSPEÇÃO ──────────────────────────────────────────────────────
+function _ativarMoria(){
+  document.getElementById('senha-overlay').style.display='none';
+  document.getElementById('moria-overlay').style.display='flex';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='F12'){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&!e.shiftKey&&['u','U'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+});
+document.addEventListener('contextmenu',function(e){e.preventDefault();_ativarMoria();});
+
+const ENCRYPTED_PAYLOAD = 'DATA_GOES_HERE';
 let DB;
-// Inicializar senha imediatamente — não depende do DOMContentLoaded
-(function(){
-  try{
-    if(sessionStorage.getItem('uni_auth')==='1'||localStorage.getItem('uni_auth')==='1'){
-      const ov=document.getElementById('senha-overlay');
-      if(ov) ov.style.display='none';
-    } else {
-      setTimeout(()=>{const inp=document.getElementById('senha-input');if(inp)inp.focus();},200);
-    }
-  }catch(e){}
-})();
 let poloSortK='pend',poloSortA=false,tutorSortK='n',tutorSortA=true,pracSortK='pend_n',pracSortA=false,ordemSortK='n',ordemSortA=true;
 let poloData=[],tutorData=[],pracData=[],ordemData=[];
 let gerPoloData=[],gerContrData=[],gerAgendaData=[],gerDetData=[];
@@ -2114,9 +2165,7 @@ function _tutMecSort(col){
 
 
 
-document.addEventListener('DOMContentLoaded',()=>{
-  initDark();
-  DB=DATA_JSON_PLACEHOLDER;
+function _iniciarDashboard(){
   const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
   document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
   const _tsEl=document.getElementById('topbar-ts');if(_tsEl)_tsEl.textContent='Atualizado: '+DB.gerado_em;
@@ -2130,6 +2179,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   try{filterPolos('');filterTutores('');}catch(e){console.error('filterPolos/Tutores',e);}
   try{renderGerenciamento();populateFilters();}catch(e){console.error('renderGer',e);}
   initSemestres();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  initDark();
   initSenha();
 });
 
