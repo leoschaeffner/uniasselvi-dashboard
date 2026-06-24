@@ -32,6 +32,7 @@ jobs:
         env:
           URL_CONTROLE:   ${{ secrets.URL_CONTROLE }}
           URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
+          URL_PORTFOLIO_2026_2: ${{ secrets.URL_PORTFOLIO_2026_2 }}
           URL_GERENCIAL:  ${{ secrets.URL_GERENCIAL }}
           URL_LOTACAO:    ${{ secrets.URL_LOTACAO }}
           URL_REL_NOVO:   ${{ secrets.URL_REL_NOVO }}
@@ -109,6 +110,7 @@ jobs:
           print("[INFO] Baixando planilhas...")
           baixar('URL_CONTROLE',   'planilhas/01_CONTROLE_TUTORIA.xlsx',        '01_CONTROLE_TUTORIA',        True)
           baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR',           True)
+          baixar('URL_PORTFOLIO_2026_2', 'planilhas/PORTIFOLIO_TUTOR_2026_2.xlsx', 'PORTIFOLIO_TUTOR_2026_2', False)
           baixar('URL_GERENCIAL',  'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERENCIAMENTO',          False)
           baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES',            False)
           baixar('URL_REL_NOVO',   'planilhas/REL_DETALHADO.csv',               'REL_DETALHADO',              False)
@@ -124,16 +126,17 @@ jobs:
       - name: Publicar index.html
         run: |
           cp saida/dashboard.html index.html
+          cp saida/lookup.json lookup.json
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
-          git add index.html
+          git add index.html lookup.json
           git diff --cached --quiet && echo "Sem mudanças" || {
             git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT"
             git pull --rebase -X ours origin main || {
               git rebase --abort
               git fetch origin main
               git reset --soft origin/main
-              git add index.html
+              git add index.html lookup.json
               git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT [retry]"
             }
             git push
