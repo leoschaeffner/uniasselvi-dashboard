@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Envio de Portfólio · VinciLab</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --verde:#006B5E;--verde-l:#00A88F;--verde-xl:#e6f5f2;
+  --amarelo:#FFD100;--amarelo-d:#E5BC00;
+  --cinza:#1a1a1a;--cinza-m:#6b7280;--cinza-l:#e5e7eb;--cinza-xl:#f9fafb;
+  --branco:#fff;--radius:10px;--vermelho:#dc2626;--verde-ok:#16a34a;
+  --font:'Inter',sans-serif;
+}
+body{font-family:var(--font);background:var(--cinza-xl);color:var(--cinza);min-height:100vh}
+
+/* HEADER */
+.header{background:var(--verde);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px}
+.header-badge{background:var(--amarelo);color:var(--cinza);font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:.5px}
+.header-title{color:var(--branco);font-size:15px;font-weight:600}
+.header-link{margin-left:auto;color:rgba(255,255,255,.7);font-size:12px;text-decoration:none;display:flex;align-items:center;gap:4px}
+.header-link:hover{color:var(--branco)}
+
+/* CONTAINER */
+.container{max-width:660px;margin:32px auto;padding:0 16px 60px}
+
+/* HERO */
+.hero{background:var(--amarelo);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px}
+.hero h1{font-size:22px;font-weight:800;color:var(--cinza);margin-bottom:4px}
+.hero p{font-size:13px;color:#5a4a00;line-height:1.5}
+
+/* CARD */
+.card{background:var(--branco);border-radius:var(--radius);border:1px solid var(--cinza-l);padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza-m);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title span{background:var(--verde);color:var(--branco);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+
+/* TUTOR INFO BOX */
+.tutor-box{background:var(--verde-xl);border:1px solid #b2dfd8;border-radius:8px;padding:14px 16px;display:none;margin-top:12px}
+.tutor-box.show{display:block}
+.tutor-box-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--verde);margin-bottom:8px}
+.tutor-field{display:flex;gap:8px;margin-bottom:4px;font-size:13px}
+.tutor-label{color:var(--cinza-m);min-width:80px}
+.tutor-value{color:var(--cinza);font-weight:500}
+.tutor-error{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;display:none;margin-top:12px;font-size:13px;color:var(--vermelho)}
+.tutor-error.show{display:block}
+
+/* FORM FIELDS */
+.field{margin-bottom:18px}
+.field:last-child{margin-bottom:0}
+label{display:block;font-size:13px;font-weight:500;color:var(--cinza);margin-bottom:6px}
+label .req{color:var(--vermelho);margin-left:2px}
+input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
+  width:100%;border:1.5px solid var(--cinza-l);border-radius:8px;
+  padding:10px 13px;font-size:14px;font-family:var(--font);
+  color:var(--cinza);background:var(--branco);outline:none;
+  transition:border-color .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--verde-l)}
+input.error,select.error,textarea.error{border-color:var(--vermelho)}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+select:disabled{background-color:var(--cinza-xl);color:var(--cinza-m);cursor:not-allowed}
+.field-hint{font-size:11px;color:var(--cinza-m);margin-top:4px}
+.field-error{font-size:11px;color:var(--vermelho);margin-top:4px;display:none}
+.field-error.show{display:block}
+
+/* ORDENS */
+.ordens{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.ordem-btn{border:2px solid var(--cinza-l);background:var(--cinza-xl);border-radius:8px;padding:12px 4px;text-align:center;cursor:pointer;font-size:15px;font-weight:700;color:var(--cinza-m);transition:all .15s;user-select:none}
+.ordem-btn:hover{border-color:var(--verde-l);color:var(--verde)}
+.ordem-btn.active{border-color:var(--amarelo);background:var(--amarelo);color:var(--cinza)}
+.ordem-btn.error-state{border-color:var(--vermelho)}
+
+/* UPLOAD FOTOS */
+.upload-area{border:2px dashed var(--cinza-l);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.upload-area:hover,.upload-area.dragover{border-color:var(--verde-l);background:var(--verde-xl)}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:28px;margin-bottom:8px}
+.upload-text{font-size:13px;font-weight:500;color:var(--cinza)}
+.upload-sub{font-size:11px;color:var(--cinza-m);margin-top:4px}
+.fotos-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.foto-thumb{position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--cinza-l)}
+.foto-thumb img{width:100%;height:100%;object-fit:cover}
+.foto-remove{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.foto-count{font-size:11px;color:var(--cinza-m);margin-top:6px}
+
+/* SUBMIT */
+.btn-submit{width:100%;background:var(--amarelo);color:var(--cinza);border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-submit:hover{background:var(--amarelo-d)}
+.btn-submit:disabled{background:var(--cinza-l);color:var(--cinza-m);cursor:not-allowed}
+.btn-submit .spinner{width:18px;height:18px;border:2px solid rgba(0,0,0,.2);border-top-color:var(--cinza);border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-submit.loading .spinner{display:block}
+.btn-submit.loading .btn-text{display:none}
+
+/* SUCESSO */
+.sucesso{display:none;background:var(--branco);border-radius:var(--radius);border:2px solid #86efac;padding:32px 24px;text-align:center;margin-bottom:16px}
+.sucesso.show{display:block}
+.sucesso-icon{font-size:48px;margin-bottom:12px}
+.sucesso h2{font-size:20px;font-weight:700;color:var(--verde-ok);margin-bottom:8px}
+.sucesso p{font-size:14px;color:var(--cinza-m);line-height:1.6;margin-bottom:16px}
+.btn-novo{background:var(--verde);color:var(--branco);border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)}
+
+/* LOADING E-MAIL */
+.email-loading{display:none;font-size:12px;color:var(--verde);margin-top:6px}
+.email-loading.show{display:flex;align-items:center;gap:6px}
+.dot-spin{width:12px;height:12px;border:2px solid #b2dfd8;border-top-color:var(--verde);border-radius:50%;animation:spin .7s linear infinite}
+
+/* FOOTER */
+.footer{text-align:center;font-size:11px;color:var(--cinza-m);padding:24px 0 0}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">VinciLab</div>
+  <div class="header-title">Envio de Portfólio de Prática</div>
+  
+</div>
+
+<div class="container">
+
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Registrar Prática Realizada</h1>
+    <p>Preencha os dados abaixo para registrar sua prática laboratorial. Cada envio corresponde a uma prática realizada.</p>
+  </div>
+
+  <!-- FORMULÁRIO -->
+  <form id="form-portfolio" novalidate>
+
+    <!-- STEP 1: IDENTIFICAÇÃO -->
+    <div class="card">
+      <div class="card-title"><span>1</span> Identificação do Tutor</div>
+
+      <div class="field">
+        <label for="email">Insira seu e-mail institucional <span class="req">*</span></label>
+        <input type="email" id="email" placeholder="Ex: nome.ultimosobrenome@tutorpratica.uniasselvi.com.br"
+               oninput="buscarTutor(this.value)"/>
+        <div class="email-loading" id="email-loading">
+          <div class="dot-spin"></div> Buscando dados...
+        </div>
+        <div class="field-error" id="email-error">E-mail não encontrado no sistema. Verifique e tente novamente.</div>
+      </div>
+
+      <!-- Dados do tutor puxados automaticamente -->
+      <div class="tutor-box" id="tutor-box">
+        <div class="tutor-box-title">✓ Tutor identificado</div>
+        <div class="tutor-field"><span class="tutor-label">Nome</span><span class="tutor-value" id="t-nome">—</span></div>
+        <div class="tutor-field"><span class="tutor-label">Polo</span><span class="tutor-value" id="t-polo">—</span></div>
+        <div class="tutor-field"><span class="tutor-label">Laboratório</span><span class="tutor-value" id="t-lab">—</span></div>
+      </div>
+      <div class="tutor-error" id="tutor-error">
+        E-mail não encontrado. Verifique se está utilizando seu e-mail institucional ou acione o time de suporte.
+      </div>
+    </div>
+
+    <!-- STEP 2: PRÁTICA -->
+    <div class="card">
+      <div class="card-title"><span>2</span> Dados da Prática</div>
+
+      <div class="field">
+        <label>Ordem de Disciplina <span class="req">*</span></label>
+        <div class="ordens" id="ordens">
+          <div class="ordem-btn" data-ordem="1" onclick="selecionarOrdem(1)">1</div>
+          <div class="ordem-btn" data-ordem="2" onclick="selecionarOrdem(2)">2</div>
+          <div class="ordem-btn" data-ordem="3" onclick="selecionarOrdem(3)">3</div>
+          <div class="ordem-btn" data-ordem="4" onclick="selecionarOrdem(4)">4</div>
+          <div class="ordem-btn" data-ordem="5" onclick="selecionarOrdem(5)">5</div>
+        </div>
+        <div class="field-error" id="ordem-error">Selecione a ordem de disciplina.</div>
+      </div>
+
+      <div class="field">
+        <label for="protocolo">Protocolo de Prática <span class="req">*</span></label>
+        <select id="protocolo" onchange="atualizarDisciplina()">
+          <option value="">— Selecione o protocolo —</option>
+        </select>
+        <div class="field-error" id="protocolo-error">Selecione o protocolo de prática.</div>
+      </div>
+
+      <div class="field">
+        <label for="disciplina">Disciplina</label>
+        <input type="text" id="disciplina" readonly placeholder="Preenchida automaticamente"
+               style="background:var(--cinza-xl);color:var(--cinza-m)"/>
+      </div>
+
+      <div class="field">
+        <label for="data-aplicacao">Data da Aplicação <span class="req">*</span></label>
+        <input type="date" id="data-aplicacao" min="2026-06-20"/>
+        <div class="field-error" id="data-error">Informe a data de aplicação.</div>
+      </div>
+
+      <div class="field">
+        <label for="qtd-estudantes">Nº de Estudantes Presentes <span class="req">*</span></label>
+        <input type="number" id="qtd-estudantes" min="1" max="60" placeholder="Ex: 12"/>
+        <div class="field-error" id="qtd-error">Informe o número de estudantes.</div>
+      </div>
+
+      <div class="field">
+        <label for="comentarios">Comentários</label>
+        <textarea id="comentarios" placeholder="Observações sobre a prática, intercorrências, materiais utilizados..."></textarea>
+        <div class="field-hint">Opcional, registre qualquer informação relevante sobre a prática.</div>
+      </div>
+    </div>
+
+    <!-- STEP 3: FOTOS -->
+    <div class="card">
+      <div class="card-title"><span>3</span> Fotos da Prática</div>
+      <p style="font-size:13px;color:var(--cinza-m);margin-bottom:14px">Adicione até 3 fotos da prática realizada (JPG, PNG, máx. 10MB cada).</p>
+
+      <div class="upload-area" id="upload-area" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFotos(event)">
+        <input type="file" id="fotos-input" accept="image/jpeg,image/png,image/jpg" multiple onchange="adicionarFotos(this.files)"/>
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">Clique para selecionar ou arraste as fotos aqui</div>
+        <div class="upload-sub">JPG ou PNG · até 10MB por foto · máximo 3 fotos</div>
+      </div>
+
+      <div class="fotos-preview" id="fotos-preview"></div>
+      <div class="foto-count" id="foto-count"></div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button type="button" class="btn-submit" id="btn-submit" onclick="enviarPortfolio()">
+      <div class="spinner"></div>
+      <span class="btn-text">✓ Enviar Portfólio</span>
+    </button>
+
+  </form>
+
+  <!-- SUCESSO -->
+  <div class="sucesso" id="sucesso">
+    <div class="sucesso-icon">✅</div>
+    <h2>Portfólio enviado com sucesso!</h2>
+    <p id="sucesso-msg">Sua prática foi registrada. Os dados foram salvos e já estão disponíveis no dashboard VinciLab.</p>
+    <button class="btn-novo" onclick="novoEnvio()">Registrar outra prática</button>
+  </div>
+
+</div>
+
+<div class="footer">
+  UNIASSELVI / VinciLab · Gestão de Práticas Laboratoriais · <span id="ano"></span>
+</div>
+
+<script>
+// ═══ CONFIGURAÇÃO SHAREPOINT ═══════════════════════════════════════════
+const SP_SITE = 'https://uniasselvi01.sharepoint.com/sites/gestaoped.polos';
+const SP_LISTA = 'Portfolios VinciLab';
+const SP_API = `${SP_SITE}/_api/web/lists/getbytitle('${SP_LISTA}')/items`;
+
+// ═══ CATÁLOGO DE PRÁTICAS ═══════════════════════════════════════════════
+const CATALOGO = {"Multidisciplinar I - Biomedicina e Farmácia": [{"id": "55", "nome": "Imunocromatografia IgG IgM para Toxoplasmose", "disc": "Imunologia Clínica", "perfil": "BFR", "curso": "BBI"}, {"id": "56", "nome": "Marcadores Reumáticos - Aslo.Pcr.Fr", "disc": "Imunologia Clínica", "perfil": "BFR", "curso": "BBI"}, {"id": "110", "nome": "Pesquisa de antígeno Covid-19", "disc": "Imunologia Clínica", "perfil": "BFR", "curso": "BBI"}, {"id": "111", "nome": "VDRL", "disc": "Imunologia Clínica", "perfil": "BFR", "curso": "BBI"}, {"id": "106", "nome": "Alterações de tamanho e coloração eritrocitária + Pesquisa de antígeno Covid-19", "disc": "Imunologia e Hematologia Clínica", "perfil": "BFR", "curso": "BFR"}, {"id": "104", "nome": "Análise de pH + Análise de acidez titulável - Determinação da acidez por titulometria", "disc": "Bromatologia e Tecnologia de Alimentos", "perfil": "BFR", "curso": "BFR"}, {"id": "107", "nome": "Desenvolvendo um Xampu", "disc": "Tecnologia Farmacêutica e Controle de Qualidade de Medicamentos e Cosméticos", "perfil": "BFR", "curso": "BFR"}, {"id": "53", "nome": "Desenvolvimento do Creme Lanette N + Xarope simples e composto", "disc": "Farmacotécnica", "perfil": "BFR", "curso": "BFR"}, {"id": "52", "nome": "Encapsulamento de pós", "disc": "Farmacotécnica", "perfil": "BFR", "curso": "BFR"}, {"id": "109", "nome": "Formulando uma Nanoemulsão Cosmética", "disc": "Tecnologia Farmacêutica e Controle de Qualidade de Medicamentos e Cosméticos", "perfil": "BFR", "curso": "BFR"}, {"id": "105", "nome": "Histologia vegetal", "disc": "Farmacognosia e Fitoterapia", "perfil": "BFR", "curso": "BFR"}, {"id": "54", "nome": "Latex (fator reumatoide), ALSO e PCR", "disc": "Imunologia e Hematologia Clínica", "perfil": "BFR", "curso": "BFR"}, {"id": "108", "nome": "Peso médio comprimidos + Análise de densidade", "disc": "Tecnologia Farmacêutica e Controle de Qualidade de Medicamentos e Cosméticos", "perfil": "BFR", "curso": "BFR"}, {"id": "60", "nome": "Análise à fresco (exame direto) de fungos dermatófitos e leveduras", "disc": "Micologia Clínica E Virologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "123", "nome": "Análise de sedimento urinário", "disc": "Urinálise E Citopatologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "66", "nome": "Análise físico-química da urina", "disc": "Urinálise E Citopatologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "61", "nome": "Análise macro e micromorfológica de fungos leveduriformes", "disc": "Micologia Clínica E Virologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "67", "nome": "Coleta de Sangue", "disc": "Hematologia e Imunologia Básica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "113", "nome": "Contagem diferencial de leucócitos", "disc": "Hematologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "68", "nome": "Contagem diferencial de leucócitos", "disc": "Hematologia e Imunologia Básica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "63", "nome": "Dosagem de colesterol sérico", "disc": "Bioquímica Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "118", "nome": "Dosagem de glicose sérica", "disc": "Bioquímica Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "120", "nome": "Dosagem de triglicerídeos sérico", "disc": "Bioquímica Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "115", "nome": "Esfregaço e coloração de GRAM", "disc": "Microbiologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "69", "nome": "Esfregaço sanguíneo e colorações  (contagem diferencial de leucócitos)", "disc": "Hematologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "59", "nome": "Esfregaço sanguíneo e colorações  (contagem diferencial de leucócitos)", "disc": "Hematologia e Imunologia Básica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "122", "nome": "Exame direto a fresco e gota espessa", "disc": "Parasitologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "116", "nome": "Identificação de estreptococos", "disc": "Microbiologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "65", "nome": "Laminário de ovos de helmintos", "disc": "Parasitologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "64", "nome": "Método de Hoffman", "disc": "Parasitologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "114", "nome": "Preparo de meio de cultura I", "disc": "Micologia Clínica E Virologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "62", "nome": "Preparo de meio de cultura II", "disc": "Microbiologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "117", "nome": "Técnicas de inoculação", "disc": "Microbiologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "70", "nome": "Tipagem sanguínea em lâminas", "disc": "Hematologia e Imunologia Básica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "119", "nome": "Transaminases", "disc": "Bioquímica Clínica", "perfil": "BFR", "curso": "BFR-BBI"}, {"id": "112", "nome": "Velocidade de Hemossedimentação", "disc": "Hematologia Clínica", "perfil": "BFR", "curso": "BFR-BBI"}], "Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética": [{"id": "124", "nome": "Abordagens Integradas para Revitalização Facial: Peeling Mecânico e Químico", "disc": "Consulta E Acompanhamento Em Biomedicina Estética", "perfil": "BFR", "curso": "BBI"}, {"id": "72", "nome": "Avaliação Corporal e avaliação facial", "disc": "Estética E Avaliação Facial E Corporal", "perfil": "BFR", "curso": "BBI"}, {"id": "73", "nome": "Limpeza de pele e hidratação facial", "disc": "Estética E Avaliação Facial E Corporal", "perfil": "BFR", "curso": "BBI"}, {"id": "71", "nome": "Microagulhamento no tratamento de cicatrizes/rejuvenescimento facial", "disc": "Procedimentos Injetáveis Em Biomedicina Estética", "perfil": "BFR", "curso": "BBI"}, {"id": "58", "nome": "Microagulhamento no tratamento de disfunções hipercrômicas", "disc": "Procedimentos Injetáveis Em Biomedicina Estética", "perfil": "BFR", "curso": "BBI"}, {"id": "125", "nome": "Tratamento de Flacidez Tissular (corporal e facial) e Gordura Localizada", "disc": "Consulta E Acompanhamento Em Biomedicina Estética", "perfil": "BFR", "curso": "BBI"}, {"id": "238", "nome": "Abordagens Fisioterapêuticas no Desenvolvimento Neuropsicomotor", "disc": "Fisioterapia na Saúde da Criança", "perfil": "BFI", "curso": "BFI"}, {"id": "568", "nome": "Aplicação da Eletrotermofototerapia em Casos Clínicos Reais", "disc": "Eletrotermofototerapia", "perfil": "BFI", "curso": "BFI"}, {"id": "184", "nome": "Aprendizagem", "disc": "Terapia Ocupacional Em Contextos Sociais E Educacionais", "perfil": "BTO", "curso": "BTO"}, {"id": "178", "nome": "Auriculoterapia", "disc": "Spas E Terapias Alternativas", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "257", "nome": "Avaliação Cardiorrespiratória com Testes Incrementais: Protocolos e Interpretação dos Resultados", "disc": "Fisiologia do Exercicio e Avaliação Cardiorrespiratória", "perfil": "BFI", "curso": "BFI"}, {"id": "237", "nome": "Avaliação e Aplicação de Recursos Eletrotermofototerapeuticos em Disfunções Dermatofuncionais", "disc": "Fisioterapia Dermatofuncional", "perfil": "BFI", "curso": "BFI"}, {"id": "247", "nome": "Avaliação e Reabilitação Funcional dos Membros Inferiores : Prática em Fisioterapia Traumato-Ortopédica", "disc": "Fisioterapia Traumato ortopedica", "perfil": "BFI", "curso": "BFI"}, {"id": "275", "nome": "Avaliação e Reabilitação Funcional dos Membros Superiores: Prática em Fisioterapia Traumato-Ortopédica", "disc": "Fisioterapia Traumato ortopedica", "perfil": "BFI", "curso": "BFI"}, {"id": "565", "nome": "Avaliação Físico-Funcional e Imaginológica da Coluna Vertebral e Quadril", "disc": "Avaliação Físico-Funcional e Imaginologia", "perfil": "BFI", "curso": "BFI"}, {"id": "240", "nome": "Avaliação Funcional e Exercícios para Gestantes: Atuação Fisioterapêutica na Gravidez", "disc": "Fisioterapia na Saúde da Mulher", "perfil": "BFI", "curso": "BFI"}, {"id": "251", "nome": "Avaliação Funcional Integrada e Correlação Imaginológica nas Patologias do Joelho/Tornozelo/Pé", "disc": "Avaliação Físico-Funcional e Imaginologia", "perfil": "BFI", "curso": "BFI"}, {"id": "199", "nome": "Avaliação Funcional Integrada e Correlação Imaginológica nas Patologias do Ombro e Cotovelo", "disc": "Avaliação Físico-Funcional e Imaginologia", "perfil": "BFI", "curso": "BFI"}, {"id": "564", "nome": "Avaliação Funcional Integrada e Correlação Imaginológica nas Patologias do Punho/Mão", "disc": "Avaliação Físico-Funcional e Imaginologia", "perfil": "BFI", "curso": "BFI"}, {"id": "570", "nome": "Avaliação Infantil", "disc": "Fisioterapia na Saúde da Criança", "perfil": "BFI", "curso": "BFI"}, {"id": "569", "nome": "Avaliação Motora e Estratégias de Reabilitação em Crianças com Paralisia Cerebral e Síndrome de Down", "disc": "Fisioterapia na Saúde da Criança", "perfil": "BFI", "curso": "BFI"}, {"id": "244", "nome": "Avaliação Neurológica", "disc": "Fisioterapia Neurofuncional", "perfil": "BFI", "curso": "BFI"}, {"id": "520", "nome": "Avaliação Semiológica Cardiorrespiratória: Métodos de Inspeção, Palpação e Ausculta no Diagnóstico Cardiovascular", "disc": "Fisiologia do Exercicio e Avaliação Cardiorrespiratória", "perfil": "BFI", "curso": "BFI"}, {"id": "261", "nome": "Avaliação Semiológica Cardiorrespiratória: Técnicas e Protocolos na Fisioterapia Cardiovascular", "disc": "Fisioterapia Cardiovascular", "perfil": "BFI", "curso": "BFI"}, {"id": "218", "nome": "Braintom", "disc": "Teorias E Dinâmicas De Trabalho Em Grupo", "perfil": "BTO", "curso": "BTO"}, {"id": "519", "nome": "Cinesioterapia Aplicada à Estabilização e Controle Motor", "disc": "Cinesioterapia", "perfil": "BFI", "curso": "BFI"}, {"id": "252", "nome": "Cinesioterapia Aplicada ao Fortalecimento Muscular: Prática de Exercícios", "disc": "Cinesioterapia", "perfil": "BFI", "curso": "BFI"}, {"id": "264", "nome": "Circuito de  Intervenções Fisioterapêuticas em Pediatria", "disc": "Fisioterapia na Saúde da Criança", "perfil": "BFI", "curso": "BFI"}, {"id": "212", "nome": "Desintoxicação e nutrição Capilar com Argila", "disc": "Estética Capilar", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "177", "nome": "Drenagem Linfática", "disc": "Procedimentos Estéticos Pré E Pós-Operatórios", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "179", "nome": "Escalda Pés", "disc": "Spas E Terapias Alternativas", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "573", "nome": "Estudo Prático da Biomecânica Articular e Muscular no Movimento Funcional Humano", "disc": "Movimento Funcional Humano", "perfil": "BFI", "curso": "BFI"}, {"id": "272", "nome": "Facilitação Motora e Controle Postural na Reabilitação de Pacientes Pós-AVC: Laboratório Prático", "disc": "Fisioterapia Neurofuncional", "perfil": "BFI", "curso": "BFI"}, {"id": "521", "nome": "Fisioterapia com Próteses: Reabilitação Funcional e Adaptação ao Uso de Próteses", "disc": "Prótese e Órteses", "perfil": "BFI", "curso": "BFI"}, {"id": "269", "nome": "Fisioterapia no Idoso: Técnicas de Avaliação Funcional e Neurológica para Diagnóstico e Reabilitação", "disc": "Fisioterapia Na Saúde Do Idoso", "perfil": "BFI", "curso": "BFI"}, {"id": "567", "nome": "Fundamentos e Aplicações Clínicas da Eletroterapia: Prática em Eletrotermofototerapia", "disc": "Eletrotermofototerapia", "perfil": "BFI", "curso": "BFI"}, {"id": "255", "nome": "Fototerapia na Reabilitação Fisioterapêutica: Prática em Eletrotermofototerapia", "disc": "Eletrotermofototerapia", "perfil": "BFI", "curso": "BFI"}, {"id": "182", "nome": "Gincana Sensorial", "disc": "Psicomotricidade E Integração Sensorial", "perfil": "BTO", "curso": "BTO"}, {"id": "171", "nome": "Laser e LED", "disc": "Eletroterapia", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "174", "nome": "Limpeza de Pele Facial e avaliação facial", "disc": "Estética E Avaliação Facial", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "186", "nome": "Mapa Conceitual", "disc": "Terapia Ocupacional Nas Disfunções Físicas Da Criança E Do Adolescente", "perfil": "BTO", "curso": "BTO"}, {"id": "175", "nome": "Maquiagem social", "disc": "Maquiagem E Visagismo", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "216", "nome": "Massagem Facial", "disc": "Teorias E Técnicas De Massagem", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "305", "nome": "Massagem Geral Terapêutica: Técnicas e Aplicações em Recursos Manuais", "disc": "Recursos terapêuticos Manuais", "perfil": "BFI", "curso": "BFI"}, {"id": "180", "nome": "Massagem Modeladora", "disc": "Teorias E Técnicas De Massagem", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "215", "nome": "Massagem Relaxante", "disc": "Teorias E Técnicas De Massagem", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "566", "nome": "Mobilização Articular na Cinesioterapia: Avaliação e Intervenção Funcional", "disc": "Cinesioterapia", "perfil": "BFI", "curso": "BFI"}, {"id": "278", "nome": "Movimento Articular e Goniometria: Avaliação Quantitativa na Prática Fisioterapêutica", "disc": "Movimento Funcional Humano", "perfil": "BFI", "curso": "BFI"}, {"id": "574", "nome": "Movimento Funcional e Cinesiologia da Marcha: Observação e Análise em Laboratório Prático", "disc": "Movimento Funcional Humano", "perfil": "BFI", "curso": "BFI"}, {"id": "181", "nome": "Oficinas de terapia ocupacional na saude mental", "disc": "Comportamento Humano E Transtornos Mentais", "perfil": "BTO", "curso": "BTO"}, {"id": "185", "nome": "Pontos cardeais", "disc": "Terapia Ocupacional Na Saúde Do Trabalhador", "perfil": "BTO", "curso": "BTO"}, {"id": "253", "nome": "Prática de Alongamento Muscular: Estratégias Cinesioterapêuticas para Ganho de Flexibilidade e Função", "disc": "Cinesioterapia", "perfil": "BFI", "curso": "BFI"}, {"id": "270", "nome": "Prática de Análise Ergonômica: Identificação e Correção de Riscos Ergonômicos no Local de Trabalho", "disc": "Fisioterapia na Saúde do Trabalhador", "perfil": "BFI", "curso": "BFI"}, {"id": "572", "nome": "Prática de Avaliação Intensiva: Uso de Simuladores para Diagnóstico e Intervenção Respiratória", "disc": "Fisioterapia Respiratória e Intensivismo", "perfil": "BFI", "curso": "BFI"}, {"id": "306", "nome": "Prática de Drenagem Linfática Manual: Estímulo à Circulação Linfática e Redução de Edema", "disc": "Recursos terapêuticos Manuais", "perfil": "BFI", "curso": "BFI"}, {"id": "307", "nome": "Prática de Mobilização Articular: Abordagens Terapêuticas em Recursos Manuais", "disc": "Recursos terapêuticos Manuais", "perfil": "BFI", "curso": "BFI"}, {"id": "304", "nome": "Prática Terapêutica com Órteses: Abordagens Funcionais na Reabilitação Musculoesquelética", "disc": "Prótese e Órteses", "perfil": "BFI", "curso": "BFI"}, {"id": "249", "nome": "Prática Traumato-Ortopédica em Coluna Vertebral: Manejo de Disfunções Cervicais, Torácicas e Lombares", "disc": "Fisioterapia Traumato ortopedica", "perfil": "BFI", "curso": "BFI"}, {"id": "176", "nome": "Preparação da pele para receber a maquiagem", "disc": "Maquiagem E Visagismo", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "268", "nome": "Prevenção de Quedas e Técnicas de Transferência: Estratégias Fisioterapêuticas para Idosos", "disc": "Fisioterapia Na Saúde Do Idoso", "perfil": "BFI", "curso": "BFI"}, {"id": "183", "nome": "Produção de Prototipo", "disc": "Tecnologia Assistiva Em Terapia Ocupacional", "perfil": "BTO", "curso": "BTO"}, {"id": "245", "nome": "Reabilitação Fisioterapêutica na Doença de Parkinson: Estratégias para a Melhora da Marcha, Equilíbrio e Funcionalidade", "disc": "Fisioterapia Neurofuncional", "perfil": "BFI", "curso": "BFI"}, {"id": "241", "nome": "Reabilitação Fisioterapêutica no Envelhecimento: Manejo de Doenças Reumáticas em Idosos", "disc": "Fisioterapia Na Saúde Do Idoso", "perfil": "BFI", "curso": "BFI"}, {"id": "571", "nome": "Recursos Terapêuticos em Disfunções Pélvicas Femininas: Prática Integrada", "disc": "Fisioterapia na Saúde da Mulher", "perfil": "BFI", "curso": "BFI"}, {"id": "301", "nome": "Revisão de Anatomorfofisiologia", "disc": "Movimento Funcional Humano", "perfil": "BFI", "curso": "BFI"}, {"id": "246", "nome": "Técnicas Respiratórias na Fisioterapia Intensiva", "disc": "Fisioterapia Respiratória e Intensivismo", "perfil": "BFI", "curso": "BFI"}, {"id": "230", "nome": "Termoterapia na Reabilitação Fisioterapêutica: Aplicações Práticas e Benefícios Terapêuticos", "disc": "Eletrotermofototerapia", "perfil": "BFI", "curso": "BFI"}, {"id": "219", "nome": "Tomada de decisão agil", "disc": "Terapia Ocupacional Em Contextos Hospitalares E Cuidados Paliativos", "perfil": "BTO", "curso": "BTO"}, {"id": "213", "nome": "Tratamento de Redução de Medida", "disc": "Estética E Avaliação Corporal", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "173", "nome": "Tratamento Flacidez dérmica", "disc": "Estética E Avaliação Corporal", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "522", "nome": "Treino de Atividades da Vida Diária - Membros Inferiores", "disc": "Movimento Funcional Humano", "perfil": "BTO", "curso": "BTO"}, {"id": "217", "nome": "Treino de Atividades da Vida Diária - Membros Superiores", "disc": "Movimento Funcional Humano", "perfil": "BTO", "curso": "BTO"}, {"id": "172", "nome": "Ultrassom Terapêutico (UST)", "disc": "Eletroterapia", "perfil": "COS-TIP", "curso": "TIP-COS"}, {"id": "214", "nome": "Uso de Microcorrentes no pós-operatório", "disc": "Procedimentos Estéticos Pré E Pós-Operatórios", "perfil": "COS-TIP", "curso": "TIP-COS"}], "Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica": [{"id": "206", "nome": "Abordagem e cuidados de enfermagem em episódio de surto psicótico", "disc": "Assistência de Enfermagem na Saúde Mental", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "79", "nome": "Administração  de medicamento por Cateter Venoso Central + Monitorização hemodinâmica  do paciente", "disc": "Assistência De Enfermagem Em Terapia Intensiva", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "76", "nome": "Administração de medicamento pela via subcutânea + Administração de medicamento pela via oral", "disc": "Assistência de Enfermagem ao Recém-Nascido e Lactente", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "130", "nome": "Aspiração de vias aéreas (com e sem TOT)", "disc": "Assistência De Enfermagem Em Terapia Intensiva", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "211", "nome": "Avaliação corporal + Ausculta pulmonar + Ausculta cardiaca + Verificação de sinais vitais", "disc": "Fundamentos de Enfermagem", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "169", "nome": "Avaliação de enfermagem ao paciente com queimadura + Escala de Coma de Glasgow", "disc": "Assistência de Enfermagem na Urgência e Emergência", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "134", "nome": "Banho de leito + Lavagem gástrica", "disc": "Assistência de Enfermagem na Saúde do Adulto", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "78", "nome": "Consulta de enfermagem no pré-natal de baixo risco + Administração de medicamento pela via intramuscular", "disc": "Assistência de Enfermagem da Gestante e Parturiente", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "210", "nome": "Curativo", "disc": "Fundamentos de Enfermagem", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "75", "nome": "Desmontagem de campo cirúrgico do paciente + Desmontagem de mesa cirurgica e retirada da vestimenta cirúrgica estéril", "disc": "Técnicas de Instrumentação Cirúrgica em Cirurgia Geral e em Videolaparoscopia", "perfil": "EMF-ISN", "curso": "ISC"}, {"id": "204", "nome": "Exame físico - sistema cardiovascular + Atuação de enfermagem nas doenças locomotoras", "disc": "Assistência de Enfermagem na Saúde do Idoso", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "74", "nome": "Lavagem cirúrgica das mãos + Calço de luvas cirúrgicas", "disc": "Assistência de Enfermagem no Centro Cirúrgico", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "74", "nome": "Lavagem cirúrgica das mãos + Calço de luvas cirúrgicas", "disc": "Paramentação Cirúrgica e Procedimentos em Centro Cirúrgico", "perfil": "EMF-ISN", "curso": "ISC"}, {"id": "207", "nome": "Manobra de Suporte Básico de Vida", "disc": "Assistência de Enfermagem na Urgência e Emergência", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "131", "nome": "Medidas antropométricas da criança e adolescente + Acolhimento e escala de Manchester pediatria", "disc": "Assistência de Enfermagem na Saúde da Criança e do Adolescente", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "208", "nome": "Montagem de mesa cirúrgica básica", "disc": "Assistência de Enfermagem no Centro Cirúrgico", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "127", "nome": "Montagem de mesa cirúrgica básica", "disc": "Técnicas de Instrumentação Cirúrgica em Cirurgia Geral e em Videolaparoscopia", "perfil": "EMF-ISN", "curso": "ISC"}, {"id": "205", "nome": "Nutrição parenteral + Instalação de dispositivo urinário", "disc": "Assistência de Enfermagem na Saúde do Idoso", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "132", "nome": "Obstrução de vias aéreas + Prática de vacinação", "disc": "Assistência de Enfermagem na Saúde da Criança e do Adolescente", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "126", "nome": "Paramentação cirúrgica: vestimenta estéril + Colocação de campos cirúrgicos no paciente", "disc": "Paramentação Cirúrgica e Procedimentos em Centro Cirúrgico", "perfil": "EMF-ISN", "curso": "ISC"}, {"id": "77", "nome": "Punção e manutenção de cateter de longa permanência + Troca de bolsa de ostomia", "disc": "Assistência de Enfermagem aos Pacientes Oncológicos e Cuidados Paliativos", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "82", "nome": "Punção Venosa + Retirada de pontos", "disc": "Assistência de Enfermagem na Saúde do Adulto", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "133", "nome": "Saúde da mulher no período gravídico-puerperal", "disc": "Assistência de Enfermagem na Saúde da Mulher", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "80", "nome": "Saúde da mulher reprodutiva + Realização do exame de Papanicolau", "disc": "Assistência de Enfermagem na Saúde da Mulher", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "81", "nome": "Sondagem vesical de alívio + Sondagem vesical de demora", "disc": "Assistência de Enfermagem na Saúde do Adulto", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "170", "nome": "Trabalho de parto natural + Emergências obstétricas", "disc": "Assistência de Enfermagem no Centro Obstétrico", "perfil": "EMF-ISN", "curso": "EFM"}, {"id": "168", "nome": "Triagem de paciente com transtorno neurológico e risco de suicídio", "disc": "Assistência de Enfermagem na Saúde Mental", "perfil": "EMF-ISN", "curso": "EFM"}], "EngeMaker | Química e Física - Engenharias e Licenciaturas": [{"id": "290", "nome": "Acionamento de Cargas Remotamente e com sensores", "disc": "Instalações Elétricas de Baixa Tensão", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER-ECE-EEA-ENM"}, {"id": "289", "nome": "Acionamento de Iluminação", "disc": "Instalações Elétricas de Baixa Tensão", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER-ECE-EEA-ENM"}, {"id": "248", "nome": "Análise de um sistema de transmissão de potência", "disc": "Experiência Profissional: Sistemas de Transmissão de Potência", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENM"}, {"id": "154", "nome": "Análise estrutural de uma viga", "disc": "Experiência Profissional: Construção e Simulação de Vigas", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ECE"}, {"id": "154", "nome": "Análise estrutural de uma viga", "disc": "Imersão Profissional: Construção e simulação de vigas", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "154", "nome": "Análise estrutural de uma viga", "disc": "Seminário Interdisciplinar VIII:", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "94", "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 1)", "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional", "perfil": "BAU", "curso": "BAU"}, {"id": "151", "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 2)", "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional", "perfil": "BAU", "curso": "BAU"}, {"id": "152", "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 3)", "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional", "perfil": "BAU", "curso": "BAU"}, {"id": "153", "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 4)", "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional", "perfil": "BAU", "curso": "BAU"}, {"id": "239", "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 1)", "disc": "Experiência Profissional: Projeto de Paisagismo Urbano", "perfil": "BAU", "curso": "BAU"}, {"id": "265", "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 2)", "disc": "Experiência Profissional: Projeto de Paisagismo Urbano", "perfil": "BAU", "curso": "BAU"}, {"id": "242", "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 3)", "disc": "Experiência Profissional: Projeto de Paisagismo Urbano", "perfil": "BAU", "curso": "BAU"}, {"id": "267", "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 4)", "disc": "Experiência Profissional: Projeto de Paisagismo Urbano", "perfil": "BAU", "curso": "BAU"}, {"id": "243", "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 1)", "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo", "perfil": "BAU", "curso": "BAU"}, {"id": "271", "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 2)", "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo", "perfil": "BAU", "curso": "BAU"}, {"id": "273", "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 3)", "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo", "perfil": "BAU", "curso": "BAU"}, {"id": "274", "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 4)", "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo", "perfil": "BAU", "curso": "BAU"}, {"id": "164", "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 1)", "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar", "perfil": "BAU", "curso": "BAU"}, {"id": "165", "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 2)", "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar", "perfil": "BAU", "curso": "BAU"}, {"id": "100", "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 3)", "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar", "perfil": "BAU", "curso": "BAU"}, {"id": "166", "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 4)", "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar", "perfil": "BAU", "curso": "BAU"}, {"id": "86", "nome": "Automação Industrial (Painel Pneumático)", "disc": "Automação Industrial", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENG"}, {"id": "287", "nome": "Avaliação do Número de Reynolds em Jar Test: Regimes de Escoamento na Coagulação", "disc": "Hidráulica e Hidrometria", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS"}, {"id": "137", "nome": "Conceitos Básicos do Desenho Auxiliado por Computador (AutoCAD)", "disc": "Desenho Auxiliado por Computador", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-EEA-ENM-ECE"}, {"id": "163", "nome": "Construção de um motor elétrico", "disc": "Experiência Profissional: Motor Elétrico", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENM"}, {"id": "84", "nome": "Desenho Técnico no AutoCAD: Prática Essencial para Iniciantes.", "disc": "Desenho Auxiliado por Computador", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-EEA-ENM-ECE"}, {"id": "309", "nome": "Dimensionamento de Condutores e Dispositivos de Proteção", "disc": "Instalações Elétricas de Baixa Tensão", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER-ECE-EEA-ENM"}, {"id": "101", "nome": "Elaboração de um algoritmo em Pascalzim", "disc": "Algoritmo e Lógica de Programação", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA-ENM-ECE-ENS-ENG"}, {"id": "51", "nome": "Elaboração de um algoritmo em Portugol", "disc": "Algoritmo e Lógica de Programação", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA-ENM-ECE-ENS-ENG"}, {"id": "352", "nome": "Geração de energia elétrica", "disc": "Máquinas Elétricas II", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "162", "nome": "Geração de energia fotovoltaica", "disc": "Experiência Profissional: Materiais Elétricos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "162", "nome": "Geração de energia fotovoltaica", "disc": "Sistemas De Energia Solar Termica e Fotovoltaica", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER"}, {"id": "95", "nome": "Impressão 3D", "disc": "Experiência Profissional: Impressão 3D", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS-ECE-ENG-EEA-ENM"}, {"id": "1", "nome": "Inspeção ergonômica no polo", "disc": "Ergonomia e Segurança Industrial", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENG"}, {"id": "139", "nome": "Introdução a Caligrafia Técnica dentro das normas da ABNT (NBR 6492). + Introdução aos Primeiros Passos", "disc": "Desenho Técnico", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "AGM-BAU-ECE-BAU-CDE-OBR-ENS-ENG-EEA-ENM"}, {"id": "288", "nome": "Levantamento de cargas", "disc": "Instalações Elétricas de Baixa Tensão", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER-ECE-EEA-ENM"}, {"id": "158", "nome": "Maquete Física Volumétrica (Parte 1)", "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "159", "nome": "Maquete Física Volumétrica (Parte 2)", "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "96", "nome": "Maquete Física Volumétrica (Parte 3)", "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "160", "nome": "Maquete Física Volumétrica (Parte 4)", "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "321", "nome": "Medição angular e verificação de folgas", "disc": "Metrologia e Confiabilidade de Equipamentos, Máquinas e Produtos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENM"}, {"id": "98", "nome": "Medição da resistência elétrica", "disc": "Medidas E Materiais Elétricos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER"}, {"id": "98", "nome": "Medição da resistência elétrica", "disc": "Experiência Profissional: Materiais Elétricos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "357", "nome": "Medição de peças com paquímetros e comparação com escala industrial", "disc": "Metrologia e Confiabilidade de Equipamentos, Máquinas e Produtos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENM"}, {"id": "362", "nome": "Metrologia", "disc": "Análise Dos Sistemas De Medição", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "GPI"}, {"id": "362", "nome": "Metrologia", "disc": "Processos e Metrologia Industrial", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENG"}, {"id": "203", "nome": "Modelagem 3D instalações elétricas", "disc": "Experiência Profissional: Projeto de Instalações Elétricas e Hidrossanitárias", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ECE"}, {"id": "203", "nome": "Modelagem 3D instalações elétricas", "disc": "Imersão Profissional: Projeto de Instalações Elétricas e Hidrossanitárias", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "203", "nome": "Modelagem 3D instalações elétricas", "disc": "Seminário Interdisciplinar IX:", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "143", "nome": "Modelo de um canteiro do obras (Parte 1)", "disc": "Experiência Profissional: Canteiro de Obras", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ECE"}, {"id": "143", "nome": "Modelo de um canteiro do obras (Parte 1)", "disc": "Imersão Profissional: Canteiro de Obras", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "150", "nome": "Modelo de um canteiro do obras (Parte 2)", "disc": "Experiência Profissional: Canteiro de Obras", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ECE"}, {"id": "150", "nome": "Modelo de um canteiro do obras (Parte 2)", "disc": "Imersão Profissional: Canteiro de Obras", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "99", "nome": "Parafuso de Arquimedes", "disc": "Experiência Profissional: Parafuso de Arquimedes", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS-ECE-ENG-EEA-ENM"}, {"id": "312", "nome": "Planta Baixa Comercial (Parte 1)", "disc": "Introdução ao Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "297", "nome": "Planta Baixa Comercial (Parte 2)", "disc": "Introdução ao Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "299", "nome": "Planta Baixa Comercial (Parte 3)", "disc": "Introdução ao Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "300", "nome": "Planta Baixa Comercial (Parte 4)", "disc": "Introdução ao Projeto Arquitetônico", "perfil": "BAU", "curso": "BAU"}, {"id": "201", "nome": "Ponte Treliçada (Parte 1)", "disc": "Experiência Profissional: Ponte Treliçada", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ECE"}, {"id": "167", "nome": "Ponte Treliçada (Parte 2)", "disc": "Experiência Profissional: Ponte Treliçada", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ECE"}, {"id": "202", "nome": "Prática de hidrossanitária", "disc": "Experiência Profissional: Projeto de Instalações Elétricas e Hidrossanitárias", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ECE"}, {"id": "202", "nome": "Prática de hidrossanitária", "disc": "Imersão Profissional: Projeto de Instalações Elétricas e Hidrossanitárias", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "202", "nome": "Prática de hidrossanitária", "disc": "Seminário Interdisciplinar IX:", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE"}, {"id": "359", "nome": "Programação de um microcontrolador Arduino", "disc": "Microcontroladores e microprocessadores", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "85", "nome": "Representações do Desenho Técnico + Cotas e Escalas", "disc": "Desenho Técnico", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "AGM-BAU-ECE-BAU-CDE-OBR-ENS-ENG-EEA-ENM"}, {"id": "91", "nome": "Simulação de um circuito de eletrônica de potência", "disc": "Eletrônica de potência", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "149", "nome": "Simulação de um circuito digital", "disc": "Eletrônica Digital", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "87", "nome": "Simulação de um circuito eletrônico", "disc": "Eletrônica Analógica I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "135", "nome": "Simulação e análise de um circuito RLC série", "disc": "Circuitos Elétricos I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "136", "nome": "Simulação e análise de um circuito trifásico", "disc": "Circuitos Elétricos II", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "319", "nome": "Técnicas e Práticas construtivas para residências (parte 1)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}, {"id": "353", "nome": "Técnicas e Práticas construtivas para residências (parte 2)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}, {"id": "711", "nome": "Técnicas e Práticas construtivas para residências (parte 3)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}, {"id": "710", "nome": "Técnicas e Práticas construtivas para residências (parte 4)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}, {"id": "358", "nome": "Verificação de concentricidade e variação dimensional com relógio comparador", "disc": "Metrologia e Confiabilidade de Equipamentos, Máquinas e Produtos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENM"}, {"id": "319", "nome": "Técnicas e Práticas construtivas para residências (parte 1)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}, {"id": "353", "nome": "Técnicas e Práticas construtivas para residências (parte 2)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}, {"id": "711", "nome": "Técnicas e Práticas construtivas para residências (parte 3)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}, {"id": "710", "nome": "Técnicas e Práticas construtivas para residências (parte 4)", "disc": "Materiais de Construção Civil", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ECE"}], "Multidisciplinar IV - Nutrição": [{"id": "196", "nome": "Análise sensorial de dietas hospitalares", "disc": "Técnica e Dietética", "perfil": "NTR", "curso": "NTR"}, {"id": "188", "nome": "Anamnese nutricional do adulto e Diagnóstico nutricional", "disc": "Avaliação Nutricional", "perfil": "NTR", "curso": "NTR"}, {"id": "187", "nome": "Avaliação antropométrico de adulto e de acamado", "disc": "Avaliação Nutricional", "perfil": "NTR", "curso": "NTR"}, {"id": "221", "nome": "Avaliação nutricional de atleta e desportista I: Antropometria e Composição corporal", "disc": "Nutrição Esportiva", "perfil": "NTR", "curso": "NTR"}, {"id": "222", "nome": "Avaliação nutricional de atleta e desportista II: Anamnese e diagnóstico", "disc": "Nutrição Esportiva", "perfil": "NTR", "curso": "NTR"}, {"id": "220", "nome": "Avaliação nutricional de gestante I: Antropometria", "disc": "Nutrição da Gestação a adolescência", "perfil": "NTR", "curso": "NTR"}, {"id": "451", "nome": "Avaliação nutricional de gestante II: Anamnese e diagnóstico", "disc": "Nutrição da Gestação a adolescência", "perfil": "NTR", "curso": "NTR"}, {"id": "189", "nome": "Dietas hospitalares", "disc": "Fisiopatologia e Dietoterapia no Estresse Metabólico", "perfil": "NTR", "curso": "NTR"}, {"id": "195", "nome": "Elaboração de dietas hospitalares", "disc": "Técnica e Dietética", "perfil": "NTR", "curso": "NTR"}, {"id": "198", "nome": "Estudo de caso dirigido  - relacionado ao caso destacado na receita preparada.", "disc": "Terapia Nutricional da Gestação à Pediatria", "perfil": "NTR", "curso": "NTR"}, {"id": "197", "nome": "Gastronomia pediátrica", "disc": "Terapia Nutricional da Gestação à Pediatria", "perfil": "NTR", "curso": "NTR"}, {"id": "192", "nome": "Técnica Dietética 1: carnes, ovos e leguminosas", "disc": "Técnica e Dietética", "perfil": "NTR", "curso": "NTR"}, {"id": "193", "nome": "Técnica Dietética 2: frutas, hortaliças e açúcares", "disc": "Técnica e Dietética", "perfil": "NTR", "curso": "NTR"}, {"id": "194", "nome": "Técnica Dietética 3: cereais, farinhas, massas e óleos e gorduras", "disc": "Técnica e Dietética", "perfil": "NTR", "curso": "NTR"}, {"id": "191", "nome": "Técnica Dietética: pesos e medidas em alimentos e aplicação dos indicadores de preparo dos alimentos", "disc": "Técnica e Dietética", "perfil": "NTR", "curso": "NTR"}, {"id": "190", "nome": "Terapia nutricional enteral e suplementação oral", "disc": "Fisiopatologia e Dietoterapia no Estresse Metabólico", "perfil": "NTR", "curso": "NTR"}], "Química e Física - Agronomia": [{"id": "156", "nome": "Ação do campo magnético sobre a corrente elétrica", "disc": "Experiência Profissional: Eletromagnetismo", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "313", "nome": "Análise de Dados experimentais através de software estatístico", "disc": "Experimentação Agrícola", "perfil": "AGM", "curso": "AGM"}, {"id": "363", "nome": "Análise de pH em amostras ambientais", "disc": "Química Analítica Ambiental", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS"}, {"id": "317", "nome": "Análise de Pureza Física de lotes de sementes", "disc": "Produção e Tecnologia de Sementes", "perfil": "AGM", "curso": "AGM"}, {"id": "369", "nome": "Aplicação da sonda multiparâmetro no monitoramento da qualidade do efluente ao longo do processo de tratamento", "disc": "Operações Unitárias Aplicadas ao Tratamento de Efluentes", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS"}, {"id": "369", "nome": "Aplicação da sonda multiparâmetro no monitoramento da qualidade do efluente ao longo do processo de tratamento", "disc": "Sistema de Tratamento de Aguas e Efluentes Líquidos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "SAN"}, {"id": "293", "nome": "Armazenamento e observação anatômica de insetos de importância agrícola", "disc": "Entomologia Agrícola", "perfil": "AGM", "curso": "AGM"}, {"id": "295", "nome": "Cálculo da densidade e volume de solos", "disc": "Física e Cálculo Aplicados à Agronomia", "perfil": "AGM", "curso": "AGM"}, {"id": "370", "nome": "Calor latente de fusão + Determinação Do Calor Especifico De Líquidos E Sólidos", "disc": "Termodinâmica I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA/SLF"}, {"id": "155", "nome": "Campo magnético criado por uma corrente elétrica", "disc": "Experiência Profissional: Eletromagnetismo", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "318", "nome": "Campo magnético de uma bobina circular +Campo magnético no interior de um solenóide", "disc": "Magnetismo e Eletromagnetismo", "perfil": "BAU", "curso": "nan"}, {"id": "296", "nome": "Caracterização bioquímica de bactérias", "disc": "Microbiologia Agrícola", "perfil": "AGM", "curso": "AGM"}, {"id": "284", "nome": "Classificação das Reações Químicas: Endotérmicas e Exotérmicas", "disc": "Físico Química II", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "QUI"}, {"id": "322", "nome": "Comparação entre lupa e microscópio óptico na observação de micro-organismos ambientais (parte 1)", "disc": "Microbiologia Ambiental", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS / SAN"}, {"id": "323", "nome": "Comparação entre lupa e microscópio óptico na observação de micro-organismos ambientais (parte 2)", "disc": "Microbiologia Ambiental", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS / SAN"}, {"id": "328", "nome": "Compreendendo os processos de coagulação e floculação aplicados ao tratamento de água", "disc": "Sistema de Tratamento de Aguas e Efluentes Líquidos", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "SAN"}, {"id": "328", "nome": "Compreendendo os processos de coagulação e floculação aplicados ao tratamento de água", "disc": "Tratamento de Água", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS"}, {"id": "308", "nome": "Condições de equilíbrio de um corpo rígido", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}, {"id": "308", "nome": "Condições de equilíbrio de um corpo rígido", "disc": "Física Geral e Experimental", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER"}, {"id": "356", "nome": "Condições de equilíbrio de um corpo rígido + Lei de Hooke", "disc": "Mecânica", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "SLF"}, {"id": "356", "nome": "Condições de equilíbrio de um corpo rígido + Lei de Hooke", "disc": "Mecânica I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA"}, {"id": "141", "nome": "Conexões elétricas simples + Verificação da Primeira Lei de Ohm e da Lei de Joule", "disc": "Eletricidade", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA/SLF"}, {"id": "157", "nome": "Corrente induzida por variação do fluxo magnético", "disc": "Experiência Profissional: Eletromagnetismo", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "EEA"}, {"id": "367", "nome": "Cromatografia em Papel + Determinação de Carater ácido e básico de amostras", "disc": "Reações Orgânicas e Biomoléculas", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "QUI"}, {"id": "103", "nome": "Determinação da Condutividad Elétrica em Amostras de Água +  Determinação De Salinidade Em Amostras Ambientais", "disc": "Análises Fisico Químicas em Saneamento Ambiental", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "SAN"}, {"id": "365", "nome": "Determinação De Ph + Titulação De Ácido-Base: Determinação Do Teor De Ácido Acético No Vinagre", "disc": "Química geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE/ OBR/ENS/ECE/ENG/EEA/ENM/ QUI/SAN/FSA"}, {"id": "102", "nome": "Determinação De pH Em Amostras Ambientais: Calibração E Medição Com Eletrodo + Determinação De Oxigênio Dissolvido Com Sensor Eletroquímico", "disc": "Análises Fisico Químicas em Saneamento Ambiental", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "SAN"}, {"id": "250", "nome": "Determinação Do Calor Especifíco De Líquidos E Sólidos", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}, {"id": "282", "nome": "Determinação do calor Específico de Líquidos e Sólidos", "disc": "Físico Química I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "QUI"}, {"id": "314", "nome": "Diagnóstico de Doenças de Plantas em laboratório: Identificação de Sintomas, Sinais e Estruturas Patogênicas", "disc": "Fitopatologia", "perfil": "AGM", "curso": "AGM"}, {"id": "311", "nome": "Emprego da reação de Benedict para a identificação de açúcares redutores em amostras vegetais", "disc": "Bioquímica", "perfil": "AGM", "curso": "AGM"}, {"id": "366", "nome": "Estequiometria + Medidas de Volume e Massa", "disc": "Química Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE/ OBR/ENS/ECE/ENG/EEA/ENM/ QUI/SAN/ FSA"}, {"id": "316", "nome": "Estudo Comparativo da Anatomia dos Órgãos Vegetativos, Raiz, Caule e Folha", "disc": "Morfologia E Sistemática Vegetal", "perfil": "AGM", "curso": "AGM"}, {"id": "280", "nome": "Experimento de Oersted", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}, {"id": "280", "nome": "Experimento de Oersted", "disc": "Física Geral e Experimental", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "TER"}, {"id": "351", "nome": "Experimento de Oersted + Imantação por indução + Detector de corrente com a bússola", "disc": "Magnetismo e Eletromagnetismo", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA"}, {"id": "285", "nome": "Fatores que interferem na velocidade das reações", "disc": "Físico Química II", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "QUI"}, {"id": "361", "nome": "Formação da imagem+Reflexão da luz em espelhos esféricos côncavos+Reflexão da luz em espelhos esféricos convexos+Refração em lentes convergentes", "disc": "Ondas e óptica", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA/SLF"}, {"id": "292", "nome": "Germinação e Desenvolvimento de Plântulas sob Diferentes Condições", "disc": "Botânica Agrícola", "perfil": "AGM", "curso": "AGM"}, {"id": "310", "nome": "Identificação de monocotiledôneas e dicotiledôneas  e a importância da estrutura vegetal para um estande de lavoura sadio", "disc": "Agricultura Geral E Grandes Culturas", "perfil": "AGM", "curso": "AGM"}, {"id": "291", "nome": "Identificação de plantas daninhas de interesse agronômico", "disc": "Biologia E Controle De Plantas Daninhas", "perfil": "AGM", "curso": "AGM"}, {"id": "281", "nome": "Índice De Refração Relativo De Um Par De Meios", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}, {"id": "140", "nome": "Medindo valores de resistência elétrica + Associação De Resistores Em Série e Paralelo", "disc": "Eletricidade", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA/SLF"}, {"id": "294", "nome": "Métodos de determinação da fertilidade do solo", "disc": "Fertilidade do solo", "perfil": "AGM", "curso": "AGM"}, {"id": "354", "nome": "Movimento retilíneo uniforme +Movimento retilíneo uniformemente variado", "disc": "Mecânica", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA"}, {"id": "354", "nome": "Movimento retilíneo uniforme +Movimento retilíneo uniformemente variado", "disc": "Mecânica I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "SLF"}, {"id": "320", "nome": "Pêndulo Simples + Determinação do peso do travessão + Resultante de forças coplanares paralelas", "disc": "Mecânica II", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA"}, {"id": "368", "nome": "Pesquisa de açúcar redutor (Sulfato de cobre II)", "disc": "Reações Orgânicas e Biomoléculas", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "QUI"}, {"id": "286", "nome": "Reconhecimento de minerais e rochas", "disc": "Geologia e Geotecnia", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "ENS"}, {"id": "326", "nome": "Refração da luz em lentes divergentes + Leis da reflexão em espelho plano+ Índice de refração do acrílico em relação ao ar", "disc": "Ondas e óptica", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA/SLF"}, {"id": "315", "nome": "Técnicas de Extração e Purificação de DNA, Fundamentos, Etapas e Aplicações em Biotecnologia Agrícola", "disc": "Genética E Melhoramento De Plantas", "perfil": "AGM", "curso": "AGM"}, {"id": "298", "nome": "Técnicas de propagação de plantas", "disc": "Propagação De Plantas", "perfil": "AGM", "curso": "AGM"}, {"id": "283", "nome": "Termômetros + Equação Termométrica", "disc": "Físico Química I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "QUI"}, {"id": "329", "nome": "Termômetros + Equação termométrica (gelo)+ Equivalente em água de um calorímetro", "disc": "Termodinâmica I", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "FSA/SLF"}, {"id": "327", "nome": "Teste de chama", "disc": "Química Analítica Qualitativa", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "QUI"}, {"id": "308", "nome": "Condições de equilíbrio de um corpo rígido", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}, {"id": "250", "nome": "Determinação Do Calor Especifíco De Líquidos E Sólidos", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}, {"id": "280", "nome": "Experimento de Oersted", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}, {"id": "281", "nome": "Índice De Refração Relativo De Um Par De Meios", "disc": "Física Geral", "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI", "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER"}]};
+
+const CAT_MAP = {"BIO-FAR (Multidisciplinar I)": "Multidisciplinar I - Biomedicina e Farmácia", "ENF-INS (Multidisciplinar II)": "Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica", "BIO-FISIO-EST-TO (Multidisciplinar III)": "Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética", "ENGMAKER": "EngeMaker | Química e Física - Engenharias e Licenciaturas", "NUTRI (Multidisciplinar IV)": "Multidisciplinar IV - Nutrição", "QUÍMICA E FÍSICA": "Química e Física - Agronomia"};
+
+// ═══ SEM FILTRO POR ORDEM (catálogo não tem mapeamento ordem→disciplina)
+// O tutor vê todas as práticas da sua categoria ao identificar o e-mail
+
+// ═══ ESTADO ══════════════════════════════════════════════════════════════
+let ordemSelecionada = 0;
+let tutorData = null;
+let fotos = [];
+let buscaTimer = null;
+
+// ═══ ANO FOOTER ══════════════════════════════════════════════════════════
+document.getElementById('ano').textContent = new Date().getFullYear();
+
+
+// ═══ BUSCA DE TUTOR ══════════════════════════════════════════════════════
+function buscarTutor(email) {
+  clearTimeout(buscaTimer);
+  document.getElementById('tutor-box').classList.remove('show');
+  document.getElementById('tutor-error').classList.remove('show');
+  document.getElementById('email-error').classList.remove('show');
+  document.getElementById('protocolo').innerHTML = '<option value="">— Selecione o protocolo —</option>';
+  document.getElementById('protocolo').disabled = true;
+  document.getElementById('disciplina').value = '';
+  tutorData = null;
+
+  if (!email || email.length < 6 || !email.includes('@')) return;
+
+  clearTimeout(buscaTimer);
+  buscaTimer = setTimeout(async () => {
+    document.getElementById('email-loading').classList.add('show');
+    try {
+      // Busca no lookup público do VinciLab (não cifrado — só email/nome/polo/categoria)
+      const resp = await fetch('https://leoschaeffner.github.io/uniasselvi-dashboard/lookup.json');
+      if (!resp.ok) throw new Error('DB indisponível');
+      const tutores = await resp.json();
+      const emailLower = email.toLowerCase().trim();
+      const tutor = tutores.find(t => (t.email||'').toLowerCase() === emailLower);
+
+      if (tutor) {
+        tutorData = tutor;
+        document.getElementById('t-nome').textContent = tutor.n || '—';
+        document.getElementById('t-polo').textContent = tutor.p || '—';
+        document.getElementById('t-lab').textContent = tutor.c || '—';
+        document.getElementById('tutor-box').classList.add('show');
+        popularProtocolos(tutor.c);
+      } else {
+        document.getElementById('tutor-error').classList.add('show');
+      }
+    } catch(e) {
+      document.getElementById('tutor-error').classList.add('show');
+    } finally {
+      document.getElementById('email-loading').classList.remove('show');
+    }
+  }, 800);
+}
+
+// ═══ POPULAR PROTOCOLOS PELA CATEGORIA DO TUTOR + FILTRO POR ORDEM ═══════
+function popularProtocolos(categoria) {
+  const chave = Object.entries(CAT_MAP).find(([k]) => {
+    return categoria && (categoria === k || categoria.includes(k) || k.includes(categoria));
+  })?.[1] || null;
+
+  const sel = document.getElementById('protocolo');
+  sel.innerHTML = '<option value="">— Selecione o protocolo —</option>';
+  sel.disabled = false;
+
+  if (!chave || !CATALOGO[chave]) return;
+
+  renderOpcoesPraticas(chave);
+}
+
+function renderOpcoesPraticas(chave) {
+  const sel = document.getElementById('protocolo');
+  const praticas = CATALOGO[chave] || [];
+  sel.innerHTML = '<option value="">— Selecione o protocolo —</option>';
+  [...praticas].sort((a,b) => a.nome.localeCompare(b.nome,'pt-BR')).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.dataset.disc = p.disc;
+    opt.dataset.nome = p.nome;
+    opt.textContent = p.nome;
+    sel.appendChild(opt);
+  });
+}
+
+
+function atualizarDisciplina() {
+  const sel = document.getElementById('protocolo');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('disciplina').value = opt ? (opt.dataset.disc || '') : '';
+}
+
+// ═══ ORDEM ════════════════════════════════════════════════════════════════
+function selecionarOrdem(n) {
+  ordemSelecionada = n;
+  document.querySelectorAll('.ordem-btn').forEach(b => {
+    b.classList.toggle('active', +b.dataset.ordem === n);
+    b.classList.remove('error-state');
+  });
+  document.getElementById('ordem-error').classList.remove('show');
+
+}
+
+// ═══ FOTOS ════════════════════════════════════════════════════════════════
+function adicionarFotos(files) {
+  for (const file of files) {
+    if (fotos.length >= 3) break;
+    if (!file.type.startsWith('image/')) continue;
+    if (file.size > 10 * 1024 * 1024) { alert(`Foto "${file.name}" excede 10MB`); continue; }
+    fotos.push(file);
+  }
+  renderFotos();
+}
+
+function renderFotos() {
+  const preview = document.getElementById('fotos-preview');
+  const count = document.getElementById('foto-count');
+  preview.innerHTML = '';
+  fotos.forEach((f, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'foto-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    const btn = document.createElement('button');
+    btn.className = 'foto-remove';
+    btn.innerHTML = '×';
+    btn.onclick = (e) => { e.preventDefault(); fotos.splice(i,1); renderFotos(); };
+    thumb.appendChild(img);
+    thumb.appendChild(btn);
+    preview.appendChild(thumb);
+  });
+  count.textContent = fotos.length > 0 ? `${fotos.length}/3 foto${fotos.length>1?'s':''} selecionada${fotos.length>1?'s':''}` : '';
+  document.getElementById('upload-area').querySelector('input').value = '';
+}
+
+function dragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
+function dragLeave(e) { document.getElementById('upload-area').classList.remove('dragover'); }
+function dropFotos(e) {
+  e.preventDefault();
+  document.getElementById('upload-area').classList.remove('dragover');
+  adicionarFotos(e.dataTransfer.files);
+}
+
+// ═══ VALIDAÇÃO ═══════════════════════════════════════════════════════════
+function validar() {
+  let ok = true;
+  const email = document.getElementById('email').value.trim();
+  if (!email || !tutorData) {
+    document.getElementById('email-error').classList.add('show');
+    document.getElementById('email').classList.add('error');
+    ok = false;
+  }
+  if (!ordemSelecionada) {
+    document.getElementById('ordem-error').classList.add('show');
+    document.querySelectorAll('.ordem-btn').forEach(b => b.classList.add('error-state'));
+    ok = false;
+  }
+  if (!document.getElementById('protocolo').value) {
+    document.getElementById('protocolo-error').classList.add('show');
+    document.getElementById('protocolo').classList.add('error');
+    ok = false;
+  }
+  if (!document.getElementById('data-aplicacao').value) {
+    document.getElementById('data-error').classList.add('show');
+    document.getElementById('data-aplicacao').classList.add('error');
+    ok = false;
+  }
+  const qtd = document.getElementById('qtd-estudantes').value;
+  if (!qtd || +qtd < 1 || +qtd > 60) {
+    document.getElementById('qtd-error').textContent = +qtd > 60 ? 'Máximo de 60 estudantes por prática.' : 'Informe o número de estudantes.';
+    document.getElementById('qtd-error').classList.add('show');
+    document.getElementById('qtd-estudantes').classList.add('error');
+    ok = false;
+  }
+  const dataVal = document.getElementById('data-aplicacao').value;
+  if (dataVal && dataVal < '2026-06-20') {
+    document.getElementById('data-error').textContent = 'A data não pode ser anterior a 20/06/2026.';
+    document.getElementById('data-error').classList.add('show');
+    document.getElementById('data-aplicacao').classList.add('error');
+    ok = false;
+  }
+  return ok;
+}
+
+// ═══ ENVIO ════════════════════════════════════════════════════════════════
+async function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function enviarPortfolio() {
+  // Limpar erros
+  document.querySelectorAll('.field-error').forEach(e => e.classList.remove('show'));
+  document.querySelectorAll('.error').forEach(e => e.classList.remove('error'));
+
+  if (!validar()) {
+    document.querySelector('.field-error.show, .tutor-error.show, .email-loading')?.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+
+  const btn = document.getElementById('btn-submit');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    // Montar payload
+    const sel = document.getElementById('protocolo');
+    const opt = sel.options[sel.selectedIndex];
+    const protocolo_nome = opt ? opt.textContent : '';
+
+    const payload = {
+      email_tutor: document.getElementById('email').value.trim().toLowerCase(),
+      nome_tutor: tutorData.n || '',
+      polo: tutorData.p || '',
+      categoria_lab: tutorData.c || '',
+      ordem_disciplina: `Ordem ${ordemSelecionada}`,
+      protocolo_id: sel.value,
+      protocolo_nome: protocolo_nome,
+      disciplina: document.getElementById('disciplina').value,
+      data_aplicacao: document.getElementById('data-aplicacao').value,
+      qtd_estudantes: +document.getElementById('qtd-estudantes').value,
+      comentarios: document.getElementById('comentarios').value.trim(),
+      data_envio: new Date().toISOString(),
+      fotos: []
+    };
+
+    // Converter fotos para base64
+    for (const foto of fotos) {
+      const b64 = await fileToBase64(foto);
+      payload.fotos.push({
+        nome: foto.name,
+        tipo: foto.type,
+        tamanho: foto.size,
+        dados: b64
+      });
+    }
+
+    // Buscar token de autenticação via SharePoint
+    const tokenResp = await fetch(`${SP_SITE}/_api/contextinfo`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json;odata=verbose',
+        'Content-Type': 'application/json;odata=verbose'
+      },
+      credentials: 'include'
+    });
+    if (!tokenResp.ok) throw new Error('Não foi possível autenticar no SharePoint. Verifique se você está logado na conta UNIASSELVI.');
+    const tokenData = await tokenResp.json();
+    const formDigest = tokenData.d.GetContextWebInformation.FormDigestValue;
+
+    // Montar item para a lista SharePoint
+    const spItem = {
+      '__metadata': {'type': `SP.Data.Portfolios_x0020_VinciLabListItem`},
+      'Title': payload.email_tutor,
+      'DATA_ENVIO': payload.data_envio,
+      'EMAIL_TUTOR': payload.email_tutor,
+      'NOME_TUTOR': payload.nome_tutor,
+      'POLO': payload.polo,
+      'CATEGORIA_LAB': payload.categoria_lab,
+      'ORDEM_DISCIPLINA': payload.ordem_disciplina,
+      'PROTOCOLO_ID': payload.protocolo_id,
+      'PROTOCOLO_NOME': payload.protocolo_nome,
+      'DISCIPLINA': payload.disciplina,
+      'DATA_APLICACAO': payload.data_aplicacao,
+      'QTD_ESTUDANTES': payload.qtd_estudantes,
+      'COMENTARIOS': payload.comentarios,
+      'FOTO_1': '',
+      'FOTO_2': '',
+      'FOTO_3': ''
+    };
+
+    // Enviar item para a lista SharePoint
+    const resp = await fetch(SP_API, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json;odata=verbose',
+        'Content-Type': 'application/json;odata=verbose',
+        'X-RequestDigest': formDigest
+      },
+      credentials: 'include',
+      body: JSON.stringify(spItem)
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(()=>({}));
+      throw new Error(errData?.error?.message?.value || `Erro ${resp.status}`);
+    }
+
+    const itemData = await resp.json();
+    const itemId = itemData?.d?.ID || '';
+
+    // Salvar fotos no OneDrive se houver
+    if (fotos.length > 0 && itemId) {
+      const pastaFotos = `${SP_SITE}/_api/web/GetFolderByServerRelativePath(decodedurl='/sites/gestaoped.polos/Shared Documents/02. Tutoria de Práticas/6. Regulatório/Portfólios/VinciLab/Fotos/${payload.polo.replace(/[/\:*?"<>|]/g,'-')}')`;
+      const linksfotos = [];
+      for (let i = 0; i < fotos.length; i++) {
+        const foto = fotos[i];
+        const nomeArq = `${itemId}_${payload.polo.replace(/[^a-zA-Z0-9]/g,'_')}_foto${i+1}${foto.name.substring(foto.name.lastIndexOf('.'))}`;
+        try {
+          const buf = await foto.arrayBuffer();
+          const uploadResp = await fetch(
+            `${pastaFotos}/Files/add(url='${encodeURIComponent(nomeArq)}',overwrite=true)`,
+            {
+              method: 'POST',
+              headers: {'X-RequestDigest': formDigest, 'Accept': 'application/json;odata=verbose'},
+              credentials: 'include',
+              body: buf
+            }
+          );
+          if (uploadResp.ok) {
+            const uploadData = await uploadResp.json();
+            linksfotos.push(uploadData?.d?.ServerRelativeUrl || '');
+          }
+        } catch(e) { linksfotos.push(''); }
+      }
+      // Atualizar item com links das fotos
+      if (linksfotos.some(l=>l)) {
+        const patchItem = {'__metadata':{'type':'SP.Data.Portfolios_x0020_VinciLabListItem'}};
+        if (linksfotos[0]) patchItem['FOTO_1'] = `https://uniasselvi01.sharepoint.com${linksfotos[0]}`;
+        if (linksfotos[1]) patchItem['FOTO_2'] = `https://uniasselvi01.sharepoint.com${linksfotos[1]}`;
+        if (linksfotos[2]) patchItem['FOTO_3'] = `https://uniasselvi01.sharepoint.com${linksfotos[2]}`;
+        await fetch(`${SP_API}(${itemId})`, {
+          method: 'MERGE',
+          headers: {
+            'Accept':'application/json;odata=verbose',
+            'Content-Type':'application/json;odata=verbose',
+            'X-RequestDigest': formDigest,
+            'IF-MATCH':'*',
+            'X-HTTP-Method':'MERGE'
+          },
+          credentials: 'include',
+          body: JSON.stringify(patchItem)
+        });
+      }
+    }
+
+    // Sucesso
+    document.getElementById('form-portfolio').style.display = 'none';
+    const s = document.getElementById('sucesso');
+    s.classList.add('show');
+    document.getElementById('sucesso-msg').textContent =
+      `Prática "${protocolo_nome}" registrada com sucesso para ${tutorData.n} · ${tutorData.p}.`;
+    s.scrollIntoView({behavior:'smooth'});
+
+  } catch(e) {
+    alert('Erro ao enviar o portfólio. Tente novamente em alguns instantes.\n\nDetalhe: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+// ═══ NOVO ENVIO ═══════════════════════════════════════════════════════════
+function novoEnvio() {
+  document.getElementById('sucesso').classList.remove('show');
+  document.getElementById('form-portfolio').style.display = 'block';
+  document.getElementById('email').value = '';
+  document.getElementById('tutor-box').classList.remove('show');
+  document.getElementById('tutor-error').classList.remove('show');
+  ordemSelecionada = 0;
+  document.querySelectorAll('.ordem-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('protocolo').innerHTML = '<option value="">— Selecione o protocolo —</option>';
+  document.getElementById('protocolo').disabled = true;
+  document.getElementById('disciplina').value = '';
+  document.getElementById('data-aplicacao').value = '';
+  document.getElementById('qtd-estudantes').value = '';
+  document.getElementById('comentarios').value = '';
+  fotos = [];
+  renderFotos();
+  tutorData = null;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
