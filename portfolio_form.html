@@ -210,7 +210,8 @@ select:disabled{background-color:var(--cinza-xl);color:var(--cinza-m);cursor:not
     <!-- STEP 3: FOTOS -->
     <div class="card">
       <div class="card-title"><span>3</span> Fotos da Prática</div>
-      <p style="font-size:13px;color:var(--cinza-m);margin-bottom:14px">Adicione até 3 fotos da prática realizada (JPG, PNG, máx. 10MB cada).</p>
+      <p style="font-size:13px;color:var(--cinza-m);margin-bottom:6px">Adicione até 3 fotos da prática realizada (JPG, PNG, máx. 10MB cada).</p>
+      <p style="font-size:12px;color:#b8860b;margin-bottom:14px">⚠️ Essas fotos são só pra você organizar — na próxima tela (SharePoint) você vai precisar anexá-las de novo antes de salvar.</p>
 
       <div class="upload-area" id="upload-area" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFotos(event)">
         <input type="file" id="fotos-input" accept="image/jpeg,image/png,image/jpg" multiple onchange="adicionarFotos(this.files)"/>
@@ -231,12 +232,13 @@ select:disabled{background-color:var(--cinza-xl);color:var(--cinza-m);cursor:not
 
   </form>
 
-  <!-- SUCESSO -->
+  <!-- CONFIRMAR E CONTINUAR (redireciona pro SharePoint) -->
   <div class="sucesso" id="sucesso">
-    <div class="sucesso-icon">✅</div>
-    <h2>Portfólio enviado com sucesso!</h2>
-    <p id="sucesso-msg">Sua prática foi registrada. Os dados foram salvos e já estão disponíveis no dashboard VinciLab.</p>
-    <button class="btn-novo" onclick="novoEnvio()">Registrar outra prática</button>
+    <div class="sucesso-icon">➡️</div>
+    <h2>Quase lá! Falta 1 passo</h2>
+    <p id="sucesso-msg">Seus dados foram preparados. Você vai ser levado a uma tela do SharePoint já preenchida — confira a <strong>data da aplicação</strong>, anexe as <strong>fotos</strong> e clique em "Salvar" lá pra concluir o envio.</p>
+    <button class="btn-novo" id="btn-continuar-sp">Continuar para o SharePoint</button>
+    <button class="btn-novo" onclick="novoEnvio()" style="background:transparent;border:1px solid #ccc;margin-top:8px">Cancelar / registrar outra</button>
   </div>
 
 </div>
@@ -482,129 +484,39 @@ async function enviarPortfolio() {
       qtd_estudantes: +document.getElementById('qtd-estudantes').value,
       comentarios: document.getElementById('comentarios').value.trim(),
       data_envio: new Date().toISOString(),
-      fotos: []
     };
 
-    // Converter fotos para base64
-    for (const foto of fotos) {
-      const b64 = await fileToBase64(foto);
-      payload.fotos.push({
-        nome: foto.name,
-        tipo: foto.type,
-        tamanho: foto.size,
-        dados: b64
-      });
-    }
+    // PATCH 12: a chamada direta à API do SharePoint é bloqueada por CORS
+    // (origem leoschaeffner.github.io não é autorizada). Solução: redirecionar
+    // pra tela nativa de "novo item" da lista, já pré-preenchida via querystring.
+    // Fotos e data não são confiáveis via prefill — tutor confirma na tela final.
+    const SP_NEWFORM = 'https://uniasselvi01.sharepoint.com/sites/gestaoped.polos/_layouts/15/listform.aspx?PageType=8&ListId=%7B3EF3AA60-5DDF-4ED3-807E-AF9E464EA01A%7D&RootFolder=%2Fsites%2Fgestaoped.polos%2FLists%2FPortfolios%20VinciLab&ContentTypeId=0x0100C0668D51C18E5C45AF3A3AA2B65B50230047FB9B22184EED439E7F3F2A78E28E31';
 
-    // Buscar token de autenticação via SharePoint
-    const tokenResp = await fetch(`${SP_SITE}/_api/contextinfo`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json;odata=verbose',
-        'Content-Type': 'application/json;odata=verbose'
-      },
-      credentials: 'include'
-    });
-    if (!tokenResp.ok) throw new Error('Não foi possível autenticar no SharePoint. Verifique se você está logado na conta UNIASSELVI.');
-    const tokenData = await tokenResp.json();
-    const formDigest = tokenData.d.GetContextWebInformation.FormDigestValue;
+    const params = new URLSearchParams();
+    params.set('Title', payload.email_tutor);
+    params.set('EMAIL_TUTOR', payload.email_tutor);
+    params.set('NOME_TUTOR', payload.nome_tutor);
+    params.set('POLO', payload.polo);
+    params.set('CATEGORIA_LAB', payload.categoria_lab);
+    params.set('ORDEM_DISCIPLINA', payload.ordem_disciplina);
+    params.set('PROTOCOLO_ID', payload.protocolo_id);
+    params.set('PROTOCOLO_NOME', payload.protocolo_nome);
+    params.set('DISCIPLINA', payload.disciplina);
+    params.set('DATA_APLICACAO', payload.data_aplicacao);
+    params.set('QTD_ESTUDANTES', String(payload.qtd_estudantes));
+    params.set('COMENTARIOS', payload.comentarios);
 
-    // Montar item para a lista SharePoint
-    const spItem = {
-      '__metadata': {'type': `SP.Data.Portfolios_x0020_VinciLabListItem`},
-      'Title': payload.email_tutor,
-      'DATA_ENVIO': payload.data_envio,
-      'EMAIL_TUTOR': payload.email_tutor,
-      'NOME_TUTOR': payload.nome_tutor,
-      'POLO': payload.polo,
-      'CATEGORIA_LAB': payload.categoria_lab,
-      'ORDEM_DISCIPLINA': payload.ordem_disciplina,
-      'PROTOCOLO_ID': payload.protocolo_id,
-      'PROTOCOLO_NOME': payload.protocolo_nome,
-      'DISCIPLINA': payload.disciplina,
-      'DATA_APLICACAO': payload.data_aplicacao,
-      'QTD_ESTUDANTES': payload.qtd_estudantes,
-      'COMENTARIOS': payload.comentarios,
-      'FOTO_1': '',
-      'FOTO_2': '',
-      'FOTO_3': ''
-    };
-
-    // Enviar item para a lista SharePoint
-    const resp = await fetch(SP_API, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json;odata=verbose',
-        'Content-Type': 'application/json;odata=verbose',
-        'X-RequestDigest': formDigest
-      },
-      credentials: 'include',
-      body: JSON.stringify(spItem)
-    });
-
-    if (!resp.ok) {
-      const errData = await resp.json().catch(()=>({}));
-      throw new Error(errData?.error?.message?.value || `Erro ${resp.status}`);
-    }
-
-    const itemData = await resp.json();
-    const itemId = itemData?.d?.ID || '';
-
-    // Salvar fotos no OneDrive se houver
-    if (fotos.length > 0 && itemId) {
-      const pastaFotos = `${SP_SITE}/_api/web/GetFolderByServerRelativePath(decodedurl='/sites/gestaoped.polos/Shared Documents/02. Tutoria de Práticas/6. Regulatório/Portfólios/VinciLab/Fotos/${payload.polo.replace(/[/\:*?"<>|]/g,'-')}')`;
-      const linksfotos = [];
-      for (let i = 0; i < fotos.length; i++) {
-        const foto = fotos[i];
-        const nomeArq = `${itemId}_${payload.polo.replace(/[^a-zA-Z0-9]/g,'_')}_foto${i+1}${foto.name.substring(foto.name.lastIndexOf('.'))}`;
-        try {
-          const buf = await foto.arrayBuffer();
-          const uploadResp = await fetch(
-            `${pastaFotos}/Files/add(url='${encodeURIComponent(nomeArq)}',overwrite=true)`,
-            {
-              method: 'POST',
-              headers: {'X-RequestDigest': formDigest, 'Accept': 'application/json;odata=verbose'},
-              credentials: 'include',
-              body: buf
-            }
-          );
-          if (uploadResp.ok) {
-            const uploadData = await uploadResp.json();
-            linksfotos.push(uploadData?.d?.ServerRelativeUrl || '');
-          }
-        } catch(e) { linksfotos.push(''); }
-      }
-      // Atualizar item com links das fotos
-      if (linksfotos.some(l=>l)) {
-        const patchItem = {'__metadata':{'type':'SP.Data.Portfolios_x0020_VinciLabListItem'}};
-        if (linksfotos[0]) patchItem['FOTO_1'] = `https://uniasselvi01.sharepoint.com${linksfotos[0]}`;
-        if (linksfotos[1]) patchItem['FOTO_2'] = `https://uniasselvi01.sharepoint.com${linksfotos[1]}`;
-        if (linksfotos[2]) patchItem['FOTO_3'] = `https://uniasselvi01.sharepoint.com${linksfotos[2]}`;
-        await fetch(`${SP_API}(${itemId})`, {
-          method: 'MERGE',
-          headers: {
-            'Accept':'application/json;odata=verbose',
-            'Content-Type':'application/json;odata=verbose',
-            'X-RequestDigest': formDigest,
-            'IF-MATCH':'*',
-            'X-HTTP-Method':'MERGE'
-          },
-          credentials: 'include',
-          body: JSON.stringify(patchItem)
-        });
-      }
-    }
-
-    // Sucesso
+    // Mostrar tela de confirmação antes de redirecionar (anexar fotos, confirmar data)
+    const urlFinal = `${SP_NEWFORM}&${params.toString()}`;
     document.getElementById('form-portfolio').style.display = 'none';
     const s = document.getElementById('sucesso');
     s.classList.add('show');
-    document.getElementById('sucesso-msg').textContent =
-      `Prática "${protocolo_nome}" registrada com sucesso para ${tutorData.n} · ${tutorData.p}.`;
+    document.getElementById('btn-continuar-sp').onclick = () => { window.location.href = urlFinal; };
     s.scrollIntoView({behavior:'smooth'});
+    return;
 
   } catch(e) {
-    alert('Erro ao enviar o portfólio. Tente novamente em alguns instantes.\n\nDetalhe: ' + e.message);
+    alert('Erro ao preparar o envio. Tente novamente em alguns instantes.\n\nDetalhe: ' + e.message);
   } finally {
     btn.classList.remove('loading');
     btn.disabled = false;
