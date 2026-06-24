@@ -289,6 +289,10 @@ def verificar_e_localizar():
         p2 = achar_arquivo(SCRIPT_DIR, "PORTFOLIO_TUTOR.xlsx")
         if p2: print(f"  [OK] {os.path.basename(p2)}")
         else:  print(f"  [FALTA] PORTFOLIO_TUTOR.xlsx")
+    # PATCH 10: planilha nova de portfólios 2026/2 (formulário customizado, schema próprio)
+    p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
+    if p2b: print(f"  [OK] {os.path.basename(p2b)}")
+    else:   print(f"  [INFO] PORTIFOLIO_TUTOR_2026_2.xlsx não encontrada (ainda sem envios 2026/2?)")
     # PATCH 6: prints duplicados de p1/p2 removidos aqui
     tmpl = os.path.join(SCRIPT_DIR, "template_dashboard.html")
     if os.path.isfile(tmpl): print(f"  [OK] template_dashboard.html")
@@ -484,14 +488,25 @@ def processar(p1, p2):
     # ── Fim MEC Cache ─────────────────────────────────────────────────────────
 
     catalogo_oficial = {}
+    id_to_perfil = {}  # PATCH 10: id da prática -> código de perfil (ex: '206'->'EMF-ISN')
     cat_file = os.path.join(SCRIPT_DIR, 'catalogo_oficial.json')
     if os.path.isfile(cat_file):
         with open(cat_file, encoding='utf-8') as f: raw = json.load(f)
         for cat_nome, praticas in raw.items():
             if isinstance(praticas, list) and praticas:
-                if isinstance(praticas[0], dict): catalogo_oficial[cat_nome] = sorted(set(p['nome'] for p in praticas))
+                if isinstance(praticas[0], dict):
+                    catalogo_oficial[cat_nome] = sorted(set(p['nome'] for p in praticas))
+                    for p in praticas:
+                        if p.get('id') and p.get('perfil'): id_to_perfil.setdefault(str(p['id']), p['perfil'])
                 else: catalogo_oficial[cat_nome] = sorted(set(praticas))
         print(f"[{ts()}] Catalogo oficial (JSON): {len(catalogo_oficial)} categorias")
+    # PATCH 10: reforça id_to_perfil com mapa verificado direto do catálogo do formulário
+    # (garante a correspondência mesmo se catalogo_oficial.json não tiver id/perfil)
+    idp_file = os.path.join(SCRIPT_DIR, 'id_to_perfil.json')
+    if os.path.isfile(idp_file):
+        with open(idp_file, encoding='utf-8') as f: idp_extra = json.load(f)
+        for k, v in idp_extra.items(): id_to_perfil.setdefault(k, v)
+        print(f"[{ts()}] id_to_perfil: {len(id_to_perfil)} práticas mapeadas")
     if not catalogo_oficial:
         cat_xlsx = achar_arquivo(SCRIPT_DIR, 'CATALOGO_EXPERIMENTOS.xlsx')
         if not cat_xlsx:
@@ -514,6 +529,35 @@ def processar(p1, p2):
                             if nomes: catalogo_oficial[cat_str] = nomes
                     print(f"[{ts()}] Catalogo oficial (Excel): {len(catalogo_oficial)} categorias, {sum(len(v) for v in catalogo_oficial.values())} práticas")
             except Exception as e: print(f"[{ts()}] AVISO: Erro ao ler catálogo Excel: {e}")
+
+    # PATCH 10: ler e mesclar PORTIFOLIO_TUTOR_2026_2.xlsx (formulário novo, schema próprio)
+    p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
+    if p2b:
+        try:
+            df_novo = ler_excel(p2b, sheet_name='PORTIFOLIOS')
+        except Exception:
+            df_novo = ler_excel(p2b, sheet_name=0)
+        df_novo.columns = [str(c).strip().upper() for c in df_novo.columns]
+        if len(df_novo):
+            def _g(col): return df_novo[col] if col in df_novo.columns else ''
+            _protoid = _g('PROTOCOLO_ID').astype(str).str.strip()
+            df_novo['_CHAVE']  = _g('POLO').astype(str).str.strip() + _protoid.map(id_to_perfil).fillna('')
+            df_novo['_PROTO']  = _g('PROTOCOLO_NOME').astype(str).str.strip()
+            df_novo['_DATA']   = pd.to_datetime(_g('DATA_APLICACAO'), errors='coerce')
+            df_novo['_ALUNOS'] = pd.to_numeric(_g('QTD_ESTUDANTES'), errors='coerce').fillna(0).astype(int)
+            df_novo['_CAT']    = _g('CATEGORIA_LAB').astype(str).str.strip()
+            df_novo['_ORDEM']  = _g('ORDEM_DISCIPLINA').astype(str).str.strip().replace('', 'Ordem 1')
+            df_novo['EMAIL']      = _g('EMAIL_TUTOR').astype(str).str.strip()  # nome exato p/ busca col_email_p
+            df_novo['NOME_TUTOR'] = _g('NOME_TUTOR').astype(str).str.strip()   # contém NOME+TUTOR p/ busca col_nome_tutor_p
+            _sem_perfil = int(_protoid.map(id_to_perfil).isna().sum())
+            if _sem_perfil: print(f"[{ts()}] AVISO: {_sem_perfil} envios em PORTIFOLIO_TUTOR_2026_2 sem PROTOCOLO_ID mapeado em id_to_perfil")
+            df_p = pd.concat([df_p, df_novo], ignore_index=True)
+            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2)")
+        else:
+            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: 0 envios ainda")
+    else:
+        print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2.xlsx não encontrada — só 2026/1 nesta rodada")
+
     chave_to_cat_raw = {}; chave_to_cf = {}; chave_alias = {}
     polo_biofar_cursos = {}
     for _, t in df_at.iterrows():
@@ -2134,6 +2178,18 @@ def gerar_html(dados):
     html = html.replace("TIMESTAMP_GOES_HERE", dados['gerado_em'])
     with open(output, 'w', encoding='utf-8') as f: f.write(html)
     print(f"[{ts()}] Salvo: {output} (JSON cifrado com AES-256-GCM, {len(payload_cifrado)} chars)")
+
+    # PATCH 9: lookup público (não cifrado) só com email/nome/polo/categoria,
+    # pro portfolio_form.html autopreencher sem precisar da senha do dashboard
+    lookup = [
+        {'email': t.get('email',''), 'n': t.get('n',''), 'p': t.get('p',''), 'c': t.get('c','')}
+        for t in dados.get('tutores', [])
+        if t.get('email') and not t.get('_anonimo') and t.get('c') != 'Aviso de Portfólio'
+    ]
+    lookup_path = os.path.join(saida, "lookup.json")
+    with open(lookup_path, 'w', encoding='utf-8') as f:
+        json.dump(lookup, f, ensure_ascii=False)
+    print(f"[{ts()}] Salvo: {lookup_path} ({len(lookup)} tutores, sem cifra)")
     return output
 
 
