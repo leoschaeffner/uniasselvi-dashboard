@@ -1776,6 +1776,7 @@ function initSemestres() {
   document.getElementById('sem-badge').style.display = '';
 
   const tabs = document.getElementById('sem-tabs');
+  tabs.innerHTML = '';  // PATCH 11: evita duplicar botões se initSemestres rodar mais de uma vez
   // Botão "Ambos" + um botão por semestre
   const opcoes = ['Ambos', ...sems];
   // Semestre padrão = o que tem mais envios (tem dados reais)
