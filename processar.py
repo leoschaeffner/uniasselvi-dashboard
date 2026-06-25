@@ -509,10 +509,16 @@ def processar(p1, p2):
         print(f"[{ts()}] id_to_perfil: {len(id_to_perfil)} práticas mapeadas")
 
     # PATCH 15: nome da prática -> perfil correto (só pra códigos ambíguos BFI/BTO/COS-TIP)
+    def _norm_proto(s):
+        # normaliza unicode (resolve variantes de hífen/travessão), colapsa espaços
+        s = unicodedata.normalize('NFKC', str(s or ''))
+        s = s.replace('–', '-').replace('—', '-')  # en-dash/em-dash -> hífen comum
+        return ' '.join(s.split()).strip()
     NOME_TO_PERFIL = {}
     nomep_file = os.path.join(SCRIPT_DIR, 'nome_to_perfil.json')
     if os.path.isfile(nomep_file):
-        with open(nomep_file, encoding='utf-8') as f: NOME_TO_PERFIL = json.load(f)
+        with open(nomep_file, encoding='utf-8') as f: _ntp_raw = json.load(f)
+        NOME_TO_PERFIL = {_norm_proto(k): v for k, v in _ntp_raw.items()}
         print(f"[{ts()}] nome_to_perfil: {len(NOME_TO_PERFIL)} práticas (correção BFI/BTO/COS-TIP)")
     if not catalogo_oficial:
         cat_xlsx = achar_arquivo(SCRIPT_DIR, 'CATALOGO_EXPERIMENTOS.xlsx')
@@ -727,6 +733,7 @@ def processar(p1, p2):
     enviados = defaultdict(list)
     polo_sem_tutor = defaultdict(list)  # polo+cat → práticas de tutores desligados
     _correcoes_perfil = 0
+    _correcoes_perfil_falhou = set()
     for _, r in df_p.iterrows():
         chave = r['_CHAVE']; proto = r['_PROTO']
         if not chave or chave == 'nan' or not proto or proto == 'nan': continue
@@ -742,14 +749,16 @@ def processar(p1, p2):
         # que não distingue Fisio (BFI) / T.O. (BTO) / Estética (COS-TIP) corretamente
         # quando os 3 cursos compartilham o mesmo polo/laboratório — corrige usando o
         # nome da prática (inequívoco), que é mais confiável que a chave pronta.
-        if NOME_TO_PERFIL and proto in NOME_TO_PERFIL:
-            perfil_certo = NOME_TO_PERFIL[proto]
+        if NOME_TO_PERFIL and _norm_proto(proto) in NOME_TO_PERFIL:
+            perfil_certo = NOME_TO_PERFIL[_norm_proto(proto)]
             for _cod_errado in ('BFI', 'BTO', 'COS-TIP', 'TIP-COS'):
                 if chave.endswith(_cod_errado) and _cod_errado != perfil_certo:
                     chave_corrigida = chave[:-len(_cod_errado)] + perfil_certo
                     if chave_corrigida in chave_to_cf:
                         chave = chave_corrigida
                         _correcoes_perfil += 1
+                    else:
+                        _correcoes_perfil_falhou.add((chave, chave_corrigida, proto))
                     break
 
         if chave not in chave_to_cf:
@@ -862,6 +871,10 @@ def processar(p1, p2):
     print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
     if _correcoes_perfil:
         print(f"[{ts()}] Correções BFI/BTO/COS-TIP por nome de prática: {_correcoes_perfil}")
+    if _correcoes_perfil_falhou:
+        print(f"[{ts()}] AVISO: {len(_correcoes_perfil_falhou)} correções de perfil não aplicadas (chave corrigida não existe em chave_to_cf):")
+        for _ch, _chc, _pr in list(_correcoes_perfil_falhou)[:10]:
+            print(f"    {_ch!r} -> {_chc!r} (não encontrado) | prática: {_pr!r}")
     if sem_match > 0:
         print(f"[{ts()}] Avisos de portfólio gerados: {len(avisos_portfolio)}")
         for av in avisos_portfolio:
