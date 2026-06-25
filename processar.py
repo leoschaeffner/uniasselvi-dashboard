@@ -754,11 +754,14 @@ def processar(p1, p2):
             for _cod_errado in ('BFI', 'BTO', 'COS-TIP', 'TIP-COS'):
                 if chave.endswith(_cod_errado) and _cod_errado != perfil_certo:
                     chave_corrigida = chave[:-len(_cod_errado)] + perfil_certo
+                    # Aplica sempre, mesmo sem tutor ativo no destino — é melhor cair
+                    # no fluxo de "sem match" (vira anônimo no polo) do que ficar
+                    # silenciosamente contado pro curso errado.
                     if chave_corrigida in chave_to_cf:
-                        chave = chave_corrigida
                         _correcoes_perfil += 1
                     else:
                         _correcoes_perfil_falhou.add((chave, chave_corrigida, proto))
+                    chave = chave_corrigida
                     break
 
         if chave not in chave_to_cf:
@@ -872,7 +875,7 @@ def processar(p1, p2):
     if _correcoes_perfil:
         print(f"[{ts()}] Correções BFI/BTO/COS-TIP por nome de prática: {_correcoes_perfil}")
     if _correcoes_perfil_falhou:
-        print(f"[{ts()}] AVISO: {len(_correcoes_perfil_falhou)} correções de perfil não aplicadas (chave corrigida não existe em chave_to_cf):")
+        print(f"[{ts()}] AVISO: {len(_correcoes_perfil_falhou)} correções de perfil sem tutor ativo no destino (foram para anônimo/polo):")
         for _ch, _chc, _pr in list(_correcoes_perfil_falhou)[:10]:
             print(f"    {_ch!r} -> {_chc!r} (não encontrado) | prática: {_pr!r}")
     if sem_match > 0:
