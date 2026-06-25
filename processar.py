@@ -507,6 +507,13 @@ def processar(p1, p2):
         with open(idp_file, encoding='utf-8') as f: idp_extra = json.load(f)
         for k, v in idp_extra.items(): id_to_perfil.setdefault(k, v)
         print(f"[{ts()}] id_to_perfil: {len(id_to_perfil)} práticas mapeadas")
+
+    # PATCH 15: nome da prática -> perfil correto (só pra códigos ambíguos BFI/BTO/COS-TIP)
+    NOME_TO_PERFIL = {}
+    nomep_file = os.path.join(SCRIPT_DIR, 'nome_to_perfil.json')
+    if os.path.isfile(nomep_file):
+        with open(nomep_file, encoding='utf-8') as f: NOME_TO_PERFIL = json.load(f)
+        print(f"[{ts()}] nome_to_perfil: {len(NOME_TO_PERFIL)} práticas (correção BFI/BTO/COS-TIP)")
     if not catalogo_oficial:
         cat_xlsx = achar_arquivo(SCRIPT_DIR, 'CATALOGO_EXPERIMENTOS.xlsx')
         if not cat_xlsx:
@@ -719,6 +726,7 @@ def processar(p1, p2):
 
     enviados = defaultdict(list)
     polo_sem_tutor = defaultdict(list)  # polo+cat → práticas de tutores desligados
+    _correcoes_perfil = 0
     for _, r in df_p.iterrows():
         chave = r['_CHAVE']; proto = r['_PROTO']
         if not chave or chave == 'nan' or not proto or proto == 'nan': continue
@@ -729,6 +737,20 @@ def processar(p1, p2):
             continue
 
         chave = chave_alias.get(chave, chave)
+
+        # PATCH 15: a planilha antiga (Forms) tem uma "CHAVE LINK POLO" pré-calculada
+        # que não distingue Fisio (BFI) / T.O. (BTO) / Estética (COS-TIP) corretamente
+        # quando os 3 cursos compartilham o mesmo polo/laboratório — corrige usando o
+        # nome da prática (inequívoco), que é mais confiável que a chave pronta.
+        if NOME_TO_PERFIL and proto in NOME_TO_PERFIL:
+            perfil_certo = NOME_TO_PERFIL[proto]
+            for _cod_errado in ('BFI', 'BTO', 'COS-TIP', 'TIP-COS'):
+                if chave.endswith(_cod_errado) and _cod_errado != perfil_certo:
+                    chave_corrigida = chave[:-len(_cod_errado)] + perfil_certo
+                    if chave_corrigida in chave_to_cf:
+                        chave = chave_corrigida
+                        _correcoes_perfil += 1
+                    break
 
         if chave not in chave_to_cf:
             # Fallback 1: por email
@@ -838,6 +860,8 @@ def processar(p1, p2):
     # Finalizar avisos
     avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
     print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
+    if _correcoes_perfil:
+        print(f"[{ts()}] Correções BFI/BTO/COS-TIP por nome de prática: {_correcoes_perfil}")
     if sem_match > 0:
         print(f"[{ts()}] Avisos de portfólio gerados: {len(avisos_portfolio)}")
         for av in avisos_portfolio:
@@ -867,18 +891,14 @@ def processar(p1, p2):
             _polo_cat_enviados[_key_pc] = _hist_merged
     print(f"[{ts()}] Polo×cat com envios: {len([v for v in _polo_cat_enviados.values() if v])}")
 
+    _hist_pre_admissao = 0
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
         cat_raw  = str(t.get(col_cat, '') or '').strip() if col_cat else ''
         cat_form = CAT_MAP.get(cat_raw, cat_raw)
         praticas = catalogo.get(cat_form, catalogo.get(cat_raw, []))
         polo_str = str(t.get(col_polo, '') or '').strip()
-        # Usar hist agregado por polo+categoria (cobre múltiplos tutores no mesmo polo)
-        hist     = _polo_cat_enviados.get((polo_str, cat_form), enviados.get(chave, []))
-        reais    = set(h['p'] for h in hist)
-        pend     = [p for p in praticas if p not in reais]
-        te = len(reais); tp = len(praticas)
-        # Enriquecimento MEC
+        # Enriquecimento MEC / data de admissão (calculado antes do filtro de hist)
         _email_t = str(t.get(col_email, '') or '').strip().lower() if col_email else ''
         _mec = mec_cache.get(_email_t, {})
         _inicio_ctrl = t.get(col_inicio) if col_inicio else None
@@ -888,6 +908,25 @@ def processar(p1, p2):
                 _inicio_str = _inicio_ctrl.strftime('%Y-%m-%d') if hasattr(_inicio_ctrl,'strftime') else str(_inicio_ctrl)[:10]
             except: pass
         if not _inicio_str: _inicio_str = _mec.get('admissao')
+
+        # Usar hist agregado por polo+categoria (cobre múltiplos tutores no mesmo polo)
+        hist_bruto = _polo_cat_enviados.get((polo_str, cat_form), enviados.get(chave, []))
+        # PATCH 16: práticas enviadas ANTES da admissão do tutor atual não são dele —
+        # provavelmente foram enviadas por quem ocupava essa vaga antes (desligado).
+        # Vão pro bucket anônimo do polo em vez de ficarem com o tutor novo.
+        if _inicio_str:
+            hist = []
+            for h in hist_bruto:
+                if h.get('d') and h['d'] < _inicio_str:
+                    polo_sem_tutor[chave].append(h)
+                    _hist_pre_admissao += 1
+                else:
+                    hist.append(h)
+        else:
+            hist = hist_bruto
+        reais    = set(h['p'] for h in hist)
+        pend     = [p for p in praticas if p not in reais]
+        te = len(reais); tp = len(praticas)
 
         tutores.append({
             'n': str(t.get(col_nome, '') or ''),
@@ -911,6 +950,8 @@ def processar(p1, p2):
             'whatsapp': str(t.get(col_whats,'') or '') if col_whats else None,
             'chapa': str(t.get(col_chapa,'') or '') if col_chapa else None,
         })
+    if _hist_pre_admissao:
+        print(f"[{ts()}] Práticas pré-admissão removidas do tutor atual (vão pro polo): {_hist_pre_admissao}")
     seen = {}; tutores_dedup = []
     for t in tutores:
         key = (t.get('p',''), t.get('n','').strip().lower())
