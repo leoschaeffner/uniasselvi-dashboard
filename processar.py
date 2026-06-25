@@ -883,29 +883,29 @@ def processar(p1, p2):
         for av in avisos_portfolio:
             print(f"[{ts()}]   {av['tipo'].upper()} ({av['count']}x): {av['email']} | {av['nome']} | {av['msg']}")
     tutores = []
-    # Pré-computar: para cada polo+categoria, agregar TODOS os envios
-    # (resolve o caso de múltiplos tutores por polo que compartilham a mesma chave)
-    _polo_cat_enviados = {}  # (polo_str, cat_form) → lista merged de hist
+    # Pré-computar: para cada polo+CURSO ESPECÍFICO, agregar TODOS os envios
+    # (resolve o caso de múltiplos tutores por polo que compartilham o mesmo curso)
+    # PATCH 17: agrupar por curso específico (col_cur), não pela categoria ampla —
+    # BFI/BTO/COS-TIP têm a mesma categoria ampla (Multidisciplinar III) mas são
+    # cursos diferentes; agrupar pela categoria ampla juntava os 3 indevidamente.
+    _polo_cat_enviados = {}  # (polo_str, curso_especifico) → lista merged de hist
     for _, t in df_at.iterrows():
         _ch = t['_CHAVE']
-        _cr = str(t.get(col_cat, '') or '').strip() if col_cat else ''
-        _cf = CAT_MAP.get(_cr, _cr)
+        _cursos_t = str(t.get(col_cur, '') or '').strip()
         _polo_str = str(t.get(col_polo, '') or '').strip()
-        _key_pc = (_polo_str, _cf)
+        _key_pc = (_polo_str, _cursos_t)
         if _key_pc not in _polo_cat_enviados:
-            # Buscar enviados pela chave canônica E por variantes de chave do mesmo polo+cat
+            # Buscar enviados pela chave canônica E por variantes de chave do mesmo
+            # polo que tenham o MESMO curso específico (não só a mesma categoria ampla)
             _hist_merged = list(enviados.get(_ch, []))
-            # Buscar também outras chaves que começam com o mesmo polo e têm a mesma cf
             for _k, _h in enviados.items():
                 if _k == _ch: continue
-                _cf_k = chave_to_cf.get(_k, '')
-                # Mesmo polo base (chave começa com polo_str) e mesma categoria
-                if _cf_k == _cf and _k.startswith(_polo_str):
+                if _k.startswith(_polo_str) and _k[len(_polo_str):] == _cursos_t:
                     for _item in _h:
                         if _item not in _hist_merged:
                             _hist_merged.append(_item)
             _polo_cat_enviados[_key_pc] = _hist_merged
-    print(f"[{ts()}] Polo×cat com envios: {len([v for v in _polo_cat_enviados.values() if v])}")
+    print(f"[{ts()}] Polo×curso com envios: {len([v for v in _polo_cat_enviados.values() if v])}")
 
     _hist_pre_admissao = 0
     for _, t in df_at.iterrows():
@@ -914,6 +914,7 @@ def processar(p1, p2):
         cat_form = CAT_MAP.get(cat_raw, cat_raw)
         praticas = catalogo.get(cat_form, catalogo.get(cat_raw, []))
         polo_str = str(t.get(col_polo, '') or '').strip()
+        cursos_t = str(t.get(col_cur, '') or '').strip()
         # Enriquecimento MEC / data de admissão (calculado antes do filtro de hist)
         _email_t = str(t.get(col_email, '') or '').strip().lower() if col_email else ''
         _mec = mec_cache.get(_email_t, {})
@@ -925,8 +926,9 @@ def processar(p1, p2):
             except: pass
         if not _inicio_str: _inicio_str = _mec.get('admissao')
 
-        # Usar hist agregado por polo+categoria (cobre múltiplos tutores no mesmo polo)
-        hist_bruto = _polo_cat_enviados.get((polo_str, cat_form), enviados.get(chave, []))
+        # PATCH 17: agregado por polo+CURSO ESPECÍFICO (não categoria ampla) — cobre
+        # múltiplos tutores do mesmo curso no mesmo polo, sem juntar BFI/BTO/COS-TIP
+        hist_bruto = _polo_cat_enviados.get((polo_str, cursos_t), enviados.get(chave, []))
         # PATCH 16: práticas enviadas ANTES da admissão do tutor atual não são dele —
         # provavelmente foram enviadas por quem ocupava essa vaga antes (desligado).
         # Vão pro bucket anônimo do polo em vez de ficarem com o tutor novo.
