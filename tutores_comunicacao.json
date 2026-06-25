@@ -1,0 +1,74 @@
+[
+  {
+    "nome": "Maria Sulina Machado",
+    "polo": "Acaraú",
+    "atencao": false,
+    "resumo": "Sem retorno / não responde o WhatsApp desde novembro 2025. Todas as ordens pendentes (apenas um experimento de ordem 3 realizado).",
+    "tentativas_contato": ["28/04", "04/05", "12/05", "22/06"],
+    "ultimo_contato": null,
+    "observacao": "Sem retorno em todas as tentativas listadas."
+  },
+  {
+    "nome": "Tarcilio José Salles",
+    "polo": "Aripuanã",
+    "atencao": false,
+    "resumo": "Avisou que pediria o desligamento no dia 24/04, foi orientado todo passo a passo, mas até então sem retorno. Sem gerenciamento, sem nenhum envio de portfólio.",
+    "tentativas_contato": ["24/04", "28/04", "04/05", "11/05", "22/06"],
+    "ultimo_contato": null,
+    "observacao": "Tutor não dá retorno sobre o desligamento solicitado por ele mesmo."
+  },
+  {
+    "nome": "Gabriella Ribeiro",
+    "polo": "Barra do Garças",
+    "atencao": false,
+    "resumo": "Sem nada gerenciado / sem nenhum envio de portfólio. Enviada mensagem para saber se foi feito de forma manual, sem retorno.",
+    "tentativas_contato": [],
+    "ultimo_contato": "28/10/2025",
+    "observacao": null
+  },
+  {
+    "nome": "Natanael da Silva",
+    "polo": "Viseu/PA",
+    "atencao": true,
+    "resumo": "Sem resposta no WhatsApp / sem gerenciamento / sem envio de portfólios. Em 12/05 informou não ter acesso; foi orientado a passo a passo. Tutor relatou que o polo colocou outra tutora em seu lugar e que ele não atua como tutor — porém continua com vínculo ativo na instituição e não oferta práticas desde junho/2025.",
+    "tentativas_contato": ["12/05"],
+    "ultimo_contato": null,
+    "observacao": "Vínculo ativo mas sem ofertar práticas desde 06/2025 — situação ambígua, polo alega ter outra tutora."
+  },
+  {
+    "nome": "Paula Cristina Fernandes",
+    "polo": "Várzea da Palma",
+    "atencao": false,
+    "resumo": "Sem contato desde fevereiro. Sem nenhum gerenciamento / sem nenhum envio de portfólio. Gerenciamento feito de forma manual.",
+    "tentativas_contato": [],
+    "ultimo_contato": "Fevereiro",
+    "observacao": null
+  },
+  {
+    "nome": "Juliane Alves Ribeiro",
+    "polo": "São Raimundo",
+    "atencao": false,
+    "resumo": "Sem contato, sem retorno, sem gerenciamento. Mensagem enviada para saber se foi feito de forma manual.",
+    "tentativas_contato": ["28/04", "12/05"],
+    "ultimo_contato": "novembro de 2025",
+    "observacao": "Tutora encaminhada para desligamento."
+  },
+  {
+    "nome": "Luíz Felipe Braz Teles",
+    "polo": "Rio Verde",
+    "atencao": false,
+    "resumo": "Sem prática, pois o laboratório estava em reforma. Em 04/05 o tutor informou não ter previsão de finalização da obra.",
+    "tentativas_contato": ["28/04", "04/05"],
+    "ultimo_contato": null,
+    "observacao": "Situação passada para o Elienai."
+  },
+  {
+    "nome": "Kalisson Batista da Silva",
+    "polo": "Juruá-AM",
+    "atencao": true,
+    "resumo": "Nunca foi feito gerenciamento no Gioconda / sem envio de portfólio. Nunca respondeu no WhatsApp.",
+    "tentativas_contato": ["22/06"],
+    "ultimo_contato": null,
+    "observacao": null
+  }
+]
