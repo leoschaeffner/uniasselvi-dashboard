@@ -13,7 +13,7 @@ PATCHES v2 aplicados:
 """
 
 import pandas as pd
-import json, os, sys, math, webbrowser, time, threading, glob, hashlib, base64
+import json, os, sys, math, webbrowser, time, threading, glob, hashlib, base64, unicodedata
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
@@ -1063,6 +1063,23 @@ def processar(p1, p2):
             if t.get('ch_semanal') and not ex.get('ch_semanal'): ex['ch_semanal'] = t['ch_semanal']
     tutores_out = tutores_dedup
     print(f"[{ts()}] Após deduplicação: {len(tutores_out)} tutores únicos")
+
+    # PATCH 13: anexa o relatório de acompanhamento/comunicação na ficha do tutor
+    def _norm_nome(s):
+        s = unicodedata.normalize('NFKD', str(s or '')).encode('ascii', 'ignore').decode('ascii')
+        return ' '.join(s.upper().split())
+    com_file = os.path.join(SCRIPT_DIR, 'tutores_comunicacao.json')
+    if os.path.isfile(com_file):
+        with open(com_file, encoding='utf-8') as f: com_lista = json.load(f)
+        com_map = {_norm_nome(c['nome']): c for c in com_lista}
+        _matches = 0
+        for t in tutores_out:
+            c = com_map.get(_norm_nome(t.get('n','')))
+            if c:
+                t['comunicacao'] = c
+                _matches += 1
+        print(f"[{ts()}] Comunicação de tutores: {_matches}/{len(com_lista)} vinculados por nome")
+
     total     = len(tutores_out)
     enviaram  = sum(1 for t in tutores_out if t['te'] > 0)
     atrasados = sum(1 for t in tutores_out if t['situacao'] == 'atrasado')
@@ -1261,7 +1278,21 @@ def processar(p1, p2):
         'todos_semestres': sorted(ALL_SEMESTRES.keys()),
         'dados_por_semestre': _dados_por_semestre,
         'disciplinas_por_ordem': _DISCIPLINAS_POR_ORDEM_GLOBAL,
+        'laboratorios': _carregar_laboratorios(),
     })
+
+
+def _carregar_laboratorios():
+    # PATCH 13: dados pré-processados da seção "Laboratórios" (gerados fora do
+    # pipeline, a partir das bases da Juliana + do dataset de práticas 2026/1)
+    path = os.path.join(SCRIPT_DIR, 'laboratorios_data.json')
+    if not os.path.isfile(path):
+        print(f"[{ts()}] laboratorios_data.json não encontrado — seção Laboratórios fica vazia")
+        return {}
+    with open(path, encoding='utf-8') as f:
+        lab = json.load(f)
+    print(f"[{ts()}] Laboratórios: {len(lab.get('ricos',{}))} categorias ricas, {len(lab.get('simples',{}))} categorias simples")
+    return lab
 
 
 def _detectar_e_corrigir_base64(p4):
