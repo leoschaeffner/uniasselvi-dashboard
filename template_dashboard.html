@@ -159,9 +159,12 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <button class="sidebar-item" onclick="navTo('ger-agendas')"><span class="si-icon">📆</span><span class="si-label">Agendas</span></button>
       <button class="sidebar-item" onclick="navTo('ger-detalhe')"><span class="si-icon">🔍</span><span class="si-label">Detalhe</span></button>
     </div>
-    <div class="sidebar-section" id="sidebar-futuro" style="display:none">
+    <div class="sidebar-section" id="sidebar-lab" style="display:none">
       <div class="sidebar-section-label">Infraestrutura</div>
-      <button class="sidebar-item" disabled style="opacity:.4"><span class="si-icon">🏗️</span><span class="si-label">Laboratórios</span><span class="si-badge">Em breve</span></button>
+      <button class="sidebar-item" onclick="navTo('laboratorios')"><span class="si-icon">🏗️</span><span class="si-label">Laboratórios</span></button>
+    </div>
+    <div class="sidebar-section" id="sidebar-futuro" style="display:none">
+      <div class="sidebar-section-label">Em breve</div>
       <button class="sidebar-item" disabled style="opacity:.4"><span class="si-icon">📝</span><span class="si-label">Vagas</span><span class="si-badge">Em breve</span></button>
       <button class="sidebar-item" disabled style="opacity:.4"><span class="si-icon">📦</span><span class="si-label">Insumos</span><span class="si-badge">Em breve</span></button>
     </div>
@@ -498,6 +501,15 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   </div>
 </div></div>
 
+<!-- ═══ LABORATÓRIOS ════════════════════════════════════════════════════ -->
+<div class="page" id="page-laboratorios"><div class="container">
+  <div class="ph"><div class="ph-title">Laboratórios</div><div class="ph-sub" id="lab-sub">—</div></div>
+  <div class="toolbar" style="margin-bottom:14px">
+    <select class="sel" id="lab-cat-sel" onchange="renderLabCategoria()" style="min-width:280px"></select>
+  </div>
+  <div id="lab-content"></div>
+</div></div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -621,6 +633,7 @@ const pageTitles={
   'ger-visao':['Visão Geral','Gerenciamento'],'ger-ofertas':['Ofertas','Gerenciamento'],
   'ger-contratacao':['Contratação','Gerenciamento'],
   'ger-agendas':['Agendas','Gerenciamento'],'ger-detalhe':['Detalhe','Gerenciamento'],
+  'laboratorios':['Laboratórios','Infraestrutura'],
 };
 function navTo(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -635,6 +648,7 @@ function navTo(name){
   if(name==='tutores-mec') renderTutoresMec();
   if(name==='port-tutores') filterTutores(document.getElementById('tutor-search')?.value||'');
   if(name==='port-visao') { renderKPIs(); renderOfensores(); renderMes(); }
+  if(name==='laboratorios') renderLaboratorios();
 }
 function esc(s){return(s||'').replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function pctColor(p){return p===100?'var(--ok)':p===0?'var(--red)':p>=60?'var(--teal)':'var(--red)'}
@@ -855,7 +869,21 @@ function openTutorModal(nome){
   if(t.chapa&&t.chapa!=='None'&&t.chapa!=='nan')perfilHtml+='<div style="font-size:10px;color:var(--muted);margin-top:5px;border-top:1px solid var(--border);padding-top:6px">🪪 Chapa: '+t.chapa+'</div>';
   if(t.lattes_id||t.lattes_url){const _u=t.lattes_id?'https://lattes.cnpq.br/'+t.lattes_id:(t.lattes_url||'');perfilHtml+='<div style="margin-top:6px"><a href="'+_u+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#1a3a5c;color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🔗 Currículo Lattes</a></div>';}
   perfilHtml+='</div>';}}
-  let html=perfilHtml+`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div></div>`;
+  // PATCH 13: bloco de acompanhamento de comunicação (relatório manual)
+  let comunicacaoHtml='';
+  if(t.comunicacao){
+    const c=t.comunicacao;
+    const cor=c.atencao?'var(--red)':'var(--yellow-d)';
+    const bg=c.atencao?'var(--red-dim)':'var(--yellow-dim)';
+    comunicacaoHtml=`<div style="background:${bg};border-left:3px solid ${cor};border-radius:8px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:${cor};margin-bottom:6px">${c.atencao?'🚨':'📞'} Acompanhamento de Comunicação</div>
+      <div style="font-size:12px;color:var(--ink);margin-bottom:6px">${esc(c.resumo||'')}</div>
+      ${c.ultimo_contato?`<div style="font-size:11px;color:var(--muted)">Último contato: <strong>${esc(c.ultimo_contato)}</strong></div>`:''}
+      ${(c.tentativas_contato&&c.tentativas_contato.length)?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Tentativas: ${c.tentativas_contato.join(', ')}</div>`:''}
+      ${c.observacao?`<div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Obs: ${esc(c.observacao)}</div>`:''}
+    </div>`;
+  }
+  let html=comunicacaoHtml+perfilHtml+`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div></div>`;
   html+=`<div style="margin-bottom:12px"><div class="kpi-label" style="margin-bottom:6px">Progresso Geral</div>${progCell(t.pct)}</div>`;
   const po=t.por_ordem||t.porOrdem||{};if(Object.keys(po).length){html+=`<div class="sec-label">Portfólios por Ordem</div>`;html+=Object.entries(po).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0])).map(([o,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-size:11px;font-weight:600;min-width:60px">${o}</span><span style="font-size:11px;font-weight:700;color:var(--ok)">${v} envio${v>1?'s':''}</span></div>`).join('');}
   if(t.real&&t.real.length){html+=`<div class="sec-label">✅ Realizadas (${t.real.length})</div>`;html+=t.real.map(r=>`<div class="prac-item"><div class="prac-icon done">✓</div><div style="flex:1"><div class="prac-name">${typeof r==='object'?r.n:r}</div></div><div class="prac-date">${typeof r==='object'?(r.d||'—'):'—'}</div></div>`).join('');}
@@ -2137,7 +2165,7 @@ function filterTutoresMec(q) {
     const nomeEsc=t.n.replace(/'/g,"\\'");
 
     html+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
-      <td style="padding:8px 10px;font-weight:600;font-size:12px;max-width:180px">${t.n}</td>
+      <td style="padding:8px 10px;font-weight:600;font-size:12px;max-width:180px">${t.n}${t.comunicacao?` <span title="${esc(t.comunicacao.resumo||'')}" style="font-size:11px">${t.comunicacao.atencao?'🚨':'📞'}</span>`:''}</td>
       <td style="padding:8px 10px;font-size:11px;color:var(--muted);max-width:140px">${t.p}</td>
       <td style="padding:8px 10px;font-size:11px;max-width:140px">${t.c||'—'}</td>
       <td style="padding:8px 8px;text-align:center">${titBadge}</td>
@@ -2166,6 +2194,185 @@ function _tutMecSort(col){
 
 
 
+// ══════════════════════════════════════════════════════════════════════════
+// PÁGINA LABORATÓRIOS
+// ══════════════════════════════════════════════════════════════════════════
+const LAB_OPCOES = [
+  {key:'EngeMaker', tipo:'simples', label:'EngeMaker'},
+  {key:'Multidisciplinar I', tipo:'simples', label:'Multidisciplinar I — Biomedicina e Farmácia'},
+  {key:'ENF', tipo:'rico', label:'Multidisciplinar II — Enfermagem (detalhado)'},
+  {key:'Multidisciplinar III', tipo:'simples', label:'Multidisciplinar III — Fisio / T.O. / Estética'},
+  {key:'TO', tipo:'rico', label:'Terapia Ocupacional (detalhado)'},
+  {key:'Multidisciplinar IV', tipo:'simples', label:'Multidisciplinar IV — Nutrição'},
+  {key:'Química e Física / Agronomia', tipo:'simples', label:'Química e Física / Agronomia'},
+];
+function _labFmtVal(v){
+  if(typeof v==='number'){
+    if(v>0 && v<1) return (v*100).toFixed(1).replace('.',',')+'%';
+    return fmtNum(Math.round(v));
+  }
+  return (v===null||v===undefined||v==='')?'—':v;
+}
+function renderLaboratorios(){
+  const lab=DB.laboratorios||{};
+  const sel=document.getElementById('lab-cat-sel');
+  const disponiveis=LAB_OPCOES.filter(o=>o.tipo==='rico'?(lab.ricos||{})[o.key]:(lab.simples||{})[o.key]);
+  if(!disponiveis.length){
+    document.getElementById('lab-content').innerHTML='<div class="empty">Nenhum dado de laboratórios disponível ainda.</div>';
+    sel.innerHTML='';
+    return;
+  }
+  sel.innerHTML=disponiveis.map(o=>`<option value="${o.key}|${o.tipo}">${esc(o.label)}</option>`).join('');
+  renderLabCategoria();
+}
+function renderLabCategoria(){
+  const sel=document.getElementById('lab-cat-sel');
+  const val=sel.value || sel.options[0]?.value;
+  if(!val) return;
+  const [key, tipo]=val.split('|');
+  const lab=DB.laboratorios||{};
+  if(tipo==='rico') renderLabRico(lab.ricos[key]);
+  else renderLabSimples(lab.simples[key]);
+}
+function renderLabRico(d){
+  const sub=document.getElementById('lab-sub'); if(sub) sub.textContent=d.categoria;
+  const ind=d.indicadores_gerais||[];
+  const destaque=['Total de Polos','Total de Alunos (Base Total)','Alunos em Prática','Alunos sem Prática','% Cobertura HUB'];
+  const kpis=destaque.map(k=>ind.find(i=>i.k===k)).filter(Boolean);
+  let html=`<div class="kpi-row" style="margin-bottom:14px">`+
+    kpis.map(k=>`<div class="kpi kpi-teal"><div class="kpi-label">${esc(k.k)}</div><div class="kpi-value">${_labFmtVal(k.v)}</div></div>`).join('')+
+    `</div>`;
+
+  // Indicadores gerais completos (lista)
+  const outros=ind.filter(i=>!destaque.includes(i.k));
+  if(outros.length){
+    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📊 Indicadores Gerais</div>`+
+      outros.map(i=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--muted)">${esc(i.k)}</span><strong>${_labFmtVal(i.v)}</strong></div>`).join('')+
+      `</div>`;
+  }
+
+  // Distribuição por módulo
+  if((d.distribuicao_modulo||[]).length){
+    const maxA=Math.max(...d.distribuicao_modulo.map(m=>m.alunos||0),1);
+    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📈 Distribuição por Módulo</div>`+
+      d.distribuicao_modulo.map(m=>{
+        const w=Math.round((m.alunos||0)/maxA*100);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+          <span style="font-size:11px;min-width:80px">${esc(m.modulo)}</span>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:14px;overflow:hidden"><div style="height:14px;background:var(--teal);width:${w}%"></div></div>
+          <span style="font-size:11px;font-weight:700;min-width:55px;text-align:right">${fmtNum(m.alunos)}</span>
+          <span style="font-size:10px;color:var(--muted);min-width:45px;text-align:right">${_labFmtVal(m.pct)}</span>
+        </div>`;
+      }).join('')+`</div>`;
+  }
+
+  // Análise de cobertura + classificação IES geral (lado a lado)
+  html+=`<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">`;
+  if((d.analise_cobertura||[]).length){
+    html+=`<div class="card" style="flex:1;min-width:280px"><div class="sec-label">🎯 Análise de Cobertura</div>`+
+      d.analise_cobertura.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${esc(c.status)}</span><span><strong>${fmtNum(c.polos)}</strong> polos · <strong>${fmtNum(c.alunos)}</strong> alunos</span></div>`).join('')+
+      `</div>`;
+  }
+  if((d.classificacao_ies_geral||[]).length){
+    html+=`<div class="card" style="flex:1;min-width:280px"><div class="sec-label">📋 Classificação IES — ENADE × Rosimar</div>`+
+      d.classificacao_ies_geral.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${esc(c.k)}</span><span><strong>${fmtNum(c.qtde)}</strong> (${_labFmtVal(c.pct)})</span></div>`).join('')+
+      `</div>`;
+  }
+  html+=`</div>`;
+
+  // Classificação IES por módulo (tabela)
+  if((d.classificacao_ies_modulo||[]).length){
+    html+=`<div class="card" style="margin-bottom:14px;overflow-x:auto"><div class="sec-label">📊 Classificação IES por Módulo</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr style="border-bottom:2px solid var(--border)"><th style="text-align:left;padding:6px">Módulo</th><th style="text-align:right;padding:6px">Está na Relação</th><th style="text-align:right;padding:6px">Não Está</th><th style="text-align:right;padding:6px">Total</th><th style="text-align:right;padding:6px">% Está</th></tr></thead><tbody>`+
+      d.classificacao_ies_modulo.map(m=>`<tr style="border-bottom:1px solid var(--border);${m.modulo==='TOTAL'?'font-weight:700':''}"><td style="padding:6px">${esc(m.modulo)}</td><td style="text-align:right;padding:6px">${fmtNum(m.esta)}</td><td style="text-align:right;padding:6px">${fmtNum(m.nao_esta)}</td><td style="text-align:right;padding:6px">${fmtNum(m.total)}</td><td style="text-align:right;padding:6px">${_labFmtVal(m.pct_esta)}</td></tr>`).join('')+
+      `</tbody></table></div>`;
+  }
+
+  // Insights
+  if((d.insights||[]).length){
+    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">💡 Insights Principais</div>`+
+      d.insights.map(i=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--muted)">${esc(i.k)}</span><strong>${_labFmtVal(i.v)}</strong></div>`).join('')+
+      `</div>`;
+  }
+
+  // Detalhamento por polo (busca)
+  html+=`<div class="card" style="padding:0;overflow:hidden">
+    <div class="toolbar" style="padding:12px 14px">
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterLabPolos(this.value)" id="lab-polo-search"/>
+      <span class="tbl-count" id="lab-polo-count">—</span>
+    </div>
+    <div class="tbl-wrap" style="max-height:500px"><table style="font-size:11px"><thead><tr id="lab-polo-thead"></tr></thead><tbody id="lab-polo-tbody"></tbody></table></div>
+  </div>`;
+
+  document.getElementById('lab-content').innerHTML=html;
+
+  // monta cabeçalho + dados da tabela de polos
+  window._labPolosCols=d.detalhe_polos_colunas||[];
+  window._labPolosData=d.detalhe_polos||[];
+  const thead=document.getElementById('lab-polo-thead');
+  thead.innerHTML=window._labPolosCols.map(c=>`<th style="white-space:nowrap;padding:6px 8px">${esc(c)}</th>`).join('');
+  filterLabPolos('');
+}
+function filterLabPolos(q){
+  q=(q||'').toLowerCase().trim();
+  const cols=window._labPolosCols||[];
+  let data=window._labPolosData||[];
+  if(q) data=data.filter(r=>String(r['Polo']||'').toLowerCase().includes(q));
+  const cnt=document.getElementById('lab-polo-count'); if(cnt) cnt.textContent=`${data.length} polos`;
+  const tbody=document.getElementById('lab-polo-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=data.slice(0,500).map(r=>'<tr style="border-bottom:1px solid var(--border)">'+
+    cols.map(c=>`<td style="padding:5px 8px;white-space:nowrap">${esc(String(r[c]??'—'))}</td>`).join('')+
+    '</tr>').join('');
+}
+function renderLabSimples(d){
+  const sub=document.getElementById('lab-sub'); if(sub) sub.textContent=d.categoria;
+  let html=`<div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi kpi-teal"><div class="kpi-label">Total de Alunos</div><div class="kpi-value">${fmtNum(d.total_alunos)}</div></div>
+    <div class="kpi kpi-green"><div class="kpi-label">Cursos</div><div class="kpi-value">${fmtNum(d.total_cursos)}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Polos</div><div class="kpi-value">${fmtNum(d.total_polos)}</div></div>
+  </div>`;
+
+  if((d.modulos||[]).length){
+    const maxA=Math.max(...d.modulos.map(m=>m.alunos||0),1);
+    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📈 Distribuição por Módulo</div>`+
+      d.modulos.map(m=>{
+        const w=Math.round((m.alunos||0)/maxA*100);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+          <span style="font-size:11px;min-width:80px">${esc(m.modulo)}</span>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:14px;overflow:hidden"><div style="height:14px;background:var(--teal);width:${w}%"></div></div>
+          <span style="font-size:11px;font-weight:700;min-width:55px;text-align:right">${fmtNum(m.alunos)}</span>
+        </div>`;
+      }).join('')+`</div>`;
+  }
+
+  html+=`<div class="card" style="margin-bottom:14px;overflow-x:auto"><div class="sec-label">🎓 Cursos</div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--border)"><th style="text-align:left;padding:6px">Curso</th><th style="text-align:left;padding:6px">Código</th><th style="text-align:right;padding:6px">Alunos</th></tr></thead><tbody>`+
+    (d.cursos||[]).map(c=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px">${esc(c.curso)}</td><td style="padding:6px;color:var(--muted)">${esc(c.codcurso)}</td><td style="text-align:right;padding:6px;font-weight:700">${fmtNum(c.alunos)}</td></tr>`).join('')+
+    `</tbody></table></div>`;
+
+  html+=`<div class="card" style="padding:0;overflow:hidden">
+    <div class="toolbar" style="padding:12px 14px">
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterLabPolosSimples(this.value)" id="lab-polo-search"/>
+      <span class="tbl-count" id="lab-polo-count">—</span>
+    </div>
+    <div class="tbl-wrap" style="max-height:500px"><table style="font-size:12px"><thead><tr><th style="padding:6px 8px;text-align:left">Polo</th><th style="padding:6px 8px;text-align:right">Alunos</th></tr></thead><tbody id="lab-polo-tbody"></tbody></table></div>
+  </div>`;
+  document.getElementById('lab-content').innerHTML=html;
+  window._labPolosSimplesData=d.polos||[];
+  filterLabPolosSimples('');
+}
+function filterLabPolosSimples(q){
+  q=(q||'').toLowerCase().trim();
+  let data=window._labPolosSimplesData||[];
+  if(q) data=data.filter(r=>String(r.polo||'').toLowerCase().includes(q));
+  const cnt=document.getElementById('lab-polo-count'); if(cnt) cnt.textContent=`${data.length} polos`;
+  const tbody=document.getElementById('lab-polo-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=data.slice(0,500).map(r=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px">${esc(r.polo)}</td><td style="padding:5px 8px;text-align:right;font-weight:700">${fmtNum(r.alunos)}</td></tr>`).join('');
+}
+
 function _iniciarDashboard(){
   const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
   document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
@@ -2179,6 +2386,12 @@ function _iniciarDashboard(){
   try{renderPracKPIs();renderCatPracBars();renderTopPrac();filterPrac('');}catch(e){console.error('renderPrac',e);}
   try{filterPolos('');filterTutores('');}catch(e){console.error('filterPolos/Tutores',e);}
   try{renderGerenciamento();populateFilters();}catch(e){console.error('renderGer',e);}
+  try{
+    const _lab=DB.laboratorios||{};
+    if(Object.keys(_lab.ricos||{}).length || Object.keys(_lab.simples||{}).length){
+      document.getElementById('sidebar-lab').style.display='';
+    }
+  }catch(e){console.error('sidebar-lab check',e);}
   initSemestres();
 }
 
