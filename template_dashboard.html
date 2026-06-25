@@ -125,6 +125,15 @@ tr:hover td{background:rgba(0,107,94,.02)}
 .senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
 .senha-lgpd{font-size:10px;color:var(--dim);margin-top:16px}
 @media(max-width:900px){.sidebar{width:60px}.sidebar .si-label,.sidebar-title,.sidebar-sub,.sidebar-section-label,.sidebar-ts{display:none}.sidebar-brand{padding:12px 8px;text-align:center}.sidebar-item{justify-content:center;padding:10px}.sidebar-item .si-badge{display:none}.main{margin-left:60px}#lgpd-bar{left:60px}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+body.sidebar-collapsed .sidebar{width:60px}
+body.sidebar-collapsed .sidebar .si-label,body.sidebar-collapsed .sidebar-title,body.sidebar-collapsed .sidebar-sub,body.sidebar-collapsed .sidebar-section-label,body.sidebar-collapsed .sidebar-ts{display:none}
+body.sidebar-collapsed .sidebar-brand{padding:12px 8px;text-align:center}
+body.sidebar-collapsed .sidebar-item{justify-content:center;padding:10px}
+body.sidebar-collapsed .sidebar-item .si-badge{display:none}
+body.sidebar-collapsed .main{margin-left:60px}
+body.sidebar-collapsed #lgpd-bar{left:60px}
+.sidebar-collapse-btn{position:absolute;top:14px;right:-12px;width:24px;height:24px;border-radius:50%;background:var(--card);border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:301;font-size:11px;color:var(--muted)}
+.sidebar-collapse-btn:hover{color:var(--green)}
 body.dark .sidebar{background:#0a1f1c}
 body.dark th{background:var(--surface)}
 body.dark .search,body.dark .sel{background:var(--surface)}
@@ -132,6 +141,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 </head>
 <body>
 <nav class="sidebar">
+  <div class="sidebar-collapse-btn" onclick="toggleSidebar()" id="sidebar-collapse-btn" title="Recolher/expandir menu">‹</div>
   <div class="sidebar-brand"><div class="sidebar-logo">VinciLab</div><div class="sidebar-title">Gestão de Práticas</div><div class="sidebar-sub">VinciLab · 2026</div></div>
   <!-- Seletor de semestre -->
   <div id="sem-selector" style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.1);display:none">
@@ -1587,6 +1597,13 @@ function populateFilters(){
 }
 function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');}
 function initDark(){if(localStorage.getItem('dark')==='1')document.body.classList.add('dark')}
+function toggleSidebar(){
+  document.body.classList.toggle('sidebar-collapsed');
+  const collapsed=document.body.classList.contains('sidebar-collapsed');
+  localStorage.setItem('sidebar-collapsed',collapsed?'1':'0');
+  const btn=document.getElementById('sidebar-collapse-btn'); if(btn) btn.textContent=collapsed?'›':'‹';
+}
+function initSidebar(){if(localStorage.getItem('sidebar-collapsed')==='1'){document.body.classList.add('sidebar-collapsed');const btn=document.getElementById('sidebar-collapse-btn');if(btn)btn.textContent='›';}}
 
 // ── EXPORTAR CSV ──────────────────────────────────────────────────────────────
 function exportCSV(rows,filename){if(!rows||!rows.length){alert('Sem dados para exportar');return;}const headers=Object.keys(rows[0]);const escape=v=>{v=String(v===null||v===undefined?'':v);if(v.includes(';')||v.includes('"')||v.includes('\n'))v='"'+v.replace(/"/g,'""')+'"';return v;};const sep=';';const csv=[headers.map(escape).join(sep),...rows.map(r=>headers.map(h=>escape(r[h])).join(sep))].join('\n');const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);}
@@ -1983,6 +2000,15 @@ function _renderComSemestre() {
 // PÁGINA TUTORES MEC — Gestão completa de tutores com MEC + portfólio + gerenciamento
 // ══════════════════════════════════════════════════════════════════════════
 function renderTutoresMec() {
+  // PATCH 14: o filtro de categoria desta página nunca era populado — corrige aqui
+  // (usa o valor cru de t.c, igual ao que filterTutoresMec compara)
+  {
+    const _catSel = document.getElementById('tutmec-cat-sel');
+    if (_catSel && _catSel.options.length <= 1) {
+      const _cats = [...new Set((DB.tutores||[]).filter(t=>!t._anonimo && t.c!=='Aviso de Portfólio').map(t=>t.c||'').filter(Boolean))].sort();
+      _cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; _catSel.appendChild(o); });
+    }
+  }
   // ── KPIs da ficha ─────────────────────────────────────────────
   const _tAll=(DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio');
   const _tit=t=>t.titulacao||'';
@@ -2194,6 +2220,44 @@ function _tutMecSort(col){
 
 
 
+function _donutSVG(vals, labels, colors, centerTop, centerVal, size){
+  size = size || 80;
+  const total = vals.reduce((a,b)=>a+(b||0),0) || 1;
+  let cum = 0;
+  const r = size*0.4, cx = size/2, cy = size/2;
+  const paths = vals.map((v,i)=>{
+    if(!v) return '';
+    const pct = v/total;
+    const a1 = cum*2*Math.PI - Math.PI/2;
+    const a2 = (cum+pct)*2*Math.PI - Math.PI/2;
+    cum += pct;
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    const lg = pct>0.5?1:0;
+    return `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${lg},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${colors[i]}" opacity="0.9" style="cursor:pointer;transition:opacity .2s" onmouseover="this.setAttribute('opacity','1')" onmouseout="this.setAttribute('opacity','0.9')"><title>${esc(labels[i])}: ${fmtNum(v)}</title></path>`;
+  }).join('');
+  const rInner = r*0.62;
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="flex-shrink:0">
+    ${paths}
+    <circle cx="${cx}" cy="${cy}" r="${rInner}" fill="var(--surface)"/>
+    <text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="var(--font)">${esc(centerTop||'')}</text>
+    <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" font-family="var(--font)">${centerVal??''}</text>
+  </svg>`;
+}
+function _donutLegenda(labels, vals, colors){
+  const total=vals.reduce((a,b)=>a+(b||0),0)||1;
+  return labels.map((l,i)=>{
+    if(!vals[i]) return '';
+    const pct=Math.round(vals[i]/total*100);
+    return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0">
+      <span style="width:9px;height:9px;border-radius:2px;background:${colors[i]};flex-shrink:0"></span>
+      <span style="color:var(--muted)">${esc(l)}</span>
+      <strong style="margin-left:auto">${fmtNum(vals[i])}</strong>
+      <span style="color:var(--muted);min-width:36px;text-align:right">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // PÁGINA LABORATÓRIOS
 // ══════════════════════════════════════════════════════════════════════════
@@ -2243,12 +2307,16 @@ function renderLabRico(d){
     kpis.map(k=>`<div class="kpi kpi-teal"><div class="kpi-label">${esc(k.k)}</div><div class="kpi-value">${_labFmtVal(k.v)}</div></div>`).join('')+
     `</div>`;
 
-  // Indicadores gerais completos (lista)
+  // Indicadores gerais completos (grid de mini-cards, não lista crua)
   const outros=ind.filter(i=>!destaque.includes(i.k));
   if(outros.length){
-    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📊 Indicadores Gerais</div>`+
-      outros.map(i=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--muted)">${esc(i.k)}</span><strong>${_labFmtVal(i.v)}</strong></div>`).join('')+
-      `</div>`;
+    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📊 Indicadores Gerais</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:8px">`+
+      outros.map(i=>`<div style="background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${esc(i.k)}</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)">${_labFmtVal(i.v)}</div>
+      </div>`).join('')+
+      `</div></div>`;
   }
 
   // Distribuição por módulo
@@ -2259,24 +2327,38 @@ function renderLabRico(d){
         const w=Math.round((m.alunos||0)/maxA*100);
         return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
           <span style="font-size:11px;min-width:80px">${esc(m.modulo)}</span>
-          <div style="flex:1;background:var(--border);border-radius:4px;height:14px;overflow:hidden"><div style="height:14px;background:var(--teal);width:${w}%"></div></div>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:14px;overflow:hidden"><div style="height:14px;background:var(--teal);width:${w}%;transition:width .4s"></div></div>
           <span style="font-size:11px;font-weight:700;min-width:55px;text-align:right">${fmtNum(m.alunos)}</span>
           <span style="font-size:10px;color:var(--muted);min-width:45px;text-align:right">${_labFmtVal(m.pct)}</span>
         </div>`;
       }).join('')+`</div>`;
   }
 
-  // Análise de cobertura + classificação IES geral (lado a lado)
+  // Análise de cobertura + classificação IES geral (donuts lado a lado)
   html+=`<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">`;
   if((d.analise_cobertura||[]).length){
-    html+=`<div class="card" style="flex:1;min-width:280px"><div class="sec-label">🎯 Análise de Cobertura</div>`+
-      d.analise_cobertura.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${esc(c.status)}</span><span><strong>${fmtNum(c.polos)}</strong> polos · <strong>${fmtNum(c.alunos)}</strong> alunos</span></div>`).join('')+
-      `</div>`;
+    const cob=d.analise_cobertura.filter(c=>c.status!=='TOTAL');
+    const totalCob=d.analise_cobertura.find(c=>c.status==='TOTAL');
+    const cobCores=['var(--teal)','var(--yellow-d)','#9ca3af'];
+    html+=`<div class="card" style="flex:1;min-width:280px">
+      <div class="sec-label">🎯 Análise de Cobertura</div>
+      <div style="display:flex;align-items:center;gap:18px;margin-top:8px">
+        ${_donutSVG(cob.map(c=>c.alunos), cob.map(c=>c.status), cobCores, 'alunos', fmtNum(totalCob?.alunos||0))}
+        <div style="flex:1">${_donutLegenda(cob.map(c=>c.status), cob.map(c=>c.alunos), cobCores)}</div>
+      </div>
+    </div>`;
   }
   if((d.classificacao_ies_geral||[]).length){
-    html+=`<div class="card" style="flex:1;min-width:280px"><div class="sec-label">📋 Classificação IES — ENADE × Rosimar</div>`+
-      d.classificacao_ies_geral.map(c=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${esc(c.k)}</span><span><strong>${fmtNum(c.qtde)}</strong> (${_labFmtVal(c.pct)})</span></div>`).join('')+
-      `</div>`;
+    const ies=d.classificacao_ies_geral.filter(c=>!c.k.startsWith('TOTAL'));
+    const totalIes=d.classificacao_ies_geral.find(c=>c.k.startsWith('TOTAL'));
+    const iesCores=['var(--green)','var(--red)'];
+    html+=`<div class="card" style="flex:1;min-width:280px">
+      <div class="sec-label">📋 Classificação IES — ENADE × Rosimar</div>
+      <div style="display:flex;align-items:center;gap:18px;margin-top:8px">
+        ${_donutSVG(ies.map(c=>c.qtde), ies.map(c=>c.k), iesCores, 'alunos', fmtNum(totalIes?.qtde||0))}
+        <div style="flex:1">${_donutLegenda(ies.map(c=>c.k), ies.map(c=>c.qtde), iesCores)}</div>
+      </div>
+    </div>`;
   }
   html+=`</div>`;
 
@@ -2289,11 +2371,15 @@ function renderLabRico(d){
       `</tbody></table></div>`;
   }
 
-  // Insights
+  // Insights (cards de destaque, não lista crua)
   if((d.insights||[]).length){
-    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">💡 Insights Principais</div>`+
-      d.insights.map(i=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--muted)">${esc(i.k)}</span><strong>${_labFmtVal(i.v)}</strong></div>`).join('')+
-      `</div>`;
+    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">💡 Insights Principais</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:8px">`+
+      d.insights.map(i=>`<div style="background:var(--yellow-dim);border-left:3px solid var(--yellow-d);border-radius:6px;padding:10px 12px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${esc(i.k)}</div>
+        <div style="font-size:15px;font-weight:700">${_labFmtVal(i.v)}</div>
+      </div>`).join('')+
+      `</div></div>`;
   }
 
   // Detalhamento por polo (busca)
@@ -2397,6 +2483,7 @@ function _iniciarDashboard(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   initDark();
+  initSidebar();
   initSenha();
 });
 
