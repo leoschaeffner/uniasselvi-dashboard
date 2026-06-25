@@ -1071,12 +1071,20 @@ def processar(p1, p2):
     com_file = os.path.join(SCRIPT_DIR, 'tutores_comunicacao.json')
     if os.path.isfile(com_file):
         with open(com_file, encoding='utf-8') as f: com_lista = json.load(f)
-        com_map = {_norm_nome(c['nome']): c for c in com_lista}
+        # PATCH 14: nomes do relatório costumam vir incompletos (ex: "Gabriella Ribeiro"
+        # vs "Gabriella Ribeiro Sousa" no cadastro) — casa por prefixo de tokens, não
+        # só por igualdade exata
+        com_tokens = [(tuple(_norm_nome(c['nome']).split()), c) for c in com_lista]
         _matches = 0
         for t in tutores_out:
-            c = com_map.get(_norm_nome(t.get('n','')))
-            if c:
-                t['comunicacao'] = c
+            t_tokens = tuple(_norm_nome(t.get('n','')).split())
+            achou = None
+            for ctoks, c in com_tokens:
+                n = min(len(ctoks), len(t_tokens))
+                if n >= 2 and ctoks[:n] == t_tokens[:n]:
+                    achou = c; break
+            if achou:
+                t['comunicacao'] = achou
                 _matches += 1
         print(f"[{ts()}] Comunicação de tutores: {_matches}/{len(com_lista)} vinculados por nome")
 
