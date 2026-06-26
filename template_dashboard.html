@@ -132,10 +132,8 @@ body.sidebar-collapsed .sidebar-item{justify-content:center;padding:10px}
 body.sidebar-collapsed .sidebar-item .si-badge{display:none}
 body.sidebar-collapsed .main{margin-left:60px}
 body.sidebar-collapsed #lgpd-bar{left:60px}
-body.sidebar-collapsed #sem-selector{padding:10px 6px;overflow:hidden}
-body.sidebar-collapsed #sem-selector>div:first-child{display:none}
-body.sidebar-collapsed #sem-tabs{flex-direction:column;align-items:center}
-body.sidebar-collapsed #sem-tabs button{width:36px;height:28px;padding:0;font-size:9px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+body.sidebar-collapsed #sem-selector{display:none}
+body.sidebar-collapsed .sidebar-logo{display:none}
 .sidebar,.main,#lgpd-bar{transition:width .2s,margin-left .2s,left .2s}
 .sidebar-collapse-btn{position:absolute;top:14px;right:-12px;width:24px;height:24px;border-radius:50%;background:var(--card);border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:301;font-size:11px;color:var(--muted)}
 .sidebar-collapse-btn:hover{color:var(--green)}
@@ -2358,7 +2356,7 @@ function renderLabRico(d){
     const totalIes=d.classificacao_ies_geral.find(c=>c.k.startsWith('TOTAL'));
     const iesCores=['var(--green)','var(--red)'];
     html+=`<div class="card" style="flex:1;min-width:280px">
-      <div class="sec-label">📋 Classificação IES — ENADE × Rosimar</div>
+      <div class="sec-label">📋 Classificação IES — Controle Regulatório</div>
       <div style="display:flex;align-items:center;gap:18px;margin-top:8px">
         ${_donutSVG(ies.map(c=>c.qtde), ies.map(c=>c.k), iesCores, 'alunos', fmtNum(totalIes?.qtde||0))}
         <div style="flex:1">${_donutLegenda(ies.map(c=>c.k), ies.map(c=>c.qtde), iesCores)}</div>
@@ -2403,7 +2401,7 @@ function renderLabRico(d){
   window._labPolosCols=d.detalhe_polos_colunas||[];
   window._labPolosData=d.detalhe_polos||[];
   const thead=document.getElementById('lab-polo-thead');
-  thead.innerHTML=window._labPolosCols.map(c=>`<th style="white-space:nowrap;padding:6px 8px">${esc(c)}</th>`).join('');
+  thead.innerHTML=window._labPolosCols.map(c=>`<th style="white-space:nowrap;padding:6px 8px">${esc(c.replace(/Rosimar/gi,'Controle Regulatório'))}</th>`).join('');
   filterLabPolos('');
 }
 function filterLabPolos(q){
