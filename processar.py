@@ -969,6 +969,7 @@ def processar(p1, p2):
             'n': str(t.get(col_nome, '') or ''),
             'p': str(t.get(col_polo, '') or ''),
             'c': cat_raw, 'cf': cat_form or 'Sem mapeamento',
+            'cursos': str(t.get(col_cur, '') or ''),  # código específico (BFI, BTO, COS-TIP, etc.)
             'tp': tp, 'te': te,
             'pend': pend, 'real': sorted(reais), 'hist': hist,
             'pct': round(te / tp * 100, 1) if tp else 0,
