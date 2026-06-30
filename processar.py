@@ -1814,8 +1814,6 @@ def _processar_gerenciamento_novo(df_g):
     df['_OFE']   = pd.to_numeric(df[c_ofe],  errors='coerce').fillna(0).astype(int) if c_ofe   else 0
     df['_TEM_TUTOR'] = df['_TUTOR'].str.len() > 0
     _situ_col = df[c_situ].fillna('').astype(str).str.strip() if c_situ else pd.Series([''] * len(df))
-    # GERENCIADO = tem tutor E (tem ofertas cadastradas OU status CONCLUÍDO)
-    df['_GERENCIADO'] = df['_TEM_TUTOR'] & ((df['_OFE'] > 0) | _situ_col.str.upper().str.contains('CONCLU', na=False))
     dt_col = df[c_dt_ag] if c_dt_ag else pd.Series([''] * len(df))
     def to_iso(v):
         if v is None: return ''
@@ -1840,6 +1838,12 @@ def _processar_gerenciamento_novo(df_g):
         return ''
     df['_DT_AG_ISO'] = dt_col.apply(to_iso)
     df['_TEM_AGENDA'] = df['_DT_AG_ISO'].str.len() > 0
+    # PATCH 22: GERENCIADO = tem tutor E tem data de gerenciamento (DT_GERENCIADA
+    # preenchida) — confirmado por Leo: TUTOR preenchido só indica quem está
+    # responsável, não que o gerenciamento foi feito; o sinal real de conclusão
+    # é a data em DT_GERENCIADA. O critério anterior (tutor + ofertas cadastradas)
+    # inflava a contagem de "gerenciadas" pra muito além do que foi feito de fato.
+    df['_GERENCIADO'] = df['_TEM_TUTOR'] & df['_TEM_AGENDA']
     df['_HR_AG'] = df[c_hr_ag].fillna('').astype(str).str.strip().replace('nan','').replace('NaT','') if c_hr_ag else ''
     parsed = (df[c_exp] if c_exp else pd.Series([''] * len(df))).apply(extrair_ordem_exp)
     df['_ORDEM'] = parsed.apply(lambda x: x[0])
@@ -2076,10 +2080,11 @@ def processar_gerenciamento(p3):
         df_g['_PRATICA_G'] = parsed.apply(lambda x: x[1])
     # FIX BUG 1: _TEM_TUTOR deve ser definido ANTES de _GERENCIADO
     df_g['_TEM_TUTOR'] = df_g[c_tutor].notna() & (df_g[c_tutor].astype(str).str.strip() != '') & (df_g[c_tutor].astype(str).str.strip().str.upper() != 'NAN')
-    # GERENCIADO = tem tutor E (tem ofertas cadastradas OU status CONCLUÍDO)
-    _situ_g = df_g[c_situ].fillna('').astype(str).str.strip() if c_situ and c_situ in df_g.columns else pd.Series([''] * len(df_g))
-    df_g['_GERENCIADO'] = df_g['_TEM_TUTOR'] & ((pd.to_numeric(df_g.get(c_ofe_cad, 0), errors='coerce').fillna(0) > 0) | _situ_g.str.upper().str.contains('CONCLU', na=False))
     df_g['_TEM_AGENDA'] = df_g.get(c_dt_agenda, pd.Series(dtype='object')).notna()
+    # PATCH 22: GERENCIADO = tem tutor E tem data de gerenciamento — mesmo
+    # critério corrigido do formato NOVO (ver comentário lá). OFERTAS_CADASTRADAS
+    # ou status CONCLUÍDO não confirmam que o gerenciamento foi feito de fato.
+    df_g['_GERENCIADO'] = df_g['_TEM_TUTOR'] & df_g['_TEM_AGENDA']
     df_g['_ALUNOS_MAT'] = pd.to_numeric(df_g.get(c_alunos, 0), errors='coerce').fillna(0).astype(int)
     df_g['_QTD_ALUN'] = pd.to_numeric(df_g.get(c_qtd_alun, 0), errors='coerce').fillna(0).astype(int)
     df_g['_CAPA'] = pd.to_numeric(df_g.get(c_capa_exp, 0), errors='coerce').fillna(0).astype(int)
