@@ -1802,7 +1802,11 @@ def _processar_gerenciamento_novo(df_g):
         return '', str(val or '').strip()
     df = df_g.copy()
     df['_POLO']  = df[c_polo].astype(str).str.strip() if c_polo else ''
-    df['_CAT']   = df[c_cat].astype(str).str.strip()  if c_cat  else ''
+    # PATCH 19: o export novo do gerenciamento (CSV 2026/2) usa um rótulo diferente
+    # do arquivo antigo pra mesma categoria (Fisio/T.O./Estética) — normaliza pra
+    # não virar "categoria fantasma" duplicada no seletor/agregações
+    _CAT_RAW_NORM = {'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)'}
+    df['_CAT']   = df[c_cat].astype(str).str.strip().replace(_CAT_RAW_NORM) if c_cat  else ''
     df['_TUTOR'] = df[c_tutor].fillna('').astype(str).str.strip().replace('nan','') if c_tutor else ''
     df['_MAT']   = pd.to_numeric(df[c_mat],  errors='coerce').fillna(0).astype(int) if c_mat  else 0
     df['_AGEND'] = pd.to_numeric(df[c_agend],errors='coerce').fillna(0).astype(int) if c_agend else 0
