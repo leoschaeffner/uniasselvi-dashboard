@@ -1032,10 +1032,20 @@ function renderGerenciamento(){
   const dcats=[...new Set(gerDetData.map(d=>d.categoria).filter(Boolean))].sort();
   const ordemKeys=(GER_DB.ger_ordem||[]).map(o=>o.ordem).filter(Boolean).sort();
   const dordens=ordemKeys.length?ordemKeys:[...new Set(gerDetData.map(d=>d.ordem).filter(Boolean))].sort();
-  const cs=document.getElementById('ger-det-cat');dcats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o)});
-  const os2=document.getElementById('ger-det-ordem');if(!dordens.includes('Ordem 5'))dordens.push('Ordem 5');
+  // PATCH 19: limpa antes de repopular — renderGerenciamento() agora roda a cada
+  // troca de semestre, e sem isso as opções duplicavam a cada chamada
+  const cs=document.getElementById('ger-det-cat');
+  const _csPrev=cs.value;
+  while(cs.options.length>1) cs.remove(1);
+  dcats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o)});
+  if([...cs.options].some(o=>o.value===_csPrev)) cs.value=_csPrev;
+  const os2=document.getElementById('ger-det-ordem');
+  const _osPrev=os2.value;
+  if(!dordens.includes('Ordem 5'))dordens.push('Ordem 5');
   dordens.sort((a,b)=>{var n=s=>parseInt((s||'0').replace(/\D/g,''));return n(a)-n(b);});
+  while(os2.options.length>1) os2.remove(1);
   dordens.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;os2.appendChild(op)});
+  if([...os2.options].some(o=>o.value===_osPrev)) os2.value=_osPrev;
   filterGerDetalhe('');
 }
 
@@ -2120,13 +2130,16 @@ function _renderComSemestre() {
 // PÁGINA TUTORES MEC — Gestão completa de tutores com MEC + portfólio + gerenciamento
 // ══════════════════════════════════════════════════════════════════════════
 function renderTutoresMec() {
-  // PATCH 14: o filtro de categoria desta página nunca era populado — corrige aqui
-  // (usa o valor cru de t.c, igual ao que filterTutoresMec compara)
+  // PATCH 19: clear-and-rebuild (não só "popula uma vez") — mais robusto a
+  // chamadas repetidas de renderTutoresMec(), mesmo padrão usado em ger-det-cat
   {
     const _catSel = document.getElementById('tutmec-cat-sel');
-    if (_catSel && _catSel.options.length <= 1) {
+    if (_catSel) {
+      const _prev = _catSel.value;
+      while(_catSel.options.length>1) _catSel.remove(1);
       const _cats = [...new Set((DB.tutores||[]).filter(t=>!t._anonimo && t.c!=='Aviso de Portfólio').map(t=>t.c||'').filter(Boolean))].sort();
       _cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; _catSel.appendChild(o); });
+      if([...(_catSel.options)].some(o=>o.value===_prev)) _catSel.value=_prev;
     }
   }
   // ── KPIs da ficha ─────────────────────────────────────────────
