@@ -34,6 +34,7 @@ jobs:
           URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
           URL_PORTFOLIO_2026_2: ${{ secrets.URL_PORTFOLIO_2026_2 }}
           URL_GERENCIAL:  ${{ secrets.URL_GERENCIAL }}
+          URL_GERENCIAL_26_02: ${{ secrets.URL_GERENCIAL_26_02 }}
           URL_LOTACAO:    ${{ secrets.URL_LOTACAO }}
           URL_REL_NOVO:   ${{ secrets.URL_REL_NOVO }}
           URL_ALUNOS_HUB: ${{ secrets.URL_ALUNOS_HUB }}
@@ -112,6 +113,7 @@ jobs:
           baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR',           True)
           baixar('URL_PORTFOLIO_2026_2', 'planilhas/PORTIFOLIO_TUTOR_2026_2.xlsx', 'PORTIFOLIO_TUTOR_2026_2', False)
           baixar('URL_GERENCIAL',  'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERENCIAMENTO',          False)
+          baixar('URL_GERENCIAL_26_02', 'planilhas/REL_GERAL_DE_GERENCIAMENTO_26_02.csv', 'REL_GERENCIAMENTO_26_02', False)
           baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES',            False)
           baixar('URL_REL_NOVO',   'planilhas/REL_DETALHADO.csv',               'REL_DETALHADO',              False)
           baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'ALUNOS_HUB',                 False)
