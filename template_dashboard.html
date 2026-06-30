@@ -627,6 +627,7 @@ let DB;
 let poloSortK='pend',poloSortA=false,tutorSortK='n',tutorSortA=true,pracSortK='pend_n',pracSortA=false,ordemSortK='n',ordemSortA=true;
 let poloData=[],tutorData=[],pracData=[],ordemData=[];
 let gerPoloData=[],gerContrData=[],gerAgendaData=[],gerDetData=[];
+let _rankTab='pend';  // PATCH 18: faltava declaração — sem isso, renderTopPrac() quebrava em silêncio e abortava o resto de _renderComSemestre()
 
 function gPN(p){return p.n||p.polo||p.POLO||"N/A"}
 function gPT(p){return p.t||p.total||0}
@@ -921,8 +922,9 @@ function closeModal(){document.getElementById('modal-overlay').classList.remove(
 function openAlunosModal(){
   // Usar dados do CSV de alunos (DB.alunos_hub) se disponível, senão usar ger_kpis por categoria
   var hub = DB.alunos_hub || null;
-  var kpis = DB.ger_kpis || {};
-  var cats = DB.ger_cat || [];
+  if(!GER_DB) GER_DB = DB;
+  var kpis = GER_DB.ger_kpis || {};
+  var cats = GER_DB.ger_cat || [];
   
   var fonte = hub ? 'Relatório de Alunos por Hub (matrículas únicas por POLO_HUB × GRUPO_HUB)' 
                   : 'Estimativa baseada no GIOCONDA (pode ter contagem múltipla)';
@@ -988,8 +990,9 @@ function openAlunosModal(){
 }
 function renderGerenciamento(){
   if(!DB.tem_gerenciamento)return;
+  if(!GER_DB) GER_DB = DB;  // PATCH 18: fallback antes do seletor de semestre inicializar
   document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';
-  const k=DB.ger_kpis;document.getElementById('gv-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
+  const k=GER_DB.ger_kpis;document.getElementById('gv-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
   document.getElementById('gv-kpis').innerHTML=`
     <div class="kpi kpi-green" title="Total de combinações tutor × laboratório × ordem no GIOCONDA"><div class="kpi-label">Total Ofertas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
     <div class="kpi kpi-ok" title="Ofertas com agenda configurada no GIOCONDA: datas, capacidade e locais definidos"><div class="kpi-label">Gerenciadas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_gerenciadas)}</div><div class="kpi-detail">${k.pct_gerenciado}% do total</div></div>
@@ -998,15 +1001,15 @@ function renderGerenciamento(){
     <div class="kpi kpi-yellow" title="Alunos com prática agendada (práticas gerenciadas × capacidade estimada por ordem)"><div class="kpi-label">Alunos Agendados <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>
     <div class="kpi kpi-green" title="% de alunos matriculados com prática agendada: Agendados ÷ Matriculados × 100"><div class="kpi-label">Ocupação <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${k.pct_ocupacao}%</div></div>`;
   const catColors=['#006B5E','#00A88F','#00C9A7','#FFD100','#E5BC00','#dc2626'];
-  document.getElementById('gv-cat-cards').innerHTML=(DB.ger_cat||[]).map((c,i)=>{const cor=catColors[i%catColors.length];return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:${cor}08;border-left:4px solid ${cor}"><div style="font-size:13px;font-weight:700;margin-bottom:6px">${c.categoria}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700;font-size:15px">${fmtNum(c.total_ofertas)}</div></div><div><span style="color:var(--muted)">Gerenciadas</span><div style="font-weight:700;font-size:15px;color:var(--ok)">${c.pct_gerenciado}%</div></div><div><span style="color:var(--muted)">Sem tutor</span><div style="font-weight:700;font-size:15px;color:${c.sem_tutor>0?'var(--red)':'var(--ok)'}">-${fmtNum(c.sem_tutor)}</div></div></div></div>`;}).join('');
-  document.getElementById('gv-ordem-cards').innerHTML=(DB.ger_ordem||[]).map(o=>{const pct=o.pct_gerenciado;return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:14px;font-weight:700">${o.ordem}</div><span style="font-size:10px;color:var(--muted)">${o.dt_inicio||''}${o.dt_inicio?' → ':''}${o.dt_fim||''}</span></div>${progCell(pct)}<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:10px;margin-top:6px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700">${fmtNum(o.total_ofertas)}</div></div><div><span style="color:var(--muted)">Al. Mat.</span><div style="font-weight:700">${fmtNum(o.alunos_matriculados)}</div></div><div><span style="color:var(--muted)">Agendados</span><div style="font-weight:700">${fmtNum(o.alunos_agendados)}</div></div></div></div>`;}).join('');
-  const topPolos=(DB.ger_polo||[]).filter(p=>p.sem_tutor>0).sort((a,b)=>b.sem_tutor-a.sem_tutor).slice(0,10);const maxST=topPolos.length?topPolos[0].sem_tutor:1;
+  document.getElementById('gv-cat-cards').innerHTML=(GER_DB.ger_cat||[]).map((c,i)=>{const cor=catColors[i%catColors.length];return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:${cor}08;border-left:4px solid ${cor}"><div style="font-size:13px;font-weight:700;margin-bottom:6px">${c.categoria}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700;font-size:15px">${fmtNum(c.total_ofertas)}</div></div><div><span style="color:var(--muted)">Gerenciadas</span><div style="font-weight:700;font-size:15px;color:var(--ok)">${c.pct_gerenciado}%</div></div><div><span style="color:var(--muted)">Sem tutor</span><div style="font-weight:700;font-size:15px;color:${c.sem_tutor>0?'var(--red)':'var(--ok)'}">-${fmtNum(c.sem_tutor)}</div></div></div></div>`;}).join('');
+  document.getElementById('gv-ordem-cards').innerHTML=(GER_DB.ger_ordem||[]).map(o=>{const pct=o.pct_gerenciado;return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:14px;font-weight:700">${o.ordem}</div><span style="font-size:10px;color:var(--muted)">${o.dt_inicio||''}${o.dt_inicio?' → ':''}${o.dt_fim||''}</span></div>${progCell(pct)}<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:10px;margin-top:6px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700">${fmtNum(o.total_ofertas)}</div></div><div><span style="color:var(--muted)">Al. Mat.</span><div style="font-weight:700">${fmtNum(o.alunos_matriculados)}</div></div><div><span style="color:var(--muted)">Agendados</span><div style="font-weight:700">${fmtNum(o.alunos_agendados)}</div></div></div></div>`;}).join('');
+  const topPolos=(GER_DB.ger_polo||[]).filter(p=>p.sem_tutor>0).sort((a,b)=>b.sem_tutor-a.sem_tutor).slice(0,10);const maxST=topPolos.length?topPolos[0].sem_tutor:1;
   document.getElementById('gv-ranking').innerHTML=topPolos.map((p,i)=>`<div class="rank-item" style="cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')"><div class="rank-pos" style="color:${i<3?'var(--red)':'var(--muted)'}">${i+1}</div><div class="rank-name" title="${p.polo}">${p.polo}</div><div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.sem_tutor/maxST*100}%;background:linear-gradient(90deg,var(--red),#f87171)"></div></div><div class="rank-val" style="color:var(--red)">${p.sem_tutor}</div></div>`).join('')||'<div style="color:var(--ok);text-align:center;padding:20px">✓ Todos os polos com tutor</div>';
 
   // Heatmap compacto (scroll interno)
-  const cats=(DB.ger_cat||[]).map(c=>c.categoria);
-  const topHM=(DB.ger_polo||[]).sort((a,b)=>b.total_ofertas-a.total_ofertas);
-  const contrMap={};(DB.ger_contratacao||[]).forEach(c=>{contrMap[c.polo+'|'+c.categoria]=c.tem_tutor});
+  const cats=(GER_DB.ger_cat||[]).map(c=>c.categoria);
+  const topHM=(GER_DB.ger_polo||[]).sort((a,b)=>b.total_ofertas-a.total_ofertas);
+  const contrMap={};(GER_DB.ger_contratacao||[]).forEach(c=>{contrMap[c.polo+'|'+c.categoria]=c.tem_tutor});
   let hmHTML=`<div style="overflow-x:auto;overflow-y:auto;max-height:500px"><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr><th style="position:sticky;top:0;left:0;background:var(--bg);z-index:10;padding:4px 6px;white-space:nowrap;min-width:140px;border-bottom:2px solid var(--border)">Polo</th>`;
   cats.forEach(c=>{hmHTML+=`<th style="position:sticky;top:0;background:var(--bg);z-index:9;padding:4px 3px;text-align:center;border-bottom:2px solid var(--border);white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis" title="${c}">${c.split('(')[0].trim().substring(0,10)}</th>`;});
   hmHTML+='</tr></thead><tbody>';
@@ -1018,16 +1021,16 @@ function renderGerenciamento(){
   hmHTML+='</tbody></table></div>';
   document.getElementById('gv-heatmap').innerHTML=hmHTML;
 
-  gerPoloData=DB.ger_polo||[];renderGerPoloTbl(gerPoloData);
+  gerPoloData=GER_DB.ger_polo||[];renderGerPoloTbl(gerPoloData);
   var temLot=DB.tem_lotacao&&(DB.tutores||[]).some(function(t){return t.ch_semanal&&t.ch_semanal>0;});document.querySelectorAll('.col-ch-lot').forEach(function(el){el.style.display=temLot?'':'none';});if(!temLot){var notaLot=document.getElementById('ch-lot-aviso');if(notaLot)notaLot.style.display='none';}
   if(!temLot){var notaLot=document.createElement('div');notaLot.style.cssText='font-size:10px;color:var(--yellow);padding:4px 18px;background:var(--yellow-dim)';notaLot.textContent='⚠ Colunas CH Contratada disponíveis após configurar Planilha de Lotação';var detCard=document.querySelector('#page-ger-detalhe .card');if(detCard)detCard.insertBefore(notaLot,detCard.firstChild);}
   var estadosData=agruparPorEstado(gerPoloData);window._estadosData=estadosData;
   renderEstadosInline(estadosData);renderMapaBrasil(estadosData);
-  gerContrData=DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
-  gerAgendaData=DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
-  gerDetData=DB.ger_ofertas||[];
+  gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
+  gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
+  gerDetData=GER_DB.ger_ofertas||[];
   const dcats=[...new Set(gerDetData.map(d=>d.categoria).filter(Boolean))].sort();
-  const ordemKeys=(DB.ger_ordem||[]).map(o=>o.ordem).filter(Boolean).sort();
+  const ordemKeys=(GER_DB.ger_ordem||[]).map(o=>o.ordem).filter(Boolean).sort();
   const dordens=ordemKeys.length?ordemKeys:[...new Set(gerDetData.map(d=>d.ordem).filter(Boolean))].sort();
   const cs=document.getElementById('ger-det-cat');dcats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o)});
   const os2=document.getElementById('ger-det-ordem');if(!dordens.includes('Ordem 5'))dordens.push('Ordem 5');
@@ -1037,7 +1040,8 @@ function renderGerenciamento(){
 }
 
 function openGerPoloModal(polo){
-  const labs=(DB.ger_contratacao||[]).filter(c=>c.polo===polo);
+  if(!GER_DB) GER_DB = DB;
+  const labs=(GER_DB.ger_contratacao||[]).filter(c=>c.polo===polo);
   if(!labs.length){
     const pd=gerPoloData.find(p=>p.polo===polo);
     document.getElementById('m-title').textContent=polo;
@@ -1053,7 +1057,7 @@ function openGerPoloModal(polo){
     return;
   }
   const semTutor=labs.filter(c=>!c.tem_tutor).length;document.getElementById('m-title').textContent=polo;document.getElementById('m-sub').textContent=labs.length+' laboratórios · '+semTutor+' sem tutor';
-  const ofertasPolo=(DB.ger_ofertas||[]).filter(o=>o.polo===polo);
+  const ofertasPolo=(GER_DB.ger_ofertas||[]).filter(o=>o.polo===polo);
   let bodyHtml='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Categoria / Lab</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Ofertas</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Agend.</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Status</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Tutor(es)</th></tr></thead><tbody>';
   labs.sort((a,b)=>a.tem_tutor-b.tem_tutor).forEach(c=>{const bg=c.tem_tutor?'':'var(--red-dim)';const ofCat=ofertasPolo.filter(o=>o.categoria===c.categoria);const agend=ofCat.filter(o=>o.tem_agenda).length;bodyHtml+='<tr style="background:'+bg+';border-bottom:1px solid var(--border)"><td style="padding:6px 8px;font-weight:600">'+c.categoria+'</td><td style="padding:6px 8px;text-align:right">'+c.total_ofertas+'</td><td style="padding:6px 8px;text-align:center">'+(agend>0?'<span style="color:var(--ok)">'+agend+'✓</span>':'<span style="color:var(--muted)">0</span>')+'</td><td style="padding:6px 8px"><span class="badge '+(c.tem_tutor?'ok':'pend')+'">'+c.status+'</span></td><td style="padding:6px 8px;font-size:11px">'+(c.tutores&&c.tutores.length?c.tutores.join(', '):'<span style="color:var(--red)">—</span>')+'</td></tr>';});
   bodyHtml+='</tbody></table>';document.getElementById('m-body').innerHTML=bodyHtml;document.getElementById('modal-overlay').classList.add('show');
@@ -1613,7 +1617,7 @@ function exportCSV(rows,filename){if(!rows||!rows.length){alert('Sem dados para 
 function exportPraticas(modo){var all=getPraticas();var rows;if(modo==='menos'){rows=[...all].filter(p=>p.env_n>0).sort((a,b)=>a.env_n-b.env_n).slice(0,50);}else if(modo==='env'){rows=[...all].sort((a,b)=>b.env_n-a.env_n).slice(0,50);}else{rows=[...all].filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,50);}exportCSV(rows.map(p=>({'Prática':p.n,'Categoria':p.c||'','Enviadas':p.env_n,'Pendentes':p.pend_n,'% Envio':p.pct||0})),'praticas_'+modo+'_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportPendentes(){const ord=document.getElementById('ordem-sel').value;const cat=(document.getElementById('ordem-cat-sel')||{}).value||'';let tutores=DB.tutores||[];if(cat)tutores=tutores.filter(t=>t.c===cat);const rows=[];tutores.forEach(t=>{Object.entries(t.por_ordem||t.porOrdem||{}).forEach(([o,qt])=>{if(ord&&o!==ord)return;if(qt===0||(t.pend||[]).length>0)rows.push({'Nome':t.n,'Polo':t.p,'Categoria':t.c||'','Ordem':o,'Envios':qt,'Status':gTS(t)||''});});});exportCSV(rows,'pendentes_'+(ord||'todas')+'_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportEnviados(){const rows=[];(DB.tutores||[]).forEach(t=>{(t.hist||[]).forEach(h=>{rows.push({'Tutor':t.n,'Polo':t.p,'Categoria':t.c||'','Prática':h.p||'','Ordem':h.o||'','Data':h.d||'','Alunos':h.a||0});});});exportCSV(rows,'portfolios_enviados_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportSemTutor(){const rows=(DB.ger_contratacao||[]).filter(c=>!c.tem_tutor).map(c=>({'Polo':c.polo,'Categoria':c.categoria,'Status':c.status,'Total Ofertas':c.total_ofertas,'Tutores':(c.tutores||[]).join('; ')||'—'}));exportCSV(rows,'polos_sem_tutor_'+new Date().toISOString().slice(0,10)+'.csv');}
+function exportSemTutor(){const rows=((GER_DB||DB).ger_contratacao||[]).filter(c=>!c.tem_tutor).map(c=>({'Polo':c.polo,'Categoria':c.categoria,'Status':c.status,'Total Ofertas':c.total_ofertas,'Tutores':(c.tutores||[]).join('; ')||'—'}));exportCSV(rows,'polos_sem_tutor_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportTutores(){var d=tutoresFiltrados||DB.tutores||[];exportCSV(d.map(t=>({'Nome':t.n,'Polo':t.p,'Categoria':t.c||'','Portfólios Enviados':t.te||0,'Total Práticas':t.tp||'?','% Conclusão':t.pct||0,'Status':gTS(t)||''})),'tutores_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportDetalhe(){var cat=(document.getElementById('ger-det-cat')||{}).value||'';var ord=(document.getElementById('ger-det-ordem')||{}).value||'';function normNomeExp(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}var dFiltrado=gerDetData||[];if(ord)dFiltrado=dFiltrado.filter(r=>r.ordem===ord);if(cat)dFiltrado=dFiltrado.filter(r=>r.categoria===cat);function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}var poloTutorMapExp={};dFiltrado.forEach(r=>{if(r.tutor&&r.polo){var pk=normPoloExp(r.polo);if(!poloTutorMapExp[pk])poloTutorMapExp[pk]=new Set();poloTutorMapExp[pk].add(normNomeExp(r.tutor));}});var tutoresAtivos=DB.tutores||[];if(cat){var catBusca=cat.split('(')[0].trim().toUpperCase();tutoresAtivos=tutoresAtivos.filter(t=>{if(!t.c)return false;return t.c.toUpperCase().split('+').map(s=>s.trim()).some(p=>p===catBusca||p.includes(catBusca));});}var semGerExpMap={};tutoresAtivos.filter(t=>{var pk=normPoloExp(t.p);var poloSet=poloTutorMapExp[pk];if(poloSet)return !poloSet.has(normNomeExp(t.n));return true;}).forEach(t=>{var key=normNomeExp(t.n)+'|'+normPoloExp(t.p);if(!semGerExpMap[key])semGerExpMap[key]={'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c||'—'),'Categoria':t.c||'','Ordem':ord||'—'};});var rows=Object.values(semGerExpMap).sort((a,b)=>a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']));if(!rows.length){alert('Todos os tutores têm oferta atribuída para esta seleção!');return;}exportCSV(rows,'sem_gerenciamento_'+(ord||'todas')+'_'+new Date().toISOString().slice(0,10)+'.csv');}
 function abrirSemGerenciamento(){var ord=(document.getElementById('ger-det-ordem')||{}).value||'';var cat=(document.getElementById('ger-det-cat')||{}).value||'';_renderSemGer(ord,cat);}
@@ -1811,6 +1815,117 @@ function renderAvisosPortfolio(){
   tbody.innerHTML = rows;
 }
 
+// ── CONTROLE DE SEMESTRE — GERENCIAMENTO ────────────────────────────────────
+// PATCH 18: gerenciamento agora vem separado por semestre (DB.gerenciamento_por_semestre).
+// GER_DB aponta para o "pacote" do semestre ativo (mesmo shape de chaves ger_*
+// que o restante do código já espera no nível raiz de DB).
+let GER_DB = null;
+
+function _gerSelecionarSemestre(sem) {
+  const porSem = DB.gerenciamento_por_semestre || null;
+  if (!porSem || !Object.keys(porSem).length) { GER_DB = DB; return; }
+  if (sem === 'Ambos') {
+    GER_DB = _gerMergeAllSemestres(porSem);
+  } else {
+    GER_DB = porSem[sem] || DB;
+  }
+}
+
+function _gerMergeAllSemestres(porSem) {
+  const todasOfertas = [];
+  Object.values(porSem).forEach(s => { todasOfertas.push(...(s.ger_ofertas || [])); });
+  const agg = _gerAggregateFromOfertas(todasOfertas);
+  agg.ger_ofertas = todasOfertas;
+  return agg;
+}
+
+function _gerAggregateFromOfertas(ofertas) {
+  // Replica em JS a agregação que o processar.py faz a partir de ger_ofertas —
+  // usado só para a visão "Ambos" (soma os 2 semestres).
+  const total = ofertas.length;
+  const comTutor = ofertas.filter(o => o.tem_tutor).length;
+  const gerenciadas = ofertas.filter(o => o.gerenciado).length;
+  const comAgenda = ofertas.filter(o => o.tem_agenda).length;
+  const totMat = ofertas.reduce((s,o) => s + (o.alunos_mat||0), 0);
+  const totAgend = ofertas.reduce((s,o) => s + (o.alunos_agend||0), 0);
+  const ger_kpis = {
+    total_ofertas: total, ofertas_gerenciadas: gerenciadas,
+    ofertas_nao_gerenciadas: total - gerenciadas,
+    pct_gerenciado: total ? Math.round(gerenciadas/total*1000)/10 : 0,
+    ofertas_com_tutor: comTutor, ofertas_sem_tutor: total - comTutor,
+    pct_com_tutor: total ? Math.round(comTutor/total*1000)/10 : 0,
+    ofertas_com_agenda: comAgenda,
+    total_alunos_matriculados: totMat, total_alunos_agendados: totAgend,
+    total_capacidade: 0, pct_ocupacao: 0,
+    polos_total: new Set(ofertas.map(o=>o.polo)).size,
+    polos_sem_tutor: new Set(ofertas.filter(o=>!o.tem_tutor).map(o=>o.polo)).size,
+  };
+  const poloMap = {}, catMap = {}, ordemMap = {}, contrMap = {};
+  ofertas.forEach(o => {
+    const pk = o.polo || '—';
+    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, alunos_matriculados:0, alunos_agendados:0, capacidade:0, tutores_unicos:[] };
+    const p = poloMap[pk];
+    p.total_ofertas++; if(o.gerenciado) p.gerenciadas++; if(o.tem_tutor) p.com_tutor++; else p.sem_tutor++;
+    if(o.tem_agenda) p.com_agenda++; p.alunos_matriculados += (o.alunos_mat||0); p.alunos_agendados += (o.alunos_agend||0);
+    if(o.tutor && !p.tutores_unicos.includes(o.tutor)) p.tutores_unicos.push(o.tutor);
+
+    const ck = o.categoria || '—';
+    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, alunos_matriculados:0, alunos_agendados:0 };
+    const c = catMap[ck];
+    c.total_ofertas++; if(o.gerenciado) c.gerenciadas++; if(o.tem_tutor) c.com_tutor++; else c.sem_tutor++;
+    c.alunos_matriculados += (o.alunos_mat||0); c.alunos_agendados += (o.alunos_agend||0);
+
+    const ok = o.ordem || '—';
+    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, alunos_matriculados:0, alunos_agendados:0, dt_inicio:'', dt_fim:'' };
+    const od = ordemMap[ok];
+    od.total_ofertas++; if(o.gerenciado) od.gerenciadas++; if(o.tem_tutor) od.com_tutor++;
+    od.alunos_matriculados += (o.alunos_mat||0); od.alunos_agendados += (o.alunos_agend||0);
+
+    const trk = (o.polo||'')+'|'+(o.categoria||'');
+    if (!contrMap[trk]) contrMap[trk] = { polo:o.polo, categoria:o.categoria, total_ofertas:0, tutores:[] };
+    contrMap[trk].total_ofertas++;
+    if (o.tutor && !contrMap[trk].tutores.includes(o.tutor)) contrMap[trk].tutores.push(o.tutor);
+  });
+  Object.values(poloMap).forEach(p => p.pct_gerenciado = p.total_ofertas ? Math.round(p.gerenciadas/p.total_ofertas*1000)/10 : 0);
+  Object.values(catMap).forEach(c => c.pct_gerenciado = c.total_ofertas ? Math.round(c.gerenciadas/c.total_ofertas*1000)/10 : 0);
+  Object.values(ordemMap).forEach(o => o.pct_gerenciado = o.total_ofertas ? Math.round(o.gerenciadas/o.total_ofertas*1000)/10 : 0);
+  const ger_contratacao = Object.values(contrMap).map(c => ({ ...c, tem_tutor: c.tutores.length>0, status: c.tutores.length>0?'Contratado':'Sem tutor' }));
+
+  const agendaPoloMap = {};
+  ofertas.forEach(o => {
+    const pk = o.polo || '—';
+    if (!agendaPoloMap[pk]) agendaPoloMap[pk] = { polo: pk, total:0, com_agenda:0, datas_por_cat:{}, datas_por_tutor:{} };
+    const a = agendaPoloMap[pk];
+    a.total++;
+    if (o.tem_agenda) {
+      a.com_agenda++;
+      const d = o.dt_agenda;
+      if (d) {
+        if (!a.datas_por_cat[d]) a.datas_por_cat[d] = [];
+        if (o.categoria && !a.datas_por_cat[d].includes(o.categoria)) a.datas_por_cat[d].push(o.categoria);
+        if (!a.datas_por_tutor[d]) a.datas_por_tutor[d] = [];
+        if (o.tutor && !a.datas_por_tutor[d].includes(o.tutor)) a.datas_por_tutor[d].push(o.tutor);
+      }
+    }
+  });
+  const ger_agendas = Object.values(agendaPoloMap).map(a => ({
+    ...a, sem_agenda: a.total - a.com_agenda,
+    pct_agendado: a.total ? Math.round(a.com_agenda/a.total*1000)/10 : 0,
+    datas_agenda: Object.keys(a.datas_por_cat).sort(),
+  })).sort((a,b) => b.sem_agenda - a.sem_agenda);
+
+  const ordemSortKey = o => { const m = (o.ordem||'').match(/\d+/); return m ? parseInt(m[0]) : 99; };
+  return {
+    ger_kpis,
+    ger_polo: Object.values(poloMap).sort((a,b)=>b.sem_tutor-a.sem_tutor),
+    ger_cat: Object.values(catMap).sort((a,b)=>b.total_ofertas-a.total_ofertas),
+    ger_ordem: Object.values(ordemMap).sort((a,b)=>ordemSortKey(a)-ordemSortKey(b)),
+    ger_contratacao, ger_agendas,
+  };
+}
+// ── FIM CONTROLE DE SEMESTRE — GERENCIAMENTO ────────────────────────────────
+
+
 // ── CONTROLE DE SEMESTRE ────────────────────────────────────────────────────
 let _SEM_ATUAL = null;  // semestre selecionado no seletor
 let _SEM_DB    = null;  // dados do semestre selecionado
@@ -1871,6 +1986,7 @@ function selecionarSemestre(sem) {
   } else {
     _SEM_DB = (DB.dados_por_semestre || {})[sem] || null;
   }
+  _gerSelecionarSemestre(sem);  // PATCH 18: gerenciamento também segue o semestre selecionado
 
   // Re-renderizar tudo
   _renderComSemestre();
@@ -1995,6 +2111,7 @@ function _renderComSemestre() {
   filterPrac(document.getElementById('prac-search')?.value||'');
   filterPolos(document.getElementById('polo-search')?.value||'');
   filterTutores(document.getElementById('tutor-search')?.value||'');
+  try{ renderGerenciamento(); }catch(e){ console.error('renderGerenciamento (semestre)', e); }  // PATCH 18
 }
 // ── FIM CONTROLE DE SEMESTRE ─────────────────────────────────────────────────
 
