@@ -1957,16 +1957,29 @@ def _processar_gerenciamento_novo(df_g):
     }
 
 
-def processar_gerenciamento_semestres(arquivos):
+def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
     """
     PATCH 18: lê 1+ arquivos de gerenciamento (cada um com um semestre padrão de
     fallback) e devolve {semestre: ger_dados_dict}. Quando o arquivo tem coluna
     SEMESTRE (export novo), usa o valor da própria linha como fonte de verdade —
     não confia só em "qual arquivo é qual semestre".
     arquivos: lista de (path, semestre_fallback)
+
+    PATCH 21: controle_tutor_lookup, se fornecido, é um dict {(polo_norm, categoria): nome}
+    usado para preencher o TUTOR quando o próprio GIOCONDA ainda não tem esse campo
+    preenchido pra aquela oferta, mas o CONTROLE já tem alguém contratado ali —
+    sem isso, um tutor recém-contratado fica invisível na tabela de Detalhe até o
+    GIOCONDA "alcançar" o cadastro, mesmo já estando ativo em todas as outras telas.
     """
+    import re as _re_local
+    def _norm_polo_ger(s):
+        s = str(s or '').strip()
+        s = _re_local.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_local.IGNORECASE)
+        return s.strip().lower()
+
     frames_novo = []
     resultado = {}
+    _backfill_count = 0
     for path, fallback_sem in arquivos:
         if not path or not os.path.isfile(path):
             continue
@@ -1990,7 +2003,25 @@ def processar_gerenciamento_semestres(arquivos):
             df.loc[_fora, '_SEM_ROW'] = fallback_sem
         else:
             df['_SEM_ROW'] = fallback_sem
+
+        # PATCH 21: backfill de TUTOR a partir do CONTROLE quando o GIOCONDA está vazio
+        if controle_tutor_lookup:
+            c_lab_bf = next((c for c in df.columns if str(c).upper() == 'LABORATORIO'), None)
+            c_cat_bf = next((c for c in df.columns if str(c).upper() == 'CATEGORIA'), None)
+            c_tut_bf = next((c for c in df.columns if str(c).upper() == 'TUTOR'), None)
+            if c_lab_bf and c_cat_bf and c_tut_bf:
+                _CAT_RAW_NORM_BF = {'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)'}
+                _tutor_vazio = df[c_tut_bf].isna() | (df[c_tut_bf].astype(str).str.strip().isin(['', 'nan']))
+                if _tutor_vazio.any():
+                    _polo_norm = df.loc[_tutor_vazio, c_lab_bf].map(_norm_polo_ger)
+                    _cat_norm  = df.loc[_tutor_vazio, c_cat_bf].astype(str).str.strip().replace(_CAT_RAW_NORM_BF)
+                    _chave_bf  = list(zip(_polo_norm, _cat_norm))
+                    _preenchido = [controle_tutor_lookup.get(k, '') for k in _chave_bf]
+                    df.loc[_tutor_vazio, c_tut_bf] = _preenchido
+                    _backfill_count += sum(1 for v in _preenchido if v)
         frames_novo.append(df)
+    if _backfill_count:
+        print(f"[{ts()}] Backfill de tutor via CONTROLE (GIOCONDA sem tutor preenchido): {_backfill_count} ofertas")
     if frames_novo:
         df_all = pd.concat(frames_novo, ignore_index=True)
         for sem, grp in df_all.groupby('_SEM_ROW'):
@@ -2407,6 +2438,21 @@ if __name__ == '__main__':
     print(f"[{ts()}] tem_lotacao={dados['tem_lotacao']} ({_ch_ok} tutores com CH SEMANAL)")
     if p3 or p3b:
         try:
+            # PATCH 21: tutor ativo no CONTROLE pra cada (polo, categoria) — usado
+            # como backfill quando o GIOCONDA ainda não tem TUTOR preenchido pra
+            # essa oferta, mesmo a pessoa já estando contratada/ativa de verdade
+            import re as _re_bf
+            def _norm_polo_bf(s):
+                s = str(s or '').strip()
+                s = _re_bf.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_bf.IGNORECASE)
+                return s.strip().lower()
+            controle_tutor_lookup = {}
+            for _t in dados.get('tutores', []):
+                if _t.get('_anonimo') or not _t.get('n') or not _t.get('p'): continue
+                _chave_bf = (_norm_polo_bf(_t['p']), _t.get('c', ''))
+                controle_tutor_lookup.setdefault(_chave_bf, _t['n'])
+            print(f"[{ts()}] Lookup de tutores ativos (CONTROLE) pra backfill: {len(controle_tutor_lookup)} chaves polo+categoria")
+
             # PATCH 18: cada arquivo tem um semestre de fallback (usado só quando a
             # linha não tem coluna SEMESTRE reconhecível) — arquivo antigo -> mais
             # antigo dos semestres carregados; arquivo "_26_02" -> 2026/2 explícito
@@ -2414,7 +2460,7 @@ if __name__ == '__main__':
             ger_por_semestre = processar_gerenciamento_semestres([
                 (p3,  _sem_mais_antigo),
                 (p3b, '2026/2' if '2026/2' in ALL_SEMESTRES else sorted(ALL_SEMESTRES.keys())[-1]),
-            ])
+            ], controle_tutor_lookup=controle_tutor_lookup)
             dados['gerenciamento_por_semestre'] = ger_por_semestre
             for _sk, _sv in ger_por_semestre.items():
                 print(f"[{ts()}] Gerenciamento {_sk}: {_sv['ger_kpis']['total_ofertas']} ofertas, {_sv['ger_kpis']['ofertas_gerenciadas']} ger.")
