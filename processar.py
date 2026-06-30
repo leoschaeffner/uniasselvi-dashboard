@@ -300,6 +300,10 @@ def verificar_e_localizar():
     p3 = achar_arquivo(SCRIPT_DIR, "REL_GERAL_DE_GERENCIAMENTO.xlsx")
     if p3: print(f"  [OK] {os.path.basename(p3)}")
     else:  print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO.xlsx não encontrada (módulo desativado)")
+    # PATCH 18: planilha de gerenciamento específica de 2026/2 (export novo, CSV)
+    p3b = achar_arquivo(SCRIPT_DIR, "REL_GERAL_DE_GERENCIAMENTO_26_02.csv")
+    if p3b: print(f"  [OK] {os.path.basename(p3b)}")
+    else:   print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO_26_02.csv não encontrada")
     p4 = achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsm") or achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsx")
     if p4: print(f"  [OK] {os.path.basename(p4)}")
     else:  print(f"  [INFO] LOTACAO_TUTORES não encontrada (.xlsx/.xlsm)")
@@ -362,7 +366,7 @@ def verificar_e_localizar():
                 print(f"  [ERRO] Não foi possível baixar CSV de alunos: {e}")
         else:
             print(f"  [INFO] Relatorio_alunos_por_hub.csv não encontrado (defina URL_ALUNOS_HUB)")
-    return p1, p2, tmpl, p3, p4, p5
+    return p1, p2, tmpl, p3, p3b, p4, p5
 
 
 def ler_excel(path, **kwargs):
@@ -373,6 +377,21 @@ def ler_excel(path, **kwargs):
             return pd.read_excel(path, **kw)
         except Exception: continue
     raise ValueError(f"Não foi possível ler {path} com nenhum engine disponível")
+
+
+def _ler_arquivo_gerenciamento(path):
+    # PATCH 18: REL_GERAL_DE_GERENCIAMENTO pode vir como .xlsx (export antigo) ou
+    # .csv (export novo, ISO-8859-1, separador ';', tudo entre aspas)
+    if str(path).lower().endswith('.csv'):
+        last_err = None
+        for enc in ('latin-1', 'utf-8', 'cp1252'):
+            try:
+                df = pd.read_csv(path, sep=';', encoding=enc, dtype=str)
+                if len(df.columns) > 1: return df
+            except Exception as e:
+                last_err = e
+        raise ValueError(f"Não foi possível ler CSV de gerenciamento ({path}): {last_err}")
+    return ler_excel(path)
 
 
 def processar(p1, p2):
@@ -1934,6 +1953,49 @@ def _processar_gerenciamento_novo(df_g):
     }
 
 
+def processar_gerenciamento_semestres(arquivos):
+    """
+    PATCH 18: lê 1+ arquivos de gerenciamento (cada um com um semestre padrão de
+    fallback) e devolve {semestre: ger_dados_dict}. Quando o arquivo tem coluna
+    SEMESTRE (export novo), usa o valor da própria linha como fonte de verdade —
+    não confia só em "qual arquivo é qual semestre".
+    arquivos: lista de (path, semestre_fallback)
+    """
+    frames_novo = []
+    resultado = {}
+    for path, fallback_sem in arquivos:
+        if not path or not os.path.isfile(path):
+            continue
+        try:
+            df = _ler_arquivo_gerenciamento(path)
+        except Exception as e:
+            print(f"[{ts()}] ERRO ao ler {os.path.basename(path)}: {e}")
+            continue
+        cols_upper = [str(c).upper() for c in df.columns]
+        is_novo = 'LABORATORIO' in cols_upper and 'NOME_EXPERIMENTO' in cols_upper
+        if not is_novo:
+            print(f"[{ts()}] {os.path.basename(path)}: formato ANTIGO — todo o arquivo tratado como {fallback_sem}")
+            resultado[fallback_sem] = processar_gerenciamento(path)
+            continue
+        sem_col = next((c for c in df.columns if str(c).upper() == 'SEMESTRE'), None)
+        if sem_col:
+            df['_SEM_ROW'] = df[sem_col].astype(str).str.strip()
+            _fora = ~df['_SEM_ROW'].isin(ALL_SEMESTRES.keys())
+            if _fora.any():
+                print(f"[{ts()}] {os.path.basename(path)}: {int(_fora.sum())} linhas com SEMESTRE não reconhecido — usando fallback {fallback_sem}")
+            df.loc[_fora, '_SEM_ROW'] = fallback_sem
+        else:
+            df['_SEM_ROW'] = fallback_sem
+        frames_novo.append(df)
+    if frames_novo:
+        df_all = pd.concat(frames_novo, ignore_index=True)
+        for sem, grp in df_all.groupby('_SEM_ROW'):
+            grp2 = grp.drop(columns=['_SEM_ROW'])
+            print(f"[{ts()}] Gerenciamento {sem}: {len(grp2)} linhas")
+            resultado[sem] = _processar_gerenciamento_novo(grp2)
+    return resultado
+
+
 def processar_gerenciamento(p3):
     print(f"[{ts()}] Lendo gerenciamento...")
     df_g = ler_excel(p3)
@@ -2315,7 +2377,7 @@ if __name__ == '__main__':
     print()
     print(" Verificando arquivos...")
     print()
-    p1, p2, tmpl, p3, p4, p5 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p3b, p4, p5 = verificar_e_localizar()
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
@@ -2339,9 +2401,23 @@ if __name__ == '__main__':
     _ch_ok = sum(1 for t in dados.get('tutores', []) if t.get('ch_semanal') and t['ch_semanal'] > 0)
     dados['tem_lotacao'] = _ch_ok > 0
     print(f"[{ts()}] tem_lotacao={dados['tem_lotacao']} ({_ch_ok} tutores com CH SEMANAL)")
-    if p3:
+    if p3 or p3b:
         try:
-            ger_dados = processar_gerenciamento(p3)
+            # PATCH 18: cada arquivo tem um semestre de fallback (usado só quando a
+            # linha não tem coluna SEMESTRE reconhecível) — arquivo antigo -> mais
+            # antigo dos semestres carregados; arquivo "_26_02" -> 2026/2 explícito
+            _sem_mais_antigo = sorted(ALL_SEMESTRES.keys())[0]
+            ger_por_semestre = processar_gerenciamento_semestres([
+                (p3,  _sem_mais_antigo),
+                (p3b, '2026/2' if '2026/2' in ALL_SEMESTRES else sorted(ALL_SEMESTRES.keys())[-1]),
+            ])
+            dados['gerenciamento_por_semestre'] = ger_por_semestre
+            for _sk, _sv in ger_por_semestre.items():
+                print(f"[{ts()}] Gerenciamento {_sk}: {_sv['ger_kpis']['total_ofertas']} ofertas, {_sv['ger_kpis']['ofertas_gerenciadas']} ger.")
+            # dados['ger_*'] no nível raiz = semestre ativo do dashboard (compat
+            # com todo o código de enriquecimento abaixo, que sempre operou em
+            # cima de um único conjunto de ofertas)
+            ger_dados = ger_por_semestre.get(SEMESTRE_ATUAL) or next(iter(ger_por_semestre.values()), {})
             dados.update(ger_dados)
             dados['tem_gerenciamento'] = True
             # ── Injetar gerenciamento nos tutores (ger_pct, ger_ok, ger_total) ──────
