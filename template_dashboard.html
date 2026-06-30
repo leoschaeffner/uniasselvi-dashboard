@@ -629,6 +629,7 @@ let poloData=[],tutorData=[],pracData=[],ordemData=[];
 let gerPoloData=[],gerContrData=[],gerAgendaData=[],gerDetData=[];
 let _detSortCol=null,_detSortAsc=true;  // PATCH 19: ordenação da tabela Detalhe (Polo/Tutor/% Ger.)
 let _rankTab='pend';  // PATCH 18: faltava declaração — sem isso, renderTopPrac() quebrava em silêncio e abortava o resto de _renderComSemestre()
+let _sortState={};  // PATCH 20: faltava declaração — toda chamada a sortTable() (cabeçalhos clicáveis em várias tabelas) quebrava com "ReferenceError: _sortState is not defined", silenciosamente, sem nenhum aviso visual
 
 function gPN(p){return p.n||p.polo||p.POLO||"N/A"}
 function gPT(p){return p.t||p.total||0}
