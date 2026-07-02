@@ -764,7 +764,14 @@ def processar(p1, p2):
 
         chave = chave_alias.get(chave, chave)
 
-        # PATCH 15: a planilha antiga (Forms) tem uma "CHAVE LINK POLO" pré-calculada
+        # PATCH 23: o email do remetente identifica a tutora de forma inequívoca.
+        # Quando a chave submetida aponta pra outro tutor (casos EMF-ISN2, EMF-ISND,
+        # etc. — o Forms só tinha a opção genérica, então a chave veio "errada"),
+        # corrige pra chave real do tutor que enviou ANTES de qualquer outra checagem.
+        if _email_subm and _email_subm in email_to_chave_tutor:
+            _chave_by_email = email_to_chave_tutor[_email_subm]
+            if _chave_by_email and _chave_by_email != chave and _chave_by_email in chave_to_cf:
+                chave = _chave_by_email
         # que não distingue Fisio (BFI) / T.O. (BTO) / Estética (COS-TIP) corretamente
         # quando os 3 cursos compartilham o mesmo polo/laboratório — corrige usando o
         # nome da prática (inequívoco), que é mais confiável que a chave pronta.
