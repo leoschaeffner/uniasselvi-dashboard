@@ -933,14 +933,29 @@ def processar(p1, p2):
             _polo_cat_enviados[_key_pc] = _hist_merged
     print(f"[{ts()}] Polo×curso com envios: {len([v for v in _polo_cat_enviados.values() if v])}")
 
+    # PATCH 24: nome_to_perfil também é usado para SEPARAR o catálogo de "previstas"
+    # (tp) por curso específico dentro de categorias compartilhadas (Multi III:
+    # BFI/BTO/COS-TIP; Multi I: BBI/BFR). Sem isso, um tutor de BFI é cobrado pelas
+    # práticas de BTO e COS-TIP também (e vice-versa), porque `catalogo` é indexado
+    # só pela categoria AMPLA (cat_form), que soma as práticas dos 3 cursos juntos.
+    def _catalogo_por_curso(praticas_full, cursos_t):
+        if not NOME_TO_PERFIL or not cursos_t:
+            return praticas_full
+        filtradas = [p for p in praticas_full if NOME_TO_PERFIL.get(_norm_proto(p)) == cursos_t]
+        # Só filtra se o mapa cobrir pelo menos 1 prática desse curso específico —
+        # caso contrário (categoria não coberta pelo nome_to_perfil.json), mantém
+        # o comportamento antigo em vez de zerar o catálogo do tutor.
+        return filtradas if filtradas else praticas_full
+
     _hist_pre_admissao = 0
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
         cat_raw  = str(t.get(col_cat, '') or '').strip() if col_cat else ''
         cat_form = CAT_MAP.get(cat_raw, cat_raw)
-        praticas = catalogo.get(cat_form, catalogo.get(cat_raw, []))
         polo_str = str(t.get(col_polo, '') or '').strip()
         cursos_t = str(t.get(col_cur, '') or '').strip()
+        praticas_full = catalogo.get(cat_form, catalogo.get(cat_raw, []))
+        praticas = _catalogo_por_curso(praticas_full, cursos_t)  # PATCH 24
         # Enriquecimento MEC / data de admissão (calculado antes do filtro de hist)
         _email_t = str(t.get(col_email, '') or '').strip().lower() if col_email else ''
         _mec = mec_cache.get(_email_t, {})
