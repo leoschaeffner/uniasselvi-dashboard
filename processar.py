@@ -263,6 +263,54 @@ def limpar(obj):
     return obj
 
 
+# PATCH 25c: snapshot de colunas detectadas + contagens-chave, comparado contra
+# a rodada anterior. Só imprime avisos no log (GitHub Actions) — nada disso
+# aparece na UI do dashboard (decisão do Leo: um KPI de "match rate" visível
+# pros usuários geraria mais confusão do que ajuda). Objetivo: pegar cedo o
+# caso "alguém renomeou uma coluna na planilha-fonte" ou "a próxima rodada
+# perdeu um monte de submissões sem ninguém notar" — exatamente o tipo de
+# problema que causou o sumiço de portfólios da tutora Cleya Da Silva Santana.
+_SNAPSHOT_QUEDA_LIMIAR = 0.15  # aviso se uma contagem cair mais de 15% sem explicação
+
+def _verificar_snapshot_regressao(colunas_detectadas, contagens):
+    snap_path = os.path.join(SCRIPT_DIR, 'snapshot_manifest.json')
+    anterior = None
+    if os.path.isfile(snap_path):
+        try:
+            with open(snap_path, encoding='utf-8') as f:
+                anterior = json.load(f)
+        except Exception as e:
+            print(f"[{ts()}] [SNAPSHOT] Aviso: não consegui ler snapshot anterior ({e}) — seguindo sem comparação")
+
+    if anterior:
+        # 1) Mudança nas colunas detectadas (PATCH 25 / guardrail #4)
+        cols_ant = anterior.get('colunas_detectadas', {})
+        for chave_col, valor_atual in colunas_detectadas.items():
+            valor_anterior = cols_ant.get(chave_col)
+            if valor_anterior is not None and valor_anterior != valor_atual:
+                print(f"[{ts()}] ⚠️  [SNAPSHOT] Coluna '{chave_col}' mudou de nome entre rodadas: "
+                      f"{valor_anterior!r} -> {valor_atual!r}. Se isso não foi intencional, "
+                      f"confira se a planilha-fonte teve o cabeçalho renomeado.")
+        # 2) Queda anormal de contagem (guardrail #2)
+        cont_ant = anterior.get('contagens', {})
+        for chave_cont, valor_atual in contagens.items():
+            valor_anterior = cont_ant.get(chave_cont)
+            if isinstance(valor_anterior, (int, float)) and valor_anterior > 0:
+                queda = (valor_anterior - valor_atual) / valor_anterior
+                if queda > _SNAPSHOT_QUEDA_LIMIAR:
+                    print(f"[{ts()}] ⚠️  [SNAPSHOT] Queda de {queda*100:.1f}% em '{chave_cont}': "
+                          f"{valor_anterior} -> {valor_atual}. Pode ser problema real de dados "
+                          f"(ex: matching quebrado) — vale checar antes de considerar normal.")
+    else:
+        print(f"[{ts()}] [SNAPSHOT] Nenhum snapshot anterior encontrado — esta rodada vira a baseline.")
+
+    try:
+        with open(snap_path, 'w', encoding='utf-8') as f:
+            json.dump({'gerado_em': ts(), 'colunas_detectadas': colunas_detectadas, 'contagens': contagens}, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[{ts()}] [SNAPSHOT] Aviso: não consegui salvar snapshot desta rodada ({e})")
+
+
 def verificar_e_localizar():
     pasta_planilhas = os.path.join(SCRIPT_DIR, "planilhas")
     os.makedirs(pasta_planilhas, exist_ok=True)
@@ -414,6 +462,25 @@ def processar(p1, p2):
     col_email= next((c for c in df_t.columns if 'E-MAIL' in str(c).upper() or 'EMAIL' in str(c).upper()), None)
     print(f"[{ts()}] CONTROLE colunas detectadas: polo='{col_polo}' cursos='{col_cur}' email='{col_email}'")
     print(f"[{ts()}] CONTROLE todas colunas: {list(df_t.columns[:20])}")
+    # PATCH 25a: validação obrigatória de colunas críticas — se a busca flexível
+    # não achou a coluna de verdade, col_polo/col_cur caem no fallback literal
+    # ('POLO'/'CURSOS'), que NÃO existe no DataFrame. Sem essa checagem, o script
+    # seguia rodando silenciosamente com POLO/CURSOS vazios em todo mundo (dados
+    # incompletos sem nenhum aviso). Agora para a execução com um erro claro,
+    # listando as colunas disponíveis, assim que uma renomeação de coluna na
+    # planilha-fonte quebra a detecção — em vez de gerar um dashboard manco.
+    _colunas_criticas_controle = {
+        'POLO': col_polo, 'CURSOS': col_cur, 'NOME DO TUTOR': col_nome, 'E-MAIL': col_email,
+    }
+    _faltando_controle = [nome for nome, col in _colunas_criticas_controle.items()
+                          if col is None or col not in df_t.columns]
+    if _faltando_controle:
+        raise ValueError(
+            f"[FALHA CRÍTICA] Coluna(s) obrigatória(s) não encontrada(s) no CONTROLE_TUTORIA: "
+            f"{_faltando_controle}. Colunas disponíveis na planilha: {list(df_t.columns)}. "
+            f"Provável renomeação de coluna na planilha-fonte — ajuste a busca flexível "
+            f"acima ou corrija o cabeçalho na planilha antes de rodar novamente."
+        )
     col_cat    = next((c for c in df_t.columns if 'CATEGORIA' in str(c).upper()), None)
     col_inicio = next((c for c in df_t.columns if str(c).upper().strip() in ('INÍCIO','INICIO')), None)
     col_whats  = next((c for c in df_t.columns if 'WHATSAPP' in str(c).upper()), None)
@@ -489,6 +556,16 @@ def processar(p1, p2):
     cat_cols = [c for c in df_p.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
     c_cat = cat_cols[0] if cat_cols else None
     print(f"[{ts()}] Colunas: chave={c_chave}, proto={c_proto}, data={c_data}, alunos={c_aluno}, cat={c_cat}")
+    # PATCH 25a: mesma validação crítica, agora pro PORTFOLIO_TUTOR — sem chave e
+    # sem protocolo não há como casar nenhuma submissão a nenhum tutor; melhor
+    # parar aqui com um erro explícito do que gerar um dashboard sem portfólios.
+    _faltando_portfolio = [nome for nome, col in {'CHAVE/LINK': c_chave, 'PROTOCOLOS': c_proto}.items() if not col]
+    if _faltando_portfolio:
+        raise ValueError(
+            f"[FALHA CRÍTICA] Coluna(s) obrigatória(s) não encontrada(s) no PORTFOLIO_TUTOR: "
+            f"{_faltando_portfolio}. Colunas disponíveis na planilha: {list(df_p.columns)}. "
+            f"Provável renomeação de coluna no formulário/planilha-fonte."
+        )
     c_ordem_cols = [c for c in df_p.columns if 'ORDEM' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
     c_ordem = c_ordem_cols[0] if c_ordem_cols else None
     print(f"[{ts()}] Coluna ordem: {c_ordem}")
@@ -652,6 +729,7 @@ def processar(p1, p2):
     print(f"[{ts()}] Catalogo final: {len(catalogo)} cats, {sum(len(v) for v in catalogo.values())} praticas")
     email_to_cf = {}; email_to_chave_tutor = {}
     col_email_t = next((c for c in df_t.columns if 'E-MAIL' in str(c).upper() or 'EMAIL' in str(c).upper()), None)
+    _email_chaves_vistas = defaultdict(set)  # PATCH 25b: detectar e-mail duplicado no CONTROLE
     if col_email_t:
         for _, t in df_at.iterrows():
             em = str(t.get(col_email_t, '') or '').strip().lower()
@@ -659,7 +737,19 @@ def processar(p1, p2):
             cat_raw_ = str(t.get(col_cat, '') or '').strip() if col_cat else ''
             cf_ = CAT_MAP.get(cat_raw_, cat_raw_)
             if em and em != 'nan':
+                _email_chaves_vistas[em].add(chave_t)
                 email_to_cf[em] = cf_; email_to_chave_tutor[em] = chave_t
+    # PATCH 25b: se o mesmo e-mail aparece em mais de uma linha ATIVA do CONTROLE
+    # com chaves (polo+curso) diferentes, a última linha processada sobrescreve
+    # silenciosamente as anteriores em email_to_chave_tutor — isso faz submissões
+    # de fallback-por-email irem parar no destino errado, sem nenhum aviso. Foi
+    # exatamente esse padrão suspeito no caso da tutora Cleya Da Silva Santana
+    # Cruz (Diamantina/MG · EMF-ISN). Agora isso gera um aviso alto no log.
+    _emails_duplicados = {em: chaves for em, chaves in _email_chaves_vistas.items() if len(chaves) > 1}
+    if _emails_duplicados:
+        print(f"[{ts()}] ⚠️  AVISO CRÍTICO: {len(_emails_duplicados)} e-mail(s) duplicado(s) no CONTROLE com chaves diferentes — fallback por e-mail pode estar direcionando submissões pro destino errado:")
+        for _em, _chaves in _emails_duplicados.items():
+            print(f"[{ts()}]     {_em} -> {sorted(_chaves)} (usando apenas a última chave processada: {email_to_chave_tutor.get(_em)!r})")
     col_email_p = next((c for c in df_p.columns if c.upper() in ('EMAIL', 'E-MAIL')), None)
     # ── Mapeamentos de fallback adicionais ──────────────────────────────────
     # Fallback 3: por nome do tutor (coluna "Nome do tutor" no Forms)
@@ -1368,6 +1458,24 @@ def processar(p1, p2):
     ch_ok = sum(1 for t in tutores_out if t.get('ch_semanal'))
     print(f"[{ts()}] {total} tutores · {enviaram} enviaram · {atrasados} atrasados · {urgentes} urgentes")
     print(f"[{ts()}] CH SEMANAL preenchida: {ch_ok}/{total} tutores")
+
+    # PATCH 25c: snapshot/regressão — colunas detectadas + contagens-chave desta
+    # rodada, comparadas contra a rodada anterior (avisos só em log, nunca na UI)
+    _verificar_snapshot_regressao(
+        colunas_detectadas={
+            'CONTROLE.POLO': col_polo, 'CONTROLE.CURSOS': col_cur,
+            'CONTROLE.NOME_TUTOR': col_nome, 'CONTROLE.EMAIL': col_email,
+            'CONTROLE.CATEGORIA': col_cat,
+            'PORTFOLIO.CHAVE': c_chave, 'PORTFOLIO.PROTOCOLOS': c_proto,
+            'PORTFOLIO.DATA': c_data, 'PORTFOLIO.ALUNOS': c_aluno,
+        },
+        contagens={
+            'total_tutores': total, 'enviaram': enviaram,
+            'com_match': com_match, 'sem_match': sem_match,
+            'total_submissoes': sum(len(t.get('hist', [])) for t in tutores_out),
+        },
+    )
+
     return limpar({
         'kpis': {
             'total': total, 'enviaram': enviaram, 'pendentes': total - enviaram,
