@@ -127,6 +127,38 @@ def _parse_ch(v):
         return None
 
 
+# PATCH 30: helpers pra item 4 (Análise de Agendas) — nenhum arquivo novo é
+# necessário pra isso; dia da semana e turno são derivados de DT_GERENCIADA/
+# HR_GERENCIADA, que já estão no CSV que alimenta o pipeline hoje.
+_DIAS_SEMANA_PT = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']  # Python weekday(): Segunda=0
+
+def _dia_semana_pt(iso_str):
+    """Dado '2026-03-15', retorna 'Domingo' (nome do dia em português) ou '' se vazio/inválido."""
+    if not iso_str:
+        return ''
+    try:
+        d = datetime.strptime(str(iso_str)[:10], '%Y-%m-%d')
+        return _DIAS_SEMANA_PT[d.weekday()]
+    except Exception:
+        return ''
+
+def _turno_de_horario(hr_str):
+    """Extrai a hora de início de uma string tipo '19:00 - 20:30' e classifica em
+    Madrugada (00h-05h59) / Manhã (06h-11h59) / Tarde (12h-17h59) / Noite (18h-23h59).
+    Madrugada é o sinal-chave pro alerta de 'horário incomum' (junto com Domingo)."""
+    import re as _re_turno
+    if not hr_str:
+        return ''
+    m = _re_turno.match(r'\s*(\d{1,2}):(\d{2})', str(hr_str))
+    if not m:
+        return ''
+    hora = int(m.group(1))
+    if 0 <= hora < 6: return 'Madrugada'
+    if 6 <= hora < 12: return 'Manhã'
+    if 12 <= hora < 18: return 'Tarde'
+    return 'Noite'
+
+
 def achar_pasta_script():
     candidatos = []
     try:
@@ -1626,6 +1658,88 @@ def carregar_lotacao(p4):
     return lotacao
 
 
+# PATCH 29: página de Vagas — extrai posições em aberto (Aumento de Quadro /
+# Substituição) diretamente da aba "Quadro Geral de Lotação". Usa a coluna
+# LOTAÇÃO como sinal de pendência (vazia = posição preenchida, sem vaga).
+# IMPORTANTE: por decisão explícita do Leo, NENHUM dado financeiro é lido ou
+# exposto aqui — a coluna "Salário Phill" e a aba "Controle Orçamento" ficam
+# de fora por completo, mesmo que estejam na mesma planilha-fonte.
+def processar_vagas(p4):
+    print(f"[{ts()}] Lendo vagas (Lotação)...")
+    _rows = None
+    for estrategia, fn in [('openpyxl', _ler_lotacao_xlsx), ('xlrd', _ler_lotacao_xls), ('pandas', _ler_lotacao_pandas)]:
+        try:
+            _rows = fn(p4)
+            break
+        except Exception as e:
+            print(f"[{ts()}] Vagas — tentativa {estrategia}: {e}")
+    if not _rows or len(_rows) < 3:
+        print(f"[{ts()}] Vagas: não foi possível ler a planilha de lotação")
+        return {'vagas': [], 'kpis': {}}
+
+    def _gv(r, i):
+        try:
+            v = r[i]
+            return v if v is not None else ''
+        except IndexError:
+            return ''
+
+    vagas = []
+    for r in _rows[2:]:
+        lotacao_status = str(_gv(r, 6)).strip()  # coluna 6 = LOTAÇÃO
+        if not lotacao_status:
+            continue  # posição preenchida — sem pendência de vaga
+        polo = str(_gv(r, 4)).strip()  # coluna 4 = POLO HUB
+        if not polo:
+            continue
+        cursos = str(_gv(r, 5)).strip()  # coluna 5 = CURSOS
+        contratacao = str(_gv(r, 7)).strip()  # coluna 7 = CONTRATAÇÃO
+        tutor_atual = str(_gv(r, 8)).strip()  # coluna 8 = TUTOR DE PRATICA
+        if tutor_atual in ('-', 'None', 'nan'):
+            tutor_atual = ''
+        status = 'Substituição' if 'Substitui' in lotacao_status else 'Aumento de Quadro'
+        # PATCH 29a: 'Aumento de Quadro' só conta como vaga de verdade quando a
+        # posição está 100% vazia (sem tutor atribuído) — confirmado pelo Leo.
+        # Linhas de "Aumento de Quadro" com tutor já preenchido representam outra
+        # coisa (CH a ampliar pra quem já está lá), não uma vaga em aberto.
+        # 'Substituição' continua contando mesmo com tutor preenchido (é normal
+        # o substituído ainda aparecer ativo até a troca de fato acontecer).
+        if status == 'Aumento de Quadro' and tutor_atual:
+            continue
+        chamado_sydle = str(_gv(r, 10)).strip()  # coluna 10 = CHAMADO SYDLE
+        if chamado_sydle in ('None', 'nan', '0'):
+            chamado_sydle = ''
+        status_chamado = str(_gv(r, 11)).strip()  # coluna 11 = STATUS CHAMADO
+        perfil = str(_gv(r, 14)).strip()  # coluna 14 = PERFIL DO TUTOR
+        ch_semanal = _parse_ch(_gv(r, 15))  # coluna 15 = CH SEMANAL
+        ch_ideal = _parse_ch(_gv(r, 16))  # coluna 16 = CH IDEAL
+        prioridade = str(_gv(r, 34)).strip() or 'Sem Prioridade'  # coluna 34
+        autorizado = str(_gv(r, 35)).strip()  # coluna 35 = Aumento de Quadro
+        vagas.append({
+            'polo': polo, 'cursos': cursos, 'perfil': perfil,
+            'status': status,
+            'contratacao': contratacao, 'tutor_atual': tutor_atual,
+            'chamado_sydle': chamado_sydle, 'status_chamado': status_chamado,
+            'ch_semanal': ch_semanal, 'ch_ideal': ch_ideal,
+            'prioridade': prioridade, 'autorizado': autorizado,
+        })
+
+    total = len(vagas)
+    kpis = {
+        'total_vagas': total,
+        'aumento_quadro': sum(1 for v in vagas if v['status'] == 'Aumento de Quadro'),
+        'substituicao': sum(1 for v in vagas if v['status'] == 'Substituição'),
+        'com_previsao': sum(1 for v in vagas if 'Com previsão' in v['contratacao']),
+        'sem_previsao': sum(1 for v in vagas if 'Sem previsão' in v['contratacao']),
+        'nao_liberada': sum(1 for v in vagas if 'liberada' in v['contratacao'].lower()),
+        'autorizadas': sum(1 for v in vagas if v['autorizado'].startswith('Autorizado')),
+        'prioridade_alta': sum(1 for v in vagas if v['prioridade'] == 'Alta'),
+        'com_chamado_aberto': sum(1 for v in vagas if v['chamado_sydle']),
+    }
+    print(f"[{ts()}] Vagas: {total} pendentes ({kpis['aumento_quadro']} aumento de quadro, {kpis['substituicao']} substituição, {kpis['com_previsao']} com previsão)")
+    return {'vagas': vagas, 'kpis': kpis}
+
+
 CURSOS_NOMES = {
     'EMF-ISN': 'Enfermagem e Instrumentação Cirúrgica', 'EMF-ISN2': 'Enfermagem e Instrumentação Cirúrgica',
     'BFR': 'Farmácia', 'BBI': 'Biomedicina', 'BFI': 'Fisioterapia', 'BTO': 'T. Ocupacional',
@@ -1976,6 +2090,12 @@ def _processar_gerenciamento_novo(df_g):
     # inflava a contagem de "gerenciadas" pra muito além do que foi feito de fato.
     df['_GERENCIADO'] = df['_TEM_TUTOR'] & df['_TEM_AGENDA']
     df['_HR_AG'] = df[c_hr_ag].fillna('').astype(str).str.strip().replace('nan','').replace('NaT','') if c_hr_ag else ''
+    # PATCH 30: dia da semana e turno derivados de DT/HR_GERENCIADA — usados na
+    # nova seção "Análise de Agendas" (horários incomuns + sessões sem aluno).
+    df['_DIA_SEMANA'] = df['_DT_AG_ISO'].apply(_dia_semana_pt)
+    df['_TURNO'] = df['_HR_AG'].apply(_turno_de_horario)
+    df['_HORARIO_INCOMUM'] = df['_TEM_AGENDA'] & ((df['_DIA_SEMANA'] == 'Domingo') | (df['_TURNO'] == 'Madrugada'))
+    df['_SEM_ALUNOS'] = df['_GERENCIADO'] & (df['_AGEND'] == 0)
     parsed = (df[c_exp] if c_exp else pd.Series([''] * len(df))).apply(extrair_ordem_exp)
     df['_ORDEM'] = parsed.apply(lambda x: x[0])
     df['_PRATICA'] = parsed.apply(lambda x: x[1])
@@ -2084,6 +2204,8 @@ def _processar_gerenciamento_novo(df_g):
             'tem_agenda': bool(row['_TEM_AGENDA']), 'gerenciado': bool(row['_GERENCIADO']),
             'alunos_mat': int(row['_MAT']), 'alunos_agend': int(row['_AGEND']),
             'dt_agenda': row['_DT_AG_ISO'], 'hr_agenda': row['_HR_AG'],
+            'dia_semana': row['_DIA_SEMANA'], 'turno': row['_TURNO'],
+            'horario_incomum': bool(row['_HORARIO_INCOMUM']), 'sem_alunos': bool(row['_SEM_ALUNOS']),
         })
     return {
         'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
@@ -2566,8 +2688,14 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar lotação: {e}")
             dados['alunos_por_curso'] = []
+        try:
+            dados['vagas'] = processar_vagas(p4)
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar vagas: {e}")
+            dados['vagas'] = {'vagas': [], 'kpis': {}}
     else:
         dados['alunos_por_curso'] = []
+        dados['vagas'] = {'vagas': [], 'kpis': {}}
     # PATCH 2: tem_lotacao baseado em dados reais (CH > 0 em pelo menos 1 tutor)
     _ch_ok = sum(1 for t in dados.get('tutores', []) if t.get('ch_semanal') and t['ch_semanal'] > 0)
     dados['tem_lotacao'] = _ch_ok > 0
