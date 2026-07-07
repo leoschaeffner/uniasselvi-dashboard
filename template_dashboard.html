@@ -165,6 +165,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <div class="sidebar-section-label">Tutores</div>
       <button class="sidebar-item" onclick="navTo('tutores-mec')"><span class="si-icon">👤</span><span class="si-label">Ficha dos Tutores</span></button>
     </div>
+    <div class="sidebar-section" id="sidebar-agendas-estudo" style="display:none">
+      <div class="sidebar-section-label">Análise de Agendas</div>
+      <button class="sidebar-item" onclick="navTo('agendas-estudo')"><span class="si-icon">📆</span><span class="si-label">Horários e Engajamento</span></button>
+    </div>
     <div class="sidebar-section" id="sidebar-ger" style="display:none">
       <div class="sidebar-section-label">Gerenciamento</div>
       <button class="sidebar-item" onclick="navTo('ger-visao')"><span class="si-icon">📋</span><span class="si-label">Visão Geral</span></button>
@@ -172,13 +176,12 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <button class="sidebar-item" onclick="navTo('ger-agendas')"><span class="si-icon">📆</span><span class="si-label">Agendas</span></button>
       <button class="sidebar-item" onclick="navTo('ger-detalhe')"><span class="si-icon">🔍</span><span class="si-label">Detalhe</span></button>
     </div>
-    <div class="sidebar-section" id="sidebar-lab" style="display:none">
-      <div class="sidebar-section-label">Infraestrutura</div>
-      <button class="sidebar-item" onclick="navTo('laboratorios')"><span class="si-icon">🏗️</span><span class="si-label">Laboratórios</span></button>
+    <div class="sidebar-section" id="sidebar-vagas" style="display:none">
+      <div class="sidebar-section-label">RH</div>
+      <button class="sidebar-item" onclick="navTo('vagas')"><span class="si-icon">📝</span><span class="si-label">Vagas</span></button>
     </div>
     <div class="sidebar-section" id="sidebar-futuro" style="display:none">
       <div class="sidebar-section-label">Em breve</div>
-      <button class="sidebar-item" disabled style="opacity:.4"><span class="si-icon">📝</span><span class="si-label">Vagas</span><span class="si-badge">Em breve</span></button>
       <button class="sidebar-item" disabled style="opacity:.4"><span class="si-icon">📦</span><span class="si-label">Insumos</span><span class="si-badge">Em breve</span></button>
     </div>
   </div>
@@ -437,6 +440,41 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   </div>
 </div></div>
 
+<!-- ═══ ANÁLISE DE AGENDAS (seção própria) ════════════════════════════════ -->
+<div class="page" id="page-agendas-estudo"><div class="container">
+  <div class="ph"><div class="ph-title">Análise de Agendas — Horários e Engajamento</div><div class="ph-sub" id="ae-sub">—</div></div>
+  <div class="kpi-row" id="ae-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card"><div class="card-hdr"><div class="card-title">📅 Distribuição por Dia da Semana</div></div><div class="card-body" id="ae-dias"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">🕐 Distribuição por Turno</div></div><div class="card-body" id="ae-turnos"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">⚠️ Horários Incomuns — Domingo ou Madrugada (00h–06h)</div><div class="card-badge" id="ae-incomuns-count">—</div></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo, tutor…" oninput="filterAgendasIncomuns(this.value)" id="ae-incomuns-search"/>
+      <span class="tbl-count" id="ae-incomuns-tbl-count">—</span>
+      <button class="btn-export" onclick="exportAgendasIncomuns()">⬇ Exportar</button>
+    </div>
+    <div class="tbl-wrap" style="max-height:400px"><table><thead><tr>
+      <th>Polo</th><th>Tutor</th><th>Curso/Lab</th><th>Dia</th><th>Turno</th><th>Data</th><th>Horário</th>
+    </tr></thead><tbody id="ae-incomuns-tbody"></tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">🪑 Gerenciamentos sem Nenhum Aluno Agendado</div><div class="card-badge" id="ae-semaluno-count">—</div></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo, tutor…" oninput="filterAgendasSemAluno(this.value)" id="ae-semaluno-search"/>
+      <span class="tbl-count" id="ae-semaluno-tbl-count">—</span>
+      <button class="btn-export" onclick="exportAgendasSemAluno()">⬇ Exportar</button>
+    </div>
+    <div class="tbl-wrap" style="max-height:400px"><table><thead><tr>
+      <th onclick="sortTable('ae-semaluno-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
+      <th onclick="sortTable('ae-semaluno-tbody','tutor','str')">Tutor<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('ae-semaluno-tbody','qtd','num')">Sessões sem aluno<span class="sort-ind"></span></th>
+      <th>Dias/turnos mais usados</th>
+    </tr></thead><tbody id="ae-semaluno-tbody"></tbody></table></div>
+  </div>
+</div></div>
+
 <!-- ═══ GERENCIAMENTO — AGENDAS ═══════════════════════════════════════════ -->
 <div class="page" id="page-ger-agendas"><div class="container">
   <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div><div class="ph-sub">⚡ Polos com muitos alunos matriculados e poucos agendamentos = baixa adesão dos estudantes</div></div>
@@ -514,13 +552,30 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   </div>
 </div></div>
 
-<!-- ═══ LABORATÓRIOS ════════════════════════════════════════════════════ -->
-<div class="page" id="page-laboratorios"><div class="container">
-  <div class="ph"><div class="ph-title">Laboratórios</div><div class="ph-sub" id="lab-sub">—</div></div>
-  <div class="toolbar" style="margin-bottom:14px">
-    <select class="sel" id="lab-cat-sel" onchange="renderLabCategoria()" style="min-width:280px"></select>
+<!-- ═══ VAGAS (RH) ══════════════════════════════════════════════════════ -->
+<div class="page" id="page-vagas"><div class="container">
+  <div class="ph"><div class="ph-title">Vagas — Contratação e Substituição</div><div class="ph-sub" id="vagas-sub">—</div></div>
+  <div class="kpi-row" id="vagas-kpis"></div>
+  <div class="card">
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar polo, curso, perfil…" oninput="filterVagas(this.value)" id="vagas-search"/>
+      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-status-sel"><option value="">Todos os status</option><option value="Aumento de Quadro">Aumento de Quadro</option><option value="Substituição">Substituição</option></select>
+      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-contr-sel"><option value="">Toda contratação</option></select>
+      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-prior-sel"><option value="">Toda prioridade</option></select>
+      <span class="tbl-count" id="vagas-count">—</span>
+      <button class="btn-export" onclick="exportVagas()">⬇ Exportar</button>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortVagas('polo')">Polo</th>
+      <th onclick="sortVagas('cursos')">Curso</th>
+      <th onclick="sortVagas('perfil')">Perfil</th>
+      <th onclick="sortVagas('status')">Status</th>
+      <th onclick="sortVagas('contratacao')">Contratação</th>
+      <th onclick="sortVagas('prioridade')">Prioridade</th>
+      <th>Tutor Atual</th>
+      <th>Chamado SYDLE</th>
+    </tr></thead><tbody id="vagas-tbody"></tbody></table></div>
   </div>
-  <div id="lab-content"></div>
 </div></div>
 
 <!-- MODAL -->
@@ -647,10 +702,11 @@ const pageTitles={
   'port-praticas':['Práticas','Portfólios'],'port-polos':['Polos','Portfólios'],
   'port-tutores':['Tutores','Portfólios'],
   'tutores-mec':['Tutores','Gestão de Tutores'],
+  'agendas-estudo':['Horários e Engajamento','Análise de Agendas'],
   'ger-visao':['Visão Geral','Gerenciamento'],'ger-ofertas':['Ofertas','Gerenciamento'],
   'ger-contratacao':['Contratação','Gerenciamento'],
   'ger-agendas':['Agendas','Gerenciamento'],'ger-detalhe':['Detalhe','Gerenciamento'],
-  'laboratorios':['Laboratórios','Infraestrutura'],
+  'vagas':['Vagas','RH'],
 };
 function navTo(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -665,7 +721,8 @@ function navTo(name){
   if(name==='tutores-mec') renderTutoresMec();
   if(name==='port-tutores') filterTutores(document.getElementById('tutor-search')?.value||'');
   if(name==='port-visao') { renderKPIs(); renderOfensores(); renderMes(); }
-  if(name==='laboratorios') renderLaboratorios();
+  if(name==='vagas') { filterVagas(document.getElementById('vagas-search')?.value||''); }
+  if(name==='agendas-estudo') { renderAgendasEstudo(); }
 }
 function esc(s){return(s||'').replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function pctColor(p){return p===100?'var(--ok)':p===0?'var(--red)':p>=60?'var(--teal)':'var(--red)'}
@@ -904,7 +961,7 @@ function openTutorModal(nome){
   html+=`<div style="margin-bottom:12px"><div class="kpi-label" style="margin-bottom:6px">Progresso Geral</div>${progCell(t.pct)}</div>`;
   const po=t.por_ordem||t.porOrdem||{};if(Object.keys(po).length){html+=`<div class="sec-label">Portfólios por Ordem</div>`;html+=Object.entries(po).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0])).map(([o,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-size:11px;font-weight:600;min-width:60px">${o}</span><span style="font-size:11px;font-weight:700;color:var(--ok)">${v} envio${v>1?'s':''}</span></div>`).join('');}
   if(t.real&&t.real.length){html+=`<div class="sec-label">✅ Realizadas (${t.real.length})</div>`;html+=t.real.map(r=>`<div class="prac-item"><div class="prac-icon done">✓</div><div style="flex:1"><div class="prac-name">${typeof r==='object'?r.n:r}</div></div><div class="prac-date">${typeof r==='object'?(r.d||'—'):'—'}</div></div>`).join('');}
-  if(t.pend&&t.pend.length){html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;const hoje=new Date();const ordensInfo=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'].map(o=>{const prazoStr=DB.prazos[o]||'';const parts=prazoStr.split('/');const prazoDate=parts.length===3?new Date(parts[2],parts[1]-1,parts[0]):null;const vencido=prazoDate?hoje>prazoDate:false;const enviou=((t.por_ordem||t.porOrdem||{})[o]||0)>0;return{nome:o,prazo:prazoStr,prazoDate,vencido,enviou};});const ordensPendentes=ordensInfo.filter(o=>!o.vencido&&!o.enviou);const ordensVencidas=ordensInfo.filter(o=>o.vencido&&!o.enviou);const totalOrdens=ordensPendentes.length||1;const porOrdem=Math.ceil(t.pend.length/totalOrdens);ordensVencidas.forEach(o=>{html+=`<div style="font-size:10px;font-weight:700;color:var(--red);margin:8px 0 4px;padding:4px 8px;background:var(--red-dim);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;});if(ordensPendentes.length>0){ordensPendentes.forEach((o,oi)=>{const start=oi*porOrdem;const end=Math.min(start+porOrdem,t.pend.length);if(start>=t.pend.length)return;const pracs=t.pend.slice(start,end);html+=`<div style="font-size:10px;font-weight:700;color:var(--teal);margin:8px 0 4px;padding:4px 8px;background:var(--teal-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;html+=pracs.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name">${p}</div></div><div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div></div>`).join('');});}else{html+=t.pend.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name" style="color:var(--red)">${p}</div></div><div class="prac-date" style="color:var(--red)">Atrasado</div></div>`).join('');}}
+  if(t.pend&&t.pend.length){html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;const hoje=new Date();const ordensInfo=_ordensParaCategoria(t.c).map(o=>{const prazoStr=DB.prazos[o]||'';const parts=prazoStr.split('/');const prazoDate=parts.length===3?new Date(parts[2],parts[1]-1,parts[0]):null;const vencido=prazoDate?hoje>prazoDate:false;const enviou=((t.por_ordem||t.porOrdem||{})[o]||0)>0;return{nome:o,prazo:prazoStr,prazoDate,vencido,enviou};});const ordensPendentes=ordensInfo.filter(o=>!o.vencido&&!o.enviou);const ordensVencidas=ordensInfo.filter(o=>o.vencido&&!o.enviou);const totalOrdens=ordensPendentes.length||1;const porOrdem=Math.ceil(t.pend.length/totalOrdens);ordensVencidas.forEach(o=>{html+=`<div style="font-size:10px;font-weight:700;color:var(--red);margin:8px 0 4px;padding:4px 8px;background:var(--red-dim);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;});if(ordensPendentes.length>0){ordensPendentes.forEach((o,oi)=>{const start=oi*porOrdem;const end=Math.min(start+porOrdem,t.pend.length);if(start>=t.pend.length)return;const pracs=t.pend.slice(start,end);html+=`<div style="font-size:10px;font-weight:700;color:var(--teal);margin:8px 0 4px;padding:4px 8px;background:var(--teal-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;html+=pracs.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name">${p}</div></div><div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div></div>`).join('');});}else{html+=t.pend.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name" style="color:var(--red)">${p}</div></div><div class="prac-date" style="color:var(--red)">Atrasado</div></div>`).join('');}}
   if(t.hist&&t.hist.length){html+=`<div class="sec-label">📋 Histórico de Envios</div>`;html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`<div class="prac-item"><div class="prac-icon done">📄</div><div style="flex:1"><div class="prac-name">${h.p||'—'}</div><div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.a||0} alunos</div></div><div class="prac-date">${h.d||'—'}</div></div>`).join('');}
   document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');
 }
@@ -994,7 +1051,7 @@ function openAlunosModal(){
 function renderGerenciamento(){
   if(!DB.tem_gerenciamento)return;
   if(!GER_DB) GER_DB = DB;  // PATCH 18: fallback antes do seletor de semestre inicializar
-  document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';
+  document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';document.getElementById('sidebar-agendas-estudo').style.display='';
   const k=GER_DB.ger_kpis;document.getElementById('gv-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
   document.getElementById('gv-kpis').innerHTML=`
     <div class="kpi kpi-green" title="Total de combinações tutor × laboratório × ordem no GIOCONDA"><div class="kpi-label">Total Ofertas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
@@ -1154,14 +1211,17 @@ function filterGerDetalhe(q){
   if(st==='ger')d=d.filter(function(r){return r.gerenciado;});
   if(st==='nger')d=d.filter(function(r){return !r.gerenciado;});
   // Conjunto de chaves tutor+polo+cat que passaram no filtro
-  var _keys=new Set(d.map(function(r){return (r.tutor||'__ST__')+'|||'+(r.polo||'')+'|||'+(r.categoria||'');}));
+  var _keys=new Set(d.map(function(r){return _normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'');}));
   // Para construir ordCells: usar TODOS os dados (sem filtro de ordem) para esses tutores
   var dBuild=gerDetData.filter(function(r){
     if(q&&!(r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q))return false;
     if(cat&&r.categoria!==cat)return false;
-    return _keys.has((r.tutor||'__ST__')+'|||'+(r.polo||'')+'|||'+(r.categoria||''));
+    return _keys.has(_normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||''));
   });
-  var tutorMap={};dBuild.forEach(function(r){var key=(r.tutor||'__SEM_TUTOR__')+'|||'+(r.polo||'')+'|||'+(r.categoria||'');if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0};var t=tutorMap[key];t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
+  var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var key=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0};var t=tutorMap[key];
+    // PATCH 26: preferir sempre a variante do nome que tem chapa (mais completa/rastreável)
+    if(r.tutor && (!t.tutor || (!/\(\d+\)/.test(t.tutor) && /\(\d+\)/.test(r.tutor)))) t.tutor = r.tutor;
+    t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
   // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
@@ -1193,7 +1253,7 @@ function filterGerDetalhe(q){
         var shortTokens=_tnFL.split(' ').filter(Boolean);
         var longNorm=xn;
         return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
-      });var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont*0.75)/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
+      });var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
       cuLab=dbTutor?cursoLabel(dbTutor):catParaCurso(t.categoria);
       window._tmpChCont=chCont;window._tmpCapOrdem=capOrdem;
     }
@@ -1237,7 +1297,7 @@ function filterGerDetalhe(q){
 }
 function _openDetTutorModal(t,allTutores){
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
-  var normM=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};var dbTM=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normM(x.n)===normM(t.tutor);});var chSemM=dbTM&&dbTM.ch_semanal?dbTM.ch_semanal:null;var padCHM=[4,8,12,20,24];var chContM=!chSemM?null:padCHM.reduce(function(a,b){return Math.abs(b-chSemM)<Math.abs(a-chSemM)?b:a;});var pracSemM=chContM?Math.floor((chContM*0.75)/1.5):null;var capOrdM=pracSemM?pracSemM*4:null;var nOrdM=Object.keys(t.ordens).length||1;var capTotM=capOrdM?capOrdM*nOrdM:null;var chGer=t.totalGer*1.5;var pracRestM=capTotM!==null?Math.max(0,capTotM-t.totalGer):null;var chRest=pracRestM!==null?pracRestM*1.5:null;
+  var normM=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};var dbTM=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normM(x.n)===normM(t.tutor);});var chSemM=dbTM&&dbTM.ch_semanal?dbTM.ch_semanal:null;var padCHM=[4,8,12,20,24];var chContM=!chSemM?null:padCHM.reduce(function(a,b){return Math.abs(b-chSemM)<Math.abs(a-chSemM)?b:a;});var pracSemM=chContM?Math.floor((chContM-_horasAdminPorCH(chContM))/1.5):null;var capOrdM=pracSemM?pracSemM*4:null;var nOrdM=Object.keys(t.ordens).length||1;var capTotM=capOrdM?capOrdM*nOrdM:null;var chGer=t.totalGer*1.5;var pracRestM=capTotM!==null?Math.max(0,capTotM-t.totalGer):null;var chRest=pracRestM!==null?pracRestM*1.5:null;
   document.getElementById('m-title').textContent=t.tutor||'Sem tutor';document.getElementById('m-sub').textContent=t.polo+' · '+catParaCurso(t.categoria);
   var kpiHtml='<div class="kpi-row"><div class="kpi kpi-green"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">'+t.totalGer+'</div><div class="kpi-detail">'+chGer.toFixed(1)+'h realizadas</div></div>'+(chContM?'<div class="kpi kpi-teal"><div class="kpi-label">CH Contratada</div><div class="kpi-value">'+chContM+'h</div><div class="kpi-detail">'+pracSemM+' práticas/sem · '+capOrdM+'/ordem</div></div>':'')+(chRest!==null?'<div class="kpi kpi-'+(chRest>0?'red':'ok')+'"><div class="kpi-label">CH Restante</div><div class="kpi-value">'+chRest.toFixed(1)+'h</div></div>':'')+'<div class="kpi kpi-yellow"><div class="kpi-label">Al. Matriculados</div><div class="kpi-value">'+fmtNum(t.totalMat)+'</div></div></div>';
   var ordensHtml='';Object.keys(t.ordens).sort(function(a,b){return (ordemOrder[a]||9)-(ordemOrder[b]||9);}).forEach(function(o){var od=t.ordens[o];var pct=od.total?Math.round(od.ger/od.total*100):0;var gerPracs=od.praticas.filter(function(r){return r.gerenciado;});var pendPracs=od.praticas.filter(function(r){return !r.gerenciado;});ordensHtml+='<div style="margin-bottom:14px;padding:10px;border:1px solid var(--border);border-radius:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong>'+o+'</strong><span style="font-size:11px;color:var(--muted)">'+od.ger+'/'+od.total+' · '+(od.ger*1.5).toFixed(1)+'h</span></div>'+progCell(pct);if(gerPracs.length){ordensHtml+='<div style="margin-top:6px;font-size:10px;font-weight:700;color:var(--ok)">✓ Gerenciadas ('+gerPracs.length+')</div>';ordensHtml+=gerPracs.map(function(r){return '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid var(--border)">'+r.pratica+'</div>';}).join('');}if(pendPracs.length){ordensHtml+='<div style="margin-top:6px;font-size:10px;font-weight:700;color:var(--red)">✗ Pendentes ('+pendPracs.length+')</div>';ordensHtml+=pendPracs.slice(0,5).map(function(r){return '<div style="font-size:11px;padding:2px 0;color:var(--muted)">'+r.pratica+'</div>';}).join('');if(pendPracs.length>5)ordensHtml+='<div style="font-size:10px;color:var(--dim)">+ '+(pendPracs.length-5)+' mais...</div>';}ordensHtml+='</div>';});
@@ -1754,6 +1814,18 @@ function sortTable(tbodyId,col,tipo){var key=tbodyId+col;var asc=_sortState[key]
 document.addEventListener('click',function(e){var btn=e.target.closest('.btn-expand');if(!btn)return;var grp=btn.dataset.grp;if(!grp)return;var row=btn.closest('tr');if(!row)return;if(grp.startsWith('cg'))toggleContrGrp(row,grp);else if(grp.startsWith('dg'))toggleDetGrp(row,grp);});
 
 // ── MAPEAMENTOS ───────────────────────────────────────────────────────────────
+// PATCH 28: apenas ENGMAKER e Química e Física / Agronomia têm Ordem 5 — todas
+// as outras categorias (ENF-INS, BIO-FAR, Multi III, NUTRI) vão só até Ordem 4.
+// Usado pra restringir quais ordens aparecem no detalhamento de pendências do
+// tutor (ver bug: prática de Instrumentação Cirúrgica "pendente em Ordem 5"
+// pra tutora de Enfermagem, que nem tem Ordem 5 — a causa era o corte
+// aritmético de openTutorModal() considerar sempre as 5 ordens pra qualquer
+// categoria, mesmo pra quem só tem 4).
+var _CAT_COM_O5 = ['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];
+function _ordensParaCategoria(cat){
+  var temO5 = _CAT_COM_O5.some(function(c){ return (cat||'').toUpperCase().includes(c); });
+  return temO5 ? ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'] : ['Ordem 1','Ordem 2','Ordem 3','Ordem 4'];
+}
 var CAT_CURSO={'ENF-INS (Multidisciplinar II)':'Enfermagem e Instrumentação Cirúrgica','BIO-FAR (Multidisciplinar I)':'Biomedicina e Farmácia','BIO-FISIO-EST-TO (Multidisciplinar III)':'Fisioterapia, T.Ocupacional e Estética','QUÍMICA E FÍSICA':'Química e Física / Agronomia','ENGMAKER':'Engenharias e Licenciaturas','NUTRI (Multidisciplinar IV)':'Nutrição'};
 function catParaCurso(cat){if(!cat)return cat;for(var k in CAT_CURSO){if(cat.toUpperCase().includes(k.split('(')[0].trim().toUpperCase()))return CAT_CURSO[k];}return cat;}
 // PATCH 19: exibe o curso específico (código do CONTROLE) em vez da categoria ampla
@@ -1775,7 +1847,216 @@ var CAT_COLORS={'ENF-INS (Multidisciplinar II)':'#2196F3','BIO-FAR (Multidiscipl
 function getCatColor(cat){if(!cat)return 'var(--green)';for(var k in CAT_COLORS){if(cat.toLowerCase().includes(k.toLowerCase().split('(')[0].trim().toLowerCase()))return CAT_COLORS[k];}return 'var(--teal)';}
 
 
+// ── ANÁLISE DE AGENDAS (seção própria) ─────────────────────────────────────────
+function _getOfertasAgenda(){
+  const src = (typeof GER_DB!=='undefined' && GER_DB) ? GER_DB : DB;
+  return (src.ger_ofertas||[]).filter(o=>o.tem_agenda);
+}
+const _DIAS_SEMANA_ORDEM=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+const _TURNOS_ORDEM=['Manhã','Tarde','Noite','Madrugada'];
+function renderAgendasEstudo(){
+  const ofertas=_getOfertasAgenda();
+  const total=ofertas.length;
+  const incomuns=ofertas.filter(o=>o.horario_incomum);
+  const semAluno=ofertas.filter(o=>o.sem_alunos);
+  const totMat=ofertas.reduce((s,o)=>s+(o.alunos_mat||0),0);
+  const totAgend=ofertas.reduce((s,o)=>s+(o.alunos_agend||0),0);
+  const engajamento=totMat?Math.round(totAgend/totMat*1000)/10:0;
+
+  document.getElementById('ae-sub').textContent=`${fmtNum(total)} ofertas com agenda registrada · ${fmtNum(incomuns.length)} em horário incomum · ${fmtNum(semAluno.length)} sem nenhum aluno agendado`;
+  document.getElementById('ae-kpis').innerHTML=`
+    <div class="kpi kpi-green"><div class="kpi-label">Ofertas com Agenda</div><div class="kpi-value">${fmtNum(total)}</div></div>
+    <div class="kpi kpi-yellow" title="Domingo ou madrugada (00h-06h)"><div class="kpi-label">Horários Incomuns</div><div class="kpi-value">${fmtNum(incomuns.length)}</div><div class="kpi-detail">${total?Math.round(incomuns.length/total*100):0}% do total</div></div>
+    <div class="kpi kpi-red" title="Gerenciado mas 0 alunos agendados"><div class="kpi-label">Sem Aluno Agendado</div><div class="kpi-value">${fmtNum(semAluno.length)}</div><div class="kpi-detail">${total?Math.round(semAluno.length/total*100):0}% do total</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Taxa de Engajamento</div><div class="kpi-value">${engajamento}%</div><div class="kpi-detail">${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados</div></div>`;
+
+  // Distribuição por dia da semana
+  const porDia={}; ofertas.forEach(o=>{if(o.dia_semana){porDia[o.dia_semana]=(porDia[o.dia_semana]||0)+1;}});
+  const maxDia=Math.max(...Object.values(porDia),1);
+  document.getElementById('ae-dias').innerHTML=_DIAS_SEMANA_ORDEM.map(d=>{
+    const v=porDia[d]||0; const w=Math.round(v/maxDia*100);
+    const cor=(d==='Domingo')?'var(--red)':'var(--teal)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+      <span style="font-size:11px;min-width:56px;font-weight:600">${d}</span>
+      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
+      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
+    </div>`;
+  }).join('');
+
+  // Distribuição por turno
+  const porTurno={}; ofertas.forEach(o=>{if(o.turno){porTurno[o.turno]=(porTurno[o.turno]||0)+1;}});
+  const maxTurno=Math.max(...Object.values(porTurno),1);
+  document.getElementById('ae-turnos').innerHTML=_TURNOS_ORDEM.map(t=>{
+    const v=porTurno[t]||0; const w=Math.round(v/maxTurno*100);
+    const cor=(t==='Madrugada')?'var(--red)':'var(--teal)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+      <span style="font-size:11px;min-width:70px;font-weight:600">${t}</span>
+      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
+      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
+    </div>`;
+  }).join('');
+
+  window._aeIncomunsData=incomuns;
+  filterAgendasIncomuns(document.getElementById('ae-incomuns-search')?.value||'');
+
+  // Agrupar "sem aluno" por tutor+polo, achando o dia/turno mais comum de cada um
+  const grpMap={};
+  semAluno.forEach(o=>{
+    const tutorKey=(typeof _normTutorKey==='function')?_normTutorKey(o.tutor):(o.tutor||'').toLowerCase();
+    const key=tutorKey+'|||'+(o.polo||'');
+    if(!grpMap[key]) grpMap[key]={tutor:o.tutor||'—',polo:o.polo||'—',categoria:o.categoria||'',qtd:0,diasTurnos:{}};
+    grpMap[key].qtd++;
+    const dt=(o.dia_semana||'?')+' '+(o.turno||'?');
+    grpMap[key].diasTurnos[dt]=(grpMap[key].diasTurnos[dt]||0)+1;
+  });
+  window._aeSemAlunoData=Object.values(grpMap).map(g=>{
+    const top=Object.entries(g.diasTurnos).sort((a,b)=>b[1]-a[1])[0];
+    g.dias_turnos_top=top?`${top[0]} (${top[1]}x)`:'—';
+    return g;
+  });
+  filterAgendasSemAluno(document.getElementById('ae-semaluno-search')?.value||'');
+}
+function filterAgendasIncomuns(q){
+  q=(q||'').toLowerCase().trim();
+  let d=window._aeIncomunsData||[];
+  if(q) d=d.filter(o=>(o.polo+(o.tutor||'')).toLowerCase().includes(q));
+  const tbody=document.getElementById('ae-incomuns-tbody');
+  tbody.innerHTML=d.map(o=>{
+    const cor=o.dia_semana==='Domingo'?'var(--red)':'var(--yellow-d)';
+    return `<tr>
+      <td style="font-size:11px">${esc(o.polo)}</td>
+      <td style="font-size:11px">${o.tutor?esc(formatTutorShort(o.tutor)):'<span style="color:var(--muted)">Sem tutor</span>'}</td>
+      <td style="font-size:11px;color:var(--muted)">${esc(catParaCurso(o.categoria))}</td>
+      <td><span class="badge" style="background:${cor}20;color:${cor}">${esc(o.dia_semana)}</span></td>
+      <td style="font-size:11px">${esc(o.turno)}</td>
+      <td style="font-size:11px">${o.dt_agenda?o.dt_agenda.split('-').reverse().join('/'):'—'}</td>
+      <td style="font-size:11px">${esc(o.hr_agenda||'—')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ae-incomuns-tbl-count').textContent=d.length+' ocorrência'+(d.length!==1?'s':'');
+  document.getElementById('ae-incomuns-count').textContent=(window._aeIncomunsData||[]).length+' no total';
+  if(!d.length) tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ok)">✓ Nenhum horário incomum encontrado.</td></tr>';
+}
+function filterAgendasSemAluno(q){
+  q=(q||'').toLowerCase().trim();
+  let d=window._aeSemAlunoData||[];
+  if(q) d=d.filter(g=>(g.polo+g.tutor).toLowerCase().includes(q));
+  d=[...d].sort((a,b)=>b.qtd-a.qtd);
+  const tbody=document.getElementById('ae-semaluno-tbody');
+  tbody.innerHTML=d.map(g=>`<tr data-vpolo="${esc(g.polo)}" data-vtutor="${esc(g.tutor)}" data-vqtd="${g.qtd}">
+    <td style="font-size:11px">${esc(g.polo)}</td>
+    <td style="font-size:11px">${esc(formatTutorShort(g.tutor))}</td>
+    <td style="text-align:right;font-weight:700;color:var(--red)">${g.qtd}</td>
+    <td style="font-size:11px;color:var(--muted)">${esc(g.dias_turnos_top)}</td>
+  </tr>`).join('');
+  document.getElementById('ae-semaluno-tbl-count').textContent=d.length+' tutor'+(d.length!==1?'es':'');
+  document.getElementById('ae-semaluno-count').textContent=(window._aeSemAlunoData||[]).reduce((s,g)=>s+g.qtd,0)+' sessões no total';
+  if(!d.length) tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ok)">✓ Nenhum gerenciamento sem aluno encontrado.</td></tr>';
+}
+function exportAgendasIncomuns(){
+  exportCSV((window._aeIncomunsData||[]).map(o=>({'Polo':o.polo,'Tutor':o.tutor||'—','Curso/Lab':catParaCurso(o.categoria),'Dia':o.dia_semana,'Turno':o.turno,'Data':o.dt_agenda||'—','Horário':o.hr_agenda||'—'})), 'horarios_incomuns_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+function exportAgendasSemAluno(){
+  exportCSV((window._aeSemAlunoData||[]).map(g=>({'Polo':g.polo,'Tutor':g.tutor,'Sessões sem aluno':g.qtd,'Dia/Turno mais usado':g.dias_turnos_top})), 'gerenciamentos_sem_aluno_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
+// ── VAGAS (RH) ────────────────────────────────────────────────────────────────
+let vagasSortK='prioridade', vagasSortA=true, vagasData=[];
+const _PRIORIDADE_ORDEM = {'Alta':0,'Média':1,'Baixa':2,'Sem Prioridade':3};
+function _getVagas(){ return (DB.vagas||{}).vagas || []; }
+function populateVagasFilters(){
+  const vagas=_getVagas();
+  const contrSel=document.getElementById('vagas-contr-sel');
+  if(contrSel && contrSel.options.length<=1){
+    [...new Set(vagas.map(v=>v.contratacao).filter(Boolean))].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;contrSel.appendChild(o);});
+  }
+  const priorSel=document.getElementById('vagas-prior-sel');
+  if(priorSel && priorSel.options.length<=1){
+    [...new Set(vagas.map(v=>v.prioridade).filter(Boolean))].sort((a,b)=>(_PRIORIDADE_ORDEM[a]??9)-(_PRIORIDADE_ORDEM[b]??9)).forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;priorSel.appendChild(o);});
+  }
+}
+function renderVagasKPIs(){
+  const k=(DB.vagas||{}).kpis||{};
+  document.getElementById('vagas-sub').textContent=`${fmtNum(k.total_vagas||0)} vagas em aberto · ${fmtNum(k.com_previsao||0)} com previsão de contratação`;
+  document.getElementById('vagas-kpis').innerHTML=`
+    <div class="kpi kpi-red"><div class="kpi-label">Total de Vagas</div><div class="kpi-value">${fmtNum(k.total_vagas||0)}</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">Aumento de Quadro</div><div class="kpi-value">${fmtNum(k.aumento_quadro||0)}</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Substituição</div><div class="kpi-value">${fmtNum(k.substituicao||0)}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Com Previsão</div><div class="kpi-value">${fmtNum(k.com_previsao||0)}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Sem Previsão</div><div class="kpi-value">${fmtNum(k.sem_previsao||0)}</div></div>
+    <div class="kpi kpi-green"><div class="kpi-label">Autorizadas</div><div class="kpi-value">${fmtNum(k.autorizadas||0)}</div><div class="kpi-detail">de ${fmtNum(k.total_vagas||0)}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Prioridade Alta</div><div class="kpi-value">${fmtNum(k.prioridade_alta||0)}</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Com Chamado SYDLE</div><div class="kpi-value">${fmtNum(k.com_chamado_aberto||0)}</div></div>`;
+}
+function filterVagas(q){
+  q=(q||'').toLowerCase().trim();
+  populateVagasFilters();
+  const st=document.getElementById('vagas-status-sel')?.value||'';
+  const ct=document.getElementById('vagas-contr-sel')?.value||'';
+  const pr=document.getElementById('vagas-prior-sel')?.value||'';
+  let d=_getVagas();
+  if(q) d=d.filter(v=>(v.polo+v.cursos+v.perfil+v.tutor_atual).toLowerCase().includes(q));
+  if(st) d=d.filter(v=>v.status===st);
+  if(ct) d=d.filter(v=>v.contratacao===ct);
+  if(pr) d=d.filter(v=>v.prioridade===pr);
+  vagasData=d;
+  renderVagasTbl(d);
+  renderVagasKPIs();
+}
+function sortVagas(k){ if(vagasSortK===k) vagasSortA=!vagasSortA; else { vagasSortK=k; vagasSortA=true; } filterVagas(document.getElementById('vagas-search')?.value||''); }
+function renderVagasTbl(data){
+  const sorted=[...data].sort((a,b)=>{
+    if(vagasSortK==='prioridade'){ const va=_PRIORIDADE_ORDEM[a.prioridade]??9, vb=_PRIORIDADE_ORDEM[b.prioridade]??9; return vagasSortA?va-vb:vb-va; }
+    const va=(a[vagasSortK]||''), vb=(b[vagasSortK]||'');
+    return vagasSortA?String(va).localeCompare(String(vb),'pt-BR'):String(vb).localeCompare(String(va),'pt-BR');
+  });
+  const corStatus = s => s==='Substituição' ? 'var(--teal)' : 'var(--yellow-d)';
+  const corContr = c => c.includes('Com previsão') ? 'var(--ok)' : c.includes('Sem previsão') ? 'var(--red)' : 'var(--muted)';
+  const corPrior = p => p==='Alta' ? 'var(--red)' : p==='Média' ? 'var(--yellow-d)' : p==='Baixa' ? 'var(--teal)' : 'var(--muted)';
+  document.getElementById('vagas-tbody').innerHTML = sorted.map(v=>`<tr>
+    <td><strong>${esc(v.polo)}</strong></td>
+    <td style="font-size:11px">${esc(v.cursos)}</td>
+    <td style="font-size:11px">${esc(v.perfil)}</td>
+    <td><span class="badge" style="background:${corStatus(v.status)}20;color:${corStatus(v.status)}">${esc(v.status)}</span></td>
+    <td style="font-size:11px;color:${corContr(v.contratacao)}">${esc(v.contratacao)}</td>
+    <td><span class="badge" style="background:${corPrior(v.prioridade)}20;color:${corPrior(v.prioridade)}">${esc(v.prioridade)}</span></td>
+    <td style="font-size:11px">${v.tutor_atual?esc(v.tutor_atual):'<span style="color:var(--muted)">—</span>'}</td>
+    <td style="font-size:11px;color:var(--muted)">${v.chamado_sydle?esc(v.chamado_sydle):'—'}</td>
+  </tr>`).join('');
+  document.getElementById('vagas-count').textContent = sorted.length+' vaga'+(sorted.length!==1?'s':'');
+  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro.</td></tr>';
+}
+function exportVagas(){
+  exportCSV(vagasData.map(v=>({'Polo':v.polo,'Curso':v.cursos,'Perfil':v.perfil,'Status':v.status,'Contratação':v.contratacao,'Prioridade':v.prioridade,'Tutor Atual':v.tutor_atual||'—','CH Semanal':v.ch_semanal||'—','CH Ideal':v.ch_ideal||'—','Chamado SYDLE':v.chamado_sydle||'—','Status Chamado':v.status_chamado||'—'})), 'vagas_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
 // ── HELPERS AGENDA ────────────────────────────────────────────────────────────
+// PATCH 26: normalização canônica de nome de tutor — usada em TODO agrupamento
+// por tutor no front-end. Sem isso, a mesma pessoa aparece como duas linhas
+// sempre que uma oferta chega do GIOCONDA com o nome nativo (com chapa, ex:
+// "Tatiane da Silva Rodrigues (14288219)") e outra foi preenchida pelo backfill
+// do CONTROLE (sem chapa, capitalização diferente, ex: "Tatiane Da Silva
+// Rodrigues") — casos confirmados com dados reais (Tatiane Rodrigues/Taguatinga
+// e Tatiana Moura/São José dos Campos, ambas com ofertas GIOCONDA em branco
+// backfilladas pelo PATCH 21 do processar.py).
+// PATCH 27: horas administrativas por faixa de CH — CORREÇÃO do PATCH 26.
+// A tabela anterior tinha 20h->4h (20%) baseada numa mensagem de texto do Leo
+// que continha um erro de digitação. A imagem oficial ("Distribuição da CH
+// semanal do Tutor") confirma que TODOS os tiers são exatamente 25%
+// administrativo: 4h->1h, 8h->2h, 12h->3h, 20h->5h (não 4h). Ou seja, o
+// percentual fixo de 25% que já existia no código ANTES do PATCH 26 estava
+// certo o tempo todo — esta tabela só o deixa explícito/auto-documentado.
+var _HORAS_ADMIN_POR_CH = {4:1, 8:2, 12:3, 20:5};
+function _horasAdminPorCH(ch){
+  if(_HORAS_ADMIN_POR_CH.hasOwnProperty(ch)) return _HORAS_ADMIN_POR_CH[ch];
+  return Math.round(ch*0.25*10)/10;
+}
+function _normTutorKey(nome){
+  if(!nome) return '__SEM_TUTOR__';
+  var s = String(nome).replace(/\s*\(\d+\)\s*$/,'').trim();
+  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return s.toLowerCase().replace(/\s+/g,' ').trim();
+}
 function formatTutorShort(nome) {
   var clean = (nome||'').replace(/\s*\(\d+\)\s*$/, '').trim();
   var p = clean.split(/\s+/).filter(Boolean);
@@ -2210,6 +2491,7 @@ function _renderComSemestre() {
   filterPolos(document.getElementById('polo-search')?.value||'');
   filterTutores(document.getElementById('tutor-search')?.value||'');
   try{ renderGerenciamento(); }catch(e){ console.error('renderGerenciamento (semestre)', e); }  // PATCH 18
+  try{ renderAgendasEstudo(); }catch(e){ console.error('renderAgendasEstudo (semestre)', e); }
 }
 // ── FIM CONTROLE DE SEMESTRE ─────────────────────────────────────────────────
 
@@ -2451,248 +2733,6 @@ function _tutMecSort(col){
   filterTutoresMec(document.getElementById('tutmec-search')?.value||'');
 }
 
-
-
-function _donutSVG(vals, labels, colors, centerTop, centerVal, size){
-  size = size || 80;
-  const total = vals.reduce((a,b)=>a+(b||0),0) || 1;
-  let cum = 0;
-  const r = size*0.4, cx = size/2, cy = size/2;
-  const paths = vals.map((v,i)=>{
-    if(!v) return '';
-    const pct = v/total;
-    const a1 = cum*2*Math.PI - Math.PI/2;
-    const a2 = (cum+pct)*2*Math.PI - Math.PI/2;
-    cum += pct;
-    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
-    const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
-    const lg = pct>0.5?1:0;
-    return `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${lg},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${colors[i]}" opacity="0.9" style="cursor:pointer;transition:opacity .2s" onmouseover="this.setAttribute('opacity','1')" onmouseout="this.setAttribute('opacity','0.9')"><title>${esc(labels[i])}: ${fmtNum(v)}</title></path>`;
-  }).join('');
-  const rInner = r*0.62;
-  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="flex-shrink:0">
-    ${paths}
-    <circle cx="${cx}" cy="${cy}" r="${rInner}" fill="var(--surface)"/>
-    <text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="var(--font)">${esc(centerTop||'')}</text>
-    <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" font-family="var(--font)">${centerVal??''}</text>
-  </svg>`;
-}
-function _donutLegenda(labels, vals, colors){
-  const total=vals.reduce((a,b)=>a+(b||0),0)||1;
-  return labels.map((l,i)=>{
-    if(!vals[i]) return '';
-    const pct=Math.round(vals[i]/total*100);
-    return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:3px 0">
-      <span style="width:9px;height:9px;border-radius:2px;background:${colors[i]};flex-shrink:0"></span>
-      <span style="color:var(--muted)">${esc(l)}</span>
-      <strong style="margin-left:auto">${fmtNum(vals[i])}</strong>
-      <span style="color:var(--muted);min-width:36px;text-align:right">${pct}%</span>
-    </div>`;
-  }).join('');
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// PÁGINA LABORATÓRIOS
-// ══════════════════════════════════════════════════════════════════════════
-const LAB_OPCOES = [
-  {key:'EngeMaker', tipo:'simples', label:'EngeMaker'},
-  {key:'Multidisciplinar I', tipo:'simples', label:'Multidisciplinar I — Biomedicina e Farmácia'},
-  {key:'ENF', tipo:'rico', label:'Multidisciplinar II — Enfermagem (detalhado)'},
-  {key:'Multidisciplinar III', tipo:'simples', label:'Multidisciplinar III — Fisio / T.O. / Estética'},
-  {key:'TO', tipo:'rico', label:'Terapia Ocupacional (detalhado)'},
-  {key:'Multidisciplinar IV', tipo:'simples', label:'Multidisciplinar IV — Nutrição'},
-  {key:'Química e Física / Agronomia', tipo:'simples', label:'Química e Física / Agronomia'},
-];
-function _labFmtVal(v){
-  if(typeof v==='number'){
-    if(v>0 && v<1) return (v*100).toFixed(1).replace('.',',')+'%';
-    return fmtNum(Math.round(v));
-  }
-  return (v===null||v===undefined||v==='')?'—':v;
-}
-function renderLaboratorios(){
-  const lab=DB.laboratorios||{};
-  const sel=document.getElementById('lab-cat-sel');
-  const disponiveis=LAB_OPCOES.filter(o=>o.tipo==='rico'?(lab.ricos||{})[o.key]:(lab.simples||{})[o.key]);
-  if(!disponiveis.length){
-    document.getElementById('lab-content').innerHTML='<div class="empty">Nenhum dado de laboratórios disponível ainda.</div>';
-    sel.innerHTML='';
-    return;
-  }
-  sel.innerHTML=disponiveis.map(o=>`<option value="${o.key}|${o.tipo}">${esc(o.label)}</option>`).join('');
-  renderLabCategoria();
-}
-function renderLabCategoria(){
-  const sel=document.getElementById('lab-cat-sel');
-  const val=sel.value || sel.options[0]?.value;
-  if(!val) return;
-  const [key, tipo]=val.split('|');
-  const lab=DB.laboratorios||{};
-  if(tipo==='rico') renderLabRico(lab.ricos[key]);
-  else renderLabSimples(lab.simples[key]);
-}
-function renderLabRico(d){
-  const sub=document.getElementById('lab-sub'); if(sub) sub.textContent=d.categoria;
-  const ind=d.indicadores_gerais||[];
-  const destaque=['Total de Polos','Total de Alunos (Base Total)','Alunos em Prática','Alunos sem Prática','% Cobertura HUB'];
-  const kpis=destaque.map(k=>ind.find(i=>i.k===k)).filter(Boolean);
-  let html=`<div class="kpi-row" style="margin-bottom:14px">`+
-    kpis.map(k=>`<div class="kpi kpi-teal"><div class="kpi-label">${esc(k.k)}</div><div class="kpi-value">${_labFmtVal(k.v)}</div></div>`).join('')+
-    `</div>`;
-
-  // Indicadores gerais completos (grid de mini-cards, não lista crua)
-  const outros=ind.filter(i=>!destaque.includes(i.k));
-  if(outros.length){
-    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📊 Indicadores Gerais</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:8px;align-items:stretch">`+
-      outros.map(i=>`<div style="background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border);min-height:62px;display:flex;flex-direction:column;justify-content:space-between">
-        <div style="font-size:10px;color:var(--muted);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.k)}</div>
-        <div style="font-size:16px;font-weight:700;color:var(--text);margin-top:4px">${_labFmtVal(i.v)}</div>
-      </div>`).join('')+
-      `</div></div>`;
-  }
-
-  // Distribuição por módulo
-  if((d.distribuicao_modulo||[]).length){
-    const maxA=Math.max(...d.distribuicao_modulo.map(m=>m.alunos||0),1);
-    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📈 Distribuição por Módulo</div>`+
-      d.distribuicao_modulo.map(m=>{
-        const w=Math.round((m.alunos||0)/maxA*100);
-        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-          <span style="font-size:11px;min-width:80px">${esc(m.modulo)}</span>
-          <div style="flex:1;background:var(--border);border-radius:4px;height:14px;overflow:hidden"><div style="height:14px;background:var(--teal);width:${w}%;transition:width .4s"></div></div>
-          <span style="font-size:11px;font-weight:700;min-width:55px;text-align:right">${fmtNum(m.alunos)}</span>
-          <span style="font-size:10px;color:var(--muted);min-width:45px;text-align:right">${_labFmtVal(m.pct)}</span>
-        </div>`;
-      }).join('')+`</div>`;
-  }
-
-  // Análise de cobertura + classificação IES geral (donuts lado a lado)
-  html+=`<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">`;
-  if((d.analise_cobertura||[]).length){
-    const cob=d.analise_cobertura.filter(c=>c.status!=='TOTAL');
-    const totalCob=d.analise_cobertura.find(c=>c.status==='TOTAL');
-    const cobCores=['var(--teal)','var(--yellow-d)','#9ca3af'];
-    html+=`<div class="card" style="flex:1;min-width:280px">
-      <div class="sec-label">🎯 Análise de Cobertura</div>
-      <div style="display:flex;align-items:center;gap:18px;margin-top:8px">
-        ${_donutSVG(cob.map(c=>c.alunos), cob.map(c=>c.status), cobCores, 'alunos', fmtNum(totalCob?.alunos||0))}
-        <div style="flex:1">${_donutLegenda(cob.map(c=>c.status), cob.map(c=>c.alunos), cobCores)}</div>
-      </div>
-    </div>`;
-  }
-  if((d.classificacao_ies_geral||[]).length){
-    const ies=d.classificacao_ies_geral.filter(c=>!c.k.startsWith('TOTAL'));
-    const totalIes=d.classificacao_ies_geral.find(c=>c.k.startsWith('TOTAL'));
-    const iesCores=['var(--green)','var(--red)'];
-    html+=`<div class="card" style="flex:1;min-width:280px">
-      <div class="sec-label">📋 Classificação IES — Controle Regulatório</div>
-      <div style="display:flex;align-items:center;gap:18px;margin-top:8px">
-        ${_donutSVG(ies.map(c=>c.qtde), ies.map(c=>c.k), iesCores, 'alunos', fmtNum(totalIes?.qtde||0))}
-        <div style="flex:1">${_donutLegenda(ies.map(c=>c.k), ies.map(c=>c.qtde), iesCores)}</div>
-      </div>
-    </div>`;
-  }
-  html+=`</div>`;
-
-  // Classificação IES por módulo (tabela)
-  if((d.classificacao_ies_modulo||[]).length){
-    html+=`<div class="card" style="margin-bottom:14px;overflow-x:auto"><div class="sec-label">📊 Classificação IES por Módulo</div>
-      <table style="width:100%;font-size:12px;border-collapse:collapse">
-      <thead><tr style="border-bottom:2px solid var(--border)"><th style="text-align:left;padding:6px">Módulo</th><th style="text-align:right;padding:6px">Está na Relação</th><th style="text-align:right;padding:6px">Não Está</th><th style="text-align:right;padding:6px">Total</th><th style="text-align:right;padding:6px">% Está</th></tr></thead><tbody>`+
-      d.classificacao_ies_modulo.map(m=>`<tr style="border-bottom:1px solid var(--border);${m.modulo==='TOTAL'?'font-weight:700':''}"><td style="padding:6px">${esc(m.modulo)}</td><td style="text-align:right;padding:6px">${fmtNum(m.esta)}</td><td style="text-align:right;padding:6px">${fmtNum(m.nao_esta)}</td><td style="text-align:right;padding:6px">${fmtNum(m.total)}</td><td style="text-align:right;padding:6px">${_labFmtVal(m.pct_esta)}</td></tr>`).join('')+
-      `</tbody></table></div>`;
-  }
-
-  // Insights (cards de destaque, não lista crua)
-  if((d.insights||[]).length){
-    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">💡 Insights Principais</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:8px;align-items:stretch">`+
-      d.insights.map(i=>`<div style="background:var(--yellow-dim);border-left:3px solid var(--yellow-d);border-radius:6px;padding:10px 12px;min-height:60px;display:flex;flex-direction:column;justify-content:space-between">
-        <div style="font-size:10px;color:var(--muted);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(i.k)}</div>
-        <div style="font-size:15px;font-weight:700;margin-top:4px">${_labFmtVal(i.v)}</div>
-      </div>`).join('')+
-      `</div></div>`;
-  }
-
-
-  // Detalhamento por polo (busca)
-  html+=`<div class="card" style="padding:0;overflow:hidden">
-    <div class="toolbar" style="padding:12px 14px">
-      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterLabPolos(this.value)" id="lab-polo-search"/>
-      <span class="tbl-count" id="lab-polo-count">—</span>
-    </div>
-    <div class="tbl-wrap" style="max-height:500px"><table style="font-size:11px"><thead><tr id="lab-polo-thead"></tr></thead><tbody id="lab-polo-tbody"></tbody></table></div>
-  </div>`;
-
-  document.getElementById('lab-content').innerHTML=html;
-
-  // monta cabeçalho + dados da tabela de polos
-  window._labPolosCols=d.detalhe_polos_colunas||[];
-  window._labPolosData=d.detalhe_polos||[];
-  const thead=document.getElementById('lab-polo-thead');
-  thead.innerHTML=window._labPolosCols.map(c=>`<th style="white-space:nowrap;padding:6px 8px">${esc(c.replace(/Rosimar/gi,'Controle Regulatório'))}</th>`).join('');
-  filterLabPolos('');
-}
-function filterLabPolos(q){
-  q=(q||'').toLowerCase().trim();
-  const cols=window._labPolosCols||[];
-  let data=window._labPolosData||[];
-  if(q) data=data.filter(r=>String(r['Polo']||'').toLowerCase().includes(q));
-  const cnt=document.getElementById('lab-polo-count'); if(cnt) cnt.textContent=`${data.length} polos`;
-  const tbody=document.getElementById('lab-polo-tbody');
-  if(!tbody) return;
-  tbody.innerHTML=data.slice(0,500).map(r=>'<tr style="border-bottom:1px solid var(--border)">'+
-    cols.map(c=>`<td style="padding:5px 8px;white-space:nowrap">${esc(String(r[c]??'—'))}</td>`).join('')+
-    '</tr>').join('');
-}
-function renderLabSimples(d){
-  const sub=document.getElementById('lab-sub'); if(sub) sub.textContent=d.categoria;
-  let html=`<div class="kpi-row" style="margin-bottom:14px">
-    <div class="kpi kpi-teal"><div class="kpi-label">Total de Alunos</div><div class="kpi-value">${fmtNum(d.total_alunos)}</div></div>
-    <div class="kpi kpi-green"><div class="kpi-label">Cursos</div><div class="kpi-value">${fmtNum(d.total_cursos)}</div></div>
-    <div class="kpi kpi-ok"><div class="kpi-label">Polos</div><div class="kpi-value">${fmtNum(d.total_polos)}</div></div>
-  </div>`;
-
-  if((d.modulos||[]).length){
-    const maxA=Math.max(...d.modulos.map(m=>m.alunos||0),1);
-    html+=`<div class="card" style="margin-bottom:14px"><div class="sec-label">📈 Distribuição por Módulo</div>`+
-      d.modulos.map(m=>{
-        const w=Math.round((m.alunos||0)/maxA*100);
-        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0">
-          <span style="font-size:11px;min-width:80px">${esc(m.modulo)}</span>
-          <div style="flex:1;background:var(--border);border-radius:4px;height:14px;overflow:hidden"><div style="height:14px;background:var(--teal);width:${w}%"></div></div>
-          <span style="font-size:11px;font-weight:700;min-width:55px;text-align:right">${fmtNum(m.alunos)}</span>
-        </div>`;
-      }).join('')+`</div>`;
-  }
-
-  html+=`<div class="card" style="margin-bottom:14px;overflow-x:auto"><div class="sec-label">🎓 Cursos</div>
-    <table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="border-bottom:2px solid var(--border)"><th style="text-align:left;padding:6px">Curso</th><th style="text-align:left;padding:6px">Código</th><th style="text-align:right;padding:6px">Alunos</th></tr></thead><tbody>`+
-    (d.cursos||[]).map(c=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px">${esc(c.curso)}</td><td style="padding:6px;color:var(--muted)">${esc(c.codcurso)}</td><td style="text-align:right;padding:6px;font-weight:700">${fmtNum(c.alunos)}</td></tr>`).join('')+
-    `</tbody></table></div>`;
-
-  html+=`<div class="card" style="padding:0;overflow:hidden">
-    <div class="toolbar" style="padding:12px 14px">
-      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterLabPolosSimples(this.value)" id="lab-polo-search"/>
-      <span class="tbl-count" id="lab-polo-count">—</span>
-    </div>
-    <div class="tbl-wrap" style="max-height:500px"><table style="font-size:12px"><thead><tr><th style="padding:6px 8px;text-align:left">Polo</th><th style="padding:6px 8px;text-align:right">Alunos</th></tr></thead><tbody id="lab-polo-tbody"></tbody></table></div>
-  </div>`;
-  document.getElementById('lab-content').innerHTML=html;
-  window._labPolosSimplesData=d.polos||[];
-  filterLabPolosSimples('');
-}
-function filterLabPolosSimples(q){
-  q=(q||'').toLowerCase().trim();
-  let data=window._labPolosSimplesData||[];
-  if(q) data=data.filter(r=>String(r.polo||'').toLowerCase().includes(q));
-  const cnt=document.getElementById('lab-polo-count'); if(cnt) cnt.textContent=`${data.length} polos`;
-  const tbody=document.getElementById('lab-polo-tbody');
-  if(!tbody) return;
-  tbody.innerHTML=data.slice(0,500).map(r=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px">${esc(r.polo)}</td><td style="padding:5px 8px;text-align:right;font-weight:700">${fmtNum(r.alunos)}</td></tr>`).join('');
-}
-
 function _iniciarDashboard(){
   const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
   document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
@@ -2707,11 +2747,13 @@ function _iniciarDashboard(){
   try{filterPolos('');filterTutores('');}catch(e){console.error('filterPolos/Tutores',e);}
   try{renderGerenciamento();populateFilters();}catch(e){console.error('renderGer',e);}
   try{
-    const _lab=DB.laboratorios||{};
-    if(Object.keys(_lab.ricos||{}).length || Object.keys(_lab.simples||{}).length){
-      document.getElementById('sidebar-lab').style.display='';
+    const _vg=(DB.vagas||{}).vagas||[];
+    if(_vg.length){
+      document.getElementById('sidebar-vagas').style.display='';
+      populateVagasFilters();
+      renderVagasKPIs();
     }
-  }catch(e){console.error('sidebar-lab check',e);}
+  }catch(e){console.error('vagas init',e);}
   initSemestres();
 }
 
