@@ -1244,6 +1244,29 @@ function filterGerDetalhe(q){
     t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
+  // PATCH 31: garantir que TODO tutor ativo apareça no Detalhe, mesmo que o
+  // GIOCONDA ainda não tenha NENHUMA oferta cadastrada pro polo+categoria dele
+  // (lab novo/ainda não provisionado). O PATCH 21 do processar.py já cobre o
+  // caso em que a oferta existe com TUTOR em branco; aqui cobrimos o caso em
+  // que a oferta nem existe — sem isso, o tutor simplesmente sumia da tela
+  // mesmo aparecendo normalmente em Ficha dos Tutores. Só adiciona a linha
+  // sintética quando o polo+categoria não tem NENHUMA linha no gerDetData —
+  // se já existir alguma (mesmo sem tutor), não duplica (evita reintroduzir
+  // o bug de duplicata do PATCH 26/28).
+  (function(){
+    function _normPoloComparavel(p){ return (p||'').replace(/^LAP\s*[-–]\s*/i,'').trim().toLowerCase(); }
+    var _tutoresJaListados={}; sorted.forEach(function(t){ _tutoresJaListados[_normTutorKey(t.tutor)+'|||'+(t.polo||'')]=true; });
+    var _poloCatComOferta={}; gerDetData.forEach(function(r){ _poloCatComOferta[_normPoloComparavel(r.polo)+'|||'+(r.categoria||'')]=true; });
+    (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n; }).forEach(function(t){
+      var keyExata=_normTutorKey(t.n)+'|||'+(t.p||'');
+      if(_tutoresJaListados[keyExata]) return;  // já apareceu de alguma forma
+      var poloCatKey=_normPoloComparavel(t.p)+'|||'+(t.c||'');
+      if(_poloCatComOferta[poloCatKey]) return;  // já existe oferta pra esse polo+categoria — não duplicar
+      if(q && !((t.n+t.p+(t.c||'')).toLowerCase().includes(q))) return;
+      if(cat && t.c!==cat) return;
+      sorted.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
+    });
+  })();
   // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
   // montar as linhas, em vez de tentar mexer no DOM depois (a tabela tem linhas
   // filhas agrupadas por tutor, que quebrariam com reordenação direta de <tr>)
@@ -1295,6 +1318,12 @@ function filterGerDetalhe(q){
       :'<span style="color:var(--red);font-size:10px">⚠ Sem tutor</span>';
     // Curso/Lab: limitar
     var cuLabDisp=_trunc(cuLab,26);
+    // PATCH 31: sinalizar visualmente as linhas sintéticas (tutor ativo sem
+    // nenhuma oferta cadastrada no GIOCONDA ainda) — não é erro, é um aviso
+    // informativo de que o lab dele ainda não foi provisionado no sistema deles.
+    if(t._semOfertaGioconda){
+      cuLabDisp='<span style="color:var(--yellow-d);font-weight:600" title="Tutor ativo mas sem nenhuma oferta cadastrada no GIOCONDA ainda">⚠ Sem oferta no GIOCONDA</span>';
+    }
     var _curPoloTutor=t.polo+'|||'+(t.tutor||'');
       var _isRepeat=(_curPoloTutor===_prevPoloTutor);
       _prevPoloTutor=_curPoloTutor;
