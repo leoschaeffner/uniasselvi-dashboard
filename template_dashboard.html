@@ -1868,6 +1868,45 @@ function getCatColor(cat){if(!cat)return 'var(--green)';for(var k in CAT_COLORS)
 
 
 // ── ANÁLISE DE AGENDAS (seção própria) ─────────────────────────────────────────
+function openTurnoModal(turno){
+  const ofertas=_getOfertasAgenda().filter(o=>o.turno===turno);
+  const porHorario={};
+  ofertas.forEach(o=>{
+    const h=o.hr_agenda||'(sem horário registrado)';
+    if(!porHorario[h]) porHorario[h]={horario:h,qtd:0,mat:0,agend:0};
+    const p=porHorario[h];
+    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
+  });
+  // Ordena cronologicamente pelo horário de início — "1º horário", "2º horário" etc.
+  const rows=Object.values(porHorario).sort((a,b)=>a.horario.localeCompare(b.horario,'pt-BR',{numeric:true}));
+  const max=Math.max(...rows.map(r=>r.qtd),1);
+  document.getElementById('m-title').textContent='Turno: '+turno;
+  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste turno · horários ordenados cronologicamente`;
+  let html='';
+  if(rows.length){
+    html+='<div class="sec-label">Distribuição por horário específico</div>';
+    rows.forEach((r,i)=>{
+      const eng=r.mat?Math.round(r.agend/r.mat*100):0;
+      const w=Math.round(r.qtd/max*100);
+      const cor=pctColor(eng);
+      const label=rows.length>1?`${i+1}º horário — ${esc(r.horario)}`:esc(r.horario);
+      html+=`<div style="margin-bottom:14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px">
+          <strong>${label}</strong>
+          <span style="color:var(--muted)">${fmtNum(r.qtd)} gerenciamento${r.qtd!==1?'s':''}</span>
+        </div>
+        <div style="height:14px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px">
+          <div style="height:100%;width:${w}%;background:var(--teal);border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${fmtNum(r.agend)} agendados de ${fmtNum(r.mat)} matriculados — <span style="color:${cor};font-weight:700">${eng}% de engajamento</span></div>
+      </div>`;
+    });
+  }else{
+    html='<div style="color:var(--muted);text-align:center;padding:24px">Sem ofertas registradas para este turno.</div>';
+  }
+  document.getElementById('m-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
 function _getOfertasAgenda(){
   const src = (typeof GER_DB!=='undefined' && GER_DB) ? GER_DB : DB;
   return (src.ger_ofertas||[]).filter(o=>o.tem_agenda);
@@ -1909,10 +1948,11 @@ function renderAgendasEstudo(){
   document.getElementById('ae-turnos').innerHTML=_TURNOS_ORDEM.map(t=>{
     const v=porTurno[t]||0; const w=Math.round(v/maxTurno*100);
     const cor=(t==='Madrugada')?'var(--red)':'var(--teal)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openTurnoModal('${t}')" title="Clique para ver os horários específicos deste turno">
       <span style="font-size:11px;min-width:70px;font-weight:600">${t}</span>
       <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
       <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
+      <span style="font-size:11px;color:var(--muted)">↗</span>
     </div>`;
   }).join('');
 
