@@ -449,6 +449,16 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="card"><div class="card-hdr"><div class="card-title">🕐 Distribuição por Turno</div></div><div class="card-body" id="ae-turnos"></div></div>
   </div>
   <div class="card">
+    <div class="card-hdr"><div class="card-title">📚 Por Laboratório / Curso</div></div>
+    <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
+      <th onclick="sortTable('ae-cat-tbody','cat','str')">Laboratório/Curso<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('ae-cat-tbody','tot','num')">Ofertas c/ Agenda<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('ae-cat-tbody','inc','num')">Horários Incomuns<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('ae-cat-tbody','sa','num')">Sem Aluno<span class="sort-ind"></span></th>
+      <th onclick="sortTable('ae-cat-tbody','eng','num')">Engajamento<span class="sort-ind"></span></th>
+    </tr></thead><tbody id="ae-cat-tbody"></tbody></table></div>
+  </div>
+  <div class="card">
     <div class="card-hdr"><div class="card-title">⚠️ Horários Incomuns — Domingo ou Madrugada (00h–06h)</div><div class="card-badge" id="ae-incomuns-count">—</div></div>
     <div class="toolbar">
       <input class="search" type="text" placeholder="Buscar polo, tutor…" oninput="filterAgendasIncomuns(this.value)" id="ae-incomuns-search"/>
@@ -556,6 +566,16 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="page" id="page-vagas"><div class="container">
   <div class="ph"><div class="ph-title">Vagas — Contratação e Substituição</div><div class="ph-sub" id="vagas-sub">—</div></div>
   <div class="kpi-row" id="vagas-kpis"></div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">📚 Por Laboratório / Curso</div></div>
+    <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
+      <th onclick="sortTable('vagas-cat-tbody','curso','str')">Curso<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','tot','num')">Total Vagas<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','aum','num')">Aumento de Quadro<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','sub','num')">Substituição<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','cp','num')">Com Previsão<span class="sort-ind"></span></th>
+    </tr></thead><tbody id="vagas-cat-tbody"></tbody></table></div>
+  </div>
   <div class="card">
     <div class="toolbar">
       <input class="search" type="text" placeholder="Buscar polo, curso, perfil…" oninput="filterVagas(this.value)" id="vagas-search"/>
@@ -1899,6 +1919,28 @@ function renderAgendasEstudo(){
   window._aeIncomunsData=incomuns;
   filterAgendasIncomuns(document.getElementById('ae-incomuns-search')?.value||'');
 
+  // Quebra por Laboratório/Curso (categoria)
+  const porCat={};
+  ofertas.forEach(o=>{
+    const cat=o.categoria||'—';
+    if(!porCat[cat]) porCat[cat]={cat, tot:0, inc:0, sa:0, mat:0, agend:0};
+    const c=porCat[cat];
+    c.tot++; if(o.horario_incomum) c.inc++; if(o.sem_alunos) c.sa++;
+    c.mat+=(o.alunos_mat||0); c.agend+=(o.alunos_agend||0);
+  });
+  const catRows=Object.values(porCat).sort((a,b)=>b.tot-a.tot);
+  document.getElementById('ae-cat-tbody').innerHTML=catRows.map(c=>{
+    const eng=c.mat?Math.round(c.agend/c.mat*100):0;
+    return `<tr data-vcat="${esc(catParaCurso(c.cat))}" data-vtot="${c.tot}" data-vinc="${c.inc}" data-vsa="${c.sa}" data-veng="${eng}">
+      <td style="font-size:12px;font-weight:600">${esc(catParaCurso(c.cat))}</td>
+      <td style="text-align:right">${fmtNum(c.tot)}</td>
+      <td style="text-align:right;color:${c.inc>0?'var(--yellow-d)':'var(--muted)'}">${fmtNum(c.inc)}</td>
+      <td style="text-align:right;color:${c.sa>0?'var(--red)':'var(--muted)'}">${fmtNum(c.sa)}</td>
+      <td>${progCell(eng)}</td>
+    </tr>`;
+  }).join('');
+  if(!catRows.length) document.getElementById('ae-cat-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
+
   // Agrupar "sem aluno" por tutor+polo, achando o dia/turno mais comum de cada um
   const grpMap={};
   semAluno.forEach(o=>{
@@ -1987,6 +2029,30 @@ function renderVagasKPIs(){
     <div class="kpi kpi-green"><div class="kpi-label">Autorizadas</div><div class="kpi-value">${fmtNum(k.autorizadas||0)}</div><div class="kpi-detail">de ${fmtNum(k.total_vagas||0)}</div></div>
     <div class="kpi kpi-red"><div class="kpi-label">Prioridade Alta</div><div class="kpi-value">${fmtNum(k.prioridade_alta||0)}</div></div>
     <div class="kpi kpi-teal"><div class="kpi-label">Com Chamado SYDLE</div><div class="kpi-value">${fmtNum(k.com_chamado_aberto||0)}</div></div>`;
+
+  // Quebra por Laboratório/Curso
+  const vagas=_getVagas();
+  const porCurso={};
+  vagas.forEach(v=>{
+    const curso=v.cursos||'—';
+    if(!porCurso[curso]) porCurso[curso]={curso, tot:0, aum:0, sub:0, cp:0};
+    const c=porCurso[curso];
+    c.tot++;
+    if(v.status==='Aumento de Quadro') c.aum++; else c.sub++;
+    if(v.contratacao.includes('Com previsão')) c.cp++;
+  });
+  const cursoRows=Object.values(porCurso).sort((a,b)=>b.tot-a.tot);
+  const cursoTbody=document.getElementById('vagas-cat-tbody');
+  if(cursoTbody){
+    cursoTbody.innerHTML=cursoRows.map(c=>`<tr data-vcurso="${esc(c.curso)}" data-vtot="${c.tot}" data-vaum="${c.aum}" data-vsub="${c.sub}" data-vcp="${c.cp}">
+      <td style="font-size:12px;font-weight:600">${esc(c.curso)}</td>
+      <td style="text-align:right">${fmtNum(c.tot)}</td>
+      <td style="text-align:right;color:var(--yellow-d)">${fmtNum(c.aum)}</td>
+      <td style="text-align:right;color:var(--teal)">${fmtNum(c.sub)}</td>
+      <td style="text-align:right;color:var(--ok)">${fmtNum(c.cp)}</td>
+    </tr>`).join('');
+    if(!cursoRows.length) cursoTbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
+  }
 }
 function filterVagas(q){
   q=(q||'').toLowerCase().trim();
