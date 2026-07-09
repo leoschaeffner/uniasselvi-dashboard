@@ -165,15 +165,12 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <div class="sidebar-section-label">Tutores</div>
       <button class="sidebar-item" onclick="navTo('tutores-mec')"><span class="si-icon">👤</span><span class="si-label">Ficha dos Tutores</span></button>
     </div>
-    <div class="sidebar-section" id="sidebar-agendas-estudo" style="display:none">
-      <div class="sidebar-section-label">Análise de Agendas</div>
-      <button class="sidebar-item" onclick="navTo('agendas-estudo')"><span class="si-icon">📆</span><span class="si-label">Horários e Engajamento</span></button>
-    </div>
     <div class="sidebar-section" id="sidebar-ger" style="display:none">
       <div class="sidebar-section-label">Gerenciamento</div>
       <button class="sidebar-item" onclick="navTo('ger-visao')"><span class="si-icon">📋</span><span class="si-label">Visão Geral</span></button>
       <button class="sidebar-item" onclick="navTo('ger-ofertas')"><span class="si-icon">📊</span><span class="si-label">Ofertas</span></button>
       <button class="sidebar-item" onclick="navTo('ger-agendas')"><span class="si-icon">📆</span><span class="si-label">Agendas</span></button>
+      <button class="sidebar-item" onclick="navTo('agendas-estudo')"><span class="si-icon">🕐</span><span class="si-label">Horários e Engajamento</span></button>
       <button class="sidebar-item" onclick="navTo('ger-detalhe')"><span class="si-icon">🔍</span><span class="si-label">Detalhe</span></button>
     </div>
     <div class="sidebar-section" id="sidebar-vagas" style="display:none">
@@ -443,6 +440,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <!-- ═══ ANÁLISE DE AGENDAS (seção própria) ════════════════════════════════ -->
 <div class="page" id="page-agendas-estudo"><div class="container">
   <div class="ph"><div class="ph-title">Análise de Agendas — Horários e Engajamento</div><div class="ph-sub" id="ae-sub">—</div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">📊 Gerenciamento de Ofertas</div></div>
+    <div id="ae-ofertas-resumo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:6px 0"></div>
+  </div>
   <div class="kpi-row" id="ae-kpis"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card"><div class="card-hdr"><div class="card-title">📅 Distribuição por Dia da Semana</div></div><div class="card-body" id="ae-dias"></div></div>
@@ -722,7 +723,7 @@ const pageTitles={
   'port-praticas':['Práticas','Portfólios'],'port-polos':['Polos','Portfólios'],
   'port-tutores':['Tutores','Portfólios'],
   'tutores-mec':['Tutores','Gestão de Tutores'],
-  'agendas-estudo':['Horários e Engajamento','Análise de Agendas'],
+  'agendas-estudo':['Horários e Engajamento','Gerenciamento'],
   'ger-visao':['Visão Geral','Gerenciamento'],'ger-ofertas':['Ofertas','Gerenciamento'],
   'ger-contratacao':['Contratação','Gerenciamento'],
   'ger-agendas':['Agendas','Gerenciamento'],'ger-detalhe':['Detalhe','Gerenciamento'],
@@ -1071,7 +1072,7 @@ function openAlunosModal(){
 function renderGerenciamento(){
   if(!DB.tem_gerenciamento)return;
   if(!GER_DB) GER_DB = DB;  // PATCH 18: fallback antes do seletor de semestre inicializar
-  document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';document.getElementById('sidebar-agendas-estudo').style.display='';
+  document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';
   const k=GER_DB.ger_kpis;document.getElementById('gv-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
   document.getElementById('gv-kpis').innerHTML=`
     <div class="kpi kpi-green" title="Total de combinações tutor × laboratório × ordem no GIOCONDA"><div class="kpi-label">Total Ofertas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
@@ -1244,42 +1245,54 @@ function filterGerDetalhe(q){
     t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
-  // PATCH 32: garantir que TODO tutor ativo apareça no Detalhe — versão reforçada
-  // do PATCH 31. A versão anterior pulava a criação da linha sintética sempre que
-  // o polo+categoria já tinha QUALQUER oferta (mesmo de outro tutor que divide o
-  // mesmo lab) — isso deixava invisível quem divide polo com um colega mais ativo,
-  // porque as ofertas do colega "ocupavam" o polo+categoria e bloqueavam a checagem.
-  // Agora o critério é só um: o tutor específico (por nome, com tolerância a
-  // pequenas variações de grafia) aparece em algum grupo de 'sorted' pro polo dele?
-  // Se não, sempre entra como linha sintética — não duplica porque o match agora
-  // é por NOME, não mais por "existe alguma oferta pro polo+categoria".
+  // PATCH 33: reforça ainda mais o PATCH 32 — corrige falso-positivo de "Sem
+  // oferta no GIOCONDA" reportado pelo Leo (tutor com gerenciamento REAL em
+  // 2026/2 ainda assim marcado como sem oferta). Causa provável: a grafia do
+  // polo no GIOCONDA (LABORATORIO, ex: "LAP - Blumenau/SC - Salto Do Norte
+  // (Centro Universitário Dante)") pode diferir da grafia no CONTROLE (POLO)
+  // em acentos, espaços duplicados ou parênteses — a normalização anterior só
+  // tirava o prefixo "LAP -". Agora: (1) normalização de polo remove também
+  // acentos e o conteúdo entre parênteses; (2) além do match por polo, existe
+  // um fallback GLOBAL por nome — se o tutor aparece em QUALQUER lugar de
+  // 'sorted' com dado real (independente do polo bater), não é mais marcado
+  // como "sem oferta", porque o dado dele claramente existe em algum lugar.
   (function(){
-    function _normPoloComparavel(p){ return (p||'').replace(/^LAP\s*[-–]\s*/i,'').trim().toLowerCase(); }
+    function _normPoloComparavel(p){
+      var s=(p||'').replace(/^LAP\s*[-–]\s*/i,'');
+      s=s.replace(/\([^)]*\)/g,'');  // remove parenteses e conteudo (ex: nome do centro universitario)
+      s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');  // remove acentos
+      return s.trim().toLowerCase().replace(/\s+/g,' ');
+    }
     function _primeiroUltimo(key){
       var pts=key.split(' ').filter(Boolean);
       return pts.length>=2 ? pts[0]+' '+pts[pts.length-1] : key;
     }
-    // Índice por polo -> lista de {key, fl} dos tutores já representados em 'sorted'
-    var _porPolo={};
+    // Índice por polo -> lista de {key, fl} + índice GLOBAL (todos os polos juntos)
+    var _porPolo={}; var _global=[];
     sorted.forEach(function(t){
       if(!t.tutor) return;  // buckets "sem tutor" não contam como representação de ninguém específico
       var poloN=_normPoloComparavel(t.polo);
       var key=_normTutorKey(t.tutor);
-      (_porPolo[poloN]=_porPolo[poloN]||[]).push({key:key, fl:_primeiroUltimo(key)});
+      var entry={key:key, fl:_primeiroUltimo(key)};
+      (_porPolo[poloN]=_porPolo[poloN]||[]).push(entry);
+      _global.push(entry);
     });
     (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n; }).forEach(function(t){
       var poloN=_normPoloComparavel(t.p);
       var alvoKey=_normTutorKey(t.n);
       var alvoFL=_primeiroUltimo(alvoKey);
-      var candidatos=_porPolo[poloN]||[];
-      var jaRepresentado=candidatos.some(function(c){ return c.key===alvoKey || c.fl===alvoFL; });
+      var candidatosPolo=_porPolo[poloN]||[];
+      var jaRepresentado=candidatosPolo.some(function(c){ return c.key===alvoKey || c.fl===alvoFL; })
+        || _global.some(function(c){ return c.key===alvoKey || c.fl===alvoFL; });  // fallback global por nome
       if(jaRepresentado) return;
       if(q && !((t.n+t.p+(t.c||'')).toLowerCase().includes(q))) return;
       if(cat && t.c!==cat) return;
       sorted.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
       // Registrar imediatamente pra não adicionar o mesmo tutor 2x se ele tiver
       // mais de uma entrada em DB.tutores pro mesmo polo (ex: registro duplicado)
-      (_porPolo[poloN]=_porPolo[poloN]||[]).push({key:alvoKey, fl:alvoFL});
+      var novaEntry={key:alvoKey, fl:alvoFL};
+      (_porPolo[poloN]=_porPolo[poloN]||[]).push(novaEntry);
+      _global.push(novaEntry);
     });
   })();
   // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
@@ -1962,6 +1975,69 @@ function openCategoriaHorariosModal(categoria){
   document.getElementById('m-body').innerHTML=html;
   document.getElementById('modal-overlay').classList.add('show');
 }
+function openDiaSemanaModal(dia){
+  const ofertas=_getOfertasAgenda().filter(o=>o.dia_semana===dia);
+  const porHorario={};
+  ofertas.forEach(o=>{
+    const h=o.hr_agenda||'(sem horário registrado)';
+    const turno=o.turno||'—';
+    const key=turno+'|||'+h;
+    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,mat:0,agend:0};
+    const p=porHorario[key];
+    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
+  });
+  const _turnoOrdem={'Manhã':0,'Tarde':1,'Noite':2,'Madrugada':3};
+  const rows=Object.values(porHorario).sort((a,b)=>{
+    const ta=_turnoOrdem[a.turno]??9, tb=_turnoOrdem[b.turno]??9;
+    if(ta!==tb) return ta-tb;
+    return a.horario.localeCompare(b.horario,'pt-BR',{numeric:true});
+  });
+  document.getElementById('m-title').textContent=dia;
+  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} gerenciamentos neste dia — comparativo entre horários dentro do mesmo turno`;
+  let html='';
+  if(rows.length){
+    // Agrupar por turno pra comparar 1º x 2º horário lado a lado dentro do mesmo turno
+    const porTurno={};
+    rows.forEach(r=>{ (porTurno[r.turno]=porTurno[r.turno]||[]).push(r); });
+    Object.keys(porTurno).sort((a,b)=>(_turnoOrdem[a]??9)-(_turnoOrdem[b]??9)).forEach(turno=>{
+      const slots=porTurno[turno];
+      const corTurno=(turno==='Madrugada')?'var(--red)':'var(--teal)';
+      html+=`<div class="sec-label" style="color:${corTurno}">${esc(turno)}</div>`;
+      const maxQtd=Math.max(...slots.map(s=>s.qtd),1);
+      // Alerta de gap entre 1º e 2º horário do mesmo turno (o que o Anderson quer ver)
+      if(slots.length>=2){
+        const maiorQtd=Math.max(...slots.map(s=>s.qtd));
+        const menorQtd=Math.min(...slots.map(s=>s.qtd));
+        if(maiorQtd>0 && (maiorQtd-menorQtd)/maiorQtd>=0.3){
+          const gapPct=Math.round((maiorQtd-menorQtd)/maiorQtd*100);
+          html+=`<div style="background:var(--yellow-dim);border-left:3px solid var(--yellow-d);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px">
+            ⚠ Gap de ${gapPct}% entre o horário mais e o menos gerenciado deste turno — vale investigar se o tutor está deixando de gerenciar um dos dois horários.
+          </div>`;
+        }
+      }
+      slots.forEach((r,i)=>{
+        const eng=r.mat?Math.round(r.agend/r.mat*100):0;
+        const w=Math.round(r.qtd/maxQtd*100);
+        const cor=pctColor(eng);
+        const ordinal=slots.length>1?`${i+1}º horário — `:'';
+        html+=`<div style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px">
+            <strong>${ordinal}${esc(r.horario)}</strong>
+            <span style="color:var(--muted)">${fmtNum(r.qtd)} gerenciamento${r.qtd!==1?'s':''}</span>
+          </div>
+          <div style="height:14px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px">
+            <div style="height:100%;width:${w}%;background:var(--teal);border-radius:4px"></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">${fmtNum(r.agend)} agendados de ${fmtNum(r.mat)} matriculados — <span style="color:${cor};font-weight:700">${eng}% de engajamento</span></div>
+        </div>`;
+      });
+    });
+  }else{
+    html='<div style="color:var(--muted);text-align:center;padding:24px">Sem gerenciamentos registrados para este dia.</div>';
+  }
+  document.getElementById('m-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
 function openTurnoModal(turno){
   const ofertas=_getOfertasAgenda().filter(o=>o.turno===turno);
   const porHorario={};
@@ -2008,6 +2084,59 @@ function _getOfertasAgenda(){
 const _DIAS_SEMANA_ORDEM=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const _TURNOS_ORDEM=['Manhã','Tarde','Noite','Madrugada'];
 function renderAgendasEstudo(){
+  // PATCH 34: resumo "Gerenciamento de Ofertas" pedido pelo Anderson/Leo — usa
+  // TODAS as ofertas do semestre selecionado (com e sem agenda, com e sem tutor),
+  // não só as que já têm data de gerenciamento registrada.
+  const todasOfertas = (typeof GER_DB!=='undefined' && GER_DB ? GER_DB : DB).ger_ofertas || [];
+  const totalDistintas = todasOfertas.length;
+  const comTutor = todasOfertas.filter(o=>o.tem_tutor);
+  const semTutor = todasOfertas.filter(o=>!o.tem_tutor);
+  const geridas = todasOfertas.filter(o=>o.gerenciado);
+  const matTotal = todasOfertas.reduce((s,o)=>s+(o.alunos_mat||0),0);
+  const matComTutor = comTutor.reduce((s,o)=>s+(o.alunos_mat||0),0);
+  const matSemTutor = semTutor.reduce((s,o)=>s+(o.alunos_mat||0),0);
+  const agendComTutor = comTutor.reduce((s,o)=>s+(o.alunos_agend||0),0);
+  // "Presença lançada": não existe campo distinto de presença nos dados de origem —
+  // usamos como proxy os agendamentos DENTRO das ofertas efetivamente GERIDAS
+  // (tutor processou a sessão), que é o melhor indicativo disponível de que a
+  // presença foi de fato registrada. Confirmar com o Anderson se essa leitura bate.
+  const presencaLancada = geridas.reduce((s,o)=>s+(o.alunos_agend||0),0);
+
+  const pctGeridas = totalDistintas?Math.round(geridas.length/totalDistintas*1000)/10:0;
+  const pctAgend = matComTutor?Math.round(agendComTutor/matComTutor*1000)/10:0;
+  const pctPresenca = matComTutor?Math.round(presencaLancada/matComTutor*1000)/10:0;
+
+  document.getElementById('ae-ofertas-resumo').innerHTML = `
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">Total de Ofertas Distintas</div>
+      <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(totalDistintas)}</div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">Ofertas Disponíveis (com e sem tutor)</div>
+      <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(totalDistintas)}</div>
+      <div style="font-size:10px;color:var(--muted)">${fmtNum(comTutor.length)} com tutor · ${fmtNum(semTutor.length)} sem tutor</div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">Ofertas Gerenciadas</div>
+      <div style="font-size:22px;font-weight:800;color:var(--ok)">${fmtNum(geridas.length)} <span style="font-size:13px;font-weight:700">(${pctGeridas}%)</span></div>
+      <div style="font-size:10px;color:var(--muted)">do total disponível</div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">Alunos Matriculados (com e sem tutor)</div>
+      <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(matTotal)}</div>
+      <div style="font-size:10px;color:var(--muted)">${fmtNum(matComTutor)} com tutor · ${fmtNum(matSemTutor)} sem tutor</div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--muted)">Agendamentos</div>
+      <div style="font-size:22px;font-weight:800;color:var(--teal)">${fmtNum(agendComTutor)} <span style="font-size:13px;font-weight:700">(${pctAgend}%)</span></div>
+      <div style="font-size:10px;color:var(--muted)">do total matriculado com tutor</div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px" title="Sem campo distinto de presença na fonte de dados — proxy: agendamentos dentro de ofertas efetivamente geridas">
+      <div style="font-size:11px;color:var(--muted)">Presença Lançada ⚠</div>
+      <div style="font-size:22px;font-weight:800;color:var(--yellow-d)">${fmtNum(presencaLancada)} <span style="font-size:13px;font-weight:700">(${pctPresenca}%)</span></div>
+      <div style="font-size:10px;color:var(--muted)">do total matriculado com tutor — proxy, ver observação</div>
+    </div>`;
+
   const ofertas=_getOfertasAgenda();
   const total=ofertas.length;
   const incomuns=ofertas.filter(o=>o.horario_incomum);
@@ -2029,10 +2158,11 @@ function renderAgendasEstudo(){
   document.getElementById('ae-dias').innerHTML=_DIAS_SEMANA_ORDEM.map(d=>{
     const v=porDia[d]||0; const w=Math.round(v/maxDia*100);
     const cor=(d==='Domingo')?'var(--red)':'var(--teal)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openDiaSemanaModal('${d}')" title="Clique para ver o comparativo 1º x 2º horário desse dia">
       <span style="font-size:11px;min-width:56px;font-weight:600">${d}</span>
       <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
       <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
+      <span style="font-size:11px;color:var(--muted)">↗</span>
     </div>`;
   }).join('');
 
