@@ -1244,27 +1244,42 @@ function filterGerDetalhe(q){
     t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
-  // PATCH 31: garantir que TODO tutor ativo apareça no Detalhe, mesmo que o
-  // GIOCONDA ainda não tenha NENHUMA oferta cadastrada pro polo+categoria dele
-  // (lab novo/ainda não provisionado). O PATCH 21 do processar.py já cobre o
-  // caso em que a oferta existe com TUTOR em branco; aqui cobrimos o caso em
-  // que a oferta nem existe — sem isso, o tutor simplesmente sumia da tela
-  // mesmo aparecendo normalmente em Ficha dos Tutores. Só adiciona a linha
-  // sintética quando o polo+categoria não tem NENHUMA linha no gerDetData —
-  // se já existir alguma (mesmo sem tutor), não duplica (evita reintroduzir
-  // o bug de duplicata do PATCH 26/28).
+  // PATCH 32: garantir que TODO tutor ativo apareça no Detalhe — versão reforçada
+  // do PATCH 31. A versão anterior pulava a criação da linha sintética sempre que
+  // o polo+categoria já tinha QUALQUER oferta (mesmo de outro tutor que divide o
+  // mesmo lab) — isso deixava invisível quem divide polo com um colega mais ativo,
+  // porque as ofertas do colega "ocupavam" o polo+categoria e bloqueavam a checagem.
+  // Agora o critério é só um: o tutor específico (por nome, com tolerância a
+  // pequenas variações de grafia) aparece em algum grupo de 'sorted' pro polo dele?
+  // Se não, sempre entra como linha sintética — não duplica porque o match agora
+  // é por NOME, não mais por "existe alguma oferta pro polo+categoria".
   (function(){
     function _normPoloComparavel(p){ return (p||'').replace(/^LAP\s*[-–]\s*/i,'').trim().toLowerCase(); }
-    var _tutoresJaListados={}; sorted.forEach(function(t){ _tutoresJaListados[_normTutorKey(t.tutor)+'|||'+(t.polo||'')]=true; });
-    var _poloCatComOferta={}; gerDetData.forEach(function(r){ _poloCatComOferta[_normPoloComparavel(r.polo)+'|||'+(r.categoria||'')]=true; });
+    function _primeiroUltimo(key){
+      var pts=key.split(' ').filter(Boolean);
+      return pts.length>=2 ? pts[0]+' '+pts[pts.length-1] : key;
+    }
+    // Índice por polo -> lista de {key, fl} dos tutores já representados em 'sorted'
+    var _porPolo={};
+    sorted.forEach(function(t){
+      if(!t.tutor) return;  // buckets "sem tutor" não contam como representação de ninguém específico
+      var poloN=_normPoloComparavel(t.polo);
+      var key=_normTutorKey(t.tutor);
+      (_porPolo[poloN]=_porPolo[poloN]||[]).push({key:key, fl:_primeiroUltimo(key)});
+    });
     (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n; }).forEach(function(t){
-      var keyExata=_normTutorKey(t.n)+'|||'+(t.p||'');
-      if(_tutoresJaListados[keyExata]) return;  // já apareceu de alguma forma
-      var poloCatKey=_normPoloComparavel(t.p)+'|||'+(t.c||'');
-      if(_poloCatComOferta[poloCatKey]) return;  // já existe oferta pra esse polo+categoria — não duplicar
+      var poloN=_normPoloComparavel(t.p);
+      var alvoKey=_normTutorKey(t.n);
+      var alvoFL=_primeiroUltimo(alvoKey);
+      var candidatos=_porPolo[poloN]||[];
+      var jaRepresentado=candidatos.some(function(c){ return c.key===alvoKey || c.fl===alvoFL; });
+      if(jaRepresentado) return;
       if(q && !((t.n+t.p+(t.c||'')).toLowerCase().includes(q))) return;
       if(cat && t.c!==cat) return;
       sorted.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
+      // Registrar imediatamente pra não adicionar o mesmo tutor 2x se ele tiver
+      // mais de uma entrada em DB.tutores pro mesmo polo (ex: registro duplicado)
+      (_porPolo[poloN]=_porPolo[poloN]||[]).push({key:alvoKey, fl:alvoFL});
     });
   })();
   // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
@@ -1897,6 +1912,56 @@ function getCatColor(cat){if(!cat)return 'var(--green)';for(var k in CAT_COLORS)
 
 
 // ── ANÁLISE DE AGENDAS (seção própria) ─────────────────────────────────────────
+function openCategoriaHorariosModal(categoria){
+  const ofertas=_getOfertasAgenda().filter(o=>o.categoria===categoria);
+  const porHorario={};
+  ofertas.forEach(o=>{
+    const h=o.hr_agenda||'(sem horário registrado)';
+    const turno=o.turno||'—';
+    const key=turno+'|||'+h;
+    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,mat:0,agend:0};
+    const p=porHorario[key];
+    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
+  });
+  // Ordena por turno (ordem cronológica do dia) e depois por horário dentro do turno
+  const _turnoOrdem={'Manhã':0,'Tarde':1,'Noite':2,'Madrugada':3};
+  const rows=Object.values(porHorario).sort((a,b)=>{
+    const ta=_turnoOrdem[a.turno]??9, tb=_turnoOrdem[b.turno]??9;
+    if(ta!==tb) return ta-tb;
+    return a.horario.localeCompare(b.horario,'pt-BR',{numeric:true});
+  });
+  const max=Math.max(...rows.map(r=>r.qtd),1);
+  document.getElementById('m-title').textContent='Horários — '+catParaCurso(categoria);
+  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste lab/curso · horários agrupados por turno`;
+  let html='';
+  if(rows.length){
+    let turnoAtual=null;
+    rows.forEach(r=>{
+      if(r.turno!==turnoAtual){
+        turnoAtual=r.turno;
+        const corTurno=(turnoAtual==='Madrugada')?'var(--red)':'var(--teal)';
+        html+=`<div class="sec-label" style="color:${corTurno}">${esc(turnoAtual)}</div>`;
+      }
+      const eng=r.mat?Math.round(r.agend/r.mat*100):0;
+      const w=Math.round(r.qtd/max*100);
+      const cor=pctColor(eng);
+      html+=`<div style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px">
+          <strong>${esc(r.horario)}</strong>
+          <span style="color:var(--muted)">${fmtNum(r.qtd)} gerenciamento${r.qtd!==1?'s':''}</span>
+        </div>
+        <div style="height:14px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px">
+          <div style="height:100%;width:${w}%;background:var(--teal);border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${fmtNum(r.agend)} agendados de ${fmtNum(r.mat)} matriculados — <span style="color:${cor};font-weight:700">${eng}% de engajamento</span></div>
+      </div>`;
+    });
+  }else{
+    html='<div style="color:var(--muted);text-align:center;padding:24px">Sem ofertas registradas para este lab/curso.</div>';
+  }
+  document.getElementById('m-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('show');
+}
 function openTurnoModal(turno){
   const ofertas=_getOfertasAgenda().filter(o=>o.turno===turno);
   const porHorario={};
@@ -2000,12 +2065,12 @@ function renderAgendasEstudo(){
   const catRows=Object.values(porCat).sort((a,b)=>b.tot-a.tot);
   document.getElementById('ae-cat-tbody').innerHTML=catRows.map(c=>{
     const eng=c.mat?Math.round(c.agend/c.mat*100):0;
-    return `<tr data-vcat="${esc(catParaCurso(c.cat))}" data-vtot="${c.tot}" data-vinc="${c.inc}" data-vsa="${c.sa}" data-veng="${eng}">
+    return `<tr data-vcat="${esc(catParaCurso(c.cat))}" data-vtot="${c.tot}" data-vinc="${c.inc}" data-vsa="${c.sa}" data-veng="${eng}" style="cursor:pointer" onclick="openCategoriaHorariosModal('${esc(c.cat).replace(/'/g,"\\'")}')" title="Clique para ver os principais horários deste lab/curso">
       <td style="font-size:12px;font-weight:600">${esc(catParaCurso(c.cat))}</td>
       <td style="text-align:right">${fmtNum(c.tot)}</td>
       <td style="text-align:right;color:${c.inc>0?'var(--yellow-d)':'var(--muted)'}">${fmtNum(c.inc)}</td>
       <td style="text-align:right;color:${c.sa>0?'var(--red)':'var(--muted)'}">${fmtNum(c.sa)}</td>
-      <td>${progCell(eng)}</td>
+      <td>${progCell(eng)} <span style="font-size:11px;color:var(--muted)">↗</span></td>
     </tr>`;
   }).join('');
   if(!catRows.length) document.getElementById('ae-cat-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
