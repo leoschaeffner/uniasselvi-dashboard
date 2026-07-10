@@ -2651,15 +2651,15 @@ function initSemestres() {
   tabs.innerHTML = '';  // PATCH 11: evita duplicar botões se initSemestres rodar mais de uma vez
   // Botão "Ambos" + um botão por semestre
   const opcoes = ['Ambos', ...sems];
-  // Semestre padrão = o que tem mais envios (tem dados reais)
-  const _semEnvios = sems.map(s => {
-    const d = (DB.dados_por_semestre || {})[s] || {};
-    return { s, e: (d.kpis || {}).enviaram || 0 };
-  });
-  const _semComDados = _semEnvios.filter(x => x.e > 0);
-  _SEM_ATUAL = _semComDados.length > 0
-    ? _semComDados.sort((a,b) => b.e - a.e)[0].s  // o com mais envios
-    : sems[sems.length - 1];
+  // PATCH 35: semestre padrão = SEMPRE o semestre atual/ativo configurado no
+  // processar.py (DB.semestre), não o que tem mais envios históricos. A lógica
+  // anterior escolhia por "mais envios de portfólio", o que fazia o dashboard
+  // abrir sozinho no semestre ANTERIOR sempre que o atual ainda não tinha
+  // portfólio (situação normal logo no início de um semestre novo) — isso
+  // causava exibições confusas em várias telas (ex: Detalhe mostrando dado de
+  // 2026/1 com a aba "2026/2" sem deixar claro que o semestre efetivamente
+  // carregado era outro).
+  _SEM_ATUAL = (DB.semestre && sems.includes(DB.semestre)) ? DB.semestre : sems[sems.length - 1];
 
   opcoes.forEach(sem => {
     const btn = document.createElement('button');
