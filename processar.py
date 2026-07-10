@@ -2058,7 +2058,7 @@ def _processar_gerenciamento_novo(df_g):
     _SUBCURSO_LABEL = {
         'BFI': 'Fisioterapia', 'BTO': 'Terapia Ocupacional',
         'COS-TIP': 'Estética e Cosmética', 'TIP-COS': 'Estética e Cosmética', 'COS': 'Estética e Cosmética',
-        'BBI': 'Biomedicina Estética', 'BFR': 'Farmácia',
+        'BBI': 'Biomedicina', 'BFR': 'Farmácia',
         'EMF-ISN': 'Enfermagem/Instrumentação', 'NTR': 'Nutrição',
     }
     def _extrair_curso(v):
@@ -2421,7 +2421,7 @@ def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
             _SUBCURSO_LABEL_INJ = {
                 'BFI': 'Fisioterapia', 'BTO': 'Terapia Ocupacional',
                 'COS-TIP': 'Estética e Cosmética', 'TIP-COS': 'Estética e Cosmética', 'COS': 'Estética e Cosmética',
-                'BBI': 'Biomedicina Estética', 'BFR': 'Farmácia',
+                'BBI': 'Biomedicina', 'BFR': 'Farmácia',
                 'EMF-ISN': 'Enfermagem/Instrumentação', 'NTR': 'Nutrição',
             }
             ofertas.append({
