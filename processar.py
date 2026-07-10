@@ -2040,7 +2040,7 @@ def _processar_gerenciamento_novo(df_g):
     c_polo = gc('LABORATORIO'); c_cat = gc('CATEGORIA'); c_exp = gc('NOME_EXPERIMENTO')
     c_tutor = gc('TUTOR'); c_mat = gc('ALUNOS_MATRICULADOS'); c_agend = gc('ALUNOS_AGENDADOS')
     c_capa = gc('CAPACIDADE_TOTAL'); c_ofe = gc('OFERTAS_CADASTRADAS'); c_situ = gc('SITU_OFERTA')
-    c_dt_ag = gc('DT_GERENCIADA'); c_hr_ag = gc('HR_GERENCIADA')
+    c_dt_ag = gc('DT_GERENCIADA'); c_hr_ag = gc('HR_GERENCIADA'); c_cursos = gc('CURSOS')
     def extrair_ordem_exp(val):
         m = _re.match(r'O\.(\d+):\s*(.*)', str(val or ''))
         if m: return f'Ordem {m.group(1)}', m.group(2).strip()
@@ -2052,6 +2052,22 @@ def _processar_gerenciamento_novo(df_g):
     # não virar "categoria fantasma" duplicada no seletor/agregações
     _CAT_RAW_NORM = {'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)'}
     df['_CAT']   = df[c_cat].astype(str).str.strip().replace(_CAT_RAW_NORM) if c_cat  else ''
+    # PATCH 42: curso específico (BFI/BTO/COS-TIP/etc.) — pedido do Leo pra poder
+    # filtrar Multidisciplinar III por especialidade (Fisioterapia/T.O./Estética)
+    # em vez de só pela categoria ampla, que mistura as três no mesmo filtro.
+    _SUBCURSO_LABEL = {
+        'BFI': 'Fisioterapia', 'BTO': 'Terapia Ocupacional',
+        'COS-TIP': 'Estética e Cosmética', 'TIP-COS': 'Estética e Cosmética', 'COS': 'Estética e Cosmética',
+        'BBI': 'Biomedicina Estética', 'BFR': 'Farmácia',
+        'EMF-ISN': 'Enfermagem/Instrumentação', 'NTR': 'Nutrição',
+    }
+    def _extrair_curso(v):
+        s = str(v or '').strip()
+        if not s or s == 'nan': return ''
+        primeiro = s.split('|')[0].strip()
+        return primeiro
+    df['_CURSO'] = df[c_cursos].apply(_extrair_curso) if c_cursos else ''
+    df['_SUBCURSO'] = df['_CURSO'].map(lambda c: _SUBCURSO_LABEL.get(c, c))
     df['_TUTOR'] = df[c_tutor].fillna('').astype(str).str.strip().replace('nan','') if c_tutor else ''
     df['_MAT']   = pd.to_numeric(df[c_mat],  errors='coerce').fillna(0).astype(int) if c_mat  else 0
     df['_AGEND'] = pd.to_numeric(df[c_agend],errors='coerce').fillna(0).astype(int) if c_agend else 0
@@ -2216,6 +2232,7 @@ def _processar_gerenciamento_novo(df_g):
             'dt_agenda': row['_DT_AG_ISO'], 'hr_agenda': row['_HR_AG'],
             'dia_semana': row['_DIA_SEMANA'], 'turno': row['_TURNO'],
             'horario_incomum': bool(row['_HORARIO_INCOMUM']), 'sem_alunos': bool(row['_SEM_ALUNOS']),
+            'curso': row['_CURSO'], 'subcurso': row['_SUBCURSO'],
         })
     return {
         'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
@@ -2353,32 +2370,71 @@ def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
     """PATCH 32: injeta uma oferta-placeholder pra cada tutor ativo cujo
     polo+categoria não tem NENHUMA linha no GIOCONDA, e recalcula todos os
     agregados a partir da lista de ofertas resultante."""
-    import re as _re_inj
+    import re as _re_inj, unicodedata as _ud_inj
     def _norm_polo_inj(s):
+        # PATCH 45: mesma robustez do PATCH 33 (JS) — sem remover parênteses/
+        # acentos aqui, tutores com dado REAL no GIOCONDA (que costuma usar a
+        # grafia curta do polo, ex: "Blumenau/SC - Salto Do Norte") recebiam uma
+        # linha sintética extra "sem oferta" só porque o CONTROLE usa a grafia
+        # mais completa (ex: "...Salto Do Norte (Centro Universitário Dante)"),
+        # duplicando o tutor na tela (uma linha real + uma fantasma).
         s = str(s or '').strip()
         s = _re_inj.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_inj.IGNORECASE)
-        return s.strip().lower()
+        s = _re_inj.sub(r'\([^)]*\)', '', s)  # remove parênteses e conteúdo
+        s = _ud_inj.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_inj.category(c) != 'Mn')  # remove acentos
+        return _re_inj.sub(r'\s+', ' ', s).strip().lower()
 
     ofertas = list(ger_dados.get('ger_ofertas', []))
     polo_cat_existentes = set((_norm_polo_inj(o['polo']), o['categoria']) for o in ofertas)
 
+    # PATCH 41: categorias reais válidas (as mesmas que aparecem de verdade no
+    # GIOCONDA) — usado pra "abrir" categorias compostas do CONTROLE (ex:
+    # "ENGMAKER+QUÍMICA E FÍSICA", usada pra tutores que cobrem os dois cursos)
+    # em entradas separadas de categoria real, em vez de vazar a string
+    # composta inteira como se fosse uma categoria válida no filtro.
+    _CATEGORIAS_REAIS_GIOCONDA = {
+        'ENF-INS (Multidisciplinar II)', 'BIO-FAR (Multidisciplinar I)',
+        'BIO-FISIO-EST-TO (Multidisciplinar III)', 'QUÍMICA E FÍSICA',
+        'ENGMAKER', 'NUTRI (Multidisciplinar IV)',
+    }
+    def _categorias_validas_para(cat_raw):
+        cat_raw = (cat_raw or '').strip()
+        if cat_raw in _CATEGORIAS_REAIS_GIOCONDA:
+            return [cat_raw]
+        partes = [p.strip() for p in cat_raw.split('+') if p.strip() in _CATEGORIAS_REAIS_GIOCONDA]
+        return partes or ([cat_raw] if cat_raw else [])
+
     injetadas = 0
     for t in tutores_ativos:
-        if t.get('_anonimo') or not t.get('n') or not t.get('p'):
+        # PATCH 40: pseudo-tutores de "Aviso de Portfólio" (submissões que não
+        # bateram com nenhum tutor real) não têm _anonimo=True, mas também não
+        # são tutores de verdade — sem esse filtro extra, eles vazavam uma
+        # categoria fantasma "Aviso de Portfólio" pro filtro de Gerenciamento.
+        if t.get('_anonimo') or t.get('c') == 'Aviso de Portfólio' or not t.get('n') or not t.get('p'):
             continue
-        chave = (_norm_polo_inj(t['p']), t.get('c', ''))
-        if chave in polo_cat_existentes:
-            continue
-        ofertas.append({
-            'polo': t['p'], 'categoria': t.get('c', ''), 'ordem': '',
-            'pratica': 'Sem oferta cadastrada no GIOCONDA', 'tutor': t['n'],
-            'tem_tutor': True, 'tem_agenda': False, 'gerenciado': False,
-            'alunos_mat': 0, 'alunos_agend': 0, 'dt_agenda': '', 'hr_agenda': '',
-            'dia_semana': '', 'turno': '', 'horario_incomum': False, 'sem_alunos': False,
-            '_sintetico': True,
-        })
-        polo_cat_existentes.add(chave)
-        injetadas += 1
+        for cat_valida in _categorias_validas_para(t.get('c', '')):
+            chave = (_norm_polo_inj(t['p']), cat_valida)
+            if chave in polo_cat_existentes:
+                continue
+            _cursos_t = t.get('cursos', '') or ''
+            _SUBCURSO_LABEL_INJ = {
+                'BFI': 'Fisioterapia', 'BTO': 'Terapia Ocupacional',
+                'COS-TIP': 'Estética e Cosmética', 'TIP-COS': 'Estética e Cosmética', 'COS': 'Estética e Cosmética',
+                'BBI': 'Biomedicina Estética', 'BFR': 'Farmácia',
+                'EMF-ISN': 'Enfermagem/Instrumentação', 'NTR': 'Nutrição',
+            }
+            ofertas.append({
+                'polo': t['p'], 'categoria': cat_valida, 'ordem': '',
+                'pratica': 'Sem oferta cadastrada no GIOCONDA', 'tutor': t['n'],
+                'tem_tutor': True, 'tem_agenda': False, 'gerenciado': False,
+                'alunos_mat': 0, 'alunos_agend': 0, 'dt_agenda': '', 'hr_agenda': '',
+                'dia_semana': '', 'turno': '', 'horario_incomum': False, 'sem_alunos': False,
+                'curso': _cursos_t, 'subcurso': _SUBCURSO_LABEL_INJ.get(_cursos_t, _cursos_t),
+                '_sintetico': True,
+            })
+            polo_cat_existentes.add(chave)
+            injetadas += 1
     if injetadas:
         print(f"[{ts()}] Tutores ativos sem nenhuma oferta no GIOCONDA (injetados como placeholder): {injetadas}")
     return _recalcular_agregados_de_ofertas(ofertas)
@@ -2398,11 +2454,15 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
     sem isso, um tutor recém-contratado fica invisível na tabela de Detalhe até o
     GIOCONDA "alcançar" o cadastro, mesmo já estando ativo em todas as outras telas.
     """
-    import re as _re_local
+    import re as _re_local, unicodedata as _ud_local
     def _norm_polo_ger(s):
+        # PATCH 45: consistente com _norm_polo_bf — remove parênteses e acentos também
         s = str(s or '').strip()
         s = _re_local.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_local.IGNORECASE)
-        return s.strip().lower()
+        s = _re_local.sub(r'\([^)]*\)', '', s)
+        s = _ud_local.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_local.category(c) != 'Mn')
+        return _re_local.sub(r'\s+', ' ', s).strip().lower()
 
     # PATCH 32: nome da prática -> curso específico (BFI/BTO/COS-TIP/BBI/BFR),
     # usado no backfill de tutor pra distinguir múltiplos tutores no mesmo polo
@@ -2693,8 +2753,17 @@ def processar_gerenciamento(p3):
 
 def carregar_alunos_hub(path_csv):
     """
-    Lê Relatorio_alunos_por_hub.csv e retorna dict com matrículas distintas
+    Lê o relatório de alunos (matrículas) e retorna dict com matrículas distintas
     por polo e por categoria — substitui a contagem inflacionada do GIOCONDA.
+
+    PATCH 43: detecta automaticamente entre dois esquemas de coluna diferentes
+    que já circularam com esse mesmo nome de arquivo:
+      - Esquema ANTIGO: POLO_HUB, GRUPO_HUB, TUTOR_PRATICA, SITUACAO_SEMESTRE
+        (granularidade: 1 linha por matrícula no semestre)
+      - Esquema NOVO: POLO, CATEGORIA_LABORATORIO, TUTOR, SITUACAO_OFERTA
+        (granularidade: 1 linha por aluno × experimento/prática — o mesmo aluno
+        aparece várias vezes, uma por prática; dedup por MATRICULA continua
+        sendo o jeito certo de contar "alunos distintos")
     """
     import unicodedata as _ud, re as _re
     if not path_csv or not os.path.isfile(path_csv):
@@ -2720,7 +2789,16 @@ def carregar_alunos_hub(path_csv):
         print(f"[{ts()}] ERRO: não foi possível ler {path_csv}")
         return None
 
-    # Apenas matrículas confirmadas
+    # PATCH 43: detectar esquema de colunas
+    esquema_novo = 'POLO' in df.columns and 'CATEGORIA_LABORATORIO' in df.columns and 'POLO_HUB' not in df.columns
+    if esquema_novo:
+        col_polo, col_grupo, col_tutor_pratica = 'POLO', 'CATEGORIA_LABORATORIO', 'TUTOR'
+        print(f"[{ts()}] Alunos hub: esquema NOVO detectado (POLO/CATEGORIA_LABORATORIO/TUTOR)")
+    else:
+        col_polo, col_grupo, col_tutor_pratica = 'POLO_HUB', 'GRUPO_HUB', 'TUTOR_PRATICA'
+        print(f"[{ts()}] Alunos hub: esquema ANTIGO detectado (POLO_HUB/GRUPO_HUB/TUTOR_PRATICA)")
+
+    # Apenas matrículas confirmadas (só existe no esquema antigo)
     if 'SITUACAO_SEMESTRE' in df.columns:
         df = df[df['SITUACAO_SEMESTRE'].str.strip() == 'Matrícula Confirmada'].copy()
 
@@ -2730,14 +2808,20 @@ def carregar_alunos_hub(path_csv):
         s = _re.sub(r'^LAP\s*[-–]\s*', '', s).strip()
         return _re.sub(r'\s+', ' ', s)
 
-    # Mapear GRUPO_HUB → nossas categorias
+    # Mapear categoria bruta (de qualquer um dos dois esquemas) → nossas categorias
     GRUPO_CAT = {
-        'MULTIDISCIPLINAR II':        'ENF-INS (Multidisciplinar II)',
-        'MULTIDISCIPLINAR I':         'BIO-FAR (Multidisciplinar I)',
-        'MULTIDISCIPLINAR III':       'BIO-FISIO-EST-TO (Multidisciplinar III)',
-        'ENGMAKER+QUIMICA E FISICA':  'QUÍMICA E FÍSICA',
-        'ENGMAKER':                   'ENGMAKER',
-        'MULTIDISCIPLINAR IV':        'NUTRI (Multidisciplinar IV)',
+        'MULTIDISCIPLINAR II':              'ENF-INS (Multidisciplinar II)',
+        'ENF-INS (MULTIDISCIPLINAR II)':    'ENF-INS (Multidisciplinar II)',
+        'MULTIDISCIPLINAR I':               'BIO-FAR (Multidisciplinar I)',
+        'BIO-FAR (MULTIDISCIPLINAR I)':     'BIO-FAR (Multidisciplinar I)',
+        'MULTIDISCIPLINAR III':             'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'FISIO-TO-EST-BIO (MULTIDISCIPLINAR III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'BIO-FISIO-EST-TO (MULTIDISCIPLINAR III)':  'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'ENGMAKER+QUIMICA E FISICA':         'QUÍMICA E FÍSICA',
+        'QUIMICA E FISICA':                  'QUÍMICA E FÍSICA',
+        'ENGMAKER':                          'ENGMAKER',
+        'MULTIDISCIPLINAR IV':               'NUTRI (Multidisciplinar IV)',
+        'NUTRI (MULTIDISCIPLINAR IV)':       'NUTRI (Multidisciplinar IV)',
     }
     def _grupo_para_cat(g):
         gn = _norm(g)
@@ -2750,11 +2834,11 @@ def carregar_alunos_hub(path_csv):
             if kn in gn and len(kn) > 8: return v
         return g
 
-    df['_POLO_NORM'] = df['POLO_HUB'].apply(_norm)
-    df['_CAT']       = df['GRUPO_HUB'].apply(_grupo_para_cat)
+    df['_POLO_NORM'] = df[col_polo].apply(_norm)
+    df['_CAT']       = df[col_grupo].apply(_grupo_para_cat)
 
     total_distintos = df['MATRICULA'].nunique()
-    print(f"[{ts()}] Matrículas DISTINTAS (ativos): {total_distintos:,}")
+    print(f"[{ts()}] Matrículas DISTINTAS (ativos): {total_distintos:,} (de {len(df):,} linhas)")
 
     # Por polo (chave normalizada)
     por_polo = (df.groupby('_POLO_NORM')['MATRICULA']
@@ -2769,9 +2853,9 @@ def carregar_alunos_hub(path_csv):
     por_cat = (df.groupby('_CAT')['MATRICULA']
                  .nunique().to_dict())
 
-    # ── Mapear TUTOR_PRATICA → subcurso para Multi 3 ────────────────────
+    # ── Mapear TUTOR_PRATICA/TUTOR → subcurso para Multi 3 ──────────────
     tutor_subcurso = {}  # nome_norm → 'Fisio'/'T.Oc'/'Est'
-    if 'TUTOR_PRATICA' in df.columns and 'DISCIPLINA' in df.columns and 'GRUPO_HUB' in df.columns:
+    if col_tutor_pratica in df.columns and 'DISCIPLINA' in df.columns and col_grupo in df.columns:
         import re as _re
         from collections import Counter as _Counter
         _FISIO = ['FISIOTERAPIA','CINESIOTERAPIA','ELETROTERM','CARDIORRESPIR',
@@ -2790,10 +2874,10 @@ def carregar_alunos_hub(path_csv):
         def _norm_tutor(s):
             s = _re.sub(r'\s*\(\d+\)\s*$', '', str(s or '')).strip()
             return _norm(s)
-        df3 = df[df['GRUPO_HUB'].str.upper().str.contains('MULTIDISCIPLINAR III|MULTI.*3|BIO-FISIO', na=False)].copy()
-        df3 = df3[df3['TUTOR_PRATICA'].notna() & (df3['TUTOR_PRATICA'].astype(str).str.strip().str.upper() != 'NAN')]
+        df3 = df[df[col_grupo].str.upper().str.contains('MULTIDISCIPLINAR III|MULTI.*3|BIO-FISIO|FISIO-TO-EST', na=False)].copy()
+        df3 = df3[df3[col_tutor_pratica].notna() & (df3[col_tutor_pratica].astype(str).str.strip().str.upper() != 'NAN')]
         df3['_sub'] = df3['DISCIPLINA'].apply(_classif_disc)
-        df3['_tnorm'] = df3['TUTOR_PRATICA'].apply(_norm_tutor)
+        df3['_tnorm'] = df3[col_tutor_pratica].apply(_norm_tutor)
         for tutor, grp in df3[df3['_sub'].notna()].groupby('_tnorm'):
             subs = list(grp['_sub'])
             if subs:
@@ -2925,11 +3009,16 @@ if __name__ == '__main__':
             # Detalhe (caso real: Suzieli Alves Rumpel, Estética, Novo
             # Hamburgo/RS, dividindo o polo com uma tutora de Fisio e outra de
             # T.O., todas sob "BIO-FISIO-EST-TO (Multidisciplinar III)").
-            import re as _re_bf
+            import re as _re_bf, unicodedata as _ud_bf
             def _norm_polo_bf(s):
+                # PATCH 45: mesma robustez aplicada em _norm_polo_inj — remove
+                # parênteses e acentos, não só o prefixo "LAP -".
                 s = str(s or '').strip()
                 s = _re_bf.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_bf.IGNORECASE)
-                return s.strip().lower()
+                s = _re_bf.sub(r'\([^)]*\)', '', s)
+                s = _ud_bf.normalize('NFD', s)
+                s = ''.join(c for c in s if _ud_bf.category(c) != 'Mn')
+                return _re_bf.sub(r'\s+', ' ', s).strip().lower()
             controle_tutor_lookup = {}
             for _t in dados.get('tutores', []):
                 if _t.get('_anonimo') or not _t.get('n') or not _t.get('p'): continue
