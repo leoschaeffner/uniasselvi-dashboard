@@ -2135,36 +2135,46 @@ def _processar_gerenciamento_novo(df_g):
     ger_polo = []
     for polo, grp in df.groupby('_POLO'):
         tuts = list(grp[grp['_TEM_TUTOR']]['_TUTOR'].dropna().unique())
+        # PATCH 38: dedup por categoria dentro do polo antes de somar alunos —
+        # a mesma linha de ALUNOS_MATRICULADOS se repete em cada prática/ordem
+        # do mesmo polo+categoria no GIOCONDA; somar direto inflava o total em
+        # ~5x (bug reportado pelo Leo: 42 mil vs 8 mil no KPI geral).
+        _dedup_p = grp.groupby('_CAT')[['_MAT','_AGEND','_CAPA']].max()
         ger_polo.append({
             'polo': str(polo), 'total_ofertas': len(grp),
             'gerenciadas': int(grp['_GERENCIADO'].sum()),
             'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
             'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
             'com_agenda': int(grp['_TEM_AGENDA'].sum()),
-            'alunos_matriculados': int(grp['_MAT'].sum()), 'alunos_agendados': int(grp['_AGEND'].sum()),
-            'capacidade': int(grp['_CAPA'].sum()), 'tutores_unicos': [str(t) for t in tuts],
+            'alunos_matriculados': int(_dedup_p['_MAT'].sum()), 'alunos_agendados': int(_dedup_p['_AGEND'].sum()),
+            'capacidade': int(_dedup_p['_CAPA'].sum()), 'tutores_unicos': [str(t) for t in tuts],
         })
     ger_polo.sort(key=lambda x: -x['sem_tutor'])
     ger_cat = []
     for cat, grp in df.groupby('_CAT'):
+        # PATCH 38: mesma correção — dedup por polo dentro da categoria antes de somar
+        _dedup_c = grp.groupby('_POLO')[['_MAT','_AGEND']].max()
         ger_cat.append({
             'categoria': str(cat), 'total_ofertas': len(grp),
             'gerenciadas': int(grp['_GERENCIADO'].sum()),
             'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
             'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
-            'alunos_matriculados': int(grp['_MAT'].sum()), 'alunos_agendados': int(grp['_AGEND'].sum()),
+            'alunos_matriculados': int(_dedup_c['_MAT'].sum()), 'alunos_agendados': int(_dedup_c['_AGEND'].sum()),
         })
     ger_cat.sort(key=lambda x: -x['total_ofertas'])
     ger_ordem = []; ordem_sort = {'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}
     for ordem in sorted(df['_ORDEM'].unique(), key=lambda x: ordem_sort.get(x,9)):
         if not ordem: continue
         grp = df[df['_ORDEM']==ordem]
+        # PATCH 38: mesma correção de dedup — dentro de uma ordem, um polo+categoria
+        # tem várias práticas distintas, todas repetindo o mesmo ALUNOS_MATRICULADOS
+        _dedup_o = grp.groupby(['_POLO','_CAT'])[['_MAT','_AGEND']].max()
         ger_ordem.append({
             'ordem': ordem, 'total_ofertas': len(grp),
             'gerenciadas': int(grp['_GERENCIADO'].sum()),
             'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
             'com_tutor': int(grp['_TEM_TUTOR'].sum()),
-            'alunos_matriculados': int(grp['_MAT'].sum()), 'alunos_agendados': int(grp['_AGEND'].sum()),
+            'alunos_matriculados': int(_dedup_o['_MAT'].sum()), 'alunos_agendados': int(_dedup_o['_AGEND'].sum()),
             'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(ordem,''),
         })
     ger_contratacao = []
@@ -2214,6 +2224,166 @@ def _processar_gerenciamento_novo(df_g):
     }
 
 
+# PATCH 32: garante que TODO tutor ativo apareça no gerenciamento (Contratação,
+# polo, heatmap, Detalhe), mesmo quando o GIOCONDA ainda não tem NENHUMA oferta
+# cadastrada pro polo+categoria dele (lab novo/não provisionado no sistema deles).
+# Antes só existia o backfill do PATCH 21 (preenche TUTOR em branco numa oferta
+# JÁ existente) — se a oferta nem existisse, o tutor simplesmente não aparecia
+# em lugar nenhum do gerenciamento, mesmo estando ativo em todo o resto do
+# VinciLab (Ficha dos Tutores, Portfólios etc.).
+def _recalcular_agregados_de_ofertas(ofertas):
+    """Recalcula ger_kpis/ger_polo/ger_cat/ger_ordem/ger_contratacao/ger_agendas
+    a partir de uma lista de ofertas (dicts) — usado depois de injetar ofertas
+    sintéticas pra tutores sem nenhuma oferta cadastrada no GIOCONDA ainda."""
+    total = len(ofertas)
+    com_tutor = sum(1 for o in ofertas if o['tem_tutor'])
+    gerenciadas = sum(1 for o in ofertas if o['gerenciado'])
+    com_agenda = sum(1 for o in ofertas if o['tem_agenda'])
+    tot_mat = sum(o.get('alunos_mat', 0) for o in ofertas)
+    tot_agend = sum(o.get('alunos_agend', 0) for o in ofertas)
+    polos_set = set(o['polo'] for o in ofertas)
+    polos_sem_tutor = set(o['polo'] for o in ofertas if not o['tem_tutor'])
+
+    ger_kpis = {
+        'total_ofertas': total, 'ofertas_gerenciadas': gerenciadas,
+        'ofertas_nao_gerenciadas': total - gerenciadas,
+        'pct_gerenciado': round(gerenciadas / total * 100, 1) if total else 0,
+        'ofertas_com_tutor': com_tutor, 'ofertas_sem_tutor': total - com_tutor,
+        'pct_com_tutor': round(com_tutor / total * 100, 1) if total else 0,
+        'ofertas_com_agenda': com_agenda, 'total_alunos_matriculados': tot_mat,
+        'total_alunos_agendados': tot_agend, 'total_capacidade': 0, 'pct_ocupacao': 0,
+        'polos_total': len(polos_set), 'polos_sem_tutor': len(polos_sem_tutor),
+    }
+
+    polo_map = {}; cat_map = {}; ordem_map = {}; contr_map = {}; agenda_map = {}
+    for o in ofertas:
+        p = o['polo'] or '—'
+        if p not in polo_map:
+            polo_map[p] = {'polo': p, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0, 'sem_tutor': 0,
+                           'com_agenda': 0, 'alunos_matriculados': 0, 'alunos_agendados': 0, 'capacidade': 0, 'tutores_unicos': []}
+        pm = polo_map[p]
+        pm['total_ofertas'] += 1
+        if o['gerenciado']: pm['gerenciadas'] += 1
+        if o['tem_tutor']: pm['com_tutor'] += 1
+        else: pm['sem_tutor'] += 1
+        if o['tem_agenda']: pm['com_agenda'] += 1
+        pm['alunos_matriculados'] += o.get('alunos_mat', 0)
+        pm['alunos_agendados'] += o.get('alunos_agend', 0)
+        if o.get('tutor') and o['tutor'] not in pm['tutores_unicos']:
+            pm['tutores_unicos'].append(o['tutor'])
+
+        c = o['categoria'] or '—'
+        if c not in cat_map:
+            cat_map[c] = {'categoria': c, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0, 'sem_tutor': 0,
+                          'alunos_matriculados': 0, 'alunos_agendados': 0}
+        cm = cat_map[c]
+        cm['total_ofertas'] += 1
+        if o['gerenciado']: cm['gerenciadas'] += 1
+        if o['tem_tutor']: cm['com_tutor'] += 1
+        else: cm['sem_tutor'] += 1
+        cm['alunos_matriculados'] += o.get('alunos_mat', 0)
+        cm['alunos_agendados'] += o.get('alunos_agend', 0)
+
+        od = o.get('ordem') or ''
+        if od:
+            if od not in ordem_map:
+                ordem_map[od] = {'ordem': od, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0,
+                                  'alunos_matriculados': 0, 'alunos_agendados': 0, 'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(od, '')}
+            omp = ordem_map[od]
+            omp['total_ofertas'] += 1
+            if o['gerenciado']: omp['gerenciadas'] += 1
+            if o['tem_tutor']: omp['com_tutor'] += 1
+            omp['alunos_matriculados'] += o.get('alunos_mat', 0)
+            omp['alunos_agendados'] += o.get('alunos_agend', 0)
+
+        trk = (p, c)
+        if trk not in contr_map:
+            contr_map[trk] = {'polo': p, 'categoria': c, 'total_ofertas': 0, 'tutores': []}
+        contr_map[trk]['total_ofertas'] += 1
+        if o.get('tutor') and o['tutor'] not in contr_map[trk]['tutores']:
+            contr_map[trk]['tutores'].append(o['tutor'])
+
+        if p not in agenda_map:
+            agenda_map[p] = {'polo': p, 'total': 0, 'com_agenda': 0, 'datas_por_cat': {}, 'datas_por_tutor': {}}
+        am = agenda_map[p]
+        am['total'] += 1
+        if o['tem_agenda']:
+            am['com_agenda'] += 1
+            d = o.get('dt_agenda')
+            if d:
+                am['datas_por_cat'].setdefault(d, [])
+                if c and c not in am['datas_por_cat'][d]: am['datas_por_cat'][d].append(c)
+                am['datas_por_tutor'].setdefault(d, [])
+                if o.get('tutor') and o['tutor'] not in am['datas_por_tutor'][d]: am['datas_por_tutor'][d].append(o['tutor'])
+
+    for pm in polo_map.values():
+        pm['pct_gerenciado'] = round(pm['gerenciadas'] / pm['total_ofertas'] * 100, 1) if pm['total_ofertas'] else 0
+    for cm in cat_map.values():
+        cm['pct_gerenciado'] = round(cm['gerenciadas'] / cm['total_ofertas'] * 100, 1) if cm['total_ofertas'] else 0
+    for omp in ordem_map.values():
+        omp['pct_gerenciado'] = round(omp['gerenciadas'] / omp['total_ofertas'] * 100, 1) if omp['total_ofertas'] else 0
+
+    ger_polo = sorted(polo_map.values(), key=lambda x: -x['sem_tutor'])
+    ger_cat = sorted(cat_map.values(), key=lambda x: -x['total_ofertas'])
+    _ordem_sort = {'Ordem 1': 1, 'Ordem 2': 2, 'Ordem 3': 3, 'Ordem 4': 4, 'Ordem 5': 5}
+    ger_ordem = sorted(ordem_map.values(), key=lambda x: _ordem_sort.get(x['ordem'], 9))
+    ger_contratacao = []
+    for trk, v in contr_map.items():
+        tem_tutor = len(v['tutores']) > 0
+        ger_contratacao.append({**v, 'tem_tutor': tem_tutor, 'status': 'Contratado' if tem_tutor else 'Sem tutor'})
+    ger_agendas = []
+    for p, am in agenda_map.items():
+        sem_agenda = am['total'] - am['com_agenda']
+        ger_agendas.append({
+            'polo': p, 'total': am['total'], 'com_agenda': am['com_agenda'], 'sem_agenda': sem_agenda,
+            'pct_agendado': round(am['com_agenda'] / am['total'] * 100, 1) if am['total'] else 0,
+            'datas_agenda': sorted(am['datas_por_cat'].keys()),
+            'datas_por_cat': am['datas_por_cat'], 'datas_por_tutor': am['datas_por_tutor'],
+        })
+    ger_agendas.sort(key=lambda x: -x['sem_agenda'])
+
+    return {
+        'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
+        'ger_ordem': ger_ordem, 'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas, 'ger_ofertas': ofertas,
+    }
+
+
+def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
+    """PATCH 32: injeta uma oferta-placeholder pra cada tutor ativo cujo
+    polo+categoria não tem NENHUMA linha no GIOCONDA, e recalcula todos os
+    agregados a partir da lista de ofertas resultante."""
+    import re as _re_inj
+    def _norm_polo_inj(s):
+        s = str(s or '').strip()
+        s = _re_inj.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_inj.IGNORECASE)
+        return s.strip().lower()
+
+    ofertas = list(ger_dados.get('ger_ofertas', []))
+    polo_cat_existentes = set((_norm_polo_inj(o['polo']), o['categoria']) for o in ofertas)
+
+    injetadas = 0
+    for t in tutores_ativos:
+        if t.get('_anonimo') or not t.get('n') or not t.get('p'):
+            continue
+        chave = (_norm_polo_inj(t['p']), t.get('c', ''))
+        if chave in polo_cat_existentes:
+            continue
+        ofertas.append({
+            'polo': t['p'], 'categoria': t.get('c', ''), 'ordem': '',
+            'pratica': 'Sem oferta cadastrada no GIOCONDA', 'tutor': t['n'],
+            'tem_tutor': True, 'tem_agenda': False, 'gerenciado': False,
+            'alunos_mat': 0, 'alunos_agend': 0, 'dt_agenda': '', 'hr_agenda': '',
+            'dia_semana': '', 'turno': '', 'horario_incomum': False, 'sem_alunos': False,
+            '_sintetico': True,
+        })
+        polo_cat_existentes.add(chave)
+        injetadas += 1
+    if injetadas:
+        print(f"[{ts()}] Tutores ativos sem nenhuma oferta no GIOCONDA (injetados como placeholder): {injetadas}")
+    return _recalcular_agregados_de_ofertas(ofertas)
+
+
 def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
     """
     PATCH 18: lê 1+ arquivos de gerenciamento (cada um com um semestre padrão de
@@ -2233,6 +2403,23 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
         s = str(s or '').strip()
         s = _re_local.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_local.IGNORECASE)
         return s.strip().lower()
+
+    # PATCH 32: nome da prática -> curso específico (BFI/BTO/COS-TIP/BBI/BFR),
+    # usado no backfill de tutor pra distinguir múltiplos tutores no mesmo polo
+    import unicodedata as _ud_bf
+    def _norm_proto_bf(s):
+        s = _ud_bf.normalize('NFKC', str(s or ''))
+        s = s.replace('–', '-').replace('—', '-')
+        return ' '.join(s.split()).strip()
+    _NOME_TO_PERFIL_BF = {}
+    _nomep_path_bf = os.path.join(SCRIPT_DIR, 'nome_to_perfil.json')
+    if os.path.isfile(_nomep_path_bf):
+        with open(_nomep_path_bf, encoding='utf-8') as _f_bf:
+            _ntp_raw_bf = json.load(_f_bf)
+        _NOME_TO_PERFIL_BF = {_norm_proto_bf(k): v for k, v in _ntp_raw_bf.items()}
+    def _pratica_de_experimento_bf(v):
+        m = _re_local.match(r'O\.\d+:\s*(.*)', str(v or ''))
+        return _norm_proto_bf(m.group(1) if m else v)
 
     frames_novo = []
     resultado = {}
@@ -2261,19 +2448,33 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
         else:
             df['_SEM_ROW'] = fallback_sem
 
-        # PATCH 21: backfill de TUTOR a partir do CONTROLE quando o GIOCONDA está vazio
+        # PATCH 21 + PATCH 32: backfill de TUTOR a partir do CONTROLE quando o
+        # GIOCONDA está vazio — tenta primeiro pelo curso específico (inferido a
+        # partir do nome da prática via nome_to_perfil.json), caindo pra
+        # categoria ampla só quando isso não é possível (categorias sem
+        # ambiguidade de curso, ou prática não mapeada).
         if controle_tutor_lookup:
             c_lab_bf = next((c for c in df.columns if str(c).upper() == 'LABORATORIO'), None)
             c_cat_bf = next((c for c in df.columns if str(c).upper() == 'CATEGORIA'), None)
             c_tut_bf = next((c for c in df.columns if str(c).upper() == 'TUTOR'), None)
+            c_exp_bf = next((c for c in df.columns if str(c).upper() == 'NOME_EXPERIMENTO'), None)
             if c_lab_bf and c_cat_bf and c_tut_bf:
                 _CAT_RAW_NORM_BF = {'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)'}
                 _tutor_vazio = df[c_tut_bf].isna() | (df[c_tut_bf].astype(str).str.strip().isin(['', 'nan']))
                 if _tutor_vazio.any():
                     _polo_norm = df.loc[_tutor_vazio, c_lab_bf].map(_norm_polo_ger)
                     _cat_norm  = df.loc[_tutor_vazio, c_cat_bf].astype(str).str.strip().replace(_CAT_RAW_NORM_BF)
-                    _chave_bf  = list(zip(_polo_norm, _cat_norm))
-                    _preenchido = [controle_tutor_lookup.get(k, '') for k in _chave_bf]
+                    if c_exp_bf and _NOME_TO_PERFIL_BF:
+                        _praticas_norm = df.loc[_tutor_vazio, c_exp_bf].map(_pratica_de_experimento_bf)
+                        _cursos_esp = _praticas_norm.map(lambda p: _NOME_TO_PERFIL_BF.get(p))
+                    else:
+                        _cursos_esp = [None] * int(_tutor_vazio.sum())
+                    _preenchido = []
+                    for _pn, _cn, _ce in zip(_polo_norm, _cat_norm, _cursos_esp):
+                        _val = controle_tutor_lookup.get((_pn, _ce), '') if _ce else ''
+                        if not _val:
+                            _val = controle_tutor_lookup.get((_pn, _cn), '')
+                        _preenchido.append(_val)
                     df.loc[_tutor_vazio, c_tut_bf] = _preenchido
                     _backfill_count += sum(1 for v in _preenchido if v)
         frames_novo.append(df)
@@ -2382,26 +2583,31 @@ def processar_gerenciamento(p3):
     ger_polo = []
     if c_polo in df_g.columns:
         for polo, grp in df_g.groupby(c_polo):
+            # PATCH 38: dedup por categoria dentro do polo antes de somar alunos
+            # (mesma correção aplicada em _processar_gerenciamento_novo)
+            _dedup_p = grp.groupby(c_cat)[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max() if c_cat in grp.columns else grp[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max().to_frame().T
             ger_polo.append({
                 'polo': str(polo), 'total_ofertas': len(grp),
                 'gerenciadas': int(grp['_GERENCIADO'].sum()),
                 'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
                 'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
                 'com_agenda': int(grp['_TEM_AGENDA'].sum()),
-                'alunos_matriculados': int(grp['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(grp['_QTD_ALUN'].sum()),
-                'capacidade': int(grp['_CAPA'].sum()),
+                'alunos_matriculados': int(_dedup_p['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(_dedup_p['_QTD_ALUN'].sum()),
+                'capacidade': int(_dedup_p['_CAPA'].sum()),
                 'tutores_unicos': list(grp[grp['_TEM_TUTOR']][c_tutor].dropna().unique()),
             })
         ger_polo.sort(key=lambda x: -x['sem_tutor'])
     ger_cat = []
     if c_cat in df_g.columns:
         for cat, grp in df_g.groupby(c_cat):
+            # PATCH 38: dedup por polo dentro da categoria antes de somar alunos
+            _dedup_c = grp.groupby(c_polo)[['_ALUNOS_MAT','_QTD_ALUN']].max() if c_polo in grp.columns else grp[['_ALUNOS_MAT','_QTD_ALUN']].max().to_frame().T
             ger_cat.append({
                 'categoria': str(cat), 'total_ofertas': len(grp),
                 'gerenciadas': int(grp['_GERENCIADO'].sum()),
                 'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
                 'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
-                'alunos_matriculados': int(grp['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(grp['_QTD_ALUN'].sum()),
+                'alunos_matriculados': int(_dedup_c['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(_dedup_c['_QTD_ALUN'].sum()),
             })
         ger_cat.sort(key=lambda x: -x['total_ofertas'])
     ger_ordem = []
@@ -2412,12 +2618,17 @@ def processar_gerenciamento(p3):
         datas_fim = pd.to_datetime(grp.get(c_ofex_dtfi, pd.Series(dtype='object')), errors='coerce').dropna()
         dt_inicio = datas_inicio.min().strftime('%d/%m/%Y') if len(datas_inicio) > 0 else ''
         dt_fim = datas_fim.max().strftime('%d/%m/%Y') if len(datas_fim) > 0 else ''
+        # PATCH 38: mesma correção de dedup por polo×categoria dentro da ordem
+        if c_polo in grp.columns and c_cat in grp.columns:
+            _dedup_o = grp.groupby([c_polo, c_cat])[['_ALUNOS_MAT','_QTD_ALUN']].max()
+        else:
+            _dedup_o = grp[['_ALUNOS_MAT','_QTD_ALUN']].max().to_frame().T
         ger_ordem.append({
             'ordem': ordem, 'total_ofertas': len(grp),
             'gerenciadas': int(grp['_GERENCIADO'].sum()),
             'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
             'com_tutor': int(grp['_TEM_TUTOR'].sum()),
-            'alunos_matriculados': int(grp['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(grp['_QTD_ALUN'].sum()),
+            'alunos_matriculados': int(_dedup_o['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(_dedup_o['_QTD_ALUN'].sum()),
             'dt_inicio': dt_inicio, 'dt_fim': dt_fim,
         })
     ger_contratacao = []
@@ -2702,9 +2913,18 @@ if __name__ == '__main__':
     print(f"[{ts()}] tem_lotacao={dados['tem_lotacao']} ({_ch_ok} tutores com CH SEMANAL)")
     if p3 or p3b:
         try:
-            # PATCH 21: tutor ativo no CONTROLE pra cada (polo, categoria) — usado
-            # como backfill quando o GIOCONDA ainda não tem TUTOR preenchido pra
-            # essa oferta, mesmo a pessoa já estando contratada/ativa de verdade
+            # PATCH 21 + PATCH 32: tutor ativo no CONTROLE pra cada (polo, categoria)
+            # E também (polo, curso específico) — usado como backfill quando o
+            # GIOCONDA ainda não tem TUTOR preenchido pra essa oferta, mesmo a
+            # pessoa já estando contratada/ativa de verdade. A chave por curso
+            # específico (ex: COS-TIP) resolve o caso de múltiplos tutores
+            # dividindo o mesmo polo sob a mesma categoria ampla (Multi III:
+            # Fisioterapia/T.O./Estética no mesmo laboratório) — sem ela, o
+            # backfill por (polo,categoria) só conseguia acertar UM dos tutores
+            # do polo, e os outros ficavam sem oferta atribuída e sumiam do
+            # Detalhe (caso real: Suzieli Alves Rumpel, Estética, Novo
+            # Hamburgo/RS, dividindo o polo com uma tutora de Fisio e outra de
+            # T.O., todas sob "BIO-FISIO-EST-TO (Multidisciplinar III)").
             import re as _re_bf
             def _norm_polo_bf(s):
                 s = str(s or '').strip()
@@ -2713,9 +2933,12 @@ if __name__ == '__main__':
             controle_tutor_lookup = {}
             for _t in dados.get('tutores', []):
                 if _t.get('_anonimo') or not _t.get('n') or not _t.get('p'): continue
-                _chave_bf = (_norm_polo_bf(_t['p']), _t.get('c', ''))
-                controle_tutor_lookup.setdefault(_chave_bf, _t['n'])
-            print(f"[{ts()}] Lookup de tutores ativos (CONTROLE) pra backfill: {len(controle_tutor_lookup)} chaves polo+categoria")
+                _polo_bf = _norm_polo_bf(_t['p'])
+                _cursos_t = _t.get('cursos', '') or ''
+                if _cursos_t:
+                    controle_tutor_lookup.setdefault((_polo_bf, _cursos_t), _t['n'])
+                controle_tutor_lookup.setdefault((_polo_bf, _t.get('c', '')), _t['n'])
+            print(f"[{ts()}] Lookup de tutores ativos (CONTROLE) pra backfill: {len(controle_tutor_lookup)} chaves polo+categoria/curso")
 
             # PATCH 18: cada arquivo tem um semestre de fallback (usado só quando a
             # linha não tem coluna SEMESTRE reconhecível) — arquivo antigo -> mais
@@ -2725,6 +2948,10 @@ if __name__ == '__main__':
                 (p3,  _sem_mais_antigo),
                 (p3b, '2026/2' if '2026/2' in ALL_SEMESTRES else sorted(ALL_SEMESTRES.keys())[-1]),
             ], controle_tutor_lookup=controle_tutor_lookup)
+            # PATCH 32: garantir que todo tutor ativo apareça no gerenciamento,
+            # mesmo sem nenhuma oferta cadastrada no GIOCONDA pro polo dele
+            for _sk in list(ger_por_semestre.keys()):
+                ger_por_semestre[_sk] = _injetar_tutores_sem_oferta(ger_por_semestre[_sk], dados.get('tutores', []))
             dados['gerenciamento_por_semestre'] = ger_por_semestre
             for _sk, _sv in ger_por_semestre.items():
                 print(f"[{ts()}] Gerenciamento {_sk}: {_sv['ger_kpis']['total_ofertas']} ofertas, {_sv['ger_kpis']['ofertas_gerenciadas']} ger.")
