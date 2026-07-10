@@ -1233,16 +1233,29 @@ function sortDetalhe(col){
   filterGerDetalhe(document.getElementById('ger-det-search')?.value||'');
 }
 function _updateSubcursoDropdown(){
-  // PATCH 42: dropdown de subcurso (especialidade) — só faz sentido mostrar
-  // quando a categoria selecionada (ou o conjunto de dados atual, se nenhuma
-  // categoria estiver selecionada) tem mais de um subcurso distinto — como
-  // Multidisciplinar III, que mistura Fisioterapia/T.O./Estética/Biomedicina
-  // Estética sob uma única categoria ampla no GIOCONDA.
+  // PATCH 46: o filtro de subcurso só faz sentido de verdade pra Multi III
+  // (Fisioterapia/Terapia Ocupacional/Estética e Cosmética — as 3 especialidades
+  // reais que o Leo confirmou). Em ENGMAKER/Química e Física existem dezenas de
+  // códigos de curso internos diferentes (cada disciplina de engenharia tem o
+  // seu) que não formam uma lista limpa de "especialidades" pro usuário — isso
+  // só confundia ("a parte de exatas ficou confusa"). E dentro de Multi III,
+  // "Biomedicina" (código BBI) não é uma especialidade real desse laboratório
+  // — aparece no GIOCONDA por outro motivo, então fica de fora das opções.
+  const _CATEGORIA_COM_SUBCURSO = 'BIO-FISIO-EST-TO (Multidisciplinar III)';
+  const _SUBCURSOS_OCULTOS = ['Biomedicina'];
   const cat=(document.getElementById('ger-det-cat')||{}).value||'';
   const subSel=document.getElementById('ger-det-subcurso');
   if(!subSel) return;
-  const base=cat?gerDetData.filter(r=>r.categoria===cat):gerDetData;
-  const subcursos=[...new Set(base.map(r=>r.subcurso).filter(Boolean))].sort();
+  if(cat!==_CATEGORIA_COM_SUBCURSO){
+    subSel.style.display='none';
+    subSel.value='';
+    while(subSel.options.length>1) subSel.remove(1);
+    return;
+  }
+  const base=gerDetData.filter(r=>r.categoria===cat);
+  const subcursos=[...new Set(base.map(r=>r.subcurso).filter(Boolean))]
+    .filter(s=>!_SUBCURSOS_OCULTOS.includes(s))
+    .sort();
   const _prev=subSel.value;
   while(subSel.options.length>1) subSel.remove(1);
   if(subcursos.length>1){
