@@ -521,6 +521,12 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     &nbsp;|&nbsp; <strong>CH Real.</strong> = CH efetivamente realizada (nº práticas × 1,5h)
     &nbsp;|&nbsp; <strong>CH Disp.</strong> = CH estimada disponível ainda. <span style="color:var(--red)">Vermelho = excedeu capacidade estimada.</span>
   </div>
+  <div class="card" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+    <div style="flex-shrink:0">
+      <div class="sec-label" style="margin-bottom:8px">Tutores Gerenciaram × Não Gerenciaram <span id="det-pizza-cat-label" style="font-weight:400;color:var(--muted)"></span></div>
+      <div id="det-pizza-chart" style="display:flex;align-items:center;gap:16px"></div>
+    </div>
+  </div>
   <div class="card">
     <div class="toolbar">
       <input class="search" type="text" placeholder="Buscar polo, prática, tutor…" oninput="filterGerDetalhe(this.value)" id="ger-det-search"/>
@@ -529,6 +535,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status"><option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option></select>
       <span class="tbl-count" id="ger-det-count">—</span>
       <button class="btn-export" onclick="exportDetalhe()">⬇ Sem Gerenc.</button>
+      <button class="btn-export" onclick="exportRelatorioPorCurso()" style="background:var(--yellow-d)">⬇ Relatório por Curso</button>
       <button class="btn-export" onclick="abrirSemGerenciamento()" style="background:var(--teal)">🔍 Ver Sem Gerenc.</button>
     </div>
     <div class="tbl-wrap" style="max-height:600px"><table style="table-layout:fixed;width:100%">
@@ -1375,6 +1382,59 @@ function filterGerDetalhe(q){
   var nTutoresUnicos = new Set(sorted.map(g=>g.tutor).filter(Boolean)).size;
   document.getElementById('ger-det-tbody').innerHTML=rows;document.getElementById('ger-det-count').textContent=nTutoresUnicos+' tutor'+(nTutoresUnicos!==1?'es':'')+' ('+d.length+' oferta'+(d.length!==1?'s':'')+')';if(!sorted.length)document.getElementById('ger-det-tbody').innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--muted)">Nenhum resultado encontrado com este filtro.</td></tr>';
   document.querySelectorAll('[data-det]').forEach(function(row){row.addEventListener('click',function(e){if(e.target.closest('.btn-expand'))return;var gi=this.dataset.det;var t=sorted[+gi];if(!t)return;_openDetTutorModal(t,sorted);});});
+  // PATCH 39: guarda a lista atual (respeitando os filtros ativos) pra exportação
+  // por curso, e atualiza o gráfico de pizza Gerenciaram x Não Gerenciaram
+  window._detSortedAtual = sorted;
+  window._detCatAtual = cat;
+  renderDetPizza(sorted, cat);
+}
+function renderDetPizza(sorted, cat){
+  var tutoresReais = sorted.filter(function(t){ return t.tutor; }); // exclui buckets "sem tutor"
+  var gerenciaram = tutoresReais.filter(function(t){ return t.totalGer>0; }).length;
+  var naoGerenciaram = tutoresReais.length - gerenciaram;
+  var total = tutoresReais.length || 1;
+  var pctGer = Math.round(gerenciaram/total*100);
+  document.getElementById('det-pizza-cat-label').textContent = cat ? '— '+cat : '— todas as categorias';
+  var anguloGer = gerenciaram/total*360;
+  var corGer='#16a34a', corNao='#dc2626';
+  function fatiaSVG(anguloIni, anguloFim, cor){
+    var r=42,cx=50,cy=50;
+    var a1=(anguloIni-90)*Math.PI/180, a2=(anguloFim-90)*Math.PI/180;
+    var x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    var x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    var largeArc = (anguloFim-anguloIni)>180 ? 1 : 0;
+    if((anguloFim-anguloIni)>=360) return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+cor+'"/>';
+    if(anguloFim===anguloIni) return '';
+    return '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+cor+'"/>';
+  }
+  var svg = '<svg viewBox="0 0 100 100" width="110" height="110">'
+    + fatiaSVG(0, anguloGer, corGer)
+    + fatiaSVG(anguloGer, 360, corNao)
+    + '<circle cx="50" cy="50" r="24" fill="var(--surface)"/>'
+    + '<text x="50" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="var(--font)">'+pctGer+'%</text>'
+    + '<text x="50" y="60" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--font)">gerenciaram</text>'
+    + '</svg>';
+  var legenda = '<div style="font-size:12px">'
+    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corGer+';display:inline-block"></span> Gerenciaram: <strong>'+gerenciaram+'</strong></div>'
+    + '<div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corNao+';display:inline-block"></span> Não Gerenciaram: <strong>'+naoGerenciaram+'</strong></div>'
+    + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+'</div>'
+    + '</div>';
+  document.getElementById('det-pizza-chart').innerHTML = svg + legenda;
+}
+function exportRelatorioPorCurso(){
+  var sorted = window._detSortedAtual || [];
+  var cat = window._detCatAtual || '';
+  var tutoresReais = sorted.filter(function(t){ return t.tutor; });
+  if(!tutoresReais.length){ alert('Sem tutores pra exportar com o filtro atual.'); return; }
+  var rows = tutoresReais.map(function(t){
+    return {
+      'Polo': t.polo, 'Tutor': t.tutor, 'Curso/Categoria': t.categoria,
+      'Status': t.totalGer>0 ? 'Gerenciou' : 'Não Gerenciou',
+      'Ofertas Gerenciadas': t.totalGer, 'Total de Ofertas': t.totalOfertas,
+    };
+  }).sort(function(a,b){ return a['Status'].localeCompare(b['Status']) || a.Polo.localeCompare(b.Polo,'pt'); });
+  var sufixo = cat ? cat.replace(/[^a-z0-9]/gi,'_') : 'todas_categorias';
+  exportCSV(rows, 'relatorio_por_curso_'+sufixo+'_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 function _openDetTutorModal(t,allTutores){
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
