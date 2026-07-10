@@ -1330,7 +1330,17 @@ function filterGerDetalhe(q){
     }
     var chCont=window._tmpChCont, capOrdem=window._tmpCapOrdem;
     var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];var ordCells='';
-    ordensExibir.forEach(function(o){var od=t.ordens[o];if(!od){ordCells+='<td style="text-align:center;color:var(--dim)">—</td>';return;}var ger=od.ger,total=od.total;var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+'</td>';});    var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
+    ordensExibir.forEach(function(o){var od=t.ordens[o];if(!od){
+      // PATCH 37: sem dado de oferta no GIOCONDA ainda não é "sem capacidade" —
+      // usa a mesma capacidade (baseada na CH do tutor) que qualquer outro
+      // tutor usaria, mostrando "0 de X" em vez de um "0/0" que parecia dizer
+      // que não existe nem capacidade nenhuma.
+      var denomSemDado=capOrdem||null;
+      ordCells+= denomSemDado
+        ? '<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:var(--red)">0<span style="font-size:10px;color:var(--dim)">/'+denomSemDado+'</span></div></td>'
+        : '<td style="text-align:center;color:var(--dim)">—</td>';
+      return;
+    }var ger=od.ger,total=od.total;var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+'</td>';});    var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
     // ── Nova abordagem: truncar strings diretamente no JS ──────────────────
     var _trunc=function(s,n){s=(s||'').trim();return s.length>n?s.substring(0,n-1)+'…':s;};
     // Polo: remover prefixo "LAP – " e limitar
@@ -1346,12 +1356,6 @@ function filterGerDetalhe(q){
       :'<span style="color:var(--red);font-size:10px">⚠ Sem tutor</span>';
     // Curso/Lab: limitar
     var cuLabDisp=_trunc(cuLab,26);
-    // PATCH 31: sinalizar visualmente as linhas sintéticas (tutor ativo sem
-    // nenhuma oferta cadastrada no GIOCONDA ainda) — não é erro, é um aviso
-    // informativo de que o lab dele ainda não foi provisionado no sistema deles.
-    if(t._semOfertaGioconda){
-      cuLabDisp='<span style="color:var(--yellow-d);font-weight:600" title="Tutor ativo mas sem nenhuma oferta cadastrada no GIOCONDA ainda">⚠ Sem oferta no GIOCONDA</span>';
-    }
     var _curPoloTutor=t.polo+'|||'+(t.tutor||'');
       var _isRepeat=(_curPoloTutor===_prevPoloTutor);
       _prevPoloTutor=_curPoloTutor;
