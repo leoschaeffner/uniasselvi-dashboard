@@ -531,6 +531,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="toolbar">
       <input class="search" type="text" placeholder="Buscar polo, prática, tutor…" oninput="filterGerDetalhe(this.value)" id="ger-det-search"/>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todas categorias</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-subcurso" style="display:none"><option value="">Toda especialidade</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem"><option value="">Todas ordens</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status"><option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option></select>
       <span class="tbl-count" id="ger-det-count">—</span>
@@ -1127,6 +1128,7 @@ function renderGerenciamento(){
   while(cs.options.length>1) cs.remove(1);
   dcats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o)});
   if([...cs.options].some(o=>o.value===_csPrev)) cs.value=_csPrev;
+  _updateSubcursoDropdown();
   const os2=document.getElementById('ger-det-ordem');
   const _osPrev=os2.value;
   if(!dordens.includes('Ordem 5'))dordens.push('Ordem 5');
@@ -1230,11 +1232,36 @@ function sortDetalhe(col){
   _detSortCol = col;
   filterGerDetalhe(document.getElementById('ger-det-search')?.value||'');
 }
+function _updateSubcursoDropdown(){
+  // PATCH 42: dropdown de subcurso (especialidade) — só faz sentido mostrar
+  // quando a categoria selecionada (ou o conjunto de dados atual, se nenhuma
+  // categoria estiver selecionada) tem mais de um subcurso distinto — como
+  // Multidisciplinar III, que mistura Fisioterapia/T.O./Estética/Biomedicina
+  // Estética sob uma única categoria ampla no GIOCONDA.
+  const cat=(document.getElementById('ger-det-cat')||{}).value||'';
+  const subSel=document.getElementById('ger-det-subcurso');
+  if(!subSel) return;
+  const base=cat?gerDetData.filter(r=>r.categoria===cat):gerDetData;
+  const subcursos=[...new Set(base.map(r=>r.subcurso).filter(Boolean))].sort();
+  const _prev=subSel.value;
+  while(subSel.options.length>1) subSel.remove(1);
+  if(subcursos.length>1){
+    subcursos.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;subSel.appendChild(o);});
+    subSel.style.display='';
+    if([...subSel.options].some(o=>o.value===_prev)) subSel.value=_prev; else subSel.value='';
+  }else{
+    subSel.style.display='none';
+    subSel.value='';
+  }
+}
 function filterGerDetalhe(q){
   q=q.toLowerCase();var cat=document.getElementById('ger-det-cat').value;var ord=document.getElementById('ger-det-ordem').value;var st=document.getElementById('ger-det-status').value;var d=gerDetData;
+  _updateSubcursoDropdown();
+  var subcurso=(document.getElementById('ger-det-subcurso')||{}).value||'';
   // Filtrar para DESCOBRIR quais tutores exibir
   if(q)d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
   if(cat)d=d.filter(function(r){return r.categoria===cat;});
+  if(subcurso)d=d.filter(function(r){return r.subcurso===subcurso;});
   if(ord)d=d.filter(function(r){return r.ordem===ord;});
   if(st==='ger')d=d.filter(function(r){return r.gerenciado;});
   if(st==='nger')d=d.filter(function(r){return !r.gerenciado;});
@@ -1244,6 +1271,7 @@ function filterGerDetalhe(q){
   var dBuild=gerDetData.filter(function(r){
     if(q&&!(r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q))return false;
     if(cat&&r.categoria!==cat)return false;
+    if(subcurso&&r.subcurso!==subcurso)return false;
     return _keys.has(_normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||''));
   });
   var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var key=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0};var t=tutorMap[key];
@@ -1389,10 +1417,22 @@ function filterGerDetalhe(q){
   renderDetPizza(sorted, cat);
 }
 function renderDetPizza(sorted, cat){
-  var tutoresReais = sorted.filter(function(t){ return t.tutor; }); // exclui buckets "sem tutor"
-  var gerenciaram = tutoresReais.filter(function(t){ return t.totalGer>0; }).length;
-  var naoGerenciaram = tutoresReais.length - gerenciaram;
-  var total = tutoresReais.length || 1;
+  // PATCH 44: deduplicar por NOME de tutor (não por grupo tutor+polo+categoria).
+  // Um mesmo tutor pode aparecer em mais de um grupo em 'sorted' (ex: categoria
+  // composta dividida em duas entradas reais, ou pequenas variações de grafia
+  // que não colapsaram 100%) — sem dedup aqui, o gráfico contava esse tutor
+  // 2x, dando um total diferente do texto acima da tabela (que já deduplica).
+  var porNome={};
+  sorted.forEach(function(t){
+    if(!t.tutor) return; // exclui buckets "sem tutor"
+    var key=_normTutorKey(t.tutor);
+    if(!porNome[key]) porNome[key]={gerenciouAlgo:false};
+    if(t.totalGer>0) porNome[key].gerenciouAlgo=true;
+  });
+  var nomesUnicos=Object.values(porNome);
+  var gerenciaram=nomesUnicos.filter(function(x){return x.gerenciouAlgo;}).length;
+  var naoGerenciaram=nomesUnicos.length-gerenciaram;
+  var total=nomesUnicos.length || 1;
   var pctGer = Math.round(gerenciaram/total*100);
   document.getElementById('det-pizza-cat-label').textContent = cat ? '— '+cat : '— todas as categorias';
   var anguloGer = gerenciaram/total*360;
