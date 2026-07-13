@@ -1354,9 +1354,13 @@ function filterGerDetalhe(q){
     if(grupo&&!_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId))return false;
     return _keys.has(_normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||''));
   });
-  var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var key=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0};var t=tutorMap[key];
+  var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var key=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0,_subcursos:{}};var t=tutorMap[key];
     // PATCH 26: preferir sempre a variante do nome que tem chapa (mais completa/rastreável)
     if(r.tutor && (!t.tutor || (!/\(\d+\)/.test(t.tutor) && /\(\d+\)/.test(r.tutor)))) t.tutor = r.tutor;
+    // PATCH 48: guarda o(s) subcurso(s) REAL(is) dessa oferta (vindo do GIOCONDA,
+    // o mesmo campo usado pra filtrar o grupo) — necessário pra exibir "Curso/Lab"
+    // consistente com o filtro aplicado (ver correção logo abaixo, na montagem de cuLab)
+    if(r.subcurso) t._subcursos[r.subcurso]=(t._subcursos[r.subcurso]||0)+1;
     t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
@@ -1445,7 +1449,18 @@ function filterGerDetalhe(q){
         var longNorm=xn;
         return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
       });var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
-      cuLab=dbTutor?cursoLabel(dbTutor):catParaCurso(t.categoria);
+      // PATCH 48: o dbTutor acima é achado só por NOME (pra CH Contratada, que vem
+      // do CONTROLE/LOTAÇÃO e não tem subcurso por prática) — mas usar esse mesmo
+      // dbTutor pra decidir o "Curso/Lab" causava o bug reportado pelo Leo: uma
+      // oferta classificada como Estética e Cosmética no GIOCONDA (e que por isso
+      // passa certinho no filtro de grupo) aparecia com o rótulo "Fisioterapia" na
+      // tabela, porque o CONTROLE tinha esse tutor registrado sob outro código de
+      // curso. Preferir sempre o subcurso que veio de fato das ofertas do GIOCONDA
+      // (guardado em t._subcursos durante a agregação) resolve a divergência —
+      // só cai pro dbTutor/categoria ampla quando não há subcurso nenhum (ex:
+      // Enfermagem/Nutrição, que não têm essa quebra).
+      var _subNomes=Object.keys(t._subcursos||{});
+      cuLab=_subNomes.length?_subNomes.sort().join(' + '):(dbTutor?cursoLabel(dbTutor):catParaCurso(t.categoria));
       window._tmpChCont=chCont;window._tmpCapOrdem=capOrdem;
     }
     var chCont=window._tmpChCont, capOrdem=window._tmpCapOrdem;
@@ -2288,6 +2303,27 @@ function _getOfertasAgenda(){
 }
 const _DIAS_SEMANA_ORDEM=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const _TURNOS_ORDEM=['Manhã','Tarde','Noite','Madrugada'];
+function _dedupAlunos(ofertas, campo){
+  // PATCH 48: mesma regra do PATCH 38 (backend) — cada prática de um mesmo
+  // polo+categoria repete o valor de ALUNOS_MATRICULADOS/ALUNOS_AGENDADOS da
+  // origem, então somar linha a linha infla o total (o card "Alunos
+  // Matriculados" desta página mostrava 42.288 — o mesmo número inflado que já
+  // tinha sido corrigido em outros lugares do dashboard — enquanto a "Taxa de
+  // Engajamento" logo abaixo, calculada só sobre o subconjunto com agenda,
+  // mostrava 13.169: dois números MUITO diferentes na mesma tela porque nenhum
+  // dos dois deduplicava, e cada um somava um subconjunto de linhas distinto).
+  // Inclui o._semOrigem na chave quando presente (visão "Ambos") — sem isso,
+  // uma mesma combinação polo+categoria em 2026/1 E 2026/2 (matrículas
+  // DIFERENTES e legítimas em cada semestre) colapsaria pro maior dos dois
+  // valores em vez de somar os dois.
+  var porGrupo={};
+  ofertas.forEach(function(o){
+    var k=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
+    var v=o[campo]||0;
+    if(!(k in porGrupo) || v>porGrupo[k]) porGrupo[k]=v;
+  });
+  return Object.values(porGrupo).reduce(function(s,v){return s+v;},0);
+}
 function renderAgendasEstudo(){
   // PATCH 34: resumo "Gerenciamento de Ofertas" pedido pelo Anderson/Leo — usa
   // TODAS as ofertas do semestre selecionado (com e sem agenda, com e sem tutor),
@@ -2297,15 +2333,20 @@ function renderAgendasEstudo(){
   const comTutor = todasOfertas.filter(o=>o.tem_tutor);
   const semTutor = todasOfertas.filter(o=>!o.tem_tutor);
   const geridas = todasOfertas.filter(o=>o.gerenciado);
-  const matTotal = todasOfertas.reduce((s,o)=>s+(o.alunos_mat||0),0);
-  const matComTutor = comTutor.reduce((s,o)=>s+(o.alunos_mat||0),0);
-  const matSemTutor = semTutor.reduce((s,o)=>s+(o.alunos_mat||0),0);
-  const agendComTutor = comTutor.reduce((s,o)=>s+(o.alunos_agend||0),0);
+  const matTotal = _dedupAlunos(todasOfertas,'alunos_mat');
+  // PATCH 48: "com tutor"/"sem tutor" são conjuntos de PRÁTICAS, mas alunos
+  // matriculados é uma métrica por polo+categoria (não por prática) — um mesmo
+  // polo+categoria pode ter práticas com e sem tutor ao mesmo tempo. Por isso
+  // matComTutor + matSemTutor pode não bater exatamente com matTotal quando
+  // isso acontece; é esperado, não é um novo bug de soma.
+  const matComTutor = _dedupAlunos(comTutor,'alunos_mat');
+  const matSemTutor = _dedupAlunos(semTutor,'alunos_mat');
+  const agendComTutor = _dedupAlunos(comTutor,'alunos_agend');
   // "Presença lançada": não existe campo distinto de presença nos dados de origem —
   // usamos como proxy os agendamentos DENTRO das ofertas efetivamente GERIDAS
   // (tutor processou a sessão), que é o melhor indicativo disponível de que a
   // presença foi de fato registrada. Confirmar com o Anderson se essa leitura bate.
-  const presencaLancada = geridas.reduce((s,o)=>s+(o.alunos_agend||0),0);
+  const presencaLancada = _dedupAlunos(geridas,'alunos_agend');
 
   const pctGeridas = totalDistintas?Math.round(geridas.length/totalDistintas*1000)/10:0;
   const pctAgend = matComTutor?Math.round(agendComTutor/matComTutor*1000)/10:0;
@@ -2346,8 +2387,8 @@ function renderAgendasEstudo(){
   const total=ofertas.length;
   const incomuns=ofertas.filter(o=>o.horario_incomum);
   const semAluno=ofertas.filter(o=>o.sem_alunos);
-  const totMat=ofertas.reduce((s,o)=>s+(o.alunos_mat||0),0);
-  const totAgend=ofertas.reduce((s,o)=>s+(o.alunos_agend||0),0);
+  const totMat=_dedupAlunos(ofertas,'alunos_mat');
+  const totAgend=_dedupAlunos(ofertas,'alunos_agend');
   const engajamento=totMat?Math.round(totAgend/totMat*1000)/10:0;
 
   document.getElementById('ae-sub').textContent=`${fmtNum(total)} ofertas com agenda registrada · ${fmtNum(incomuns.length)} em horário incomum · ${fmtNum(semAluno.length)} sem nenhum aluno agendado`;
@@ -2747,7 +2788,11 @@ function _gerSelecionarSemestre(sem) {
 
 function _gerMergeAllSemestres(porSem) {
   const todasOfertas = [];
-  Object.values(porSem).forEach(s => { todasOfertas.push(...(s.ger_ofertas || [])); });
+  Object.keys(porSem).forEach(semKey => {
+    (porSem[semKey].ger_ofertas || []).forEach(o => {
+      todasOfertas.push(o._semOrigem ? o : Object.assign({}, o, {_semOrigem: semKey}));
+    });
+  });
   const agg = _gerAggregateFromOfertas(todasOfertas);
   agg.ger_ofertas = todasOfertas;
   return agg;
@@ -2760,8 +2805,8 @@ function _gerAggregateFromOfertas(ofertas) {
   const comTutor = ofertas.filter(o => o.tem_tutor).length;
   const gerenciadas = ofertas.filter(o => o.gerenciado).length;
   const comAgenda = ofertas.filter(o => o.tem_agenda).length;
-  const totMat = ofertas.reduce((s,o) => s + (o.alunos_mat||0), 0);
-  const totAgend = ofertas.reduce((s,o) => s + (o.alunos_agend||0), 0);
+  const totMat = _dedupAlunos(ofertas,'alunos_mat');
+  const totAgend = _dedupAlunos(ofertas,'alunos_agend');
   const ger_kpis = {
     total_ofertas: total, ofertas_gerenciadas: gerenciadas,
     ofertas_nao_gerenciadas: total - gerenciadas,
@@ -2774,31 +2819,59 @@ function _gerAggregateFromOfertas(ofertas) {
     polos_total: new Set(ofertas.map(o=>o.polo)).size,
     polos_sem_tutor: new Set(ofertas.filter(o=>!o.tem_tutor).map(o=>o.polo)).size,
   };
+  // PATCH 48: mesmo dedup do PATCH 38 (backend) — polo soma o MAIOR valor visto
+  // por categoria (não a soma bruta de todas as práticas daquele polo+categoria);
+  // categoria soma o maior valor visto por polo; ordem soma o maior valor visto
+  // por polo+categoria dentro dela. Sem isso, esta função (usada só na visão
+  // "Ambos") reintroduzia exatamente o bug de inflação que o PATCH 38 já tinha
+  // corrigido no backend pros outros semestres.
   const poloMap = {}, catMap = {}, ordemMap = {}, contrMap = {};
   ofertas.forEach(o => {
     const pk = o.polo || '—';
-    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, alunos_matriculados:0, alunos_agendados:0, capacidade:0, tutores_unicos:[] };
+    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, _matPorCat:{}, _agendPorCat:{}, capacidade:0, tutores_unicos:[] };
     const p = poloMap[pk];
     p.total_ofertas++; if(o.gerenciado) p.gerenciadas++; if(o.tem_tutor) p.com_tutor++; else p.sem_tutor++;
-    if(o.tem_agenda) p.com_agenda++; p.alunos_matriculados += (o.alunos_mat||0); p.alunos_agendados += (o.alunos_agend||0);
+    if(o.tem_agenda) p.com_agenda++;
+    const pCatKey=(o._semOrigem||'')+'|||'+(o.categoria||'—');
+    if(!(pCatKey in p._matPorCat) || (o.alunos_mat||0)>p._matPorCat[pCatKey]) p._matPorCat[pCatKey]=o.alunos_mat||0;
+    if(!(pCatKey in p._agendPorCat) || (o.alunos_agend||0)>p._agendPorCat[pCatKey]) p._agendPorCat[pCatKey]=o.alunos_agend||0;
     if(o.tutor && !p.tutores_unicos.includes(o.tutor)) p.tutores_unicos.push(o.tutor);
 
     const ck = o.categoria || '—';
-    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, alunos_matriculados:0, alunos_agendados:0 };
+    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, _matPorPolo:{}, _agendPorPolo:{} };
     const c = catMap[ck];
     c.total_ofertas++; if(o.gerenciado) c.gerenciadas++; if(o.tem_tutor) c.com_tutor++; else c.sem_tutor++;
-    c.alunos_matriculados += (o.alunos_mat||0); c.alunos_agendados += (o.alunos_agend||0);
+    const cPoloKey=(o._semOrigem||'')+'|||'+(o.polo||'—');
+    if(!(cPoloKey in c._matPorPolo) || (o.alunos_mat||0)>c._matPorPolo[cPoloKey]) c._matPorPolo[cPoloKey]=o.alunos_mat||0;
+    if(!(cPoloKey in c._agendPorPolo) || (o.alunos_agend||0)>c._agendPorPolo[cPoloKey]) c._agendPorPolo[cPoloKey]=o.alunos_agend||0;
 
     const ok = o.ordem || '—';
-    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, alunos_matriculados:0, alunos_agendados:0, dt_inicio:'', dt_fim:'' };
+    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, _matPorPoloCat:{}, _agendPorPoloCat:{}, dt_inicio:'', dt_fim:'' };
     const od = ordemMap[ok];
     od.total_ofertas++; if(o.gerenciado) od.gerenciadas++; if(o.tem_tutor) od.com_tutor++;
-    od.alunos_matriculados += (o.alunos_mat||0); od.alunos_agendados += (o.alunos_agend||0);
+    const oPoloCatKey=(o._semOrigem||'')+'|||'+(o.polo||'—')+'|||'+(o.categoria||'—');
+    if(!(oPoloCatKey in od._matPorPoloCat) || (o.alunos_mat||0)>od._matPorPoloCat[oPoloCatKey]) od._matPorPoloCat[oPoloCatKey]=o.alunos_mat||0;
+    if(!(oPoloCatKey in od._agendPorPoloCat) || (o.alunos_agend||0)>od._agendPorPoloCat[oPoloCatKey]) od._agendPorPoloCat[oPoloCatKey]=o.alunos_agend||0;
 
     const trk = (o.polo||'')+'|'+(o.categoria||'');
     if (!contrMap[trk]) contrMap[trk] = { polo:o.polo, categoria:o.categoria, total_ofertas:0, tutores:[] };
     contrMap[trk].total_ofertas++;
     if (o.tutor && !contrMap[trk].tutores.includes(o.tutor)) contrMap[trk].tutores.push(o.tutor);
+  });
+  Object.values(poloMap).forEach(p => {
+    p.alunos_matriculados = Object.values(p._matPorCat).reduce((s,v)=>s+v,0);
+    p.alunos_agendados = Object.values(p._agendPorCat).reduce((s,v)=>s+v,0);
+    delete p._matPorCat; delete p._agendPorCat;
+  });
+  Object.values(catMap).forEach(c => {
+    c.alunos_matriculados = Object.values(c._matPorPolo).reduce((s,v)=>s+v,0);
+    c.alunos_agendados = Object.values(c._agendPorPolo).reduce((s,v)=>s+v,0);
+    delete c._matPorPolo; delete c._agendPorPolo;
+  });
+  Object.values(ordemMap).forEach(od => {
+    od.alunos_matriculados = Object.values(od._matPorPoloCat).reduce((s,v)=>s+v,0);
+    od.alunos_agendados = Object.values(od._agendPorPoloCat).reduce((s,v)=>s+v,0);
+    delete od._matPorPoloCat; delete od._agendPorPoloCat;
   });
   Object.values(poloMap).forEach(p => p.pct_gerenciado = p.total_ofertas ? Math.round(p.gerenciadas/p.total_ofertas*1000)/10 : 0);
   Object.values(catMap).forEach(c => c.pct_gerenciado = c.total_ofertas ? Math.round(c.gerenciadas/c.total_ofertas*1000)/10 : 0);
