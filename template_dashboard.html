@@ -530,8 +530,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="card">
     <div class="toolbar">
       <input class="search" type="text" placeholder="Buscar polo, prática, tutor…" oninput="filterGerDetalhe(this.value)" id="ger-det-search"/>
-      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todas categorias</option></select>
-      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-subcurso" style="display:none"><option value="">Toda especialidade</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todos os grupos</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-subcurso" style="display:none"><option value="">Toda Exatas</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem"><option value="">Todas ordens</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status"><option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option></select>
       <span class="tbl-count" id="ger-det-count">—</span>
@@ -1118,17 +1118,21 @@ function renderGerenciamento(){
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
   gerDetData=GER_DB.ger_ofertas||[];
-  const dcats=[...new Set(gerDetData.map(d=>d.categoria).filter(Boolean))].sort();
+  const dcats=[...new Set(gerDetData.map(d=>d.categoria).filter(Boolean))];
   const ordemKeys=(GER_DB.ger_ordem||[]).map(o=>o.ordem).filter(Boolean).sort();
   const dordens=ordemKeys.length?ordemKeys:[...new Set(gerDetData.map(d=>d.ordem).filter(Boolean))].sort();
   // PATCH 19: limpa antes de repopular — renderGerenciamento() agora roda a cada
   // troca de semestre, e sem isso as opções duplicavam a cada chamada
+  // PATCH 47: dropdown agora lista os 5 grupos de área (GRUPOS_GER), não mais as
+  // categorias cruas — só mostra um grupo se pelo menos uma das categorias dele
+  // realmente aparecer nos dados do semestre atual.
   const cs=document.getElementById('ger-det-cat');
   const _csPrev=cs.value;
   while(cs.options.length>1) cs.remove(1);
-  dcats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o)});
+  GRUPOS_GER.filter(g=>g.cats.some(c=>dcats.includes(c)))
+    .forEach(g=>{const o=document.createElement('option');o.value=g.id;o.textContent=g.label;cs.appendChild(o)});
   if([...cs.options].some(o=>o.value===_csPrev)) cs.value=_csPrev;
-  _updateSubcursoDropdown();
+  _updateGerSubfiltro();
   const os2=document.getElementById('ger-det-ordem');
   const _osPrev=os2.value;
   if(!dordens.includes('Ordem 5'))dordens.push('Ordem 5');
@@ -1232,49 +1236,113 @@ function sortDetalhe(col){
   _detSortCol = col;
   filterGerDetalhe(document.getElementById('ger-det-search')?.value||'');
 }
-function _updateSubcursoDropdown(){
-  // PATCH 46: o filtro de subcurso só faz sentido de verdade pra Multi III
-  // (Fisioterapia/Terapia Ocupacional/Estética e Cosmética — as 3 especialidades
-  // reais que o Leo confirmou). Em ENGMAKER/Química e Física existem dezenas de
-  // códigos de curso internos diferentes (cada disciplina de engenharia tem o
-  // seu) que não formam uma lista limpa de "especialidades" pro usuário — isso
-  // só confundia ("a parte de exatas ficou confusa"). E dentro de Multi III,
-  // "Biomedicina" (código BBI) não é uma especialidade real desse laboratório
-  // — aparece no GIOCONDA por outro motivo, então fica de fora das opções.
-  const _CATEGORIA_COM_SUBCURSO = 'BIO-FISIO-EST-TO (Multidisciplinar III)';
-  const _SUBCURSOS_OCULTOS = ['Biomedicina'];
-  const cat=(document.getElementById('ger-det-cat')||{}).value||'';
+// PATCH 47: reagrupamento dos filtros de Gerenciamento por área de atuação real,
+// a pedido do Leo — os grupos antigos usavam a categoria "crua" (ENF-INS, BIO-FAR,
+// BIO-FISIO-EST-TO, QUÍMICA E FÍSICA, ENGMAKER, NUTRI), o que misturava Fisio/T.O.
+// com Estética/Cosmética dentro do mesmo filtro de Multi III (o subcurso existia,
+// mas era só um filtro OPCIONAL adicional — selecionar Multi III sozinho, ou
+// esquecer de escolher um subcurso, ainda misturava tudo). Agora os 5 grupos que o
+// Leo pediu são a ÚNICA opção do dropdown principal:
+// 1) Enfermagem (ENF-INS, inclui instrumentação cirúrgica dentro da mesma cat.)
+// 2) Fisioterapia e T.O. (só a fatia de Multi III com esse subcurso)
+// 3) Biomedicina, Farmácia e Estética/Cosmética (BIO-FAR inteira + a fatia de
+//    Multi III que é Estética/Cosmética — "Biomedicina"/BBI dentro de Multi III
+//    continua fora, como já era: não é uma especialidade real desse laboratório)
+// 4) Nutrição (NUTRI)
+// 5) Exatas (QUÍMICA E FÍSICA + ENGMAKER + a categoria composta dos dois) — com
+//    um sub-filtro pra escolher Engenharias/Licenciaturas vs Química e Física/
+//    Agronomia, que é a separação que o Leo pediu ("separar qual é qual")
+var GRUPOS_GER = [
+  {id:'enfermagem', label:'Enfermagem',
+    cats:['ENF-INS (Multidisciplinar II)']},
+  {id:'fisio-to', label:'Fisioterapia e Terapia Ocupacional',
+    cats:['BIO-FISIO-EST-TO (Multidisciplinar III)'],
+    subcursos:['Fisioterapia','Terapia Ocupacional']},
+  {id:'bio-far-est', label:'Biomedicina, Farmácia e Estética/Cosmética',
+    cats:['BIO-FAR (Multidisciplinar I)','BIO-FISIO-EST-TO (Multidisciplinar III)'],
+    subcursosPorCat:{'BIO-FISIO-EST-TO (Multidisciplinar III)':['Estética e Cosmética']}},
+  {id:'nutricao', label:'Nutrição',
+    cats:['NUTRI (Multidisciplinar IV)']},
+  {id:'exatas', label:'Exatas',
+    cats:['QUÍMICA E FÍSICA','ENGMAKER','ENGMAKER+QUÍMICA E FÍSICA'],
+    subfiltro:[
+      {id:'engenharias', label:'Engenharias e Licenciaturas', cats:['ENGMAKER','ENGMAKER+QUÍMICA E FÍSICA']},
+      {id:'quimica-fisica', label:'Química e Física / Agronomia', cats:['QUÍMICA E FÍSICA','ENGMAKER+QUÍMICA E FÍSICA']}
+    ]},
+];
+function _grupoById(id){return GRUPOS_GER.find(function(g){return g.id===id;})||null;}
+// Código de curso específico (coluna CURSOS do CONTROLE/LOTAÇÃO: BFI/BTO/COS-TIP/
+// BBI/BFR/EMF-ISN/NTR) → subcurso. Espelha o _SUBCURSO_LABEL do processar.py.
+// Usado só pra classificar tutores que ainda não têm NENHUMA oferta no GIOCONDA
+// (o fallback do PATCH 32/33) — sem isso, esse fallback injetava o tutor no
+// grupo errado (ex: um tutor de Fisioterapia aparecendo com o filtro em
+// "Biomedicina, Farmácia e Estética/Cosmética"), que foi o bug relatado pelo Leo.
+var _SUBCURSO_LABEL_JS = {
+  'BFI':'Fisioterapia', 'BTO':'Terapia Ocupacional',
+  'COS-TIP':'Estética e Cosmética', 'TIP-COS':'Estética e Cosmética', 'COS':'Estética e Cosmética',
+  'BBI':'Biomedicina', 'BFR':'Farmácia',
+  'EMF-ISN':'Enfermagem/Instrumentação', 'NTR':'Nutrição'
+};
+function _subcursoDeCodigo(codigo){
+  var raw=(codigo||'').split('|')[0].trim().toUpperCase();
+  return _SUBCURSO_LABEL_JS[raw]||null;
+}
+// Testa se uma linha de OFERTA (tem .categoria e .subcurso já vindos do processar.py)
+// pertence ao grupo selecionado (e, se houver, ao sub-filtro de Exatas)
+function _rowMatchesGrupo(catRow, subcursoRow, grupo, subfiltroId){
+  if(!grupo) return true;
+  if(grupo.cats.indexOf(catRow)<0) return false;
+  if(grupo.subcursos && (!subcursoRow || grupo.subcursos.indexOf(subcursoRow)<0)) return false;
+  if(grupo.subcursosPorCat && grupo.subcursosPorCat[catRow] && (!subcursoRow || grupo.subcursosPorCat[catRow].indexOf(subcursoRow)<0)) return false;
+  if(grupo.subfiltro && subfiltroId){
+    var sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
+    if(sf && sf.cats.indexOf(catRow)<0) return false;
+  }
+  return true;
+}
+// Testa se um TUTOR de DB.tutores (só tem t.c = categoria crua e t.cursos = código
+// específico, sem subcurso pronto) pertence ao grupo selecionado. Quando o código
+// de curso do tutor não está mapeado em _SUBCURSO_LABEL_JS (subcurso desconhecido),
+// não excluímos o tutor — ele aparece nos grupos que dividem essa categoria, pra não
+// sumir da tela por falta de dado (mesmo espírito do resto do dashboard: anomalia
+// visível, não erro escondido).
+function _tutorMatchesGrupo(t, grupo, subfiltroId){
+  if(!grupo) return true;
+  var catT=t.c||'';
+  if(grupo.cats.indexOf(catT)<0) return false;
+  var subT=_subcursoDeCodigo(t.cursos);
+  if(grupo.subcursos && subT && grupo.subcursos.indexOf(subT)<0) return false;
+  if(grupo.subcursosPorCat && grupo.subcursosPorCat[catT] && subT && grupo.subcursosPorCat[catT].indexOf(subT)<0) return false;
+  if(grupo.subfiltro && subfiltroId){
+    var sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
+    if(sf && sf.cats.indexOf(catT)<0) return false;
+  }
+  return true;
+}
+function _updateGerSubfiltro(){
+  const grupoId=(document.getElementById('ger-det-cat')||{}).value||'';
+  const grupo=_grupoById(grupoId);
   const subSel=document.getElementById('ger-det-subcurso');
   if(!subSel) return;
-  if(cat!==_CATEGORIA_COM_SUBCURSO){
+  if(!grupo || !grupo.subfiltro){
     subSel.style.display='none';
     subSel.value='';
     while(subSel.options.length>1) subSel.remove(1);
     return;
   }
-  const base=gerDetData.filter(r=>r.categoria===cat);
-  const subcursos=[...new Set(base.map(r=>r.subcurso).filter(Boolean))]
-    .filter(s=>!_SUBCURSOS_OCULTOS.includes(s))
-    .sort();
   const _prev=subSel.value;
   while(subSel.options.length>1) subSel.remove(1);
-  if(subcursos.length>1){
-    subcursos.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;subSel.appendChild(o);});
-    subSel.style.display='';
-    if([...subSel.options].some(o=>o.value===_prev)) subSel.value=_prev; else subSel.value='';
-  }else{
-    subSel.style.display='none';
-    subSel.value='';
-  }
+  grupo.subfiltro.forEach(function(s){const o=document.createElement('option');o.value=s.id;o.textContent=s.label;subSel.appendChild(o);});
+  subSel.style.display='';
+  if([...subSel.options].some(o=>o.value===_prev)) subSel.value=_prev; else subSel.value='';
 }
 function filterGerDetalhe(q){
-  q=q.toLowerCase();var cat=document.getElementById('ger-det-cat').value;var ord=document.getElementById('ger-det-ordem').value;var st=document.getElementById('ger-det-status').value;var d=gerDetData;
-  _updateSubcursoDropdown();
-  var subcurso=(document.getElementById('ger-det-subcurso')||{}).value||'';
+  q=q.toLowerCase();var grupoId=document.getElementById('ger-det-cat').value;var grupo=_grupoById(grupoId);var ord=document.getElementById('ger-det-ordem').value;var st=document.getElementById('ger-det-status').value;var d=gerDetData;
+  _updateGerSubfiltro();
+  var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
   // Filtrar para DESCOBRIR quais tutores exibir
   if(q)d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
-  if(cat)d=d.filter(function(r){return r.categoria===cat;});
-  if(subcurso)d=d.filter(function(r){return r.subcurso===subcurso;});
+  if(grupo)d=d.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
   if(ord)d=d.filter(function(r){return r.ordem===ord;});
   if(st==='ger')d=d.filter(function(r){return r.gerenciado;});
   if(st==='nger')d=d.filter(function(r){return !r.gerenciado;});
@@ -1283,8 +1351,7 @@ function filterGerDetalhe(q){
   // Para construir ordCells: usar TODOS os dados (sem filtro de ordem) para esses tutores
   var dBuild=gerDetData.filter(function(r){
     if(q&&!(r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q))return false;
-    if(cat&&r.categoria!==cat)return false;
-    if(subcurso&&r.subcurso!==subcurso)return false;
+    if(grupo&&!_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId))return false;
     return _keys.has(_normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||''));
   });
   var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var key=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0};var t=tutorMap[key];
@@ -1334,7 +1401,12 @@ function filterGerDetalhe(q){
         || _global.some(function(c){ return c.key===alvoKey || c.fl===alvoFL; });  // fallback global por nome
       if(jaRepresentado) return;
       if(q && !((t.n+t.p+(t.c||'')).toLowerCase().includes(q))) return;
-      if(cat && t.c!==cat) return;
+      // PATCH 47: antes só checava a categoria ampla (t.c!==cat) — um tutor de
+      // Fisioterapia dentro de Multi III passava mesmo com o filtro em "Biomedicina,
+      // Farmácia e Estética/Cosmética", porque as duas fatias compartilham a mesma
+      // categoria crua. Agora usa _tutorMatchesGrupo, que também olha o subcurso
+      // (código de curso do tutor) quando o grupo exige isso.
+      if(grupo && !_tutorMatchesGrupo(t, grupo, subfiltroId)) return;
       sorted.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
       // Registrar imediatamente pra não adicionar o mesmo tutor 2x se ele tiver
       // mais de uma entrada em DB.tutores pro mesmo polo (ex: registro duplicado)
@@ -1426,8 +1498,16 @@ function filterGerDetalhe(q){
   // PATCH 39: guarda a lista atual (respeitando os filtros ativos) pra exportação
   // por curso, e atualiza o gráfico de pizza Gerenciaram x Não Gerenciaram
   window._detSortedAtual = sorted;
-  window._detCatAtual = cat;
-  renderDetPizza(sorted, cat);
+  var grupoLabel='';
+  if(grupo){
+    grupoLabel=grupo.label;
+    if(grupo.subfiltro && subfiltroId){
+      var _sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
+      if(_sf) grupoLabel+=' — '+_sf.label;
+    }
+  }
+  window._detCatAtual = grupoLabel;
+  renderDetPizza(sorted, grupoLabel);
 }
 function renderDetPizza(sorted, cat){
   // PATCH 44: deduplicar por NOME de tutor (não por grupo tutor+polo+categoria).
@@ -1900,8 +1980,16 @@ function exportPendentes(){const ord=document.getElementById('ordem-sel').value;
 function exportEnviados(){const rows=[];(DB.tutores||[]).forEach(t=>{(t.hist||[]).forEach(h=>{rows.push({'Tutor':t.n,'Polo':t.p,'Categoria':t.c||'','Prática':h.p||'','Ordem':h.o||'','Data':h.d||'','Alunos':h.a||0});});});exportCSV(rows,'portfolios_enviados_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportSemTutor(){const rows=((GER_DB||DB).ger_contratacao||[]).filter(c=>!c.tem_tutor).map(c=>({'Polo':c.polo,'Categoria':c.categoria,'Status':c.status,'Total Ofertas':c.total_ofertas,'Tutores':(c.tutores||[]).join('; ')||'—'}));exportCSV(rows,'polos_sem_tutor_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportTutores(){var d=tutoresFiltrados||DB.tutores||[];exportCSV(d.map(t=>({'Nome':t.n,'Polo':t.p,'Categoria':t.c||'','Portfólios Enviados':t.te||0,'Total Práticas':t.tp||'?','% Conclusão':t.pct||0,'Status':gTS(t)||''})),'tutores_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportDetalhe(){var cat=(document.getElementById('ger-det-cat')||{}).value||'';var ord=(document.getElementById('ger-det-ordem')||{}).value||'';function normNomeExp(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}var dFiltrado=gerDetData||[];if(ord)dFiltrado=dFiltrado.filter(r=>r.ordem===ord);if(cat)dFiltrado=dFiltrado.filter(r=>r.categoria===cat);function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}var poloTutorMapExp={};dFiltrado.forEach(r=>{if(r.tutor&&r.polo){var pk=normPoloExp(r.polo);if(!poloTutorMapExp[pk])poloTutorMapExp[pk]=new Set();poloTutorMapExp[pk].add(normNomeExp(r.tutor));}});var tutoresAtivos=(DB.tutores||[]).filter(t=>!t._anonimo);if(cat){var catBusca=cat.split('(')[0].trim().toUpperCase();tutoresAtivos=tutoresAtivos.filter(t=>{if(!t.c)return false;return t.c.toUpperCase().split('+').map(s=>s.trim()).some(p=>p===catBusca||p.includes(catBusca));});}var semGerExpMap={};tutoresAtivos.filter(t=>{var pk=normPoloExp(t.p);var poloSet=poloTutorMapExp[pk];if(poloSet)return !poloSet.has(normNomeExp(t.n));return true;}).forEach(t=>{var key=normNomeExp(t.n)+'|'+normPoloExp(t.p);if(!semGerExpMap[key])semGerExpMap[key]={'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c||'—'),'Categoria':t.c||'','Ordem':ord||'—'};});var rows=Object.values(semGerExpMap).sort((a,b)=>a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']));if(!rows.length){alert('Todos os tutores têm oferta atribuída para esta seleção!');return;}exportCSV(rows,'sem_gerenciamento_'+(ord||'todas')+'_'+new Date().toISOString().slice(0,10)+'.csv');}
-function abrirSemGerenciamento(){var ord=(document.getElementById('ger-det-ordem')||{}).value||'';var cat=(document.getElementById('ger-det-cat')||{}).value||'';_renderSemGer(ord,cat);}
+function exportDetalhe(){var grupoId=(document.getElementById('ger-det-cat')||{}).value||'';var grupo=_grupoById(grupoId);var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';var ord=(document.getElementById('ger-det-ordem')||{}).value||'';function normNomeExp(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}var dFiltrado=gerDetData||[];if(ord)dFiltrado=dFiltrado.filter(r=>r.ordem===ord);if(grupo)dFiltrado=dFiltrado.filter(r=>_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId));function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}var poloTutorMapExp={};dFiltrado.forEach(r=>{if(r.tutor&&r.polo){var pk=normPoloExp(r.polo);if(!poloTutorMapExp[pk])poloTutorMapExp[pk]=new Set();poloTutorMapExp[pk].add(normNomeExp(r.tutor));}});var tutoresAtivos=(DB.tutores||[]).filter(t=>!t._anonimo);if(grupo)tutoresAtivos=tutoresAtivos.filter(t=>_tutorMatchesGrupo(t,grupo,subfiltroId));var semGerExpMap={};tutoresAtivos.filter(t=>{var pk=normPoloExp(t.p);var poloSet=poloTutorMapExp[pk];if(poloSet)return !poloSet.has(normNomeExp(t.n));return true;}).forEach(t=>{var key=normNomeExp(t.n)+'|'+normPoloExp(t.p);if(!semGerExpMap[key])semGerExpMap[key]={'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c||'—'),'Categoria':t.c||'','Ordem':ord||'—'};});var rows=Object.values(semGerExpMap).sort((a,b)=>a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']));if(!rows.length){alert('Todos os tutores têm oferta atribuída para esta seleção!');return;}var sufixoGrupo=grupo?grupo.label.replace(/[^a-z0-9]/gi,'_'):'todos_grupos';exportCSV(rows,'sem_gerenciamento_'+(ord||'todas')+'_'+sufixoGrupo+'_'+new Date().toISOString().slice(0,10)+'.csv');}
+function abrirSemGerenciamento(){
+  // PATCH 47: o modal "Ver Sem Gerenc." tem um seletor de categoria PRÓPRIO,
+  // com as categorias cruas (não os 5 grupos do filtro principal), porque 2 dos
+  // grupos novos somam mais de uma categoria/subcurso — não dá pra herdar um
+  // valor único de categoria a partir do grupo sem esconder parte dele. Herda
+  // só a ordem; a categoria começa em "Todos os laboratórios" dentro do modal.
+  var ord=(document.getElementById('ger-det-ordem')||{}).value||'';
+  _renderSemGer(ord,'');
+}
 function _renderSemGer(ord,cat){
   function normPolo(p){return (p||'').replace(/^LAP\s*[-–]\s*/i,'').trim().toLowerCase();}
   var d=gerDetData||[];
