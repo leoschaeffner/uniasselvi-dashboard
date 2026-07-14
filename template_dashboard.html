@@ -301,6 +301,9 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="page" id="page-tutores-mec"><div class="container">
   <div class="ph"><div class="ph-title">Gestão de Tutores</div><div class="ph-sub" id="tutmec-sub">—</div></div>
   <div class="kpi-row" id="tutmec-kpis" style="margin-bottom:12px"></div>
+  <div style="font-size:11px;color:var(--muted);margin:-6px 0 12px 2px">
+    <b>Gerenc.</b> = capacidade esperada, não quantidade de registros: CH contratada → práticas/semana → capacidade por ordem (4h→8, 8h→16, 12h→24, 20h→40, 24h→48), somada em todas as ordens que o tutor tem dado no GIOCONDA.
+  </div>
   <div class="card" style="margin-bottom:12px">
     <div class="toolbar" style="flex-wrap:wrap;gap:6px">
       <input class="search" type="text" placeholder="Buscar tutor, polo…" oninput="filterTutoresMec(this.value)" id="tutmec-search" style="min-width:180px;flex:1"/>
@@ -1129,7 +1132,7 @@ function renderGerenciamento(){
   const cs=document.getElementById('ger-det-cat');
   const _csPrev=cs.value;
   while(cs.options.length>1) cs.remove(1);
-  GRUPOS_GER.filter(g=>g.cats.some(c=>dcats.includes(c)))
+  GRUPOS_GER.filter(g=>dcats.some(c=>g.base.indexOf(_grupoBaseDaCategoria(c))>=0))
     .forEach(g=>{const o=document.createElement('option');o.value=g.id;o.textContent=g.label;cs.appendChild(o)});
   if([...cs.options].some(o=>o.value===_csPrev)) cs.value=_csPrev;
   _updateGerSubfiltro();
@@ -1253,24 +1256,55 @@ function sortDetalhe(col){
 //    um sub-filtro pra escolher Engenharias/Licenciaturas vs Química e Física/
 //    Agronomia, que é a separação que o Leo pediu ("separar qual é qual")
 var GRUPOS_GER = [
-  {id:'enfermagem', label:'Enfermagem',
-    cats:['ENF-INS (Multidisciplinar II)']},
-  {id:'fisio-to', label:'Fisioterapia e Terapia Ocupacional',
-    cats:['BIO-FISIO-EST-TO (Multidisciplinar III)'],
+  {id:'enfermagem', label:'Enfermagem', base:['enfermagem']},
+  {id:'fisio-to', label:'Fisioterapia e Terapia Ocupacional', base:['multi3'],
     subcursos:['Fisioterapia','Terapia Ocupacional']},
-  {id:'bio-far-est', label:'Biomedicina, Farmácia e Estética/Cosmética',
-    cats:['BIO-FAR (Multidisciplinar I)','BIO-FISIO-EST-TO (Multidisciplinar III)'],
-    subcursosPorCat:{'BIO-FISIO-EST-TO (Multidisciplinar III)':['Estética e Cosmética']}},
-  {id:'nutricao', label:'Nutrição',
-    cats:['NUTRI (Multidisciplinar IV)']},
-  {id:'exatas', label:'Exatas',
-    cats:['QUÍMICA E FÍSICA','ENGMAKER','ENGMAKER+QUÍMICA E FÍSICA'],
+  {id:'bio-far-est', label:'Biomedicina, Farmácia e Estética/Cosmética', base:['bio-far','multi3'],
+    // PATCH 51: sub-filtro pra separar as duas fatias quando o Leo achar a
+    // lista combinada confusa demais (mesmo mecanismo genérico já usado em
+    // Exatas) — por padrão continua mostrando as duas juntas.
     subfiltro:[
-      {id:'engenharias', label:'Engenharias e Licenciaturas', cats:['ENGMAKER','ENGMAKER+QUÍMICA E FÍSICA']},
-      {id:'quimica-fisica', label:'Química e Física / Agronomia', cats:['QUÍMICA E FÍSICA','ENGMAKER+QUÍMICA E FÍSICA']}
+      {id:'bio-far', label:'Biomedicina e Farmácia', base:['bio-far']},
+      {id:'estetica', label:'Estética e Cosmética', base:['multi3']}
+    ]},
+  {id:'nutricao', label:'Nutrição', base:['nutricao']},
+  {id:'exatas', label:'Exatas', base:['exatas'],
+    subfiltro:[
+      {id:'engenharias', label:'Engenharias e Licenciaturas', keyword:'MAKER'},
+      {id:'quimica-fisica', label:'Química e Física / Agronomia', keyword:'QUIMICA'}
     ]},
 ];
 function _grupoById(id){return GRUPOS_GER.find(function(g){return g.id===id;})||null;}
+function _semAcento(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+// PATCH 52: o Leo reportou tutores de Enfermagem aparecendo em "Biomedicina,
+// Farmácia e Estética/Cosmética", engenheiros em Nutrição/Fisioterapia — em
+// TODOS os cursos, não caso isolado. Causa provável: o filtro comparava a
+// categoria da oferta (r.categoria, vinda do export GIOCONDA) com uma string
+// EXATA fixa — e o próprio código já documentava (PATCH 19, _CAT_RAW_NORM) que
+// o export novo de 2026/2 renomeia rótulos de categoria (confirmado pra Multi
+// III: "FISIO-TO-EST-BIO" virou "BIO-FISIO-EST-TO", e só esse caso foi
+// normalizado). Se as OUTRAS categorias também vieram renomeadas no export
+// novo sem um ajuste equivalente, a comparação exata simplesmente nunca batia
+// pra elas — e o fallback de "tutor sem oferta" (que usa t.c, vindo do
+// CONTROLE, formato antigo) virava o único jeito desses tutores aparecerem,
+// caindo no grupo que seu t.c antigo bate, mesmo que a oferta real dele no
+// GIOCONDA seja de outra categoria. Esta função troca a comparação exata por
+// uma baseada no NÚMERO do Multidisciplinar (I/II/III/IV — estável entre
+// formatos) + palavra-chave pra Exatas (que não tem numeração), bem mais
+// resistente a mudanças no texto descritivo da categoria em si.
+function _grupoBaseDaCategoria(catStr){
+  var s=_semAcento(catStr).toUpperCase();
+  var m=s.match(/MULTIDISCIPLINAR\s+(IV|III|II|I)\)/);
+  if(m){
+    var r=m[1];
+    if(r==='IV') return 'nutricao';
+    if(r==='III') return 'multi3';
+    if(r==='II') return 'enfermagem';
+    if(r==='I') return 'bio-far';
+  }
+  if(s.indexOf('ENGMAKER')>=0 || s.indexOf('ENGEMAKER')>=0 || s.indexOf('QUIMICA')>=0) return 'exatas';
+  return null;
+}
 // Código de curso específico (coluna CURSOS do CONTROLE/LOTAÇÃO: BFI/BTO/COS-TIP/
 // BBI/BFR/EMF-ISN/NTR) → subcurso. Espelha o _SUBCURSO_LABEL do processar.py.
 // Usado só pra classificar tutores que ainda não têm NENHUMA oferta no GIOCONDA
@@ -1288,15 +1322,19 @@ function _subcursoDeCodigo(codigo){
   return _SUBCURSO_LABEL_JS[raw]||null;
 }
 // Testa se uma linha de OFERTA (tem .categoria e .subcurso já vindos do processar.py)
-// pertence ao grupo selecionado (e, se houver, ao sub-filtro de Exatas)
+// pertence ao grupo selecionado (e, se houver, ao sub-filtro)
 function _rowMatchesGrupo(catRow, subcursoRow, grupo, subfiltroId){
   if(!grupo) return true;
-  if(grupo.cats.indexOf(catRow)<0) return false;
-  if(grupo.subcursos && (!subcursoRow || grupo.subcursos.indexOf(subcursoRow)<0)) return false;
-  if(grupo.subcursosPorCat && grupo.subcursosPorCat[catRow] && (!subcursoRow || grupo.subcursosPorCat[catRow].indexOf(subcursoRow)<0)) return false;
+  var base=_grupoBaseDaCategoria(catRow);
+  if(!base || grupo.base.indexOf(base)<0) return false;
+  if(grupo.id==='fisio-to' && (!subcursoRow || grupo.subcursos.indexOf(subcursoRow)<0)) return false;
+  if(grupo.id==='bio-far-est' && base==='multi3' && subcursoRow!=='Estética e Cosmética') return false;
   if(grupo.subfiltro && subfiltroId){
     var sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
-    if(sf && sf.cats.indexOf(catRow)<0) return false;
+    if(sf){
+      if(sf.base && sf.base.indexOf(base)<0) return false;
+      if(sf.keyword && _semAcento(catRow).toUpperCase().indexOf(sf.keyword)<0) return false;
+    }
   }
   return true;
 }
@@ -1309,13 +1347,17 @@ function _rowMatchesGrupo(catRow, subcursoRow, grupo, subfiltroId){
 function _tutorMatchesGrupo(t, grupo, subfiltroId){
   if(!grupo) return true;
   var catT=t.c||'';
-  if(grupo.cats.indexOf(catT)<0) return false;
+  var base=_grupoBaseDaCategoria(catT);
+  if(!base || grupo.base.indexOf(base)<0) return false;
   var subT=_subcursoDeCodigo(t.cursos);
-  if(grupo.subcursos && subT && grupo.subcursos.indexOf(subT)<0) return false;
-  if(grupo.subcursosPorCat && grupo.subcursosPorCat[catT] && subT && grupo.subcursosPorCat[catT].indexOf(subT)<0) return false;
+  if(grupo.id==='fisio-to' && subT && grupo.subcursos.indexOf(subT)<0) return false;
+  if(grupo.id==='bio-far-est' && base==='multi3' && subT && subT!=='Estética e Cosmética') return false;
   if(grupo.subfiltro && subfiltroId){
     var sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
-    if(sf && sf.cats.indexOf(catT)<0) return false;
+    if(sf){
+      if(sf.base && sf.base.indexOf(base)<0) return false;
+      if(sf.keyword && _semAcento(catT).toUpperCase().indexOf(sf.keyword)<0) return false;
+    }
   }
   return true;
 }
@@ -3137,6 +3179,47 @@ function _renderComSemestre() {
 // ══════════════════════════════════════════════════════════════════════════
 // PÁGINA TUTORES MEC — Gestão completa de tutores com MEC + portfólio + gerenciamento
 // ══════════════════════════════════════════════════════════════════════════
+function _construirIndiceGerPorOrdem(){
+  // PATCH 51: agrupa as ofertas do semestre atual por tutor (nome normalizado)
+  // e, dentro de cada tutor, por ordem — base pro cálculo consolidado abaixo.
+  var idx={};
+  ((typeof GER_DB!=='undefined' && GER_DB ? GER_DB : DB).ger_ofertas||[]).forEach(function(r){
+    if(!r.tutor) return;
+    var key=_normTutorKey(r.tutor);
+    if(!idx[key]) idx[key]={};
+    var ord=r.ordem||'—';
+    if(!idx[key][ord]) idx[key][ord]={ger:0,total:0};
+    idx[key][ord].total++;
+    if(r.gerenciado) idx[key][ord].ger++;
+  });
+  return idx;
+}
+function _gerConsolidadoDoTutor(t, idxPorOrdem){
+  // PATCH 51: o backend calculava ger_pct como (registros geridos ÷ registros
+  // BRUTOS do GIOCONDA pro tutor) — um tutor com só 1 registro (gerido) mostrava
+  // "1/1 100%" exatamente igual a um tutor com 15/15, mesmo os dois tendo
+  // capacidades reais completamente diferentes (a quantidade de registros no
+  // GIOCONDA não é a capacidade esperada do tutor). Aqui o denominador vira a
+  // capacidade REAL esperada — CH contratada → práticas/semana → capacidade por
+  // ordem (mesma fórmula e mesmos padrões de CH usados no Detalhe: 4h→8, 8h→16,
+  // 12h→24, 20h→40, 24h→48) — somada em TODAS as ordens que o tutor tem dado
+  // (o "consolidado" pedido pelo Leo), e só cai pro total bruto de registros
+  // quando a CH do tutor é desconhecida (não dá pra calcular capacidade).
+  var porOrdem=idxPorOrdem[_normTutorKey(t.n)];
+  if(!porOrdem) return {ok:0,total:0,pct:null};
+  var chSemanal=t.ch_semanal||null;
+  var padraoCH=[4,8,12,20,24];
+  var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});
+  var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;
+  var capOrdem=praticasSemana?praticasSemana*4:null;
+  var totalGer=0, totalCap=0;
+  Object.keys(porOrdem).forEach(function(ord){
+    var od=porOrdem[ord];
+    totalGer+=od.ger;
+    totalCap+=(capOrdem||od.total);
+  });
+  return {ok:totalGer, total:totalCap, pct:totalCap?Math.round(totalGer/totalCap*100):null};
+}
 function renderTutoresMec() {
   // PATCH 19: clear-and-rebuild (não só "popula uma vez") — mais robusto a
   // chamadas repetidas de renderTutoresMec(), mesmo padrão usado em ger-det-cat
@@ -3157,6 +3240,17 @@ function renderTutoresMec() {
     }
   }
   // ── KPIs da ficha ─────────────────────────────────────────────
+  // PATCH 51: recalcula ger_ok/ger_total/ger_pct de TODOS os tutores usando a
+  // capacidade consolidada (ver _gerConsolidadoDoTutor) antes de qualquer KPI,
+  // filtro, ordenação ou célula usar esses campos — substitui de vez o valor
+  // que vinha do processar.py (baseado em contagem bruta de registros).
+  (function(){
+    var _idxGerOrdem=_construirIndiceGerPorOrdem();
+    (DB.tutores||[]).forEach(function(t){
+      var c=_gerConsolidadoDoTutor(t, _idxGerOrdem);
+      t.ger_ok=c.ok; t.ger_total=c.total; t.ger_pct=c.pct;
+    });
+  })();
   const _tAll=(DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio');
   const _tit=t=>t.titulacao||'';
   const kpiEl=document.getElementById('tutmec-kpis');
@@ -3293,7 +3387,7 @@ function filterTutoresMec(q) {
         <th style="${thC}" onclick="_tutMecSort('ch')">CH ${arrow('ch')}</th>
         <th style="${thC}" onclick="_tutMecSort('admis')">Admissão ${arrow('admis')}</th>
         <th style="${thC}" onclick="_tutMecSort('port')">Portfólio ${arrow('port')}</th>
-        <th style="${thC}" onclick="_tutMecSort('ger')">Gerenc. ${arrow('ger')}</th>
+        <th style="${thC}" onclick="_tutMecSort('ger')" title="% sobre a capacidade esperada (CH contratada → práticas/semana → capacidade por ordem, somada em todas as ordens que o tutor tem dado no GIOCONDA) — não é sobre a quantidade bruta de registros">Gerenc. ⓘ ${arrow('ger')}</th>
         <th style="${thC}" onclick="_tutMecSort('lattes')" style="cursor:pointer">Lattes ${arrow('lattes')}</th>
         <th style="${thC}">Ver</th>
       </tr>
