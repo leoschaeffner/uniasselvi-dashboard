@@ -1121,6 +1121,60 @@ function renderGerenciamento(){
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
   gerDetData=GER_DB.ger_ofertas||[];
+  // PATCH 56: o Leo reportou tutores de Estética/Bio-Far aparecendo classificados
+  // como Terapia Ocupacional (e o mesmo em outras áreas) — "diversos tutores, sem
+  // exceção". A especialidade de um tutor é uma característica DELE (registrada
+  // no CONTROLE/LOTAÇÃO, coluna CURSOS — ex: Beatriz Henkels = BBI/Biomedicina),
+  // não deveria mudar de prática pra prática. Mas o subcurso vindo do GIOCONDA é
+  // calculado por LINHA/prática, e parece não ser confiável nesse nível — a
+  // mesma pessoa aparece com códigos diferentes em práticas diferentes. Como o
+  // CONTROLE é o cadastro mestre da especialidade do tutor, ele passa a ter
+  // prioridade: sobrescreve o subcurso de cada oferta com o subcurso do CADASTRO
+  // do tutor (por nome) quando existir, e só usa o subcurso da própria oferta
+  // (GIOCONDA) quando o tutor não tiver esse dado no CONTROLE.
+  // PATCH 58: a versão anterior resolvia a especialidade só pelo NOME normalizado
+  // — se duas pessoas reais diferentes tiverem o mesmo nome (o próprio dashboard
+  // já documentou esse tipo de caso, ex: PATCH 49 chapa/homônimo), a última
+  // processada "vencia" e podia sobrescrever a especialidade errada nas ofertas
+  // da outra pessoa. Agora tenta, em ordem de precisão: nome+chapa exata (quando
+  // o nome tem "(nnnn)") > nome+polo (só se todos os registros desse nome+polo
+  // no CONTROLE concordarem numa única especialidade) > nome sozinho (só se
+  // TODOS os registros desse nome no CONTROLE, em qualquer polo, concordarem).
+  // Se houver ambiguidade real em algum nível, não decide — mantém o subcurso
+  // original da oferta (GIOCONDA) em vez de arriscar um palpite errado.
+  (function(){
+    function _chapaDe(nome){ var m=String(nome||'').match(/\((\d+)\)\s*$/); return m?m[1]:null; }
+    function _poloKeySimples(p){
+      return String(p||'').replace(/^LAP\s*[-–]\s*/i,'').replace(/\([^)]*\)/g,'')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+    }
+    var porNomeChapa={}, porNomePolo={}, porNomePoloAmbiguo={}, porNome={}, porNomeAmbiguo={};
+    (DB.tutores||[]).forEach(function(t){
+      if(!t.n) return;
+      var sub=_subcursoDeCodigo(t.cursos);
+      if(!sub) return;
+      var nk=_normTutorKey(t.n);
+      var chapa=_chapaDe(t.n);
+      if(chapa) porNomeChapa[nk+'|||'+chapa]=sub;
+      var pk=nk+'|||'+_poloKeySimples(t.p);
+      if(pk in porNomePolo && porNomePolo[pk]!==sub) porNomePoloAmbiguo[pk]=true; else porNomePolo[pk]=sub;
+      if(nk in porNome && porNome[nk]!==sub) porNomeAmbiguo[nk]=true; else porNome[nk]=sub;
+    });
+    gerDetData.forEach(function(r){
+      if(!r.tutor) return;
+      var nk=_normTutorKey(r.tutor);
+      var chapa=_chapaDe(r.tutor);
+      var sub=null;
+      if(chapa && porNomeChapa[nk+'|||'+chapa]){
+        sub=porNomeChapa[nk+'|||'+chapa];
+      }else{
+        var pk=nk+'|||'+_poloKeySimples(r.polo);
+        if(!porNomePoloAmbiguo[pk] && porNomePolo[pk]) sub=porNomePolo[pk];
+        else if(!porNomeAmbiguo[nk] && porNome[nk]) sub=porNome[nk];
+      }
+      if(sub) r.subcurso=sub;
+    });
+  })();
   const dcats=[...new Set(gerDetData.map(d=>d.categoria).filter(Boolean))];
   const ordemKeys=(GER_DB.ger_ordem||[]).map(o=>o.ordem).filter(Boolean).sort();
   const dordens=ordemKeys.length?ordemKeys:[...new Set(gerDetData.map(d=>d.ordem).filter(Boolean))].sort();
@@ -1294,7 +1348,11 @@ function _semAcento(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\
 // resistente a mudanças no texto descritivo da categoria em si.
 function _grupoBaseDaCategoria(catStr){
   var s=_semAcento(catStr).toUpperCase();
-  var m=s.match(/MULTIDISCIPLINAR\s+(IV|III|II|I)\)/);
+  // PATCH 57: sem exigir ")" logo depois do numeral — o próprio CAT_MAP usa um
+  // formato descritivo longo sem parênteses nenhum ("Multidisciplinar I -
+  // Biomedicina e Farmácia"), e exigir ")" fazia essa forma (ou qualquer outra
+  // pontuação diferente) nunca bater
+  var m=s.match(/MULTIDISCIPLINAR\s+(IV|III|II|I)\b/);
   if(m){
     var r=m[1];
     if(r==='IV') return 'nutricao';
@@ -1411,7 +1469,7 @@ function filterGerDetalhe(q){
   // em vez de resolver o problema — o objetivo aqui é separar especialidades
   // REAIS e reconhecíveis (Fisioterapia × T.O., Farmácia × Biomedicina, etc.),
   // não qualquer valor bruto que caia no campo subcurso.
-  var _SUBCURSOS_LIMPOS = {'Fisioterapia':1,'Terapia Ocupacional':1,'Estética e Cosmética':1,'Biomedicina':1,'Farmácia':1,'Enfermagem/Instrumentação':1,'Nutrição':1};
+  var _SUBCURSOS_LIMPOS = Object.values(_SUBCURSO_LABEL_JS).reduce(function(acc,v){acc[v]=1;return acc;},{});
   function _baseKeyOferta(r){
     var subLimpo = _SUBCURSOS_LIMPOS[r.subcurso] ? r.subcurso : '';
     return _normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'')+'|||'+subLimpo;
@@ -3196,34 +3254,42 @@ function _renderComSemestre() {
 // PÁGINA TUTORES MEC — Gestão completa de tutores com MEC + portfólio + gerenciamento
 // ══════════════════════════════════════════════════════════════════════════
 function _construirIndiceGerPorOrdem(){
-  // PATCH 51: agrupa as ofertas do semestre atual por tutor (nome normalizado)
-  // e, dentro de cada tutor, por ordem — base pro cálculo consolidado abaixo.
-  var idx={};
+  // PATCH 51/59: agrupa as ofertas do semestre atual por tutor+polo (base pro
+  // cálculo consolidado abaixo). Duas pessoas reais diferentes com o mesmo nome
+  // em polos DIFERENTES não se confundem mais (chave inclui o polo); o índice
+  // por nome sozinho continua existindo só como fallback pra quando o polo do
+  // GIOCONDA e do CONTROLE não baterem exatamente (grafia diferente etc.).
+  function _poloKeySimples(p){
+    return String(p||'').replace(/^LAP\s*[-–]\s*/i,'').replace(/\([^)]*\)/g,'')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+  }
+  var porNomePolo={}, porNome={};
   ((typeof GER_DB!=='undefined' && GER_DB ? GER_DB : DB).ger_ofertas||[]).forEach(function(r){
     if(!r.tutor) return;
-    var key=_normTutorKey(r.tutor);
-    if(!idx[key]) idx[key]={};
+    var nk=_normTutorKey(r.tutor);
     var ord=r.ordem||'—';
-    if(!idx[key][ord]) idx[key][ord]={ger:0,total:0};
-    idx[key][ord].total++;
-    if(r.gerenciado) idx[key][ord].ger++;
+    var pk=nk+'|||'+_poloKeySimples(r.polo);
+    if(!porNomePolo[pk]) porNomePolo[pk]={};
+    if(!porNomePolo[pk][ord]) porNomePolo[pk][ord]={ger:0,total:0};
+    porNomePolo[pk][ord].total++; if(r.gerenciado) porNomePolo[pk][ord].ger++;
+    if(!porNome[nk]) porNome[nk]={};
+    if(!porNome[nk][ord]) porNome[nk][ord]={ger:0,total:0};
+    porNome[nk][ord].total++; if(r.gerenciado) porNome[nk][ord].ger++;
   });
-  return idx;
+  return {porNomePolo:porNomePolo, porNome:porNome, _poloKeySimples:_poloKeySimples};
 }
-function _gerConsolidadoDoTutor(t, idxPorOrdem){
-  // PATCH 51/54: o backend calculava ger_pct como (registros geridos ÷ registros
-  // BRUTOS do GIOCONDA pro tutor) — um tutor com só 1 registro (gerido) mostrava
-  // "1/1 100%" igual a um tutor com 15/15. O PATCH 51 trocou o denominador pela
-  // capacidade REAL esperada (CH → práticas/semana → capacidade por ordem), mas
-  // só somava as ordens que o tutor JÁ TINHA dado no GIOCONDA — um tutor que
-  // terminou 100% da Ordem 1 mas ainda nem começou as Ordens 2-5 aparecia como
-  // "8/8 100%", quando na verdade só cobriu 1 de 5 ordens esperadas no semestre
-  // (8/40 = 20%, como o Leo apontou). Agora o total de ordens é FIXO em 5 (O.1
-  // a O.5, o mesmo padrão usado em todo o resto do dashboard) sempre que a CH é
-  // conhecida — só cai pro total bruto de ordens com dado quando a CH é
-  // desconhecida (não dá pra calcular capacidade nenhuma).
+function _gerConsolidadoDoTutor(t, idx){
+  // PATCH 51/54/59: o backend calculava ger_pct como (registros geridos ÷
+  // registros BRUTOS do GIOCONDA pro tutor) — um tutor com só 1 registro
+  // (gerido) mostrava "1/1 100%" igual a um tutor com 15/15. Agora o denominador
+  // é a capacidade REAL esperada (CH → práticas/semana → capacidade por ordem)
+  // multiplicada pelas 5 ordens do semestre (O.1 a O.5) — não só as ordens em
+  // que o tutor já tem dado — e a busca do histórico do tutor prioriza nome+polo
+  // (evita conflito entre duas pessoas reais de mesmo nome em polos diferentes).
   var NUM_ORDENS_SEMESTRE = 5;
-  var porOrdem=idxPorOrdem[_normTutorKey(t.n)];
+  var nk=_normTutorKey(t.n);
+  var pk=nk+'|||'+idx._poloKeySimples(t.p);
+  var porOrdem = idx.porNomePolo[pk] || idx.porNome[nk];
   if(!porOrdem) return {ok:0,total:0,pct:null};
   var chSemanal=t.ch_semanal||null;
   var padraoCH=[4,8,12,20,24];
