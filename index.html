@@ -302,7 +302,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="ph"><div class="ph-title">Gestão de Tutores</div><div class="ph-sub" id="tutmec-sub">—</div></div>
   <div class="kpi-row" id="tutmec-kpis" style="margin-bottom:12px"></div>
   <div style="font-size:11px;color:var(--muted);margin:-6px 0 12px 2px">
-    <b>Gerenc.</b> = capacidade esperada, não quantidade de registros: CH contratada → práticas/semana → capacidade por ordem (4h→8, 8h→16, 12h→24, 20h→40, 24h→48), somada em todas as ordens que o tutor tem dado no GIOCONDA.
+    <b>Gerenc.</b> = capacidade esperada, não quantidade de registros: CH contratada → práticas/semana → capacidade por ordem (4h→8, 8h→16, 12h→24, 20h→40, 24h→48), multiplicada pelas 5 ordens do semestre (O.1 a O.5) — não só as ordens em que o tutor já tem dado.
   </div>
   <div class="card" style="margin-bottom:12px">
     <div class="toolbar" style="flex-wrap:wrap;gap:6px">
@@ -1402,13 +1402,27 @@ function filterGerDetalhe(q){
   // tem MAIS DE UMA chapa distinta nos dados — indício forte de duas pessoas reais
   // diferentes com o mesmo nome (não apenas variação de formatação "com/sem
   // chapa" da MESMA pessoa, que é o caso normal e deve continuar mesclado).
+  // PATCH 55: só separa a linha por subcurso quando ele é uma especialidade
+  // "limpa" e conhecida (as mesmas do _SUBCURSO_LABEL_JS) — em Exatas, o campo
+  // subcurso cai pro código de curso INTERNO cru quando não reconhecido (dezenas
+  // de códigos diferentes por disciplina de engenharia, já documentado no PATCH
+  // 46: "não formam uma lista limpa de especialidades"). Sem essa restrição, um
+  // único tutor de Exatas fragmentaria em várias linhas (uma por código interno)
+  // em vez de resolver o problema — o objetivo aqui é separar especialidades
+  // REAIS e reconhecíveis (Fisioterapia × T.O., Farmácia × Biomedicina, etc.),
+  // não qualquer valor bruto que caia no campo subcurso.
+  var _SUBCURSOS_LIMPOS = {'Fisioterapia':1,'Terapia Ocupacional':1,'Estética e Cosmética':1,'Biomedicina':1,'Farmácia':1,'Enfermagem/Instrumentação':1,'Nutrição':1};
+  function _baseKeyOferta(r){
+    var subLimpo = _SUBCURSOS_LIMPOS[r.subcurso] ? r.subcurso : '';
+    return _normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'')+'|||'+subLimpo;
+  }
   var _chapaPorGrupo={};
   dBuild.forEach(function(r){
-    var baseKey=_normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'');
+    var baseKey=_baseKeyOferta(r);
     var m=String(r.tutor||'').match(/\((\d+)\)\s*$/);
     if(m){ (_chapaPorGrupo[baseKey]=_chapaPorGrupo[baseKey]||new Set()).add(m[1]); }
   });
-  var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var baseKey=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');
+  var tutorMap={};dBuild.forEach(function(r){var baseKey=_baseKeyOferta(r);
     var _mChapaAtual=String(r.tutor||'').match(/\((\d+)\)\s*$/);var _chapaAtual=_mChapaAtual?_mChapaAtual[1]:null;
     var _chapasDoGrupo=_chapaPorGrupo[baseKey];
     var key=(_chapasDoGrupo && _chapasDoGrupo.size>1) ? baseKey+'|||'+(_chapaAtual||'sem-chapa') : baseKey;
@@ -1418,6 +1432,8 @@ function filterGerDetalhe(q){
     // PATCH 48: guarda o(s) subcurso(s) REAL(is) dessa oferta (vindo do GIOCONDA,
     // o mesmo campo usado pra filtrar o grupo) — necessário pra exibir "Curso/Lab"
     // consistente com o filtro aplicado (ver correção logo abaixo, na montagem de cuLab)
+    // PATCH 53: como o baseKey agora já inclui o subcurso, cada linha só recebe UM
+    // subcurso na prática (mantido como mapa por segurança/compatibilidade)
     if(r.subcurso) t._subcursos[r.subcurso]=(t._subcursos[r.subcurso]||0)+1;
     t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
@@ -3195,16 +3211,18 @@ function _construirIndiceGerPorOrdem(){
   return idx;
 }
 function _gerConsolidadoDoTutor(t, idxPorOrdem){
-  // PATCH 51: o backend calculava ger_pct como (registros geridos ÷ registros
+  // PATCH 51/54: o backend calculava ger_pct como (registros geridos ÷ registros
   // BRUTOS do GIOCONDA pro tutor) — um tutor com só 1 registro (gerido) mostrava
-  // "1/1 100%" exatamente igual a um tutor com 15/15, mesmo os dois tendo
-  // capacidades reais completamente diferentes (a quantidade de registros no
-  // GIOCONDA não é a capacidade esperada do tutor). Aqui o denominador vira a
-  // capacidade REAL esperada — CH contratada → práticas/semana → capacidade por
-  // ordem (mesma fórmula e mesmos padrões de CH usados no Detalhe: 4h→8, 8h→16,
-  // 12h→24, 20h→40, 24h→48) — somada em TODAS as ordens que o tutor tem dado
-  // (o "consolidado" pedido pelo Leo), e só cai pro total bruto de registros
-  // quando a CH do tutor é desconhecida (não dá pra calcular capacidade).
+  // "1/1 100%" igual a um tutor com 15/15. O PATCH 51 trocou o denominador pela
+  // capacidade REAL esperada (CH → práticas/semana → capacidade por ordem), mas
+  // só somava as ordens que o tutor JÁ TINHA dado no GIOCONDA — um tutor que
+  // terminou 100% da Ordem 1 mas ainda nem começou as Ordens 2-5 aparecia como
+  // "8/8 100%", quando na verdade só cobriu 1 de 5 ordens esperadas no semestre
+  // (8/40 = 20%, como o Leo apontou). Agora o total de ordens é FIXO em 5 (O.1
+  // a O.5, o mesmo padrão usado em todo o resto do dashboard) sempre que a CH é
+  // conhecida — só cai pro total bruto de ordens com dado quando a CH é
+  // desconhecida (não dá pra calcular capacidade nenhuma).
+  var NUM_ORDENS_SEMESTRE = 5;
   var porOrdem=idxPorOrdem[_normTutorKey(t.n)];
   if(!porOrdem) return {ok:0,total:0,pct:null};
   var chSemanal=t.ch_semanal||null;
@@ -3214,10 +3232,13 @@ function _gerConsolidadoDoTutor(t, idxPorOrdem){
   var capOrdem=praticasSemana?praticasSemana*4:null;
   var totalGer=0, totalCap=0;
   Object.keys(porOrdem).forEach(function(ord){
-    var od=porOrdem[ord];
-    totalGer+=od.ger;
-    totalCap+=(capOrdem||od.total);
+    totalGer+=porOrdem[ord].ger;
   });
+  if(capOrdem){
+    totalCap = capOrdem * NUM_ORDENS_SEMESTRE;
+  }else{
+    Object.keys(porOrdem).forEach(function(ord){ totalCap+=porOrdem[ord].total; });
+  }
   return {ok:totalGer, total:totalCap, pct:totalCap?Math.round(totalGer/totalCap*100):null};
 }
 function renderTutoresMec() {
@@ -3387,7 +3408,7 @@ function filterTutoresMec(q) {
         <th style="${thC}" onclick="_tutMecSort('ch')">CH ${arrow('ch')}</th>
         <th style="${thC}" onclick="_tutMecSort('admis')">Admissão ${arrow('admis')}</th>
         <th style="${thC}" onclick="_tutMecSort('port')">Portfólio ${arrow('port')}</th>
-        <th style="${thC}" onclick="_tutMecSort('ger')" title="% sobre a capacidade esperada (CH contratada → práticas/semana → capacidade por ordem, somada em todas as ordens que o tutor tem dado no GIOCONDA) — não é sobre a quantidade bruta de registros">Gerenc. ⓘ ${arrow('ger')}</th>
+        <th style="${thC}" onclick="_tutMecSort('ger')" title="% sobre a capacidade esperada (CH contratada → práticas/semana → capacidade por ordem × 5 ordens do semestre) — não é sobre a quantidade bruta de registros nem só as ordens que o tutor já tem dado">Gerenc. ⓘ ${arrow('ger')}</th>
         <th style="${thC}" onclick="_tutMecSort('lattes')" style="cursor:pointer">Lattes ${arrow('lattes')}</th>
         <th style="${thC}">Ver</th>
       </tr>
