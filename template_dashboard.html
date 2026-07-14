@@ -1340,21 +1340,37 @@ function filterGerDetalhe(q){
   q=q.toLowerCase();var grupoId=document.getElementById('ger-det-cat').value;var grupo=_grupoById(grupoId);var ord=document.getElementById('ger-det-ordem').value;var st=document.getElementById('ger-det-status').value;var d=gerDetData;
   _updateGerSubfiltro();
   var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
-  // Filtrar para DESCOBRIR quais tutores exibir
   if(q)d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
   if(grupo)d=d.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
   if(ord)d=d.filter(function(r){return r.ordem===ord;});
   if(st==='ger')d=d.filter(function(r){return r.gerenciado;});
   if(st==='nger')d=d.filter(function(r){return !r.gerenciado;});
-  // Conjunto de chaves tutor+polo+cat que passaram no filtro
-  var _keys=new Set(d.map(function(r){return _normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'');}));
-  // Para construir ordCells: usar TODOS os dados (sem filtro de ordem) para esses tutores
-  var dBuild=gerDetData.filter(function(r){
-    if(q&&!(r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q))return false;
-    if(grupo&&!_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId))return false;
-    return _keys.has(_normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||''));
+  // PATCH 50: antes disso, a tabela era montada em 2 passos — "d" (com todos os
+  // filtros, usado só pra DESCOBRIR quais tutores qualificam) e "dBuild" (que
+  // ignorava ordem/status de propósito e trazia o histórico INTEIRO do tutor em
+  // todas as ordens). A ideia original era dar contexto, mas na prática isso
+  // fazia qualquer tutor que gerenciou QUALQUER coisa aparecer com célula verde
+  // mesmo filtrando por "Não gerenciadas" — não é caso isolado de homônimo/chapa
+  // (PATCH 49), é sistemático: acontecia com qualquer combinação de filtro, em
+  // qualquer curso, sempre que o tutor tinha ALGUMA prática gerenciada em algum
+  // lugar do histórico dele. Agora "dBuild" é exatamente "d": a tabela mostra só
+  // o que bate com o filtro escolhido, sem trazer de volta dado de fora dele.
+  var dBuild=d;
+  // PATCH 49: descobre, ANTES de agregar, se alguma combinação nome+polo+categoria
+  // tem MAIS DE UMA chapa distinta nos dados — indício forte de duas pessoas reais
+  // diferentes com o mesmo nome (não apenas variação de formatação "com/sem
+  // chapa" da MESMA pessoa, que é o caso normal e deve continuar mesclado).
+  var _chapaPorGrupo={};
+  dBuild.forEach(function(r){
+    var baseKey=_normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'');
+    var m=String(r.tutor||'').match(/\((\d+)\)\s*$/);
+    if(m){ (_chapaPorGrupo[baseKey]=_chapaPorGrupo[baseKey]||new Set()).add(m[1]); }
   });
-  var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var key=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0,_subcursos:{}};var t=tutorMap[key];
+  var tutorMap={};dBuild.forEach(function(r){var tutorKey=_normTutorKey(r.tutor);var baseKey=tutorKey+'|||'+(r.polo||'')+'|||'+(r.categoria||'');
+    var _mChapaAtual=String(r.tutor||'').match(/\((\d+)\)\s*$/);var _chapaAtual=_mChapaAtual?_mChapaAtual[1]:null;
+    var _chapasDoGrupo=_chapaPorGrupo[baseKey];
+    var key=(_chapasDoGrupo && _chapasDoGrupo.size>1) ? baseKey+'|||'+(_chapaAtual||'sem-chapa') : baseKey;
+    if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0,_subcursos:{}};var t=tutorMap[key];
     // PATCH 26: preferir sempre a variante do nome que tem chapa (mais completa/rastreável)
     if(r.tutor && (!t.tutor || (!/\(\d+\)/.test(t.tutor) && /\(\d+\)/.test(r.tutor)))) t.tutor = r.tutor;
     // PATCH 48: guarda o(s) subcurso(s) REAL(is) dessa oferta (vindo do GIOCONDA,
@@ -1386,17 +1402,33 @@ function filterGerDetalhe(q){
       var pts=key.split(' ').filter(Boolean);
       return pts.length>=2 ? pts[0]+' '+pts[pts.length-1] : key;
     }
+    // PATCH 50: como a tabela agora é filtrada de verdade por ordem/status, um
+    // tutor 100% gerenciado pode legitimamente ficar de fora de "sorted" quando
+    // o filtro é "Não gerenciadas" (ele não tem NADA pendente pra mostrar ali).
+    // Isso não pode ser confundido com "sem oferta no GIOCONDA" — então a checagem
+    // de "já representado" usa o universo INTEIRO de ofertas dentro do
+    // grupo/busca escolhidos (ignorando ordem/status), não mais 'sorted'.
+    var dTodosNoEscopo=gerDetData.filter(function(r){
+      if(q&&!(r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q))return false;
+      if(grupo&&!_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId))return false;
+      return true;
+    });
     // Índice por polo -> lista de {key, fl} + índice GLOBAL (todos os polos juntos)
     var _porPolo={}; var _global=[];
-    sorted.forEach(function(t){
-      if(!t.tutor) return;  // buckets "sem tutor" não contam como representação de ninguém específico
-      var poloN=_normPoloComparavel(t.polo);
-      var key=_normTutorKey(t.tutor);
+    dTodosNoEscopo.forEach(function(r){
+      if(!r.tutor) return;  // linhas sem tutor não contam como representação de ninguém específico
+      var poloN=_normPoloComparavel(r.polo);
+      var key=_normTutorKey(r.tutor);
       var entry={key:key, fl:_primeiroUltimo(key)};
       (_porPolo[poloN]=_porPolo[poloN]||[]).push(entry);
       _global.push(entry);
     });
     (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n; }).forEach(function(t){
+      // PATCH 50: um tutor sem NENHUMA oferta real no GIOCONDA nunca pode
+      // satisfazer o filtro "Gerenciadas" (não existe nada dele gerenciado) —
+      // só faz sentido injetá-lo como anomalia visível quando o filtro de
+      // status é "Todos" ou "Não gerenciadas".
+      if(st==='ger') return;
       var poloN=_normPoloComparavel(t.p);
       var alvoKey=_normTutorKey(t.n);
       var alvoFL=_primeiroUltimo(alvoKey);
@@ -2342,15 +2374,9 @@ function renderAgendasEstudo(){
   const matComTutor = _dedupAlunos(comTutor,'alunos_mat');
   const matSemTutor = _dedupAlunos(semTutor,'alunos_mat');
   const agendComTutor = _dedupAlunos(comTutor,'alunos_agend');
-  // "Presença lançada": não existe campo distinto de presença nos dados de origem —
-  // usamos como proxy os agendamentos DENTRO das ofertas efetivamente GERIDAS
-  // (tutor processou a sessão), que é o melhor indicativo disponível de que a
-  // presença foi de fato registrada. Confirmar com o Anderson se essa leitura bate.
-  const presencaLancada = _dedupAlunos(geridas,'alunos_agend');
 
   const pctGeridas = totalDistintas?Math.round(geridas.length/totalDistintas*1000)/10:0;
   const pctAgend = matComTutor?Math.round(agendComTutor/matComTutor*1000)/10:0;
-  const pctPresenca = matComTutor?Math.round(presencaLancada/matComTutor*1000)/10:0;
 
   document.getElementById('ae-ofertas-resumo').innerHTML = `
     <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
@@ -2376,12 +2402,16 @@ function renderAgendasEstudo(){
       <div style="font-size:11px;color:var(--muted)">Agendamentos</div>
       <div style="font-size:22px;font-weight:800;color:var(--teal)">${fmtNum(agendComTutor)} <span style="font-size:13px;font-weight:700">(${pctAgend}%)</span></div>
       <div style="font-size:10px;color:var(--muted)">do total matriculado com tutor</div>
-    </div>
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px" title="Sem campo distinto de presença na fonte de dados — proxy: agendamentos dentro de ofertas efetivamente geridas">
-      <div style="font-size:11px;color:var(--muted)">Presença Lançada ⚠</div>
-      <div style="font-size:22px;font-weight:800;color:var(--yellow-d)">${fmtNum(presencaLancada)} <span style="font-size:13px;font-weight:700">(${pctPresenca}%)</span></div>
-      <div style="font-size:10px;color:var(--muted)">do total matriculado com tutor — proxy, ver observação</div>
     </div>`;
+  // PATCH 49: removido o card "Presença Lançada" — não é só uma proxy imprecisa,
+  // é uma cópia GARANTIDA de "Agendamentos": alunos_agend só é >0 quando a oferta
+  // tem agenda, e "gerenciado" = tem_tutor & tem_agenda, então o valor máximo por
+  // polo+categoria dentro de "com tutor" é sempre o mesmo valor máximo dentro de
+  // "geridas" — as duas contas SEMPRE batem exatamente, com qualquer dado. Mostrar
+  // isso como um segundo número (com um ⚠ do lado, sugerindo que é outra coisa)
+  // é o que estava causando a confusão do Leo. Quando existir um campo de presença
+  // de verdade na origem (confirmar com o Anderson), dá pra trazer o card de volta
+  // com uma conta que realmente meça algo diferente de Agendamentos.
 
   const ofertas=_getOfertasAgenda();
   const total=ofertas.length;
