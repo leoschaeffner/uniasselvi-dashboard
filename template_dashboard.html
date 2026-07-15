@@ -1320,13 +1320,13 @@ var GRUPOS_GER = [
     subfiltro:[
       {id:'bio-far', label:'Biomedicina e Farmácia', base:['bio-far']},
       {id:'estetica', label:'Estética e Cosmética', base:['multi3']}
-    ]},
+    ], subfiltroTodosLabel:'Todo o grupo'},
   {id:'nutricao', label:'Nutrição', base:['nutricao']},
   {id:'exatas', label:'Exatas', base:['exatas'],
     subfiltro:[
       {id:'engenharias', label:'Engenharias e Licenciaturas', keyword:'MAKER'},
       {id:'quimica-fisica', label:'Química e Física / Agronomia', keyword:'QUIMICA'}
-    ]},
+    ], subfiltroTodosLabel:'Toda Exatas'},
 ];
 function _grupoById(id){return GRUPOS_GER.find(function(g){return g.id===id;})||null;}
 function _semAcento(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
@@ -1432,6 +1432,12 @@ function _updateGerSubfiltro(){
   }
   const _prev=subSel.value;
   while(subSel.options.length>1) subSel.remove(1);
+  // PATCH 60: o placeholder da opção "todos" (value="") ficava sempre com o
+  // texto fixo "Toda Exatas" no HTML, mesmo quando o grupo ativo era outro
+  // (ex: Biomedicina, Farmácia e Estética/Cosmética) — exatamente o "filtro de
+  // Exatas aparecendo em Bio-Far" que o Leo reportou. Agora o texto da primeira
+  // opção é atualizado pra bater com o grupo selecionado.
+  if(subSel.options[0]) subSel.options[0].textContent = grupo.subfiltroTodosLabel || ('Todo(a) '+grupo.label);
   grupo.subfiltro.forEach(function(s){const o=document.createElement('option');o.value=s.id;o.textContent=s.label;subSel.appendChild(o);});
   subSel.style.display='';
   if([...subSel.options].some(o=>o.value===_prev)) subSel.value=_prev; else subSel.value='';
@@ -1618,12 +1624,22 @@ function filterGerDetalhe(q){
       // usa a mesma capacidade (baseada na CH do tutor) que qualquer outro
       // tutor usaria, mostrando "0 de X" em vez de um "0/0" que parecia dizer
       // que não existe nem capacidade nenhuma.
-      var denomSemDado=capOrdem||null;
+      // PATCH 62: mas isso só vale quando NÃO há filtro de status ativo. Com o
+      // PATCH 50 (filtro estrito), "sem dado nessa ordem AQUI" também acontece
+      // quando o tutor tem TODAS as práticas da ordem geridas e o filtro ativo
+      // é "Não Gerenciadas" (ou o inverso) — nesse caso "0/capacidade" é FALSO:
+      // ele não fez "0 de 8", só não tem nada pendente pra mostrar SOB ESSE
+      // FILTRO. Foi exatamente o caso da Suzana Lima que o Leo reportou (8/8 em
+      // "Todos", "0/8" em "Não Gerenciadas" pra Ordem 1 — ela tinha as 8 TODAS
+      // geridas; não são 15 práticas nem duplicidade nenhuma, é essa célula
+      // mostrando "0" quando devia mostrar "nada a exibir sob este filtro").
+      var denomSemDado = (!st && capOrdem) ? capOrdem : null;
       ordCells+= denomSemDado
         ? '<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:var(--red)">0<span style="font-size:10px;color:var(--dim)">/'+denomSemDado+'</span></div></td>'
         : '<td style="text-align:center;color:var(--dim)">—</td>';
       return;
-    }var ger=od.ger,total=od.total;var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+'</td>';});    var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
+    }var ger=od.ger,total=od.total;var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;
+    ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+'</td>';});    var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
     // ── Nova abordagem: truncar strings diretamente no JS ──────────────────
     var _trunc=function(s,n){s=(s||'').trim();return s.length>n?s.substring(0,n-1)+'…':s;};
     // Polo: remover prefixo "LAP – " e limitar
