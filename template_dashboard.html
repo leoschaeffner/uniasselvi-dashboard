@@ -1446,20 +1446,6 @@ function filterGerDetalhe(q){
   q=q.toLowerCase();var grupoId=document.getElementById('ger-det-cat').value;var grupo=_grupoById(grupoId);var ord=document.getElementById('ger-det-ordem').value;var st=document.getElementById('ger-det-status').value;var d=gerDetData;
   _updateGerSubfiltro();
   var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
-  // PATCH 63: total REAL (gerido + não gerido) por tutor+polo+categoria+subcurso+
-  // ordem, calculado ANTES do filtro de status — usado como denominador estável
-  // quando "Gerenciadas"/"Não gerenciadas" está ativo (ver uso mais abaixo, na
-  // montagem das células). O catálogo de práticas de um polo pode legitimamente
-  // ter MAIS experimentos cadastrados do que a capacidade de UM tutor cobre — daí
-  // "geridas" e "não geridas" serem dois recortes REAIS e válidos que não
-  // precisam somar a capacidade: um tutor pode gerir 8 (=capacidade) e ainda
-  // sobrarem 3 outras práticas do catálogo não geridas por ninguém. Antes disso,
-  // as duas visões usavam a capacidade fixa como denominador nos dois lados,
-  // fazendo "8/8" (Gerenciadas) e "0/8" (Não Gerenciadas) parecerem contraditórios
-  // quando na verdade o certo seria "8/11" e "3/11" (mesmo total real dos dois lados).
-  var _dParaTotalReal=gerDetData;
-  if(q)_dParaTotalReal=_dParaTotalReal.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
-  if(grupo)_dParaTotalReal=_dParaTotalReal.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
   if(q)d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
   if(grupo)d=d.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
   if(ord)d=d.filter(function(r){return r.ordem===ord;});
@@ -1494,50 +1480,21 @@ function filterGerDetalhe(q){
     var subLimpo = _SUBCURSOS_LIMPOS[r.subcurso] ? r.subcurso : '';
     return _normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'')+'|||'+subLimpo;
   }
-  // PATCH 63 (cont.): só agora, com _baseKeyOferta já definida, monta os índices
-  // de total real — precisa usar EXATAMENTE a mesma chave que o tutorMap vai usar
-  // logo abaixo (senão, pra Exatas — onde o subcurso "limpo" vira string vazia —
-  // as chaves não bateriam e a busca falharia silenciosamente).
-  // PATCH 64: o Leo confirmou que a capacidade (8 práticas/ordem pra 4h) É o
-  // número real de práticas distintas esperadas — não uma teto teórico que o
-  // catálogo pode exceder. Contar linhas brutas (PATCH 63) inflava o total muito
-  // além disso (15, 12...) porque cada linha do GIOCONDA parece representar uma
-  // OFERTA/sessão agendada, e a MESMA prática (mesmo nome de experimento) pode
-  // ter várias sessões ao longo da ordem — contá-las cada uma como "1 prática
-  // distinta" duplicava o total. Agora deduplica por NOME da prática
-  // (r.pratica) dentro de cada tutor+polo+categoria+subcurso+ordem: cada nome
-  // distinto conta 1 vez só, e é tratado como "gerido" se QUALQUER sessão dele
-  // foi gerida.
-  var _totalRealPorBaseOrdem={};var _totalGerRealPorBase={};
-  var _praticasPorBaseOrdem={}; // bk -> ordem -> nomeDaPratica -> foiGeridaAlgumaVez (bool)
-  _dParaTotalReal.forEach(function(r){
-    var bk=_baseKeyOferta(r);
-    var ordK=r.ordem||'—';
-    // Sem nome de prática pra deduplicar contra: trata como única (não agrupa
-    // linhas sem identificação nenhuma, pra não esconder dado por engano)
-    var praticaNome=r.pratica||('__sem_nome__'+Math.random());
-    if(!_praticasPorBaseOrdem[bk]) _praticasPorBaseOrdem[bk]={};
-    if(!_praticasPorBaseOrdem[bk][ordK]) _praticasPorBaseOrdem[bk][ordK]={};
-    if(!(praticaNome in _praticasPorBaseOrdem[bk][ordK])) _praticasPorBaseOrdem[bk][ordK][praticaNome]=false;
-    if(r.gerenciado) _praticasPorBaseOrdem[bk][ordK][praticaNome]=true;
-  });
-  Object.keys(_praticasPorBaseOrdem).forEach(function(bk){
-    _totalRealPorBaseOrdem[bk]={};
-    Object.keys(_praticasPorBaseOrdem[bk]).forEach(function(ordK){
-      var praticas=_praticasPorBaseOrdem[bk][ordK];
-      var nomes=Object.keys(praticas);
-      _totalRealPorBaseOrdem[bk][ordK]=nomes.length;
-      var gerCount=nomes.filter(function(n){return praticas[n];}).length;
-      _totalGerRealPorBase[bk]=(_totalGerRealPorBase[bk]||0)+gerCount;
-    });
-  });
   var _chapaPorGrupo={};
   dBuild.forEach(function(r){
     var baseKey=_baseKeyOferta(r);
     var m=String(r.tutor||'').match(/\((\d+)\)\s*$/);
     if(m){ (_chapaPorGrupo[baseKey]=_chapaPorGrupo[baseKey]||new Set()).add(m[1]); }
   });
-  var tutorMap={};dBuild.forEach(function(r){var baseKey=_baseKeyOferta(r);
+  var tutorMap={};dBuild.forEach(function(r){
+    // PATCH 65: o Leo confirmou com a planilha real que uma tutora de 4h com 8
+    // práticas geridas está em 100% — os "15" que apareciam vinham de práticas
+    // do catálogo SEM NENHUM tutor atribuído (campo TUTOR vazio no GIOCONDA)
+    // sendo contadas dentro do total dela. Isso nunca deveria acontecer — uma
+    // linha sem tutor não pertence a nenhum tutor nomeado. Blindagem explícita:
+    // linha sem tutor nunca conta pra dentro de uma entrada de tutor nomeado.
+    if(!r.tutor) return;
+    var baseKey=_baseKeyOferta(r);
     var _mChapaAtual=String(r.tutor||'').match(/\((\d+)\)\s*$/);var _chapaAtual=_mChapaAtual?_mChapaAtual[1]:null;
     var _chapasDoGrupo=_chapaPorGrupo[baseKey];
     var key=(_chapasDoGrupo && _chapasDoGrupo.size>1) ? baseKey+'|||'+(_chapaAtual||'sem-chapa') : baseKey;
@@ -1639,18 +1596,7 @@ function filterGerDetalhe(q){
   ['polo','tutor','pct'].forEach(function(c){var el=document.getElementById('gd-ind-'+c);if(el)el.textContent=(_detSortCol===c)?(_detSortAsc?' ▲':' ▼'):'';});
   var rows='';
   var _prevPoloTutor='';sorted.forEach(function(t,gi){
-    // PATCH 63: com filtro de status ativo, t.totalOfertas/t.totalGer vêm só do
-    // recorte filtrado — sob "Gerenciadas" TODO mundo bateria 100% (só entram
-    // linhas geridas ali dentro), e sob "Não gerenciadas" TODO mundo bateria 0%,
-    // tornando a coluna "% GER." sem nenhuma informação real. Usa o total REAL
-    // (somado em todas as ordens, independente do filtro de status) como
-    // denominador quando há filtro de status ativo — mesma lógica das células
-    // O.1-O.5.
-    var _totalRealDoTutor = (st && t._baseKeyOferta && _totalRealPorBaseOrdem[t._baseKeyOferta])
-      ? Object.values(_totalRealPorBaseOrdem[t._baseKeyOferta]).reduce(function(s,v){return s+v;},0)
-      : null;
-    var _totalGerReal = (st && t._baseKeyOferta) ? (_totalGerRealPorBase[t._baseKeyOferta]||0) : null;
-    var pct=(_totalRealDoTutor||t.totalOfertas)?Math.round((_totalGerReal!==null?_totalGerReal:t.totalGer)/(_totalRealDoTutor||t.totalOfertas)*100):0;
+    var pct=t.totalOfertas?Math.round(t.totalGer/t.totalOfertas*100):0;
     var semTutor=!t.tutor;var tutorDisplay=t.tutor||'<span style="color:var(--red)">Sem tutor</span>';
     // Curso/Lab
     var cuLab;
@@ -1684,45 +1630,25 @@ function filterGerDetalhe(q){
     var chCont=window._tmpChCont, capOrdem=window._tmpCapOrdem;
     var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];var ordCells='';
     ordensExibir.forEach(function(o){var od=t.ordens[o];
-      // PATCH 63: total REAL (gerido+não gerido) dessa ordem pra esse tutor,
-      // independente do filtro de status atual (ver cálculo no topo da função).
-      var realTotalInfo = t._baseKeyOferta ? (_totalRealPorBaseOrdem[t._baseKeyOferta]||{})[o] : null;
       if(!od){
       // PATCH 37: sem dado de oferta no GIOCONDA ainda não é "sem capacidade" —
       // usa a mesma capacidade (baseada na CH do tutor) que qualquer outro
       // tutor usaria, mostrando "0 de X" em vez de um "0/0" que parecia dizer
       // que não existe nem capacidade nenhuma.
-      // PATCH 63: quando HÁ filtro de status ativo e existe dado real pra essa
-      // ordem (só não bate com o filtro atual — ex: tudo já foi gerido, então
-      // "Não Gerenciadas" não tem nada a mostrar aqui), usa 0 sobre o TOTAL REAL
-      // daquela ordem (não a capacidade) — é o denominador que faz sentido
-      // quando se está olhando um recorte (gerido OU não gerido) específico.
-      // Ex: Suzana Lima com 8 práticas reais na Ordem 1, todas geridas — em
-      // "Não Gerenciadas" mostra "0/8" (0 de 8 reais), não "0/capacidade" nem
-      // "—": o "8" aqui é o total VERDADEIRO de práticas dela, não a capacidade
-      // teórica da CH (que podem ser números diferentes quando o catálogo tem
-      // mais práticas cadastradas pro polo do que a capacidade de 1 tutor cobre).
-      if(st && realTotalInfo){
-        ordCells+= '<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:var(--red)">0<span style="font-size:10px;color:var(--dim)">/'+realTotalInfo+'</span></div></td>';
-        return;
-      }
-      // PATCH 62: sem filtro de status ativo E sem nenhum dado real pra essa
-      // ordem — aí sim "0/capacidade" representa uma lacuna de verdade.
-      var denomSemDado = (!st && capOrdem) ? capOrdem : null;
+      var denomSemDado = capOrdem||null;
       ordCells+= denomSemDado
         ? '<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:var(--red)">0<span style="font-size:10px;color:var(--dim)">/'+denomSemDado+'</span></div></td>'
         : '<td style="text-align:center;color:var(--dim)">—</td>';
       return;
     }var ger=od.ger,total=od.total;
-    // PATCH 63: com filtro de status ativo, o denominador é o TOTAL REAL da
-    // ordem (gerido+não gerido juntos) — assim "Gerenciadas" e "Não gerenciadas"
-    // usam o MESMO denominador e os dois números somam o total real, em vez de
-    // cada um usar a capacidade (que pode não ter nenhuma relação direta com
-    // quantas práticas dessa ordem realmente existem cadastradas no catálogo
-    // pra aquele polo). Sem filtro de status, mantém a capacidade — é a visão
-    // "quanto da minha CH eu já cobri", que é o que a legenda da página descreve.
-    var denom = st ? (realTotalInfo||total) : (capOrdem||total);
-    var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;
+    // PATCH 65: o Leo confirmou com a planilha real (REL_GERAL_DE_GERENCIAMENTO)
+    // que a capacidade da CH É o número real de práticas esperadas por ordem —
+    // não um teto teórico que o catálogo pode superar. As tentativas anteriores
+    // (PATCH 61/63/64) de usar um "total real" diferente da capacidade partiam
+    // de um entendimento errado; o "15" que aparecia vinha de práticas do
+    // catálogo SEM tutor atribuído sendo contadas por engano (ver PATCH 65 na
+    // agregação, que já bloqueia isso na raiz). Denominador sempre = capacidade.
+    var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;
     ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+'</td>';});    var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
     // ── Nova abordagem: truncar strings diretamente no JS ──────────────────
     var _trunc=function(s,n){s=(s||'').trim();return s.length>n?s.substring(0,n-1)+'…':s;};
@@ -1770,27 +1696,20 @@ function filterGerDetalhe(q){
     }
   }
   window._detCatAtual = grupoLabel;
-  renderDetPizza(sorted, grupoLabel, st, _totalGerRealPorBase);
+  renderDetPizza(sorted, grupoLabel);
 }
-function renderDetPizza(sorted, cat, st, totalGerRealPorBase){
+function renderDetPizza(sorted, cat){
   // PATCH 44: deduplicar por NOME de tutor (não por grupo tutor+polo+categoria).
   // Um mesmo tutor pode aparecer em mais de um grupo em 'sorted' (ex: categoria
   // composta dividida em duas entradas reais, ou pequenas variações de grafia
   // que não colapsaram 100%) — sem dedup aqui, o gráfico contava esse tutor
   // 2x, dando um total diferente do texto acima da tabela (que já deduplica).
-  // PATCH 63: com filtro de status ativo, t.totalGer vem só do recorte
-  // filtrado — sob "Gerenciadas" TODO MUNDO tem totalGer>0 (só entram linhas
-  // geridas), e sob "Não gerenciadas" NINGUÉM tem (só entram linhas não
-  // geridas) — o gráfico sempre mostraria 100%/0% ou 0%/100%, sem nenhuma
-  // relação com a real proporção de quem geriu. Usa o total gerido REAL
-  // (independente do filtro de status) quando ele está ativo.
   var porNome={};
   sorted.forEach(function(t){
     if(!t.tutor) return; // exclui buckets "sem tutor"
     var key=_normTutorKey(t.tutor);
     if(!porNome[key]) porNome[key]={gerenciouAlgo:false};
-    var gerReal = (st && t._baseKeyOferta && totalGerRealPorBase) ? (totalGerRealPorBase[t._baseKeyOferta]||0) : t.totalGer;
-    if(gerReal>0) porNome[key].gerenciouAlgo=true;
+    if(t.totalGer>0) porNome[key].gerenciouAlgo=true;
   });
   var nomesUnicos=Object.values(porNome);
   var gerenciaram=nomesUnicos.filter(function(x){return x.gerenciouAlgo;}).length;
