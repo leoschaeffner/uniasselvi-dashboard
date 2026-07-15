@@ -1498,13 +1498,38 @@ function filterGerDetalhe(q){
   // de total real — precisa usar EXATAMENTE a mesma chave que o tutorMap vai usar
   // logo abaixo (senão, pra Exatas — onde o subcurso "limpo" vira string vazia —
   // as chaves não bateriam e a busca falharia silenciosamente).
+  // PATCH 64: o Leo confirmou que a capacidade (8 práticas/ordem pra 4h) É o
+  // número real de práticas distintas esperadas — não uma teto teórico que o
+  // catálogo pode exceder. Contar linhas brutas (PATCH 63) inflava o total muito
+  // além disso (15, 12...) porque cada linha do GIOCONDA parece representar uma
+  // OFERTA/sessão agendada, e a MESMA prática (mesmo nome de experimento) pode
+  // ter várias sessões ao longo da ordem — contá-las cada uma como "1 prática
+  // distinta" duplicava o total. Agora deduplica por NOME da prática
+  // (r.pratica) dentro de cada tutor+polo+categoria+subcurso+ordem: cada nome
+  // distinto conta 1 vez só, e é tratado como "gerido" se QUALQUER sessão dele
+  // foi gerida.
   var _totalRealPorBaseOrdem={};var _totalGerRealPorBase={};
+  var _praticasPorBaseOrdem={}; // bk -> ordem -> nomeDaPratica -> foiGeridaAlgumaVez (bool)
   _dParaTotalReal.forEach(function(r){
     var bk=_baseKeyOferta(r);
-    if(!_totalRealPorBaseOrdem[bk]) _totalRealPorBaseOrdem[bk]={};
     var ordK=r.ordem||'—';
-    _totalRealPorBaseOrdem[bk][ordK]=(_totalRealPorBaseOrdem[bk][ordK]||0)+1;
-    if(r.gerenciado) _totalGerRealPorBase[bk]=(_totalGerRealPorBase[bk]||0)+1;
+    // Sem nome de prática pra deduplicar contra: trata como única (não agrupa
+    // linhas sem identificação nenhuma, pra não esconder dado por engano)
+    var praticaNome=r.pratica||('__sem_nome__'+Math.random());
+    if(!_praticasPorBaseOrdem[bk]) _praticasPorBaseOrdem[bk]={};
+    if(!_praticasPorBaseOrdem[bk][ordK]) _praticasPorBaseOrdem[bk][ordK]={};
+    if(!(praticaNome in _praticasPorBaseOrdem[bk][ordK])) _praticasPorBaseOrdem[bk][ordK][praticaNome]=false;
+    if(r.gerenciado) _praticasPorBaseOrdem[bk][ordK][praticaNome]=true;
+  });
+  Object.keys(_praticasPorBaseOrdem).forEach(function(bk){
+    _totalRealPorBaseOrdem[bk]={};
+    Object.keys(_praticasPorBaseOrdem[bk]).forEach(function(ordK){
+      var praticas=_praticasPorBaseOrdem[bk][ordK];
+      var nomes=Object.keys(praticas);
+      _totalRealPorBaseOrdem[bk][ordK]=nomes.length;
+      var gerCount=nomes.filter(function(n){return praticas[n];}).length;
+      _totalGerRealPorBase[bk]=(_totalGerRealPorBase[bk]||0)+gerCount;
+    });
   });
   var _chapaPorGrupo={};
   dBuild.forEach(function(r){
