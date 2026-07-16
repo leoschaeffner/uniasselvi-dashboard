@@ -1553,6 +1553,32 @@ function filterGerDetalhe(q){
       var pts=key.split(' ').filter(Boolean);
       return pts.length>=2 ? pts[0]+' '+pts[pts.length-1] : key;
     }
+    // PATCH 74: nome+primeiro/último não cobre quando um dos dois nomes tem
+    // MAIS ou MENOS partes que o outro (nome do meio faltando ou sobrando) —
+    // confirmado com dado real: "Cicero Rosendo da Silva Filho" (GIOCONDA) vs
+    // "Jose Cicero Rosendo Da Silva Filho" (CONTROLE, "Jose" a mais na frente)
+    // e "Gabriela Fanck dos Santos de Oliveira" (GIOCONDA) vs "Gabriela Fanck
+    // Dos Santos" (CONTROLE, sem o "de Oliveira") — em ambos os casos o
+    // primeiro OU o último token muda, então nem a chave exata nem o
+    // primeiro+último batem, e a mesma pessoa real acaba contada 2x (uma vez
+    // pelo dado real do GIOCONDA, outra pelo "sem oferta" injetado errado).
+    // Considera match quando todos os tokens do nome MAIS CURTO aparecem, na
+    // mesma ordem, dentro do nome mais longo (mesmo que não sejam contíguos).
+    function _ehSubsequencia(curtos, longos){
+      var i=0;
+      for(var j=0;j<longos.length && i<curtos.length;j++){
+        if(longos[j]===curtos[i]) i++;
+      }
+      return i===curtos.length;
+    }
+    function _nomesBatem(keyA, keyB){
+      if(keyA===keyB) return true;
+      var tA=keyA.split(' ').filter(Boolean), tB=keyB.split(' ').filter(Boolean);
+      if(tA.length===0||tB.length===0) return false;
+      var curtos=tA.length<=tB.length?tA:tB, longos=tA.length<=tB.length?tB:tA;
+      if(curtos.length<2) return false; // nome de 1 token só é arriscado demais pra casar por subsequência
+      return _ehSubsequencia(curtos, longos);
+    }
     // PATCH 50: como a tabela agora é filtrada de verdade por ordem/status, um
     // tutor 100% gerenciado pode legitimamente ficar de fora de "sorted" quando
     // o filtro é "Não gerenciadas" (ele não tem NADA pendente pra mostrar ali).
@@ -1579,8 +1605,8 @@ function filterGerDetalhe(q){
       var alvoKey=_normTutorKey(t.n);
       var alvoFL=_primeiroUltimo(alvoKey);
       var candidatosPolo=_porPolo[poloN]||[];
-      var jaRepresentado=candidatosPolo.some(function(c){ return c.key===alvoKey || c.fl===alvoFL; })
-        || _global.some(function(c){ return c.key===alvoKey || c.fl===alvoFL; });  // fallback global por nome
+      var jaRepresentado=candidatosPolo.some(function(c){ return c.key===alvoKey || c.fl===alvoFL || _nomesBatem(alvoKey,c.key); })
+        || _global.some(function(c){ return c.key===alvoKey || c.fl===alvoFL || _nomesBatem(alvoKey,c.key); });  // fallback global por nome
       if(jaRepresentado) return;
       if(q && !((t.n+t.p+(t.c||'')).toLowerCase().includes(q))) return;
       // PATCH 47: antes só checava a categoria ampla (t.c!==cat) — um tutor de
