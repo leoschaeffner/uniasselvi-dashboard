@@ -1449,8 +1449,12 @@ function filterGerDetalhe(q){
   if(q)d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
   if(grupo)d=d.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
   if(ord)d=d.filter(function(r){return r.ordem===ord;});
-  if(st==='ger')d=d.filter(function(r){return r.gerenciado;});
-  if(st==='nger')d=d.filter(function(r){return !r.gerenciado;});
+  // PATCH 68: NÃO filtra mais por status aqui — ver explicação mais abaixo,
+  // onde o filtro de Gerenciadas/Não gerenciadas é aplicado de verdade,
+  // comparando geridas × CAPACIDADE (não linha a linha).
+  // PATCH 68: NÃO filtra mais por status aqui — ver explicação mais abaixo,
+  // onde o filtro de Gerenciadas/Não gerenciadas é aplicado de verdade,
+  // comparando geridas × CAPACIDADE (não linha a linha).
   // PATCH 50: antes disso, a tabela era montada em 2 passos — "d" (com todos os
   // filtros, usado só pra DESCOBRIR quais tutores qualificam) e "dBuild" (que
   // ignorava ordem/status de propósito e trazia o histórico INTEIRO do tutor em
@@ -1591,6 +1595,36 @@ function filterGerDetalhe(q){
       _global.push(novaEntry);
     });
   })();
+  // PATCH 68: filtro de status "de verdade" — aplicado por CAPACIDADE, não por
+  // linha. Antes, "Gerenciadas"/"Não gerenciadas" filtravam linhas individuais
+  // pelo campo bruto gerenciado=true/false — então um tutor que já cobriu 100%
+  // da capacidade dele (ex: 8 de 8) ainda aparecia em "Não gerenciadas" só
+  // porque existiam OUTRAS práticas do catálogo daquela categoria ampla (Bio-Far
+  // cobre Farmácia+Biomedicina+Estética) que ninguém geriu ainda — mesmo sem
+  // serem responsabilidade dele especificamente. Isso é o "8/8 aqui, 0/8 ali"
+  // que o Leo reportou repetidas vezes. Agora: geridas ≥ capacidade = 100%,
+  // conta como "Gerenciada" e só aparece em "Gerenciadas"; abaixo da capacidade
+  // conta como "Não gerenciada". Quando a CH é desconhecida (sem como calcular
+  // capacidade), cai pro critério antigo (teve ALGUM gerenciamento ou não).
+  if(st){
+    sorted = sorted.filter(function(t){
+      if(t._semOfertaGioconda) return st==='nger'; // sem nenhum dado real -> nunca "gerenciada"
+      var cap = _capOrdemPorNomeTutor(t.tutor);
+      var atingiuCapacidade;
+      if(cap){
+        if(ord){
+          var od = t.ordens[ord];
+          atingiuCapacidade = od ? (od.ger >= cap) : false;
+        }else{
+          var nOrdens = Object.keys(t.ordens).length || 1;
+          atingiuCapacidade = t.totalGer >= (cap * nOrdens);
+        }
+      }else{
+        atingiuCapacidade = t.totalGer > 0; // CH desconhecida: fallback pro critério antigo
+      }
+      return st==='ger' ? atingiuCapacidade : !atingiuCapacidade;
+    });
+  }
   // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
   // montar as linhas, em vez de tentar mexer no DOM depois (a tabela tem linhas
   // filhas agrupadas por tutor, que quebrariam com reordenação direta de <tr>)
@@ -2808,6 +2842,28 @@ var _HORAS_ADMIN_POR_CH = {4:1, 8:2, 12:3, 20:5};
 function _horasAdminPorCH(ch){
   if(_HORAS_ADMIN_POR_CH.hasOwnProperty(ch)) return _HORAS_ADMIN_POR_CH[ch];
   return Math.round(ch*0.25*10)/10;
+}
+// PATCH 68: mesma lógica de busca de CH (por nome, com fallback fuzzy) já usada
+// na renderização das células — extraída aqui pra ser reaproveitada também no
+// filtro de status (que precisa saber a capacidade ANTES de decidir quem
+// aparece em Gerenciadas/Não gerenciadas, não só na hora de desenhar a célula).
+function _capOrdemPorNomeTutor(tutorNome){
+  var normT=function(s){var n=(s||'').toLowerCase().split('(')[0].trim();n=n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();return n;};
+  var normFL=function(s){var pts=normT(s).split(' ').filter(Boolean);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:normT(s);};
+  var _tn=normT(tutorNome||'');var _tnFL=normFL(tutorNome||'');
+  var dbTutor=(DB.tutores||[]).find(function(x){
+    if(!x.n||!tutorNome)return false;
+    var xn=normT(x.n),xFL=normFL(x.n);
+    if(xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL) return true;
+    var shortTokens=_tnFL.split(' ').filter(Boolean);
+    var longNorm=xn;
+    return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
+  });
+  var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;
+  var padraoCH=[4,8,12,20,24];
+  var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});
+  var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;
+  return praticasSemana?praticasSemana*4:null;
 }
 function _normTutorKey(nome){
   if(!nome) return '__SEM_TUTOR__';
