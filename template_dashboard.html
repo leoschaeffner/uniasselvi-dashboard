@@ -1595,34 +1595,26 @@ function filterGerDetalhe(q){
       _global.push(novaEntry);
     });
   })();
-  // PATCH 68: filtro de status "de verdade" — aplicado por CAPACIDADE, não por
-  // linha. Antes, "Gerenciadas"/"Não gerenciadas" filtravam linhas individuais
-  // pelo campo bruto gerenciado=true/false — então um tutor que já cobriu 100%
-  // da capacidade dele (ex: 8 de 8) ainda aparecia em "Não gerenciadas" só
-  // porque existiam OUTRAS práticas do catálogo daquela categoria ampla (Bio-Far
-  // cobre Farmácia+Biomedicina+Estética) que ninguém geriu ainda — mesmo sem
-  // serem responsabilidade dele especificamente. Isso é o "8/8 aqui, 0/8 ali"
-  // que o Leo reportou repetidas vezes. Agora: geridas ≥ capacidade = 100%,
-  // conta como "Gerenciada" e só aparece em "Gerenciadas"; abaixo da capacidade
-  // conta como "Não gerenciada". Quando a CH é desconhecida (sem como calcular
-  // capacidade), cai pro critério antigo (teve ALGUM gerenciamento ou não).
+  // PATCH 69: o Leo confirmou que "Não gerenciadas" deve mostrar só quem NÃO
+  // GERIU NADA (zero práticas geridas) — progresso parcial (ex: 5/8, 6/8) não
+  // conta como "não gerenciada", mesmo estando abaixo da capacidade. Então
+  // "Gerenciadas" = tem QUALQUER prática gerida (mesmo que não tenha batido a
+  // capacidade ainda); "Não gerenciadas" = zero práticas geridas. Isso substitui
+  // o critério de capacidade do PATCH 68 (que ainda causava um tutor com 5/8
+  // aparecer em "Não gerenciadas" por não ter chegado a 8) — mas mantém a
+  // correção principal do PATCH 68 (comparação agregada por tutor+ordem, não
+  // linha a linha), só troca o LIMIAR de "capacidade" pra "zero".
   if(st){
     sorted = sorted.filter(function(t){
       if(t._semOfertaGioconda) return st==='nger'; // sem nenhum dado real -> nunca "gerenciada"
-      var cap = _capOrdemPorNomeTutor(t.tutor);
-      var atingiuCapacidade;
-      if(cap){
-        if(ord){
-          var od = t.ordens[ord];
-          atingiuCapacidade = od ? (od.ger >= cap) : false;
-        }else{
-          var nOrdens = Object.keys(t.ordens).length || 1;
-          atingiuCapacidade = t.totalGer >= (cap * nOrdens);
-        }
+      var geriuAlgo;
+      if(ord){
+        var od = t.ordens[ord];
+        geriuAlgo = od ? (od.ger > 0) : false;
       }else{
-        atingiuCapacidade = t.totalGer > 0; // CH desconhecida: fallback pro critério antigo
+        geriuAlgo = t.totalGer > 0;
       }
-      return st==='ger' ? atingiuCapacidade : !atingiuCapacidade;
+      return st==='ger' ? geriuAlgo : !geriuAlgo;
     });
   }
   // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
