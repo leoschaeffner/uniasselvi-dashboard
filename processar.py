@@ -2388,6 +2388,49 @@ def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
     ofertas = list(ger_dados.get('ger_ofertas', []))
     polo_cat_existentes = set((_norm_polo_inj(o['polo']), o['categoria']) for o in ofertas)
 
+    # PATCH 75: a checagem acima (polo, categoria) deveria ter bastado — mas na
+    # prática, um tutor real (ex: "Cicero Rosendo da Silva Filho" no GIOCONDA)
+    # ainda recebia um placeholder duplicado sob o nome do CONTROLE ("Jose
+    # Cicero Rosendo Da Silva Filho", com um nome a mais na frente), mesmo
+    # sendo a mesma pessoa e o mesmo polo+categoria. Adiciona uma segunda
+    # checagem independente, por NOME (mesma lógica de subsequência do PATCH
+    # 74 no JS), como blindagem extra.
+    def _normaliza_nome_inj(s):
+        s = str(s or '').strip()
+        s = _re_inj.sub(r'\s*\(\d+\)\s*$', '', s)  # remove chapa entre parênteses no final
+        s = _ud_inj.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_inj.category(c) != 'Mn')
+        return _re_inj.sub(r'\s+', ' ', s).strip().lower()
+
+    def _eh_subsequencia_inj(curtos, longos):
+        i = 0
+        for tok in longos:
+            if i < len(curtos) and tok == curtos[i]:
+                i += 1
+        return i == len(curtos)
+
+    def _nomes_batem_inj(nome_a, nome_b):
+        if nome_a == nome_b:
+            return True
+        ta = nome_a.split()
+        tb = nome_b.split()
+        if not ta or not tb:
+            return False
+        curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+        if len(curtos) < 2:
+            return False  # nome de 1 token só é arriscado demais pra casar por subsequência
+        return _eh_subsequencia_inj(curtos, longos)
+
+    # Nomes de tutores que JÁ têm alguma oferta real no GIOCONDA (independente
+    # de polo/categoria) — usado como segunda checagem, complementar à de
+    # (polo, categoria), pra pegar exatamente o caso acima (nome do CONTROLE
+    # com uma parte a mais/a menos do que o nome usado no GIOCONDA).
+    nomes_reais_existentes = set()
+    for o in ofertas:
+        _nm = _normaliza_nome_inj(o.get('tutor', ''))
+        if _nm:
+            nomes_reais_existentes.add(_nm)
+
     # PATCH 41: categorias reais válidas (as mesmas que aparecem de verdade no
     # GIOCONDA) — usado pra "abrir" categorias compostas do CONTROLE (ex:
     # "ENGMAKER+QUÍMICA E FÍSICA", usada pra tutores que cobrem os dois cursos)
@@ -2416,6 +2459,9 @@ def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
         for cat_valida in _categorias_validas_para(t.get('c', '')):
             chave = (_norm_polo_inj(t['p']), cat_valida)
             if chave in polo_cat_existentes:
+                continue
+            nome_alvo = _normaliza_nome_inj(t['n'])
+            if any(_nomes_batem_inj(nome_alvo, nm) for nm in nomes_reais_existentes):
                 continue
             _cursos_t = t.get('cursos', '') or ''
             _SUBCURSO_LABEL_INJ = {
