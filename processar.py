@@ -2416,6 +2416,13 @@ def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
         tb = nome_b.split()
         if not ta or not tb:
             return False
+        # PATCH 76: além da subsequência (nome com parte a mais/a menos), cobre
+        # também o caso de MESMO número de partes com uma palavra do meio
+        # diferente (ex: "Renata Souza da Silva" vs "Renata Souza De Silva") —
+        # a subsequência sozinha não pega isso porque nenhum token "sobra" ou
+        # "falta", só troca; primeiro+último nome bate mesmo assim.
+        if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+            return True
         curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
         if len(curtos) < 2:
             return False  # nome de 1 token só é arriscado demais pra casar por subsequência
