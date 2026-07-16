@@ -3019,35 +3019,14 @@ if __name__ == '__main__':
                 s = _ud_bf.normalize('NFD', s)
                 s = ''.join(c for c in s if _ud_bf.category(c) != 'Mn')
                 return _re_bf.sub(r'\s+', ' ', s).strip().lower()
-            # PATCH 66: o backfill amplo por (polo, categoria) só é seguro quando
-            # existe UM ÚNICO tutor registrado ali — se dois tutores diferentes
-            # dividem a mesma categoria ampla no mesmo polo (ex: uma pra Farmácia
-            # e outra pra Biomedicina, ambas sob "BIO-FAR"), o antigo .setdefault()
-            # atribuía TODAS as práticas órfãs daquela categoria (mesmo as que não
-            # são da especialidade dela) pro primeiro tutor processado — foi
-            # exatamente esse o caso real reportado pelo Leo (Simone Gabino
-            # Barbosa de Oliveira, registrada pra Farmácia, recebendo práticas de
-            # Biomedicina de ninguém mais reivindicadas). Categorias como Multi
-            # III já não sofriam disso porque o curso específico normalmente é
-            # inferido a partir do nome da prática (nome_to_perfil.json) — mas
-            # esse mapeamento não cobre Bio-Far/Farmácia/Biomedicina, então TUDO
-            # ali sempre caía no fallback amplo. Agora o fallback amplo só é
-            # usado quando não há ambiguidade real (um único tutor pra aquela
-            # categoria naquele polo); havendo dois ou mais, a prática fica sem
-            # tutor (mais honesto do que adivinhar errado).
             controle_tutor_lookup = {}
-            _candidatos_por_cat_ampla = {}
             for _t in dados.get('tutores', []):
                 if _t.get('_anonimo') or not _t.get('n') or not _t.get('p'): continue
                 _polo_bf = _norm_polo_bf(_t['p'])
                 _cursos_t = _t.get('cursos', '') or ''
                 if _cursos_t:
                     controle_tutor_lookup.setdefault((_polo_bf, _cursos_t), _t['n'])
-                _cat_key = (_polo_bf, _t.get('c', ''))
-                _candidatos_por_cat_ampla.setdefault(_cat_key, set()).add(_t['n'])
-            for _cat_key, _nomes in _candidatos_por_cat_ampla.items():
-                if len(_nomes) == 1:
-                    controle_tutor_lookup[_cat_key] = next(iter(_nomes))
+                controle_tutor_lookup.setdefault((_polo_bf, _t.get('c', '')), _t['n'])
             print(f"[{ts()}] Lookup de tutores ativos (CONTROLE) pra backfill: {len(controle_tutor_lookup)} chaves polo+categoria/curso")
 
             # PATCH 18: cada arquivo tem um semestre de fallback (usado só quando a
