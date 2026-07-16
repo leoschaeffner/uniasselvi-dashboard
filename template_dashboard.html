@@ -1604,6 +1604,14 @@ function filterGerDetalhe(q){
   // aparecer em "Não gerenciadas" por não ter chegado a 8) — mas mantém a
   // correção principal do PATCH 68 (comparação agregada por tutor+ordem, não
   // linha a linha), só troca o LIMIAR de "capacidade" pra "zero".
+  // PATCH 70: guarda a lista COMPLETA (antes do filtro de status) pro gráfico
+  // de pizza usar — sem isso, com "Não gerenciadas" selecionado, o pizza sempre
+  // mostraria 0%/100% (já que só sobram tutores com zero gerido nesse recorte),
+  // não a proporção real de quem geriu entre TODOS os tutores do grupo/ordem
+  // selecionados. O pizza deve responder "de todo mundo nesse grupo, quantos
+  // geriram?" — uma pergunta independente de qual filtro de status a TABELA
+  // está usando pra decidir quais linhas mostrar.
+  var sortedParaPizza = sorted.slice();
   if(st){
     sorted = sorted.filter(function(t){
       if(t._semOfertaGioconda) return st==='nger'; // sem nenhum dado real -> nunca "gerenciada"
@@ -1732,7 +1740,7 @@ function filterGerDetalhe(q){
     }
   }
   window._detCatAtual = grupoLabel;
-  renderDetPizza(sorted, grupoLabel);
+  renderDetPizza(sortedParaPizza, grupoLabel);
 }
 function renderDetPizza(sorted, cat){
   // PATCH 44: deduplicar por NOME de tutor (não por grupo tutor+polo+categoria).
