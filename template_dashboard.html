@@ -1475,7 +1475,17 @@ function filterGerDetalhe(q){
   // em vez de resolver o problema — o objetivo aqui é separar especialidades
   // REAIS e reconhecíveis (Fisioterapia × T.O., Farmácia × Biomedicina, etc.),
   // não qualquer valor bruto que caia no campo subcurso.
-  var _SUBCURSOS_LIMPOS = Object.values(_SUBCURSO_LABEL_JS).reduce(function(acc,v){acc[v]=1;return acc;},{});
+  // PATCH 67: Farmácia e Biomedicina são a MESMA categoria/vaga (Bio-Far) — um
+  // tutor de Bio-Far cobre as duas legitimamente, não são especialistas
+  // diferentes. Confirmado pelo Leo: um tutor só aparece 2x quando está
+  // registrado em DUAS categorias diferentes de verdade (Bio-Far E, à parte,
+  // Estética e Cosmética do Multi III) — isso já acontece naturalmente porque
+  // a categoria (BIO-FAR vs BIO-FISIO-EST-TO) já é parte da chave da linha, sem
+  // precisar quebrar por subcurso dentro do Bio-Far. Só continuam "limpos" pra
+  // separar em linhas os subcursos que são especialidades REALMENTE distintas
+  // dentro da MESMA categoria ampla (Multi III: Fisioterapia × Terapia
+  // Ocupacional × Estética e Cosmética são vagas/registros diferentes).
+  var _SUBCURSOS_LIMPOS = {'Fisioterapia':1,'Terapia Ocupacional':1,'Estética e Cosmética':1};
   function _baseKeyOferta(r){
     var subLimpo = _SUBCURSOS_LIMPOS[r.subcurso] ? r.subcurso : '';
     return _normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'')+'|||'+subLimpo;
