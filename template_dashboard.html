@@ -1524,6 +1524,13 @@ function filterGerDetalhe(q){
     t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
+  // PATCH 72: lista de tutores "sem oferta no GIOCONDA" SEMPRE preenchida,
+  // independente do filtro de status da tabela — usada pelo pizza (ver
+  // sortedParaPizza mais abaixo) pra não perder esses tutores da conta quando
+  // o filtro da TABELA está em "Gerenciadas" (nesse caso eles corretamente não
+  // entram na tabela, mas continuam existindo e contando como "não geriu" no
+  // gráfico geral).
+  var _semOfertaInjetadosTodos = [];
   // PATCH 33: reforça ainda mais o PATCH 32 — corrige falso-positivo de "Sem
   // oferta no GIOCONDA" reportado pelo Leo (tutor com gerenciamento REAL em
   // 2026/2 ainda assim marcado como sem oferta). Causa provável: a grafia do
@@ -1568,11 +1575,6 @@ function filterGerDetalhe(q){
       _global.push(entry);
     });
     (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n; }).forEach(function(t){
-      // PATCH 50: um tutor sem NENHUMA oferta real no GIOCONDA nunca pode
-      // satisfazer o filtro "Gerenciadas" (não existe nada dele gerenciado) —
-      // só faz sentido injetá-lo como anomalia visível quando o filtro de
-      // status é "Todos" ou "Não gerenciadas".
-      if(st==='ger') return;
       var poloN=_normPoloComparavel(t.p);
       var alvoKey=_normTutorKey(t.n);
       var alvoFL=_primeiroUltimo(alvoKey);
@@ -1587,7 +1589,16 @@ function filterGerDetalhe(q){
       // categoria crua. Agora usa _tutorMatchesGrupo, que também olha o subcurso
       // (código de curso do tutor) quando o grupo exige isso.
       if(grupo && !_tutorMatchesGrupo(t, grupo, subfiltroId)) return;
-      sorted.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
+      // PATCH 72: registra SEMPRE nessa lista à parte (pro pizza usar, ver
+      // sortedParaPizza mais abaixo) — mas só entra em "sorted" (a tabela) quando
+      // o filtro de status permite (um tutor sem NENHUMA oferta real nunca pode
+      // satisfazer "Gerenciadas", então continua fora da tabela nesse caso; mas
+      // ele CONTINUA existindo e contando como "não gerenciou" no pizza, mesmo
+      // com o filtro da tabela em "Gerenciadas").
+      _semOfertaInjetadosTodos.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
+      if(st!=='ger'){
+        sorted.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
+      }
       // Registrar imediatamente pra não adicionar o mesmo tutor 2x se ele tiver
       // mais de uma entrada em DB.tutores pro mesmo polo (ex: registro duplicado)
       var novaEntry={key:alvoKey, fl:alvoFL};
@@ -1611,7 +1622,34 @@ function filterGerDetalhe(q){
   // selecionados. O pizza deve responder "de todo mundo nesse grupo, quantos
   // geriram?" — uma pergunta independente de qual filtro de status a TABELA
   // está usando pra decidir quais linhas mostrar.
-  var sortedParaPizza = sorted.slice();
+  // PATCH 71: o pizza precisa refletir TODOS os tutores do grupo/busca
+  // selecionados, independente de qual ORDEM está selecionada na tabela — não
+  // só independente do filtro de status (PATCH 70). Um tutor cujo único dado
+  // real é de uma ordem diferente da selecionada sumia inteiramente da conta
+  // (nem "geriu" nem "não geriu" — simplesmente não existia no recorte),
+  // causando a diferença "314 de 322" que o Leo reportou. Reconstrói a lista
+  // aqui SEM o filtro de ordem (só busca + grupo), reaproveitando a mesma
+  // lógica de "tutor sem oferta nenhuma" já calculada acima.
+  var sortedParaPizza = (function(){
+    var dSemOrdem = gerDetData;
+    if(q) dSemOrdem = dSemOrdem.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
+    if(grupo) dSemOrdem = dSemOrdem.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
+    var mapa = {};
+    dSemOrdem.forEach(function(r){
+      if(!r.tutor) return;
+      var key=_baseKeyOferta(r);
+      if(!mapa[key]) mapa[key] = {tutor:r.tutor, totalGer:0};
+      if(r.gerenciado) mapa[key].totalGer++;
+    });
+    var lista = Object.values(mapa);
+    // Reaproveita a lista de "sem oferta no GIOCONDA" SEMPRE preenchida (PATCH
+    // 72) — ao contrário de ler de 'sorted', que fica sem esses tutores quando
+    // o filtro de status da tabela é "Gerenciadas".
+    _semOfertaInjetadosTodos.forEach(function(t){
+      lista.push({tutor:t.tutor, totalGer:0});
+    });
+    return lista;
+  })();
   if(st){
     sorted = sorted.filter(function(t){
       if(t._semOfertaGioconda) return st==='nger'; // sem nenhum dado real -> nunca "gerenciada"
