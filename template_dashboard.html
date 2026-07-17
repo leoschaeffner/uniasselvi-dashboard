@@ -1121,6 +1121,60 @@ function renderGerenciamento(){
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
   gerDetData=GER_DB.ger_ofertas||[];
+  // PATCH 77: o Leo reportou a MESMA pessoa (Renata Souza da/De Silva) ainda
+  // duplicada mesmo depois do PATCH 75/76 bloquearem a re-injeção de "sem
+  // oferta" — a causa real nesse caso é outra: um mecanismo ANTERIOR no
+  // processar.py preenche práticas sem tutor nenhum usando o nome do CONTROLE
+  // (backfill), criando uma linha REAL (não sintética) com grafia de nome
+  // DIFERENTE da que aparece nas linhas que o próprio tutor já tem atribuídas
+  // no GIOCONDA. Cada bloqueio de duplicidade (aqui e no processar.py) só
+  // cobre o SEU caminho específico — a causa raiz é sempre a mesma (grafias
+  // diferentes = "pessoas" diferentes pro sistema), não importa qual
+  // mecanismo introduziu a grafia divergente dessa vez. Resolve na raiz:
+  // canoniza o nome do tutor de TODA oferta pro nome oficial do CONTROLE (por
+  // polo, pra não juntar homônimos de polos diferentes), com a mesma
+  // tolerância a nome com parte a mais/a menos ou palavra do meio diferente
+  // do PATCH 74/75/76 — assim toda linha da mesma pessoa vira uma identidade
+  // só, antes de qualquer agrupamento.
+  (function(){
+    function _poloKeyCanon(p){
+      return String(p||'').replace(/^LAP\s*[-–]\s*/i,'').replace(/\([^)]*\)/g,'')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+    }
+    function _semChapaCanon(nome){ return String(nome||'').replace(/\s*\(\d+\)\s*$/,'').trim(); }
+    function _ehSubsequenciaCanon(curtos, longos){
+      var i=0;
+      for(var j=0;j<longos.length && i<curtos.length;j++){ if(longos[j]===curtos[i]) i++; }
+      return i===curtos.length;
+    }
+    function _nomesBatemCanon(nomeA, nomeB){
+      if(nomeA===nomeB) return true;
+      var tA=nomeA.split(' ').filter(Boolean), tB=nomeB.split(' ').filter(Boolean);
+      if(!tA.length||!tB.length) return false;
+      if(tA.length>=2 && tB.length>=2 && tA[0]===tB[0] && tA[tA.length-1]===tB[tB.length-1]) return true;
+      var curtos=tA.length<=tB.length?tA:tB, longos=tA.length<=tB.length?tB:tA;
+      if(curtos.length<2) return false;
+      return _ehSubsequenciaCanon(curtos, longos);
+    }
+    var candidatosPorPolo={};
+    (DB.tutores||[]).forEach(function(t){
+      if(!t.n || !t.p) return;
+      var pk=_poloKeyCanon(t.p);
+      (candidatosPorPolo[pk]=candidatosPorPolo[pk]||[]).push({nomeCanonico:_semChapaCanon(t.n), nomeNorm:_normTutorKey(t.n)});
+    });
+    gerDetData.forEach(function(r){
+      if(!r.tutor) return;
+      var pk=_poloKeyCanon(r.polo);
+      var nomeNormAtual=_normTutorKey(r.tutor);
+      var candidatos=candidatosPorPolo[pk]||[];
+      if(candidatos.some(function(c){return c.nomeNorm===nomeNormAtual;})) return; // já bate exato
+      var match=candidatos.find(function(c){return _nomesBatemCanon(nomeNormAtual, c.nomeNorm);});
+      if(match){
+        var chapaOriginal=(String(r.tutor).match(/\(\d+\)\s*$/)||[])[0]||'';
+        r.tutor = match.nomeCanonico + (chapaOriginal?' '+chapaOriginal:'');
+      }
+    });
+  })();
   // PATCH 56: o Leo reportou tutores de Estética/Bio-Far aparecendo classificados
   // como Terapia Ocupacional (e o mesmo em outras áreas) — "diversos tutores, sem
   // exceção". A especialidade de um tutor é uma característica DELE (registrada
