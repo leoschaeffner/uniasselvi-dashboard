@@ -448,6 +448,14 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div id="ae-ofertas-resumo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:6px 0"></div>
   </div>
   <div class="kpi-row" id="ae-kpis"></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">🔎 Ver 1 por 1 (opcional)</div></div>
+    <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <select class="sel" id="ae-filtro-polo" onchange="filterAgendasPoloTutor()"><option value="">Todos os polos</option></select>
+      <select class="sel" id="ae-filtro-tutor" onchange="filterAgendasPoloTutor()"><option value="">Todos os tutores</option></select>
+      <span style="font-size:11px;color:var(--muted)">Deixa em "Todos" pra ver o agregado de sempre — escolhe um polo ou tutor pra ver só os horários dele.</span>
+    </div>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card"><div class="card-hdr"><div class="card-title">📅 Distribuição por Dia da Semana</div></div><div class="card-body" id="ae-dias"></div></div>
     <div class="card"><div class="card-hdr"><div class="card-title">🕐 Distribuição por Turno</div></div><div class="card-body" id="ae-turnos"></div></div>
@@ -2679,6 +2687,64 @@ function _dedupAlunos(ofertas, campo){
   });
   return Object.values(porGrupo).reduce(function(s,v){return s+v;},0);
 }
+function _renderAgendasKpisDiasTurnos(ofertas){
+  // PATCH 78: extraído de renderAgendasEstudo() pra poder ser chamado de novo
+  // com um subconjunto filtrado (1 polo ou 1 tutor por vez), sem duplicar a
+  // lógica nem perder o comportamento agregado de sempre (que continua sendo
+  // o padrão — só muda quando alguém escolhe um filtro específico).
+  const total=ofertas.length;
+  const incomuns=ofertas.filter(o=>o.horario_incomum);
+  const semAluno=ofertas.filter(o=>o.sem_alunos);
+  const totMat=_dedupAlunos(ofertas,'alunos_mat');
+  const totAgend=_dedupAlunos(ofertas,'alunos_agend');
+  const engajamento=totMat?Math.round(totAgend/totMat*1000)/10:0;
+
+  document.getElementById('ae-kpis').innerHTML=`
+    <div class="kpi kpi-green"><div class="kpi-label">Ofertas com Agenda</div><div class="kpi-value">${fmtNum(total)}</div></div>
+    <div class="kpi kpi-yellow" title="Domingo ou madrugada (00h-06h)"><div class="kpi-label">Horários Incomuns</div><div class="kpi-value">${fmtNum(incomuns.length)}</div><div class="kpi-detail">${total?Math.round(incomuns.length/total*100):0}% do total</div></div>
+    <div class="kpi kpi-red" title="Gerenciado mas 0 alunos agendados"><div class="kpi-label">Sem Aluno Agendado</div><div class="kpi-value">${fmtNum(semAluno.length)}</div><div class="kpi-detail">${total?Math.round(semAluno.length/total*100):0}% do total</div></div>
+    <div class="kpi kpi-teal"><div class="kpi-label">Taxa de Engajamento</div><div class="kpi-value">${engajamento}%</div><div class="kpi-detail">${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados</div></div>`;
+
+  // Distribuição por dia da semana
+  const porDia={}; ofertas.forEach(o=>{if(o.dia_semana){porDia[o.dia_semana]=(porDia[o.dia_semana]||0)+1;}});
+  const maxDia=Math.max(...Object.values(porDia),1);
+  document.getElementById('ae-dias').innerHTML=_DIAS_SEMANA_ORDEM.map(d=>{
+    const v=porDia[d]||0; const w=Math.round(v/maxDia*100);
+    const cor=(d==='Domingo')?'var(--red)':'var(--teal)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openDiaSemanaModal('${d}')" title="Clique para ver o comparativo 1º x 2º horário desse dia">
+      <span style="font-size:11px;min-width:56px;font-weight:600">${d}</span>
+      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
+      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
+      <span style="font-size:11px;color:var(--muted)">↗</span>
+    </div>`;
+  }).join('');
+
+  // Distribuição por turno
+  const porTurno={}; ofertas.forEach(o=>{if(o.turno){porTurno[o.turno]=(porTurno[o.turno]||0)+1;}});
+  const maxTurno=Math.max(...Object.values(porTurno),1);
+  document.getElementById('ae-turnos').innerHTML=_TURNOS_ORDEM.map(t=>{
+    const v=porTurno[t]||0; const w=Math.round(v/maxTurno*100);
+    const cor=(t==='Madrugada')?'var(--red)':'var(--teal)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openTurnoModal('${t}')" title="Clique para ver os horários específicos deste turno">
+      <span style="font-size:11px;min-width:70px;font-weight:600">${t}</span>
+      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
+      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
+      <span style="font-size:11px;color:var(--muted)">↗</span>
+    </div>`;
+  }).join('');
+}
+function filterAgendasPoloTutor(){
+  // PATCH 78: "ver 1 por 1" — filtra os KPIs + os dois gráficos por polo e/ou
+  // tutor escolhidos, sem mexer no resto da página (categoria, incomuns).
+  // Com os dois seletores em "Todos", volta a ser exatamente o agregado de
+  // sempre — nada muda pra quem não usa o filtro.
+  const polo=(document.getElementById('ae-filtro-polo')||{}).value||'';
+  const tutor=(document.getElementById('ae-filtro-tutor')||{}).value||'';
+  let ofertas=window._aeOfertasCompletas||[];
+  if(polo) ofertas=ofertas.filter(o=>o.polo===polo);
+  if(tutor) ofertas=ofertas.filter(o=>o.tutor===tutor);
+  _renderAgendasKpisDiasTurnos(ofertas);
+}
 function renderAgendasEstudo(){
   // PATCH 34: resumo "Gerenciamento de Ofertas" pedido pelo Anderson/Leo — usa
   // TODAS as ofertas do semestre selecionado (com e sem agenda, com e sem tutor),
@@ -2740,44 +2806,27 @@ function renderAgendasEstudo(){
   const total=ofertas.length;
   const incomuns=ofertas.filter(o=>o.horario_incomum);
   const semAluno=ofertas.filter(o=>o.sem_alunos);
-  const totMat=_dedupAlunos(ofertas,'alunos_mat');
-  const totAgend=_dedupAlunos(ofertas,'alunos_agend');
-  const engajamento=totMat?Math.round(totAgend/totMat*1000)/10:0;
 
   document.getElementById('ae-sub').textContent=`${fmtNum(total)} ofertas com agenda registrada · ${fmtNum(incomuns.length)} em horário incomum · ${fmtNum(semAluno.length)} sem nenhum aluno agendado`;
-  document.getElementById('ae-kpis').innerHTML=`
-    <div class="kpi kpi-green"><div class="kpi-label">Ofertas com Agenda</div><div class="kpi-value">${fmtNum(total)}</div></div>
-    <div class="kpi kpi-yellow" title="Domingo ou madrugada (00h-06h)"><div class="kpi-label">Horários Incomuns</div><div class="kpi-value">${fmtNum(incomuns.length)}</div><div class="kpi-detail">${total?Math.round(incomuns.length/total*100):0}% do total</div></div>
-    <div class="kpi kpi-red" title="Gerenciado mas 0 alunos agendados"><div class="kpi-label">Sem Aluno Agendado</div><div class="kpi-value">${fmtNum(semAluno.length)}</div><div class="kpi-detail">${total?Math.round(semAluno.length/total*100):0}% do total</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Taxa de Engajamento</div><div class="kpi-value">${engajamento}%</div><div class="kpi-detail">${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados</div></div>`;
 
-  // Distribuição por dia da semana
-  const porDia={}; ofertas.forEach(o=>{if(o.dia_semana){porDia[o.dia_semana]=(porDia[o.dia_semana]||0)+1;}});
-  const maxDia=Math.max(...Object.values(porDia),1);
-  document.getElementById('ae-dias').innerHTML=_DIAS_SEMANA_ORDEM.map(d=>{
-    const v=porDia[d]||0; const w=Math.round(v/maxDia*100);
-    const cor=(d==='Domingo')?'var(--red)':'var(--teal)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openDiaSemanaModal('${d}')" title="Clique para ver o comparativo 1º x 2º horário desse dia">
-      <span style="font-size:11px;min-width:56px;font-weight:600">${d}</span>
-      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
-      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
-      <span style="font-size:11px;color:var(--muted)">↗</span>
-    </div>`;
-  }).join('');
-
-  // Distribuição por turno
-  const porTurno={}; ofertas.forEach(o=>{if(o.turno){porTurno[o.turno]=(porTurno[o.turno]||0)+1;}});
-  const maxTurno=Math.max(...Object.values(porTurno),1);
-  document.getElementById('ae-turnos').innerHTML=_TURNOS_ORDEM.map(t=>{
-    const v=porTurno[t]||0; const w=Math.round(v/maxTurno*100);
-    const cor=(t==='Madrugada')?'var(--red)':'var(--teal)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openTurnoModal('${t}')" title="Clique para ver os horários específicos deste turno">
-      <span style="font-size:11px;min-width:70px;font-weight:600">${t}</span>
-      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
-      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
-      <span style="font-size:11px;color:var(--muted)">↗</span>
-    </div>`;
-  }).join('');
+  // PATCH 78: popula os seletores de "ver 1 por 1" com os polos/tutores que
+  // realmente têm oferta com agenda — refeito a cada render (troca de
+  // semestre, por exemplo) pra não ficar com opção de um semestre antigo.
+  (function(){
+    const selPolo=document.getElementById('ae-filtro-polo'), selTutor=document.getElementById('ae-filtro-tutor');
+    if(!selPolo||!selTutor) return;
+    const prevPolo=selPolo.value, prevTutor=selTutor.value;
+    const polos=[...new Set(ofertas.map(o=>o.polo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+    const tutores=[...new Set(ofertas.map(o=>o.tutor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+    while(selPolo.options.length>1) selPolo.remove(1);
+    polos.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;selPolo.appendChild(o);});
+    if([...selPolo.options].some(o=>o.value===prevPolo)) selPolo.value=prevPolo;
+    while(selTutor.options.length>1) selTutor.remove(1);
+    tutores.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selTutor.appendChild(o);});
+    if([...selTutor.options].some(o=>o.value===prevTutor)) selTutor.value=prevTutor;
+  })();
+  window._aeOfertasCompletas=ofertas;
+  _renderAgendasKpisDiasTurnos(ofertas);
 
   window._aeIncomunsData=incomuns;
   filterAgendasIncomuns(document.getElementById('ae-incomuns-search')?.value||'');
