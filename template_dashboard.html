@@ -2703,7 +2703,7 @@ function _renderAgendasKpisDiasTurnos(ofertas){
     <div class="kpi kpi-green"><div class="kpi-label">Ofertas com Agenda</div><div class="kpi-value">${fmtNum(total)}</div></div>
     <div class="kpi kpi-yellow" title="Domingo ou madrugada (00h-06h)"><div class="kpi-label">Horários Incomuns</div><div class="kpi-value">${fmtNum(incomuns.length)}</div><div class="kpi-detail">${total?Math.round(incomuns.length/total*100):0}% do total</div></div>
     <div class="kpi kpi-red" title="Gerenciado mas 0 alunos agendados"><div class="kpi-label">Sem Aluno Agendado</div><div class="kpi-value">${fmtNum(semAluno.length)}</div><div class="kpi-detail">${total?Math.round(semAluno.length/total*100):0}% do total</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Taxa de Engajamento</div><div class="kpi-value">${engajamento}%</div><div class="kpi-detail">${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados</div></div>`;
+    <div class="kpi kpi-teal" title="Diferente do card 'Agendamentos' lá em cima: ali é sobre TODAS as ofertas com tutor (tenham agenda ou não); aqui é só dentro das ofertas que JÁ têm uma agenda registrada — mede quantos dos matriculados dessas ofertas específicas conseguiram um horário individual."><div class="kpi-label">Taxa de Preenchimento ⓘ<br><span style="font-size:9px;font-weight:400;color:var(--muted)">dentro das ofertas com agenda</span></div><div class="kpi-value">${engajamento}%</div><div class="kpi-detail">${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados (só ofertas com agenda)</div></div>`;
 
   // Distribuição por dia da semana
   const porDia={}; ofertas.forEach(o=>{if(o.dia_semana){porDia[o.dia_semana]=(porDia[o.dia_semana]||0)+1;}});
@@ -2733,11 +2733,31 @@ function _renderAgendasKpisDiasTurnos(ofertas){
     </div>`;
   }).join('');
 }
+function _popularFiltroTutor(){
+  // PATCH 79: lista de tutores do seletor "ver 1 por 1" passa a depender do
+  // polo escolhido — só mostra quem realmente atua naquele polo. Se o tutor
+  // que estava selecionado não existir mais nessa lista (porque o polo mudou
+  // pra um onde ele não atua), volta pra "Todos os tutores" em vez de manter
+  // uma seleção que não faz mais sentido.
+  const selPolo=document.getElementById('ae-filtro-polo');
+  const selTutor=document.getElementById('ae-filtro-tutor');
+  if(!selTutor) return;
+  const poloAtual=(selPolo||{}).value||'';
+  const prevTutor=selTutor.value;
+  const base=window._aeOfertasCompletas||[];
+  const escopo=poloAtual?base.filter(o=>o.polo===poloAtual):base;
+  const tutores=[...new Set(escopo.map(o=>o.tutor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+  while(selTutor.options.length>1) selTutor.remove(1);
+  tutores.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selTutor.appendChild(o);});
+  selTutor.value=[...selTutor.options].some(o=>o.value===prevTutor)?prevTutor:'';
+}
 function filterAgendasPoloTutor(){
-  // PATCH 78: "ver 1 por 1" — filtra os KPIs + os dois gráficos por polo e/ou
-  // tutor escolhidos, sem mexer no resto da página (categoria, incomuns).
+  // PATCH 78/79: "ver 1 por 1" — filtra os KPIs + os dois gráficos por polo
+  // e/ou tutor escolhidos, sem mexer no resto da página (categoria, incomuns).
   // Com os dois seletores em "Todos", volta a ser exatamente o agregado de
-  // sempre — nada muda pra quem não usa o filtro.
+  // sempre — nada muda pra quem não usa o filtro. Repopula o seletor de tutor
+  // ANTES de ler o valor dele, pra já refletir o polo recém-escolhido.
+  _popularFiltroTutor();
   const polo=(document.getElementById('ae-filtro-polo')||{}).value||'';
   const tutor=(document.getElementById('ae-filtro-tutor')||{}).value||'';
   let ofertas=window._aeOfertasCompletas||[];
@@ -2787,10 +2807,10 @@ function renderAgendasEstudo(){
       <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(matTotal)}</div>
       <div style="font-size:10px;color:var(--muted)">${fmtNum(matComTutor)} com tutor · ${fmtNum(matSemTutor)} sem tutor</div>
     </div>
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--muted)">Agendamentos</div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px" title="Todas as ofertas com tutor, tenham agenda registrada ou não — visão mais ampla que a 'Taxa de Preenchimento' mais abaixo, que olha só dentro das que já têm agenda">
+      <div style="font-size:11px;color:var(--muted)">Agendamentos ⓘ</div>
       <div style="font-size:22px;font-weight:800;color:var(--teal)">${fmtNum(agendComTutor)} <span style="font-size:13px;font-weight:700">(${pctAgend}%)</span></div>
-      <div style="font-size:10px;color:var(--muted)">do total matriculado com tutor</div>
+      <div style="font-size:10px;color:var(--muted)">do total matriculado com tutor (todas as ofertas)</div>
     </div>`;
   // PATCH 49: removido o card "Presença Lançada" — não é só uma proxy imprecisa,
   // é uma cópia GARANTIDA de "Agendamentos": alunos_agend só é >0 quando a oferta
@@ -2809,23 +2829,21 @@ function renderAgendasEstudo(){
 
   document.getElementById('ae-sub').textContent=`${fmtNum(total)} ofertas com agenda registrada · ${fmtNum(incomuns.length)} em horário incomum · ${fmtNum(semAluno.length)} sem nenhum aluno agendado`;
 
-  // PATCH 78: popula os seletores de "ver 1 por 1" com os polos/tutores que
-  // realmente têm oferta com agenda — refeito a cada render (troca de
-  // semestre, por exemplo) pra não ficar com opção de um semestre antigo.
+  // PATCH 78/79: popula os seletores de "ver 1 por 1". O de TUTOR agora depende
+  // do polo escolhido — se um polo estiver selecionado, só lista os tutores
+  // daquele polo (bem mais fácil de achar o tutor certo do que rolar a lista
+  // inteira). Com "Todos os polos", volta a listar todo mundo, como antes.
+  window._aeOfertasCompletas=ofertas;
   (function(){
-    const selPolo=document.getElementById('ae-filtro-polo'), selTutor=document.getElementById('ae-filtro-tutor');
-    if(!selPolo||!selTutor) return;
-    const prevPolo=selPolo.value, prevTutor=selTutor.value;
+    const selPolo=document.getElementById('ae-filtro-polo');
+    if(!selPolo) return;
+    const prevPolo=selPolo.value;
     const polos=[...new Set(ofertas.map(o=>o.polo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
-    const tutores=[...new Set(ofertas.map(o=>o.tutor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
     while(selPolo.options.length>1) selPolo.remove(1);
     polos.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;selPolo.appendChild(o);});
     if([...selPolo.options].some(o=>o.value===prevPolo)) selPolo.value=prevPolo;
-    while(selTutor.options.length>1) selTutor.remove(1);
-    tutores.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selTutor.appendChild(o);});
-    if([...selTutor.options].some(o=>o.value===prevTutor)) selTutor.value=prevTutor;
   })();
-  window._aeOfertasCompletas=ofertas;
+  _popularFiltroTutor();
   _renderAgendasKpisDiasTurnos(ofertas);
 
   window._aeIncomunsData=incomuns;
