@@ -268,8 +268,6 @@ CAT_MAP = {
         'Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica',
     'BIO-FISIO-EST-TO (Multidisciplinar III)':
         'Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética',
-    'BIO-BIO-FISIO-EST-TO (Multidisciplinar III)':
-        'Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética',
     'BIO-FAR (Multidisciplinar I)':
         'Multidisciplinar I - Biomedicina e Farmácia',
     'NUTRI (Multidisciplinar IV)':
@@ -281,6 +279,24 @@ CAT_MAP = {
     'ENGMAKER+QUÍMICA E FÍSICA':
         'EngeMaker | Química e Física - Engenharias e Licenciaturas',
 }
+
+# PATCH 82: mais de uma vez já apareceu uma variante do rótulo de categoria com
+# prefixo "BIO-" duplicado (ex: "BIO-BIO-FISIO-EST-TO"), vinda de uma exportação
+# diferente do CONTROLE/GIOCONDA — isso virava uma "categoria fantasma" separada
+# em qualquer lugar que agrupa pelo valor CRU da categoria (o filtro de
+# Portfólios, por exemplo), mesmo já existindo uma entrada no CAT_MAP pra dar o
+# nome de exibição certo a essa variante (band-aid que só cobria o texto
+# mostrado, não a contagem/agrupamento em si). Normaliza a categoria na
+# FONTE — assim ela nunca mais aparece como algo diferente da categoria certa
+# em nenhum lugar do sistema, e essa proteção vale pra qualquer futura
+# duplicação de prefixo "BIO-", não só esse caso específico.
+def _normaliza_categoria_bio_duplicado(s):
+    s2 = str(s or '').strip()
+    while s2.upper().startswith('BIO-BIO-'):
+        s2 = s2[4:]
+    return s2
+
+
 
 
 def ts():
@@ -704,7 +720,7 @@ def processar(p1, p2):
     for _, t in df_at.iterrows():
         polo_   = str(t.get(col_polo, '') or '').strip()
         cursos_ = str(t.get(col_cur,  '') or '').strip()
-        cat_    = str(t.get(col_cat,  '') or '').strip() if col_cat else ''
+        cat_    = _normaliza_categoria_bio_duplicado(str(t.get(col_cat,  '') or '').strip()) if col_cat else ''
         if cursos_ in ('BBI', 'BFR') and 'BIO-FAR' in cat_.upper():
             if polo_ not in polo_biofar_cursos: polo_biofar_cursos[polo_] = set()
             polo_biofar_cursos[polo_].add(cursos_)
@@ -718,7 +734,7 @@ def processar(p1, p2):
     for _, t in df_at.iterrows():
         polo = str(t.get(col_polo, '') or '').strip()
         cursos = str(t.get(col_cur, '') or '').strip()
-        cat_raw = str(t.get(col_cat, '') or '').strip() if col_cat else ''
+        cat_raw = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
         cf = CAT_MAP.get(cat_raw, cat_raw)
         chave = polo + cursos
         if chave and cat_raw:
@@ -766,7 +782,7 @@ def processar(p1, p2):
         for _, t in df_at.iterrows():
             em = str(t.get(col_email_t, '') or '').strip().lower()
             chave_t = t['_CHAVE']
-            cat_raw_ = str(t.get(col_cat, '') or '').strip() if col_cat else ''
+            cat_raw_ = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
             cf_ = CAT_MAP.get(cat_raw_, cat_raw_)
             if em and em != 'nan':
                 _email_chaves_vistas[em].add(chave_t)
@@ -801,6 +817,32 @@ def processar(p1, p2):
         s = unicodedata.normalize('NFD', s)
         s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
         return s
+
+    # PATCH 83: mesma lógica de subsequência já usada noutros pontos do arquivo
+    # (nome com uma parte a mais ou a menos, tipo "Jose Cicero..." vs "Cicero...")
+    # — aqui serve pra resolver submissões do Forms de portfólio que caem em
+    # "Aviso de Portfólio" só porque o nome digitado no formulário tem uma
+    # grafia levemente diferente do nome oficial no CONTROLE, mesmo a pessoa
+    # sendo um tutor real e corretamente cadastrado.
+    def _eh_subsequencia_nome_match(curtos, longos):
+        i = 0
+        for tok in longos:
+            if i < len(curtos) and tok == curtos[i]:
+                i += 1
+        return i == len(curtos)
+
+    def _nomes_batem_match(nome_a, nome_b):
+        if nome_a == nome_b:
+            return True
+        ta, tb = nome_a.split(), nome_b.split()
+        if not ta or not tb:
+            return False
+        if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+            return True
+        curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+        if len(curtos) < 2:
+            return False
+        return _eh_subsequencia_nome_match(curtos, longos)
 
     # Mapear: nome_normalizado → chave CONTROLE
     nome_to_chave_tutor = {}
@@ -947,6 +989,18 @@ def processar(p1, p2):
                         if fl_p in nome_to_chave_tutor:
                             chave = nome_to_chave_tutor[fl_p]
                             match_por_nome += 1
+                    # PATCH 83: se nem nome exato nem primeiro+último bateram,
+                    # tenta por subsequência (nome com parte a mais/a menos) —
+                    # antes disso, esses tutores caíam direto em "Aviso de
+                    # Portfólio" mesmo estando corretamente cadastrados, só
+                    # porque o nome digitado no Forms tinha uma grafia
+                    # levemente diferente da oficial no CONTROLE.
+                    if chave not in chave_to_cf:
+                        for _nome_ctrl, _chave_ctrl in nome_to_chave_tutor.items():
+                            if _nomes_batem_match(nome_p, _nome_ctrl):
+                                chave = _chave_ctrl
+                                match_por_nome += 1
+                                break
 
         if chave not in chave_to_cf:
             # Fallback 3: normalizar a própria chave (diferenças de espaços/acentos)
@@ -1072,7 +1126,7 @@ def processar(p1, p2):
     _hist_pre_admissao = 0
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
-        cat_raw  = str(t.get(col_cat, '') or '').strip() if col_cat else ''
+        cat_raw  = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
         cat_form = CAT_MAP.get(cat_raw, cat_raw)
         polo_str = str(t.get(col_polo, '') or '').strip()
         cursos_t = str(t.get(col_cur, '') or '').strip()
@@ -1986,6 +2040,12 @@ def processar_gerenciamento_csv(p5):
             'com_tutor': int(grp['tem_tutor'].sum()),
             'alunos_matriculados': int(grp['alunos_mat'].sum()), 'alunos_agendados': int(grp['alunos_agend'].sum()),
             'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(ordem,''),
+            # PATCH 86 (P6): quantos tutores distintos gerenciaram QUALQUER coisa
+            # nesta ordem — base pro gráfico "tutores gerenciaram por ordem",
+            # atualizando conforme cada ordem acontece (não é % de ofertas, é
+            # contagem de PESSOAS, seguindo a mesma regra já validada de
+            # "geriu alguma coisa = gerenciou" — não precisa bater a capacidade.
+            'tutores_gerenciaram': int(grp[grp['gerenciado']]['tutor'].dropna().nunique()),
         })
     ger_contratacao = []
     for (polo, cat), grp in df_r.groupby(['polo','categoria']):
@@ -2047,11 +2107,24 @@ def _processar_gerenciamento_novo(df_g):
         return '', str(val or '').strip()
     df = df_g.copy()
     df['_POLO']  = df[c_polo].astype(str).str.strip() if c_polo else ''
-    # PATCH 19: o export novo do gerenciamento (CSV 2026/2) usa um rótulo diferente
-    # do arquivo antigo pra mesma categoria (Fisio/T.O./Estética) — normaliza pra
-    # não virar "categoria fantasma" duplicada no seletor/agregações
-    _CAT_RAW_NORM = {'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)'}
-    df['_CAT']   = df[c_cat].astype(str).str.strip().replace(_CAT_RAW_NORM) if c_cat  else ''
+    # PATCH 19/82: o export do gerenciamento já trocou de rótulo pra essa mesma
+    # categoria (Fisio/T.O./Estética) mais de uma vez — primeiro "FISIO-TO-EST-
+    # BIO", agora "BIO-BIO-FISIO-EST-TO" (prefixo "BIO-" duplicado num export
+    # mais recente). Cada variante nova virava uma "categoria fantasma" separada
+    # nos filtros/agregações em vez de cair na mesma categoria de sempre. Além
+    # da lista de variantes conhecidas, adiciona uma regra geral: se o rótulo
+    # começar com "BIO-" duplicado (ex: "BIO-BIO-..."), colapsa pro rótulo
+    # correto — proteção pra a PRÓXIMA vez que isso acontecer de novo.
+    _CAT_RAW_NORM = {
+        'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'BIO-BIO-FISIO-EST-TO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+    }
+    def _corrige_prefixo_bio_duplicado(s):
+        s2 = str(s or '').strip()
+        while s2.upper().startswith('BIO-BIO-'):
+            s2 = s2[4:]  # remove um "BIO-" duplicado da frente, pode acontecer mais de uma vez
+        return s2
+    df['_CAT']   = (df[c_cat].astype(str).str.strip().replace(_CAT_RAW_NORM).apply(_corrige_prefixo_bio_duplicado)) if c_cat  else ''
     # PATCH 42: curso específico (BFI/BTO/COS-TIP/etc.) — pedido do Leo pra poder
     # filtrar Multidisciplinar III por especialidade (Fisioterapia/T.O./Estética)
     # em vez de só pela categoria ampla, que mistura as três no mesmo filtro.
@@ -2192,6 +2265,7 @@ def _processar_gerenciamento_novo(df_g):
             'com_tutor': int(grp['_TEM_TUTOR'].sum()),
             'alunos_matriculados': int(_dedup_o['_MAT'].sum()), 'alunos_agendados': int(_dedup_o['_AGEND'].sum()),
             'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(ordem,''),
+            'tutores_gerenciaram': int(grp[grp['_GERENCIADO']]['_TUTOR'].dropna().nunique()),  # PATCH 86 (P6)
         })
     ger_contratacao = []
     for (polo, cat), grp in df.groupby(['_POLO','_CAT']):
@@ -2321,7 +2395,7 @@ def _recalcular_agregados_de_ofertas(ofertas):
             contr_map[trk]['tutores'].append(o['tutor'])
 
         if p not in agenda_map:
-            agenda_map[p] = {'polo': p, 'total': 0, 'com_agenda': 0, 'datas_por_cat': {}, 'datas_por_tutor': {}}
+            agenda_map[p] = {'polo': p, 'total': 0, 'com_agenda': 0, 'datas_por_cat': {}, 'datas_por_tutor': {}, 'datas_por_horario': {}}
         am = agenda_map[p]
         am['total'] += 1
         if o['tem_agenda']:
@@ -2332,6 +2406,13 @@ def _recalcular_agregados_de_ofertas(ofertas):
                 if c and c not in am['datas_por_cat'][d]: am['datas_por_cat'][d].append(c)
                 am['datas_por_tutor'].setdefault(d, [])
                 if o.get('tutor') and o['tutor'] not in am['datas_por_tutor'][d]: am['datas_por_tutor'][d].append(o['tutor'])
+                # PATCH 85 (P7): horário do agendamento junto do tutor, pra dar
+                # pra ver não só QUEM agendou naquele dia mas A QUE HORAS.
+                am['datas_por_horario'].setdefault(d, [])
+                _hr_cal = o.get('hr_agenda')
+                if _hr_cal and o.get('tutor'):
+                    _entrada_cal = f"{o['tutor']} · {_hr_cal}"
+                    if _entrada_cal not in am['datas_por_horario'][d]: am['datas_por_horario'][d].append(_entrada_cal)
 
     for pm in polo_map.values():
         pm['pct_gerenciado'] = round(pm['gerenciadas'] / pm['total_ofertas'] * 100, 1) if pm['total_ofertas'] else 0
@@ -2356,6 +2437,7 @@ def _recalcular_agregados_de_ofertas(ofertas):
             'pct_agendado': round(am['com_agenda'] / am['total'] * 100, 1) if am['total'] else 0,
             'datas_agenda': sorted(am['datas_por_cat'].keys()),
             'datas_por_cat': am['datas_por_cat'], 'datas_por_tutor': am['datas_por_tutor'],
+            'datas_por_horario': am['datas_por_horario'],  # PATCH 85 (P7)
         })
     ger_agendas.sort(key=lambda x: -x['sem_agenda'])
 
@@ -2572,11 +2654,19 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
             c_tut_bf = next((c for c in df.columns if str(c).upper() == 'TUTOR'), None)
             c_exp_bf = next((c for c in df.columns if str(c).upper() == 'NOME_EXPERIMENTO'), None)
             if c_lab_bf and c_cat_bf and c_tut_bf:
-                _CAT_RAW_NORM_BF = {'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)'}
+                _CAT_RAW_NORM_BF = {
+                    'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+                    'BIO-BIO-FISIO-EST-TO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+                }
+                def _corrige_prefixo_bio_duplicado_bf(s):
+                    s2 = str(s or '').strip()
+                    while s2.upper().startswith('BIO-BIO-'):
+                        s2 = s2[4:]
+                    return s2
                 _tutor_vazio = df[c_tut_bf].isna() | (df[c_tut_bf].astype(str).str.strip().isin(['', 'nan']))
                 if _tutor_vazio.any():
                     _polo_norm = df.loc[_tutor_vazio, c_lab_bf].map(_norm_polo_ger)
-                    _cat_norm  = df.loc[_tutor_vazio, c_cat_bf].astype(str).str.strip().replace(_CAT_RAW_NORM_BF)
+                    _cat_norm  = df.loc[_tutor_vazio, c_cat_bf].astype(str).str.strip().replace(_CAT_RAW_NORM_BF).apply(_corrige_prefixo_bio_duplicado_bf)
                     if c_exp_bf and _NOME_TO_PERFIL_BF:
                         _praticas_norm = df.loc[_tutor_vazio, c_exp_bf].map(_pratica_de_experimento_bf)
                         _cursos_esp = _praticas_norm.map(lambda p: _NOME_TO_PERFIL_BF.get(p))
@@ -2743,6 +2833,7 @@ def processar_gerenciamento(p3):
             'com_tutor': int(grp['_TEM_TUTOR'].sum()),
             'alunos_matriculados': int(_dedup_o['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(_dedup_o['_QTD_ALUN'].sum()),
             'dt_inicio': dt_inicio, 'dt_fim': dt_fim,
+            'tutores_gerenciaram': int(grp[grp['_GERENCIADO']][c_tutor].dropna().nunique()) if c_tutor in grp.columns else 0,  # PATCH 86 (P6)
         })
     ger_contratacao = []
     if c_polo in df_g.columns and c_cat in df_g.columns:
