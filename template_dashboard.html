@@ -334,6 +334,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
         <option value="nao">Não gerenciado</option>
         <option value="sem_dados">Sem dados</option>
       </select>
+      <button class="btn-export" onclick="exportTutoresAtivosPorCurso()" style="background:var(--teal)">⬇ Exportar Tutores por Curso</button>
     </div>
   </div>
   <div id="tutmec-table-wrap"></div>
@@ -3808,6 +3809,7 @@ function filterTutoresMec(q) {
         <th style="${thC}" onclick="_tutMecSort('port')">Portfólio ${arrow('port')}</th>
         <th style="${thC}" onclick="_tutMecSort('ger')" title="% sobre a capacidade esperada (CH contratada → práticas/semana → capacidade por ordem × 5 ordens do semestre) — não é sobre a quantidade bruta de registros nem só as ordens que o tutor já tem dado">Gerenc. ⓘ ${arrow('ger')}</th>
         <th style="${thC}" onclick="_tutMecSort('lattes')" style="cursor:pointer">Lattes ${arrow('lattes')}</th>
+        <th style="${thC}" title="Só aparece pra tutores com menos de 2 meses de casa. 3 quadrados: Trilha de Aprendizagem, Checklist, 1:1 de Gerenciamento. Quando os 3 ficam verdes, o tutor vira Apto e some daqui.">Onboarding ⓘ</th>
         <th style="${thC}">Ver</th>
       </tr>
     </thead>
@@ -3856,6 +3858,22 @@ function filterTutoresMec(q) {
 
     const nomeEsc=t.n.replace(/'/g,"\\'");
 
+    // PATCH 88: onboarding — só mostra os quadrados pra quem tem menos de 2
+    // meses de casa (calculado sozinho a partir do INÍCIO, sem precisar
+    // marcar nada manualmente pra isso). Uma vez "apto" (os 3 em Sim), some
+    // da visualização — o tutor já é considerado formado.
+    var onboardingCell='<span style="color:var(--dim);font-size:10px">—</span>';
+    if(t.inicio){
+      var _inicioD=new Date(t.inicio);
+      var _doisMesesAtras=new Date(); _doisMesesAtras.setMonth(_doisMesesAtras.getMonth()-2);
+      if(!isNaN(_inicioD) && _inicioD>=_doisMesesAtras && t.onboarding_apto!==true){
+        var _sq=function(ok,label){return '<span title="'+label+(ok?': OK':': pendente')+'" style="display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:2px;background:'+(ok?'var(--ok)':'var(--red)')+'"></span>';};
+        onboardingCell=_sq(t.onboarding_trilha,'Trilha de Aprendizagem')+_sq(t.onboarding_checklist,'Checklist')+_sq(t.onboarding_1a1,'1:1 de Gerenciamento');
+      }else if(t.onboarding_apto===true){
+        onboardingCell='<span style="color:var(--ok);font-size:10px;font-weight:700">✓ Apto</span>';
+      }
+    }
+
     html+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
       <td style="padding:8px 10px;font-weight:600;font-size:12px;max-width:180px">${t.n}${t.comunicacao?` <span title="${esc(t.comunicacao.resumo||'')}" style="font-size:11px">${t.comunicacao.atencao?'🚨':'📞'}</span>`:''}</td>
       <td style="padding:8px 10px;font-size:11px;color:var(--muted);max-width:140px">${t.p}</td>
@@ -3866,6 +3884,7 @@ function filterTutoresMec(q) {
       <td style="padding:8px 8px;text-align:center">${portCell}</td>
       <td style="padding:8px 8px;text-align:center">${gerCell}</td>
       <td style="padding:8px 8px;text-align:center">${lattesBadge}</td>
+      <td style="padding:8px 8px;text-align:center">${onboardingCell}</td>
       <td style="padding:8px 8px;text-align:center">
         <button onclick="openTutorModal('${nomeEsc}')"
           style="background:var(--teal);color:#fff;border:none;padding:4px 10px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">
@@ -3877,6 +3896,46 @@ function filterTutoresMec(q) {
 
   html += '</tbody></table></div>';
   wrap.innerHTML = html;
+}
+function exportTutoresAtivosPorCurso(){
+  // PATCH 87: exporta os tutores ativos ATUALMENTE exibidos na tela (respeita
+  // busca/categoria/titulação/lattes/portfólio/gerenc. já selecionados) — se
+  // nada estiver filtrado, exporta todo mundo. Sempre inclui a data de
+  // contratação (campo INÍCIO do Controle de Tutoria).
+  const tutores = (DB.tutores||[]).filter(t => !t._anonimo && t.n !== 'Tutor desligado' && t.c !== 'Aviso de Portfólio');
+  const q = (document.getElementById('tutmec-search')?.value || '').toLowerCase().trim();
+  const cat  = document.getElementById('tutmec-cat-sel')?.value || '';
+  const tit  = document.getElementById('tutmec-tit-sel')?.value || '';
+  const port = document.getElementById('tutmec-port-sel')?.value || '';
+  const ger  = document.getElementById('tutmec-ger-sel')?.value || '';
+  const lat  = document.getElementById('tutmec-lattes-sel')?.value || '';
+  let d = tutores;
+  if (q) d = d.filter(t => (t.n+t.p+(t.c||'')).toLowerCase().includes(q));
+  if (cat) {
+    const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
+    d = d.filter(t => _normC(t.c||'') === cat);
+  }
+  if (tit) d = d.filter(t => t.titulacao === tit);
+  if (lat === 'com') d = d.filter(t => !!t.lattes_id);
+  else if (lat === 'sem') d = d.filter(t => !t.lattes_id);
+  if (port === 'ok')   d = d.filter(t => (t.te||0) > 0);
+  else if (port === 'pend') d = d.filter(t => (t.te||0) === 0);
+  if (ger === 'ok')        d = d.filter(t => t.ger_pct === 100);
+  else if (ger === 'parcial')  d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct > 0 && t.ger_pct < 100);
+  else if (ger === 'nao')      d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct === 0);
+  else if (ger === 'sem_dados') d = d.filter(t => t.ger_pct === null || t.ger_pct === undefined);
+
+  if (!d.length){ alert('Nenhum tutor no filtro atual para exportar.'); return; }
+  const rows = d.slice().sort((a,b)=>(a.n||'').localeCompare(b.n||'','pt-BR')).map(t => ({
+    'Tutor': t.n || '',
+    'Polo': t.p || '',
+    'Categoria/Curso': t.c || '',
+    'Data de Contratação': t.inicio || '',
+    'CH Semanal': t.ch_semanal ? t.ch_semanal+'h' : '',
+    'Titulação': t.titulacao || '',
+    '% Gerenciamento': (t.ger_pct===null||t.ger_pct===undefined) ? '' : t.ger_pct+'%',
+  }));
+  exportCSV(rows, 'tutores_ativos_por_curso_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 function _tutMecSort(col){
   if(window._tutMecSortK===col){ window._tutMecSortA=!window._tutMecSortA; }
