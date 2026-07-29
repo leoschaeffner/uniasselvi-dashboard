@@ -1857,6 +1857,131 @@ CURSOS_NOMES = {
     'ARQUITETURA E URBANISMO': 'Arquitetura e Urbanismo',
 }
 
+def gerar_onboarding_atualizado(p1, p6, destino):
+    """
+    PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding.
+    - p1: caminho do 01_CONTROLE_TUTORIA.xlsx (fonte dos tutores ativos)
+    - p6: caminho da Acompanhamento_Onboarding.xlsx ATUAL (pode ser None na
+      primeira vez) — usado só pra preservar os flags já marcados
+    - destino: onde salvar a planilha atualizada
+
+    Regra: tutor ativo com "INÍCIO" nos últimos 2 meses entra na lista
+    automaticamente. Se já estava na planilha antiga, mantém os flags dele
+    (Trilha/Checklist/1:1/Observações) tal como estavam. Tutor que já tem as
+    3 colunas em "Sim" (virou "apto") sai da lista — não precisa de uma
+    coluna a mais pra isso, o próprio critério das 3 colunas já resolve.
+    """
+    import pandas as _pd
+    import openpyxl as _oxl
+    from openpyxl.styles import Font as _Font, PatternFill as _Fill, Alignment as _Align, Border as _Border, Side as _Side
+    from openpyxl.utils import get_column_letter as _gcl
+
+    df = _pd.read_excel(p1, sheet_name='Base de Tutores', header=1)
+    ativos = df[df['SITUAÇÃO'].astype(str).str.strip().str.upper() == 'ATIVO'].copy()
+
+    def _categoria_exibicao(categoria, cursos):
+        cat = str(categoria or '').strip()
+        if cat == 'BIO-FISIO-EST-TO (Multidisciplinar III)':
+            primeiro = str(cursos or '').split('|')[0].strip()
+            return CURSOS_NOMES.get(primeiro, cat)
+        return cat
+
+    ativos['_CAT_EXIB'] = ativos.apply(lambda r: _categoria_exibicao(r.get('CATEGORIA'), r.get('CURSOS')), axis=1)
+
+    hoje = _pd.Timestamp.now().normalize()
+    corte = hoje - _pd.Timedelta(days=60)
+    novos = ativos[_pd.to_datetime(ativos['INÍCIO'], errors='coerce') >= corte].copy()
+
+    # Carrega flags já existentes (se a planilha anterior estiver disponível)
+    flags_por_chapa = {}
+    if p6:
+        try:
+            df_old = _pd.read_excel(p6, sheet_name='Onboarding Tutores')
+            for _, r in df_old.iterrows():
+                chapa = str(r.get('Chapa', '') or '').strip()
+                if chapa:
+                    flags_por_chapa[chapa] = {
+                        'trilha': str(r.get('Trilha de Aprendizagem', '') or '').strip(),
+                        'checklist': str(r.get('Checklist Realizado', '') or '').strip(),
+                        'um_a_um': str(r.get('1:1 de Gerenciamento', '') or '').strip(),
+                        'obs': r.get('Observações', '') or '',
+                    }
+        except Exception as e:
+            print(f"[{ts()}] AVISO: não consegui ler onboarding anterior pra preservar flags: {e}")
+
+    linhas = []
+    for _, t in novos.iterrows():
+        chapa = str(t.get('CHAPA', '') or '').strip()
+        antigos = flags_por_chapa.get(chapa, {})
+        trilha = antigos.get('trilha', 'Não') or 'Não'
+        checklist = antigos.get('checklist', 'Não') or 'Não'
+        um_a_um = antigos.get('um_a_um', 'Não') or 'Não'
+        # PATCH 89: tutor com as 3 colunas em "Sim" virou apto — não entra
+        # (ou sai) da planilha de acompanhamento.
+        if trilha.lower() == 'sim' and checklist.lower() == 'sim' and um_a_um.lower() == 'sim':
+            continue
+        inicio_val = t.get('INÍCIO')
+        inicio_str = _pd.to_datetime(inicio_val).strftime('%d/%m/%Y') if _pd.notna(inicio_val) else ''
+        linhas.append({
+            'Chapa': chapa, 'Nome do Tutor': t.get('NOME DO TUTOR', ''), 'Polo': t.get('POLO', ''),
+            'Categoria': t.get('_CAT_EXIB', ''), 'Data de Início': inicio_str,
+            'Trilha de Aprendizagem': trilha, 'Checklist Realizado': checklist,
+            '1:1 de Gerenciamento': um_a_um, 'Observações': antigos.get('obs', ''),
+        })
+    linhas.sort(key=lambda x: x['Data de Início'], reverse=True)
+
+    wb = _oxl.Workbook()
+    ws = wb.active
+    ws.title = 'Onboarding Tutores'
+    headers = ['Chapa', 'Nome do Tutor', 'Polo', 'Categoria', 'Data de Início',
+               'Trilha de Aprendizagem', 'Checklist Realizado', '1:1 de Gerenciamento', 'Observações']
+    font_header = _Font(name='Arial', bold=True, color='FFFFFF', size=10)
+    fill_header = _Fill('solid', fgColor='1B4D3E')
+    font_body = _Font(name='Arial', size=10)
+    align_center = _Align(horizontal='center', vertical='center')
+    align_left = _Align(horizontal='left', vertical='center')
+    thin = _Side(style='thin', color='D9D9D9')
+    border = _Border(left=thin, right=thin, top=thin, bottom=thin)
+    fill_pendente = _Fill('solid', fgColor='FCE8B2')
+
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(row=1, column=col, value=h)
+        c.font = font_header; c.fill = fill_header; c.alignment = align_center; c.border = border
+    ws.freeze_panes = 'A2'
+
+    for row_idx, linha in enumerate(linhas, start=2):
+        for col, h in enumerate(headers, 1):
+            v = linha[h]
+            c = ws.cell(row=row_idx, column=col, value=v)
+            c.font = font_body; c.border = border
+            c.alignment = align_left if h in ('Nome do Tutor', 'Polo', 'Categoria', 'Observações') else align_center
+            if h in ('Trilha de Aprendizagem', 'Checklist Realizado', '1:1 de Gerenciamento') and str(v).strip().lower() != 'sim':
+                c.fill = fill_pendente
+
+    widths = [14, 30, 30, 26, 14, 20, 18, 18, 24]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[_gcl(i)].width = w
+    ws.row_dimensions[1].height = 28
+
+    ws2 = wb.create_sheet('Instruções')
+    instrucoes = [
+        'Como preencher — Acompanhamento de Onboarding', '',
+        '• Esta planilha lista os tutores contratados nos últimos 2 meses (calculado automaticamente a partir da Data de Início).',
+        '• A categoria mostra o curso ESPECÍFICO do tutor (ex: Fisioterapia, T. Ocupacional, Estética e Cosmética dentro do Multi III) — não a categoria ampla.',
+        '• Marque "Sim" nas 3 colunas conforme cada etapa for concluída: Trilha de Aprendizagem, Checklist Realizado, 1:1 de Gerenciamento.',
+        '• Quando as 3 colunas estiverem "Sim", o tutor sai da lista automaticamente na próxima atualização — é considerado "apto".',
+        '• Não altere Chapa, Nome, Polo, Categoria ou Data de Início — são usados para localizar o tutor certo.',
+        '• Esta planilha é atualizada automaticamente a cada ciclo — tutores novos entram sozinhos, e o que você já preencheu NÃO é apagado.',
+    ]
+    for r, texto in enumerate(instrucoes, 1):
+        cell = ws2.cell(row=r, column=1, value=texto if texto else None)
+        if r == 1:
+            cell.font = _Font(name='Arial', bold=True, size=13)
+    ws2.column_dimensions['A'].width = 100
+
+    wb.save(destino)
+    print(f"[{ts()}] Onboarding atualizado: {len(linhas)} tutores em acompanhamento -> {destino}")
+
 def enriquecer_tutores(dados, lotacao):
     tutores = dados.get('tutores', [])
     matched = 0
@@ -2432,13 +2557,21 @@ def _recalcular_agregados_de_ofertas(ofertas):
         if od:
             if od not in ordem_map:
                 ordem_map[od] = {'ordem': od, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0,
-                                  'alunos_matriculados': 0, 'alunos_agendados': 0, 'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(od, '')}
+                                  'alunos_matriculados': 0, 'alunos_agendados': 0, 'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(od, ''),
+                                  '_tutores_ger_set': set()}
             omp = ordem_map[od]
             omp['total_ofertas'] += 1
             if o['gerenciado']: omp['gerenciadas'] += 1
             if o['tem_tutor']: omp['com_tutor'] += 1
             omp['alunos_matriculados'] += o.get('alunos_mat', 0)
             omp['alunos_agendados'] += o.get('alunos_agend', 0)
+            # PATCH 86 (P6): tutores distintos que gerenciaram QUALQUER coisa
+            # nesta ordem específica — usado no gráfico "Tutores Gerenciaram
+            # por Ordem". Essa função roda DEPOIS da injeção de ofertas
+            # sintéticas, então é aqui que o dado realmente chega pro
+            # dashboard ao vivo — faltava justamente aqui.
+            if o['gerenciado'] and o.get('tutor'):
+                omp['_tutores_ger_set'].add(o['tutor'])
 
         trk = (p, c)
         if trk not in contr_map:
@@ -2473,6 +2606,7 @@ def _recalcular_agregados_de_ofertas(ofertas):
         cm['pct_gerenciado'] = round(cm['gerenciadas'] / cm['total_ofertas'] * 100, 1) if cm['total_ofertas'] else 0
     for omp in ordem_map.values():
         omp['pct_gerenciado'] = round(omp['gerenciadas'] / omp['total_ofertas'] * 100, 1) if omp['total_ofertas'] else 0
+        omp['tutores_gerenciaram'] = len(omp.pop('_tutores_ger_set', set()))  # PATCH 86 (P6)
 
     ger_polo = sorted(polo_map.values(), key=lambda x: -x['sem_tutor'])
     ger_cat = sorted(cat_map.values(), key=lambda x: -x['total_ofertas'])
@@ -3228,6 +3362,15 @@ if __name__ == '__main__':
     else:
         dados['alunos_por_curso'] = []
         dados['vagas'] = {'vagas': [], 'kpis': {}}
+    # PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding —
+    # roda sempre (mesmo na primeira vez, quando ainda não existe um p6 pra
+    # ler flags antigos) pra garantir que a lista sempre nasce e se mantém
+    # sozinha. Preserva flags de quem já está sendo acompanhado, adiciona
+    # tutor novo automaticamente, remove quem já ficou "apto".
+    try:
+        gerar_onboarding_atualizado(p1, p6, os.path.join(SCRIPT_DIR, 'Acompanhamento_Onboarding.xlsx'))
+    except Exception as e:
+        print(f"[{ts()}] AVISO: Erro ao gerar onboarding atualizado: {e}")
     # PATCH 2: tem_lotacao baseado em dados reais (CH > 0 em pelo menos 1 tutor)
     _ch_ok = sum(1 for t in dados.get('tutores', []) if t.get('ch_semanal') and t['ch_semanal'] > 0)
     dados['tem_lotacao'] = _ch_ok > 0
