@@ -462,7 +462,60 @@ def verificar_e_localizar():
                 print(f"  [ERRO] Não foi possível baixar CSV de alunos: {e}")
         else:
             print(f"  [INFO] Relatorio_alunos_por_hub.csv não encontrado (defina URL_ALUNOS_HUB)")
-    return p1, p2, tmpl, p3, p3b, p4, p5
+
+    # ── PATCH 88: planilha de acompanhamento de onboarding (preenchida pelos
+    # tutores/equipe) — mesmo padrão de secret+URL do Relatorio_alunos_por_hub,
+    # só que aqui é um .xlsx, não .csv. Precisa da variável de ambiente
+    # URL_ONBOARDING_TUTORES (secret novo no GitHub) apontando pro link de
+    # download direto do OneDrive/SharePoint desse arquivo.
+    p6 = achar_arquivo(SCRIPT_DIR, "Acompanhamento_Onboarding.xlsx")
+    if p6:
+        print(f"  [OK] {os.path.basename(p6)}")
+    else:
+        url_onb = os.environ.get("URL_ONBOARDING_TUTORES", "").strip()
+        if url_onb:
+            print(f"  [Baixando] Acompanhamento_Onboarding.xlsx via URL_ONBOARDING_TUTORES...")
+            try:
+                import urllib.request as _urlreq
+                def _build_dl_urls_onb(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)
+                    return urls
+                dest_onb = os.path.join(pasta_planilhas, "Acompanhamento_Onboarding.xlsx")
+                downloaded_onb = False
+                for url_dl in _build_dl_urls_onb(url_onb):
+                    try:
+                        req = _urlreq.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with _urlreq.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 2000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest_onb, 'wb') as f_out: f_out.write(data)
+                            p6 = dest_onb
+                            print(f"  [OK] Acompanhamento_Onboarding.xlsx ({len(data):,} bytes)")
+                            downloaded_onb = True
+                            break
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar onboarding: {ex} | URL: {url_dl[:80]}")
+                if not downloaded_onb:
+                    print(f"  [ERRO] Não foi possível baixar Acompanhamento_Onboarding.xlsx — verifique URL_ONBOARDING_TUTORES")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar onboarding: {e}")
+        else:
+            print(f"  [INFO] Acompanhamento_Onboarding.xlsx não encontrada (secret URL_ONBOARDING_TUTORES ainda não configurado)")
+    return p1, p2, tmpl, p3, p3b, p4, p5, p6
 
 
 def ler_excel(path, **kwargs):
@@ -3109,7 +3162,7 @@ if __name__ == '__main__':
     print()
     print(" Verificando arquivos...")
     print()
-    p1, p2, tmpl, p3, p3b, p4, p5 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p3b, p4, p5, p6 = verificar_e_localizar()
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
@@ -3127,6 +3180,46 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar lotação: {e}")
             dados['alunos_por_curso'] = []
+    # PATCH 88: aplica o acompanhamento de onboarding, se o arquivo já estiver
+    # disponível — cruza por CHAPA (mais confiável) e, se não achar, por
+    # nome+polo. Tutor com as 3 colunas em "Sim" vira apto=True (some da lista
+    # de treinamento no Vinci); do contrário, apto=False com os 3 flags
+    # individuais, pra mostrar os quadradinhos na tela.
+    if p6:
+        try:
+            import pandas as _pd_onb
+            _df_onb = _pd_onb.read_excel(p6, sheet_name='Onboarding Tutores')
+            _onb_por_chapa = {}
+            _onb_por_nomepolo = {}
+            for _, _row in _df_onb.iterrows():
+                _chapa_onb = str(_row.get('Chapa', '') or '').strip()
+                _nome_onb = str(_row.get('Nome do Tutor', '') or '').strip()
+                _polo_onb = str(_row.get('Polo', '') or '').strip()
+                _flags = {
+                    'trilha': str(_row.get('Trilha de Aprendizagem', '') or '').strip().lower() == 'sim',
+                    'checklist': str(_row.get('Checklist Realizado', '') or '').strip().lower() == 'sim',
+                    'um_a_um': str(_row.get('1:1 de Gerenciamento', '') or '').strip().lower() == 'sim',
+                }
+                if _chapa_onb:
+                    _onb_por_chapa[_chapa_onb] = _flags
+                if _nome_onb and _polo_onb:
+                    _onb_por_nomepolo[(_nome_onb.lower(), _polo_onb.lower())] = _flags
+            _n_aplicados = 0
+            for _t in dados.get('tutores', []):
+                _chapa_t = str(_t.get('chapa', '') or '').strip()
+                _flags_t = _onb_por_chapa.get(_chapa_t)
+                if not _flags_t:
+                    _key = ((_t.get('n') or '').lower(), (_t.get('p') or '').lower())
+                    _flags_t = _onb_por_nomepolo.get(_key)
+                if _flags_t:
+                    _t['onboarding_trilha'] = _flags_t['trilha']
+                    _t['onboarding_checklist'] = _flags_t['checklist']
+                    _t['onboarding_1a1'] = _flags_t['um_a_um']
+                    _t['onboarding_apto'] = all(_flags_t.values())
+                    _n_aplicados += 1
+            print(f"[{ts()}] Onboarding: {_n_aplicados} tutores com acompanhamento aplicado")
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar onboarding: {e}")
         try:
             dados['vagas'] = processar_vagas(p4)
         except Exception as e:
