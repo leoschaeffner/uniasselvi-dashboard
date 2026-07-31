@@ -1911,13 +1911,18 @@ function filterGerDetalhe(q){
       var dOrdem = gerDetData;
       if(q) dOrdem = dOrdem.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
       if(grupo) dOrdem = dOrdem.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
-      dOrdem = dOrdem.filter(function(r){return r.ordem===ord;});
+      // PATCH 94: NÃO filtra por ordem aqui — o universo de tutores tem que
+      // ser o MESMO do gráfico da esquerda (todo mundo do grupo/subfiltro),
+      // senão um tutor sem nenhum dado registrado justo NESSA ordem específica
+      // simplesmente sumia da conta (o total nunca batia com o outro gráfico).
+      // "totalGer" agora conta só o que foi gerido DENTRO da ordem selecionada
+      // — sem dado nela = 0 = "não gerenciou nesta ordem", não excluído.
       var mapaOrdem = {};
       dOrdem.forEach(function(r){
         if(!r.tutor) return;
         var key=_baseKeyOferta(r);
         if(!mapaOrdem[key]) mapaOrdem[key] = {tutor:r.tutor, totalGer:0};
-        if(r.gerenciado) mapaOrdem[key].totalGer++;
+        if(r.ordem===ord && r.gerenciado) mapaOrdem[key].totalGer++;
       });
       var listaOrdem = Object.values(mapaOrdem);
       // tutores sem oferta nenhuma nunca "gerenciaram" nesta ordem específica também
