@@ -539,6 +539,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <div class="sec-label" style="margin-bottom:8px">Tutores Gerenciaram × Não Gerenciaram <span id="det-pizza-cat-label" style="font-weight:400;color:var(--muted)"></span></div>
       <div id="det-pizza-chart" style="display:flex;align-items:center;gap:16px"></div>
     </div>
+    <div id="det-pizza-ordem-wrap" style="flex-shrink:0;padding-left:24px;border-left:1px solid var(--border);display:none">
+      <div class="sec-label" style="margin-bottom:8px">Neste recorte <span id="det-pizza-ordem-label" style="font-weight:400;color:var(--muted)"></span></div>
+      <div id="det-pizza-chart-ordem" style="display:flex;align-items:center;gap:16px"></div>
+    </div>
   </div>
   <div class="card">
     <div class="toolbar">
@@ -1895,8 +1899,39 @@ function filterGerDetalhe(q){
   }
   window._detCatAtual = grupoLabel;
   renderDetPizza(sortedParaPizza, grupoLabel);
+  // PATCH 93: segundo gráfico, lado a lado — reflete a ORDEM selecionada
+  // especificamente (sem trivializar 100%/0% com o filtro de Status, mesma
+  // lógica de sempre: "geriu alguma coisa nesta ordem" independente do
+  // Status escolhido na tabela). Só aparece quando uma ordem específica está
+  // selecionada — com "Todas ordens", os dois gráficos seriam idênticos.
+  var _wrapOrdemPizza = document.getElementById('det-pizza-ordem-wrap');
+  if(ord){
+    if(_wrapOrdemPizza) _wrapOrdemPizza.style.display='';
+    var sortedParaPizzaOrdem = (function(){
+      var dOrdem = gerDetData;
+      if(q) dOrdem = dOrdem.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
+      if(grupo) dOrdem = dOrdem.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
+      dOrdem = dOrdem.filter(function(r){return r.ordem===ord;});
+      var mapaOrdem = {};
+      dOrdem.forEach(function(r){
+        if(!r.tutor) return;
+        var key=_baseKeyOferta(r);
+        if(!mapaOrdem[key]) mapaOrdem[key] = {tutor:r.tutor, totalGer:0};
+        if(r.gerenciado) mapaOrdem[key].totalGer++;
+      });
+      var listaOrdem = Object.values(mapaOrdem);
+      // tutores sem oferta nenhuma nunca "gerenciaram" nesta ordem específica também
+      _semOfertaInjetadosTodos.forEach(function(t){ listaOrdem.push({tutor:t.tutor, totalGer:0}); });
+      return listaOrdem;
+    })();
+    renderDetPizza(sortedParaPizzaOrdem, ord, 'det-pizza-chart-ordem', 'det-pizza-ordem-label');
+  }else{
+    if(_wrapOrdemPizza) _wrapOrdemPizza.style.display='none';
+  }
 }
-function renderDetPizza(sorted, cat){
+function renderDetPizza(sorted, cat, targetChartId, targetLabelId){
+  targetChartId = targetChartId || 'det-pizza-chart';
+  targetLabelId = targetLabelId || 'det-pizza-cat-label';
   // PATCH 44: deduplicar por NOME de tutor (não por grupo tutor+polo+categoria).
   // Um mesmo tutor pode aparecer em mais de um grupo em 'sorted' (ex: categoria
   // composta dividida em duas entradas reais, ou pequenas variações de grafia
@@ -1914,7 +1949,8 @@ function renderDetPizza(sorted, cat){
   var naoGerenciaram=nomesUnicos.length-gerenciaram;
   var total=nomesUnicos.length || 1;
   var pctGer = Math.round(gerenciaram/total*100);
-  document.getElementById('det-pizza-cat-label').textContent = cat ? '— '+cat : '— todas as categorias';
+  var _lblEl = document.getElementById(targetLabelId);
+  if(_lblEl) _lblEl.textContent = cat ? '— '+cat : '— todas as categorias';
   var anguloGer = gerenciaram/total*360;
   var corGer='#16a34a', corNao='#dc2626';
   function fatiaSVG(anguloIni, anguloFim, cor){
@@ -1939,7 +1975,7 @@ function renderDetPizza(sorted, cat){
     + '<div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corNao+';display:inline-block"></span> Não Gerenciaram: <strong>'+naoGerenciaram+'</strong></div>'
     + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+'</div>'
     + '</div>';
-  document.getElementById('det-pizza-chart').innerHTML = svg + legenda;
+  document.getElementById(targetChartId).innerHTML = svg + legenda;
 }
 function exportRelatorioPorCurso(){
   var sorted = window._detSortedAtual || [];
