@@ -2055,12 +2055,49 @@ def enriquecer_tutores(dados, lotacao):
     total_al_sum = sum(x['alunos'] for x in alunos_por_curso)
     print(f"[{ts()}] Alunos por lab: {len(alunos_por_curso)} labs, total {total_al_sum:,}")
 
+    import unicodedata as _ud_ch, re as _re_ch
+    def _norm_ch(s):
+        s = str(s or '').strip().lower()
+        s = _ud_ch.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_ch.category(c) != 'Mn')
+        return _re_ch.sub(r'\s+', ' ', s)
+    def _eh_subsequencia_ch(curtos, longos):
+        i = 0
+        for tok in longos:
+            if i < len(curtos) and tok == curtos[i]:
+                i += 1
+        return i == len(curtos)
+    def _nomes_batem_ch(nome_a, nome_b):
+        if nome_a == nome_b:
+            return True
+        ta, tb = nome_a.split(), nome_b.split()
+        if not ta or not tb:
+            return False
+        if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+            return True
+        curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+        if len(curtos) < 2:
+            return False
+        return _eh_subsequencia_ch(curtos, longos)
+    _lotacao_norm = {_norm_ch(k): v for k, v in lotacao.items()}
+    _matched_subsequencia_ch = 0
     for t in tutores:
         nome_lower = str(t.get('n', '')).lower()
         info = lotacao.get(nome_lower)
         if not info:
-            for k, v in lotacao.items():
-                if nome_lower in k or k in nome_lower: info = v; break
+            nome_norm_t = _norm_ch(nome_lower)
+            info = _lotacao_norm.get(nome_norm_t)
+            if not info:
+                # PATCH 96: fallback por subsequência (nome com parte a mais/a
+                # menos, ou uma palavra do meio diferente) — antes disso, só
+                # existia um teste de substring simples, que não cobre o caso
+                # de palavra SUBSTITUÍDA no meio (ex: "Souza da Silva" vs
+                # "Souza De Silva").
+                for k_norm, v in _lotacao_norm.items():
+                    if _nomes_batem_ch(nome_norm_t, k_norm):
+                        info = v
+                        _matched_subsequencia_ch += 1
+                        break
         if info:
             t['perfil'] = info['perfil']; t['cursos'] = info['cursos']
             # Lotação tem prioridade sobre CH da planilha de controle
@@ -2071,7 +2108,7 @@ def enriquecer_tutores(dados, lotacao):
             t['lab'] = info.get('cursos', '')  # curso da planilha de lotação (para Multi 3)
             t['polo_hub_lot'] = info.get('polo_hub', '')
             matched += 1
-    print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH")
+    print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH ({_matched_subsequencia_ch} via correspondência por subsequência)")
     # ── Adicionar tutores sintéticos para avisos (aparecem na aba Tutores) ────
     _avisos_enr = dados.get('avisos_portfolio', [])
     if _avisos_enr:
@@ -3440,6 +3477,31 @@ if __name__ == '__main__':
             def _fl_ger2(s):
                 pts = _norm_ger2(s).split()
                 return f"{pts[0]} {pts[-1]}" if len(pts) >= 2 else _norm_ger2(s)
+            # PATCH 95: mesma lógica de subsequência já usada em outros pontos
+            # (nome com parte a mais/a menos, ou uma palavra do meio diferente)
+            # — usada aqui como ÚLTIMO fallback, só quando nem o nome exato nem
+            # primeiro+último batem. Isso resolve exatamente o padrão dos "32
+            # tutores sem gerenciamento vinculado" reportado — provável causa
+            # em tutores novos, cujo nome ainda pode estar digitado de forma
+            # levemente diferente entre o Controle e o GIOCONDA.
+            def _eh_subsequencia_ger2(curtos, longos):
+                i = 0
+                for tok in longos:
+                    if i < len(curtos) and tok == curtos[i]:
+                        i += 1
+                return i == len(curtos)
+            def _nomes_batem_ger2(nome_a, nome_b):
+                if nome_a == nome_b:
+                    return True
+                ta, tb = nome_a.split(), nome_b.split()
+                if not ta or not tb:
+                    return False
+                if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+                    return True
+                curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+                if len(curtos) < 2:
+                    return False
+                return _eh_subsequencia_ger2(curtos, longos)
             _ger_idx2 = {}
             for _g2 in dados.get('ger_ofertas', []):
                 _gn2 = (_g2.get('tutor') or '').strip()
@@ -3450,9 +3512,17 @@ if __name__ == '__main__':
                     _ger_idx2[_k2]['total'] += 1
                     if _g2.get('gerenciado'): _ger_idx2[_k2]['ger'] += 1
             _ger_matched2 = 0
+            _ger_matched2_subsequencia = 0
             for _t2 in dados.get('tutores', []):
                 _tn2 = _t2.get('n', '')
-                _gd2 = _ger_idx2.get(_norm_ger2(_tn2)) or _ger_idx2.get(_fl_ger2(_tn2))
+                _tn2_norm = _norm_ger2(_tn2)
+                _gd2 = _ger_idx2.get(_tn2_norm) or _ger_idx2.get(_fl_ger2(_tn2))
+                if not _gd2:
+                    for _k2n in _ger_idx2:
+                        if _nomes_batem_ger2(_tn2_norm, _k2n):
+                            _gd2 = _ger_idx2[_k2n]
+                            _ger_matched2_subsequencia += 1
+                            break
                 if _gd2 and _gd2['total'] > 0:
                     _t2['ger_total'] = _gd2['total']
                     _t2['ger_ok']    = _gd2['ger']
@@ -3462,7 +3532,7 @@ if __name__ == '__main__':
                     _t2['ger_total'] = 0
                     _t2['ger_ok']    = 0
                     _t2['ger_pct']   = None
-            print(f"[{ts()}] Gerenciamento injetado nos tutores: {_ger_matched2}/{len(dados.get('tutores',[]))} matches")
+            print(f"[{ts()}] Gerenciamento injetado nos tutores: {_ger_matched2}/{len(dados.get('tutores',[]))} matches ({_ger_matched2_subsequencia} via correspondência por subsequência)")
             # ────────────────────────────────────────────────────────────────────────
             # Enriquecer ger_ofertas com ch_semanal (join por nome normalizado)
             def _norm_nome(s):
