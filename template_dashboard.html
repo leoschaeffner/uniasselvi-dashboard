@@ -1807,18 +1807,27 @@ function filterGerDetalhe(q){
       var normFL=function(s){var pts=normT(s).split(' ').filter(Boolean);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:normT(s);};
       var preJoinCH=t.ch_semanal||null;
       var _tn=normT(t.tutor||'');var _tnFL=normFL(t.tutor||'');
-      // PATCH 99: duas passadas — a EXATA (nome completo ou primeiro+último)
-      // primeiro, testando TODOS os candidatos antes de considerar o fallback
-      // por substring. Antes, um "find()" só, testando as duas condições
-      // juntas por candidato, podia parar num match FRACO (substring) de um
-      // tutor errado que aparecesse ANTES no array, mesmo o tutor CERTO (match
-      // exato) existindo mais adiante — foi a causa real da Ana Keila Everton
-      // Araujo (8h) aparecendo com CH de outra pessoa (4h) na tabela.
+      // PATCH 99/100: três passadas, da mais confiável pra menos — nome
+      // completo exato primeiro (testando TODOS os candidatos), depois
+      // primeiro+último nome (só se nada exato existir em lugar nenhum), e só
+      // por último o fallback por substring. Antes, um "find()" só testava
+      // tudo junto e parava no primeiro que batesse — um match FRACO (nome
+      // parecido ou primeiro+último coincidente de OUTRA pessoa) que
+      // aparecesse antes no array escondia o match EXATO que existia mais
+      // adiante. Casos reais confirmados: "Ana Keila Everton Araujo" (8h)
+      // pegando CH de "Juliana Araujo..." (substring "ana"/"araujo"), e
+      // "Paulo Roberto Souza Da Silva" (8h) pegando CH de "Paulo Vitor Santos
+      // Da Silva" (mesmo primeiro+último "Paulo...Silva", pessoa diferente).
       var dbTutor=preJoinCH?{ch_semanal:preJoinCH}:(DB.tutores||[]).find(function(x){
-        if(!x.n||!t.tutor)return false;
-        var xn=normT(x.n),xFL=normFL(x.n);
-        return xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL;
+        return x.n&&t.tutor&&normT(x.n)===_tn;
       });
+      if(!dbTutor && !preJoinCH){
+        dbTutor=(DB.tutores||[]).find(function(x){
+          if(!x.n||!t.tutor)return false;
+          var xFL=normFL(x.n);
+          return xFL===_tnFL||xFL===_tn||normT(x.n)===_tnFL;
+        });
+      }
       if(!dbTutor && !preJoinCH){
         dbTutor=(DB.tutores||[]).find(function(x){
           if(!x.n||!t.tutor)return false;
@@ -3148,11 +3157,18 @@ function _capOrdemPorNomeTutor(tutorNome){
   var _tn=normT(tutorNome||'');var _tnFL=normFL(tutorNome||'');
   // PATCH 99: mesma correção de duas passadas (ver comentário na tabela de
   // Detalhe) — exato/primeiro+último primeiro, substring só como último recurso.
+  // PATCH 100: mesmas 3 passadas (ver comentário na tabela de Detalhe) —
+  // nome completo exato primeiro, depois primeiro+último, substring por último.
   var dbTutor=(DB.tutores||[]).find(function(x){
-    if(!x.n||!tutorNome)return false;
-    var xn=normT(x.n),xFL=normFL(x.n);
-    return xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL;
+    return x.n&&tutorNome&&normT(x.n)===_tn;
   });
+  if(!dbTutor){
+    dbTutor=(DB.tutores||[]).find(function(x){
+      if(!x.n||!tutorNome)return false;
+      var xFL=normFL(x.n);
+      return xFL===_tnFL||xFL===_tn||normT(x.n)===_tnFL;
+    });
+  }
   if(!dbTutor){
     dbTutor=(DB.tutores||[]).find(function(x){
       if(!x.n||!tutorNome)return false;
