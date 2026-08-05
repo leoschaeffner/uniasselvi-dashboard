@@ -346,6 +346,13 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="card"><div class="card-hdr"><div class="card-title">📊 Por Categoria</div></div><div class="card-body" id="gv-cat-cards"></div></div>
     <div class="card"><div class="card-hdr"><div class="card-title">📅 Por Ordem</div></div><div class="card-body" id="gv-ordem-cards"></div></div>
     <div class="card"><div class="card-hdr"><div class="card-title">👥 Tutores Gerenciaram, por Ordem</div></div><div class="card-body" id="gv-ordem-tutores-chart" style="padding:6px 0"></div></div>
+    <div class="card" id="gv-anomalia-ordem-card" style="display:none">
+      <div class="card-hdr"><div class="card-title">⚠️ Gerenciamento Fora do Período da Ordem</div></div>
+      <div class="card-body">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Práticas de uma ordem mais avançada geridas enquanto a data ainda caía dentro do período oficial de uma ordem anterior — possível desde que o GIOCONDA parou de travar isso.</div>
+        <div id="gv-anomalia-ordem-lista"></div>
+      </div>
+    </div>
   </div>
 
   <!-- LINHA PRINCIPAL: coluna esquerda (ranking+mapa+estados) | coluna direita (heatmap) -->
@@ -842,7 +849,7 @@ function sortOrdem(k){if(ordemSortK===k)ordemSortA=!ordemSortA;else{ordemSortK=k
 function renderOrdemTbl(data){
   const sorted=[...data].sort((a,b)=>{let va,vb;if(['o1','o2','o3','o4','o5'].includes(ordemSortK)){const o='Ordem '+ordemSortK[1];va=((a.por_ordem||a.porOrdem||{})[o])||0;vb=((b.por_ordem||b.porOrdem||{})[o])||0;}else{va=a[ordemSortK]||0;vb=b[ordemSortK]||0;}if(typeof va==='string')return ordemSortA?va.localeCompare(vb):vb.localeCompare(va);return ordemSortA?va-vb:vb-va;});
   const tb=document.getElementById('ordem-tbody');
-  tb.innerHTML=sorted.map(t=>{const po=t.por_ordem||t.porOrdem||{};const cell=o=>{const v=po[o]||0;return `<td style="text-align:center;font-weight:600;color:${v?'var(--ok)':'var(--dim)'}"><span style="background:${v?'var(--ok-dim)':'var(--bg)'};padding:3px 8px;border-radius:4px;font-size:11px">${v||'—'}</span></td>`};return `<tr><td><strong>${t._anonimo?'<span style="color:#dc2626;font-style:italic;font-size:11px">⚠ Tutor desligado</span>':t.n}</strong></td><td style="font-size:11px">${t._anonimo?t.p.replace(/[A-Z]{2,6}(-[A-Z]{2,6})?$/,'').trim():t.p}</td><td style="font-size:11px">${t.c||'—'}</td>${cell('Ordem 1')}${cell('Ordem 2')}${cell('Ordem 3')}${cell('Ordem 4')}${cell('Ordem 5')}<td style="text-align:right;font-weight:700">${t.te}</td></tr>`;}).join('');
+  tb.innerHTML=sorted.map(t=>{const po=t.por_ordem||t.porOrdem||{};const cell=o=>{const v=po[o]||0;return `<td style="text-align:center;font-weight:600;color:${v?'var(--ok)':'var(--dim)'}"><span style="background:${v?'var(--ok-dim)':'var(--bg)'};padding:3px 8px;border-radius:4px;font-size:11px">${v||'—'}</span></td>`};return `<tr><td><strong>${t._anonimo?'<span style="color:#dc2626;font-style:italic;font-size:11px">⚠ Tutor desligado</span>':t.n}</strong></td><td style="font-size:11px">${t._anonimo?t.p.replace(/[A-Z]{2,6}(-[A-Z]{2,6})?$/,'').trim():t.p}</td><td style="font-size:11px">${t.c_exibicao||t.c||'—'}</td>${cell('Ordem 1')}${cell('Ordem 2')}${cell('Ordem 3')}${cell('Ordem 4')}${cell('Ordem 5')}<td style="text-align:right;font-weight:700">${t.te}</td></tr>`;}).join('');
   document.getElementById('ordem-count').textContent=sorted.length+' tutor'+(sorted.length!==1?'es':'');if(!sorted.length)document.getElementById('ordem-tbody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">Nenhum tutor encontrado com este filtro.</td></tr>';
 }
 
@@ -940,7 +947,7 @@ function renderTutorTbl(data){
     return `<tr class="${t.te>0?'':'tr-pend'}">
       <td><strong>${t.n}</strong></td>
       <td style="font-size:11px">${t.p}</td>
-      <td style="font-size:11px">${t.c||'—'}</td>
+      <td style="font-size:11px">${t.c_exibicao||t.c||'—'}</td>
       <td style="text-align:right;font-weight:600">${t.te}/${t.tp||'?'}</td>
       <td>${progCell(t.pct)}</td>
       <td><span class="badge ${sit==='ok'?'ok':sit==='atrasado'?'parcial':'pend'}">${sit==='ok'?'OK':sit==='atrasado'?'Atrasado':'Urgente'}</span></td>
@@ -974,7 +981,7 @@ function openListModal(tipo){
 function openCatModal(idx){const entry=Object.entries(window._pvCats||{}).sort((a,b)=>b[1].t-a[1].t)[idx];if(!entry)return;const[cat]=entry;const lista=(DB.tutores||[]).filter(t=>t.c===cat);window._ml=lista;document.getElementById('m-title').textContent=cat;document.getElementById('m-sub').textContent=lista.length+' tutores nesta categoria';document.getElementById('m-body').innerHTML=lista.map((t,i)=>'<div class="modal-list-item" data-mli="'+i+'" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+t.n+'</div><div style="font-size:10px;color:var(--muted)">'+t.p+'</div></div>'+pctBadge(t.pct)+'</div>').join('');document.querySelectorAll('[data-mli]').forEach(function(el){el.addEventListener('click',function(){const t=window._ml[+this.dataset.mli];closeModal();setTimeout(function(){openTutorModal(t.n);},100);});});document.getElementById('modal-overlay').classList.add('show');}
 function openTutorModal(nome){
   const t=(DB.tutores||[]).find(x=>x.n===nome);if(!t){document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent='Tutor não encontrado nos dados carregados';document.getElementById('m-body').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">Este tutor não foi localizado na base de dados atual. O arquivo pode ter sido atualizado.</div>';document.getElementById('modal-overlay').classList.add('show');return;}
-  document.getElementById('m-title').textContent=t.n;document.getElementById('m-sub').textContent=`${t.p} · ${t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
+  document.getElementById('m-title').textContent=t.n;document.getElementById('m-sub').textContent=`${t.p} · ${t.c_exibicao||t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
   let perfilHtml='';
   {const _temDados=t.perfil||t.cursos||t.ch_semanal||t.titulacao||t.inicio||t.lattes_id||t.email;
   if(_temDados){perfilHtml='<div style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--border)">';
@@ -1023,7 +1030,7 @@ function openPoloModal(nome){
     alunos:poloStats.a||poloStats.alunos||tutores.reduce((s,t)=>s+(t.al||0),0)};
   document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
   let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div><div class="sec-label">Tutores</div>`;
-  html+=tutores.map(t=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)"><div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c||'—'}</div></div><div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>${pctBadge(t.pct)}</div>`).join('');
+  html+=tutores.map(t=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)"><div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c_exibicao||t.c||'—'}</div></div><div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>${pctBadge(t.pct)}</div>`).join('');
   document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
@@ -1130,6 +1137,32 @@ function renderGerenciamento(){
         '<span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">'+v+'</span>'+
       '</div>';
     }).join('');
+  })();
+  // PATCH 97: lista de gerenciamento fora do período da ordem — só aparece o
+  // card quando existe pelo menos uma ocorrência real, pra não poluir a tela
+  // com um card vazio na maior parte do tempo.
+  (function(){
+    var _cardAnom=document.getElementById('gv-anomalia-ordem-card');
+    var _elLista=document.getElementById('gv-anomalia-ordem-lista');
+    if(!_cardAnom||!_elLista) return;
+    var _anomalias=(GER_DB.ger_anomalias_ordem||(GER_DB.ger_ofertas||[]).filter(function(o){return o._anomalia_ordem;}));
+    if(!_anomalias.length){ _cardAnom.style.display='none'; return; }
+    _cardAnom.style.display='';
+    _elLista.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<thead><tr style="text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase">'+
+      '<th style="padding:6px 8px">Polo</th><th style="padding:6px 8px">Tutor</th><th style="padding:6px 8px">Prática</th>'+
+      '<th style="padding:6px 8px">Ordem da Prática</th><th style="padding:6px 8px">Gerido em</th><th style="padding:6px 8px">Período Vigente na Data</th></tr></thead><tbody>'+
+      _anomalias.slice(0,200).map(function(o){
+        return '<tr style="border-top:1px solid var(--border)">'+
+          '<td style="padding:6px 8px">'+(o.polo||'—')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:600">'+(o.tutor||'—')+'</td>'+
+          '<td style="padding:6px 8px;color:var(--muted)">'+(o.pratica||'—')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:700;color:var(--red)">'+(o.ordem||'—')+'</td>'+
+          '<td style="padding:6px 8px">'+(o.dt_agenda||'—')+'</td>'+
+          '<td style="padding:6px 8px;font-weight:700">'+(o._ordem_esperada_na_data||'—')+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table>'+
+      (_anomalias.length>200?'<div style="font-size:11px;color:var(--muted);margin-top:8px">Mostrando 200 de '+_anomalias.length+' — exporte pra ver todos.</div>':'');
   })();
   const topPolos=(GER_DB.ger_polo||[]).filter(p=>p.sem_tutor>0).sort((a,b)=>b.sem_tutor-a.sem_tutor).slice(0,10);const maxST=topPolos.length?topPolos[0].sem_tutor:1;
   document.getElementById('gv-ranking').innerHTML=topPolos.map((p,i)=>`<div class="rank-item" style="cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')"><div class="rank-pos" style="color:${i<3?'var(--red)':'var(--muted)'}">${i+1}</div><div class="rank-name" title="${p.polo}">${p.polo}</div><div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.sem_tutor/maxST*100}%;background:linear-gradient(90deg,var(--red),#f87171)"></div></div><div class="rank-val" style="color:var(--red)">${p.sem_tutor}</div></div>`).join('')||'<div style="color:var(--ok);text-align:center;padding:20px">✓ Todos os polos com tutor</div>';
@@ -2449,7 +2482,40 @@ function exportPendentes(){const ord=document.getElementById('ordem-sel').value;
 function exportEnviados(){const rows=[];(DB.tutores||[]).forEach(t=>{(t.hist||[]).forEach(h=>{rows.push({'Tutor':t.n,'Polo':t.p,'Categoria':t.c||'','Prática':h.p||'','Ordem':h.o||'','Data':h.d||'','Alunos':h.a||0});});});exportCSV(rows,'portfolios_enviados_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportSemTutor(){const rows=((GER_DB||DB).ger_contratacao||[]).filter(c=>!c.tem_tutor).map(c=>({'Polo':c.polo,'Categoria':c.categoria,'Status':c.status,'Total Ofertas':c.total_ofertas,'Tutores':(c.tutores||[]).join('; ')||'—'}));exportCSV(rows,'polos_sem_tutor_'+new Date().toISOString().slice(0,10)+'.csv');}
 function exportTutores(){var d=tutoresFiltrados||DB.tutores||[];exportCSV(d.map(t=>({'Nome':t.n,'Polo':t.p,'Categoria':t.c||'','Portfólios Enviados':t.te||0,'Total Práticas':t.tp||'?','% Conclusão':t.pct||0,'Status':gTS(t)||''})),'tutores_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportDetalhe(){var grupoId=(document.getElementById('ger-det-cat')||{}).value||'';var grupo=_grupoById(grupoId);var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';var ord=(document.getElementById('ger-det-ordem')||{}).value||'';function normNomeExp(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}var dFiltrado=gerDetData||[];if(ord)dFiltrado=dFiltrado.filter(r=>r.ordem===ord);if(grupo)dFiltrado=dFiltrado.filter(r=>_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId));function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}var poloTutorMapExp={};dFiltrado.forEach(r=>{if(r.tutor&&r.polo){var pk=normPoloExp(r.polo);if(!poloTutorMapExp[pk])poloTutorMapExp[pk]=new Set();poloTutorMapExp[pk].add(normNomeExp(r.tutor));}});var tutoresAtivos=(DB.tutores||[]).filter(t=>!t._anonimo);if(grupo)tutoresAtivos=tutoresAtivos.filter(t=>_tutorMatchesGrupo(t,grupo,subfiltroId));var semGerExpMap={};tutoresAtivos.filter(t=>{var pk=normPoloExp(t.p);var poloSet=poloTutorMapExp[pk];if(poloSet)return !poloSet.has(normNomeExp(t.n));return true;}).forEach(t=>{var key=normNomeExp(t.n)+'|'+normPoloExp(t.p);if(!semGerExpMap[key])semGerExpMap[key]={'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c||'—'),'Categoria':t.c||'','Ordem':ord||'—'};});var rows=Object.values(semGerExpMap).sort((a,b)=>a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']));if(!rows.length){alert('Todos os tutores têm oferta atribuída para esta seleção!');return;}var sufixoGrupo=grupo?grupo.label.replace(/[^a-z0-9]/gi,'_'):'todos_grupos';exportCSV(rows,'sem_gerenciamento_'+(ord||'todas')+'_'+sufixoGrupo+'_'+new Date().toISOString().slice(0,10)+'.csv');}
+function exportDetalhe(){
+  var grupoId=(document.getElementById('ger-det-cat')||{}).value||'';var grupo=_grupoById(grupoId);
+  var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
+  var ordSel=(document.getElementById('ger-det-ordem')||{}).value||'';
+  function normNomeExp(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
+  function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}
+  var tutoresAtivos=(DB.tutores||[]).filter(t=>!t._anonimo);
+  if(grupo)tutoresAtivos=tutoresAtivos.filter(t=>_tutorMatchesGrupo(t,grupo,subfiltroId));
+  // PATCH 92: quando NENHUMA ordem específica está selecionada ("Todas
+  // ordens"), repete a checagem "sem oferta atribuída" pra CADA uma das 5
+  // ordens separadamente — antes, todas as linhas saíam com "Ordem: —",
+  // misturando tudo junto e sem dar pra saber em qual ordem específica
+  // faltava. Com uma ordem específica selecionada, comporta-se como antes
+  // (só aquela ordem).
+  var ordensParaChecar = ordSel ? [ordSel] : ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];
+  var linhas=[];
+  ordensParaChecar.forEach(function(ordAtual){
+    var dFiltrado=(gerDetData||[]).filter(r=>r.ordem===ordAtual);
+    if(grupo)dFiltrado=dFiltrado.filter(r=>_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId));
+    var poloTutorMapExp={};
+    dFiltrado.forEach(r=>{if(r.tutor&&r.polo){var pk=normPoloExp(r.polo);if(!poloTutorMapExp[pk])poloTutorMapExp[pk]=new Set();poloTutorMapExp[pk].add(normNomeExp(r.tutor));}});
+    tutoresAtivos.filter(t=>{
+      var pk=normPoloExp(t.p);var poloSet=poloTutorMapExp[pk];
+      if(poloSet)return !poloSet.has(normNomeExp(t.n));
+      return true;
+    }).forEach(t=>{
+      linhas.push({'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c_exibicao||t.c||'—'),'Categoria':t.c_exibicao||t.c||'','Ordem':ordAtual});
+    });
+  });
+  if(!linhas.length){alert('Todos os tutores têm oferta atribuída para esta seleção!');return;}
+  var rows=linhas.sort((a,b)=>a['Ordem'].localeCompare(b['Ordem'])||a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']));
+  var sufixoGrupo=grupo?grupo.label.replace(/[^a-z0-9]/gi,'_'):'todos_grupos';
+  exportCSV(rows,'sem_gerenciamento_'+(ordSel||'todas_ordens_separadas')+'_'+sufixoGrupo+'_'+new Date().toISOString().slice(0,10)+'.csv');
+}
 function abrirSemGerenciamento(){
   // PATCH 47: o modal "Ver Sem Gerenc." tem um seletor de categoria PRÓPRIO,
   // com as categorias cruas (não os 5 grupos do filtro principal), porque 2 dos
@@ -3732,7 +3798,20 @@ function renderTutoresMec() {
       // ordem-cat-sel) já normalizavam; esta ficou de fora.
       const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
       const _cats = [...new Set((DB.tutores||[]).filter(t=>!t._anonimo && t.c!=='Aviso de Portfólio').map(t=>_normC(t.c||'')).filter(Boolean))].sort();
-      _cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; _catSel.appendChild(o); });
+      // PATCH 91: adiciona os grupos combinados (os mesmos 5 do Detalhe, tipo
+      // "Biomedicina, Farmácia e Estética/Cosmética") ANTES das categorias
+      // brutas individuais — sem isso, não tinha como filtrar/exportar Bio-Far
+      // e Estética juntos aqui, só categoria por categoria separada.
+      if(typeof GRUPOS_GER!=='undefined' && GRUPOS_GER && GRUPOS_GER.length){
+        const _optGroup=document.createElement('optgroup');_optGroup.label='Grupos combinados';
+        GRUPOS_GER.forEach(g=>{const o=document.createElement('option');o.value='grupo:'+g.id;o.textContent=g.label;_optGroup.appendChild(o);});
+        _catSel.appendChild(_optGroup);
+        const _optGroup2=document.createElement('optgroup');_optGroup2.label='Categoria específica';
+        _catSel.appendChild(_optGroup2);
+        _cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; _optGroup2.appendChild(o); });
+      }else{
+        _cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; _catSel.appendChild(o); });
+      }
       if([...(_catSel.options)].some(o=>o.value===_prev)) _catSel.value=_prev;
     }
   }
@@ -3813,6 +3892,22 @@ function renderTutoresMec() {
   filterTutoresMec('');
 }
 
+function _filtraTutoresPorCategoriaSel(d, cat){
+  // PATCH 91: trata tanto grupo combinado ("grupo:bio-far-est", casando com
+  // _tutorMatchesGrupo, a mesma lógica já usada no Detalhe) quanto categoria
+  // bruta específica (comparação exata, normalizada). Sem isso, um grupo como
+  // "Biomedicina, Farmácia e Estética/Cosmética" não tinha como ser filtrado
+  // nem exportado junto — só categoria por categoria isolada.
+  if (!cat) return d;
+  if (cat.startsWith('grupo:')) {
+    const gid = cat.slice(6);
+    const grupo = (typeof _grupoById === 'function') ? _grupoById(gid) : (GRUPOS_GER||[]).find(g=>g.id===gid);
+    if (!grupo) return d;
+    return d.filter(t => _tutorMatchesGrupo(t, grupo, ''));
+  }
+  const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
+  return d.filter(t => _normC(t.c||'') === cat);
+}
 function filterTutoresMec(q) {
   const tutores = (DB.tutores||[]).filter(t => !t._anonimo && t.n !== 'Tutor desligado' && t.c !== 'Aviso de Portfólio');
   q = (q||'').toLowerCase().trim();
@@ -3824,13 +3919,10 @@ function filterTutoresMec(q) {
 
   let d = tutores;
   if (q) d = d.filter(t => (t.n+t.p+(t.c||'')).toLowerCase().includes(q));
-  // BUGFIX: normalizar t.c antes de comparar com o valor do dropdown (que agora
-  // guarda a categoria NORMALIZADA) — sem isso o filtro nunca batia e ficava
-  // sempre vazio (ou sempre mostrando tudo, dependendo do navegador).
-  if (cat) {
-    const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
-    d = d.filter(t => _normC(t.c||'') === cat);
-  }
+  // PATCH 91: agora "cat" pode ser um grupo combinado ("grupo:bio-far-est")
+  // ou uma categoria específica — usa _filtraTutoresPorCategoriaSel pra tratar
+  // os dois casos igual em qualquer lugar que precise desse filtro.
+  d = _filtraTutoresPorCategoriaSel(d, cat);
   if (tit) d = d.filter(t => t.titulacao === tit);
   if (lat === 'com') d = d.filter(t => !!t.lattes_id);
   else if (lat === 'sem') d = d.filter(t => !t.lattes_id);
@@ -3954,7 +4046,7 @@ function filterTutoresMec(q) {
     html+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
       <td style="padding:8px 10px;font-weight:600;font-size:12px;max-width:180px">${t.n}${t.comunicacao?` <span title="${esc(t.comunicacao.resumo||'')}" style="font-size:11px">${t.comunicacao.atencao?'🚨':'📞'}</span>`:''}</td>
       <td style="padding:8px 10px;font-size:11px;color:var(--muted);max-width:140px">${t.p}</td>
-      <td style="padding:8px 10px;font-size:11px;max-width:140px">${t.c||'—'}</td>
+      <td style="padding:8px 10px;font-size:11px;max-width:140px">${t.c_exibicao||t.c||'—'}</td>
       <td style="padding:8px 8px;text-align:center">${titBadge}</td>
       <td style="padding:8px 8px;text-align:center;font-size:11px">${t.ch_semanal?t.ch_semanal.toFixed(0)+'h':'—'}</td>
       <td style="padding:8px 8px;text-align:center;font-size:11px">${admStr}${expStr}</td>
@@ -3988,10 +4080,7 @@ function exportTutoresAtivosPorCurso(){
   const lat  = document.getElementById('tutmec-lattes-sel')?.value || '';
   let d = tutores;
   if (q) d = d.filter(t => (t.n+t.p+(t.c||'')).toLowerCase().includes(q));
-  if (cat) {
-    const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
-    d = d.filter(t => _normC(t.c||'') === cat);
-  }
+  d = _filtraTutoresPorCategoriaSel(d, cat);
   if (tit) d = d.filter(t => t.titulacao === tit);
   if (lat === 'com') d = d.filter(t => !!t.lattes_id);
   else if (lat === 'sem') d = d.filter(t => !t.lattes_id);
@@ -4006,7 +4095,7 @@ function exportTutoresAtivosPorCurso(){
   const rows = d.slice().sort((a,b)=>(a.n||'').localeCompare(b.n||'','pt-BR')).map(t => ({
     'Tutor': t.n || '',
     'Polo': t.p || '',
-    'Categoria/Curso': t.c || '',
+    'Categoria/Curso': t.c_exibicao || t.c || '',
     'Data de Contratação': t.inicio || '',
     'CH Semanal': t.ch_semanal ? t.ch_semanal+'h' : '',
     'Titulação': t.titulacao || '',
