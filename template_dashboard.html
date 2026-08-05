@@ -1684,7 +1684,7 @@ function filterGerDetalhe(q){
       (_porPolo[poloN]=_porPolo[poloN]||[]).push(entry);
       _global.push(entry);
     });
-    (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n; }).forEach(function(t){
+    (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n && t.n!=='Tutor desligado'; }).forEach(function(t){
       var poloN=_normPoloComparavel(t.p);
       var alvoKey=_normTutorKey(t.n);
       var alvoFL=_primeiroUltimo(alvoKey);
