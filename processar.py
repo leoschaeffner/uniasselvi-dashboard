@@ -1216,10 +1216,19 @@ def processar(p1, p2):
         pend     = [p for p in praticas if p not in reais]
         te = len(reais); tp = len(praticas)
 
+        # PATCH 90: campo só de EXIBIÇÃO com o curso específico (Fisioterapia/
+        # T. Ocupacional/Estética e Cosmética) pra Multi III — sem mexer em
+        # 'c' (categoria ampla crua), que o resto do sistema usa pra filtro/
+        # agrupamento de grupo. Só a coluna "Categoria" na tela usa isso.
+        _cat_exibicao = cat_raw
+        if str(cat_raw).strip() == 'BIO-FISIO-EST-TO (Multidisciplinar III)':
+            _primeiro_curso = str(t.get(col_cur, '') or '').split('|')[0].strip()
+            _cat_exibicao = CURSOS_NOMES.get(_primeiro_curso, cat_raw)
+
         tutores.append({
             'n': str(t.get(col_nome, '') or ''),
             'p': str(t.get(col_polo, '') or ''),
-            'c': cat_raw, 'cf': cat_form or 'Sem mapeamento',
+            'c': cat_raw, 'cf': cat_form or 'Sem mapeamento', 'c_exibicao': _cat_exibicao,
             'cursos': str(t.get(col_cur, '') or ''),  # código específico (BFI, BTO, COS-TIP, etc.)
             'tp': tp, 'te': te,
             'pend': pend, 'real': sorted(reais), 'hist': hist,
@@ -2672,6 +2681,53 @@ def _recalcular_agregados_de_ofertas(ofertas):
     }
 
 
+def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
+    """
+    PATCH 97: pra cada oferta gerida com data de gerenciamento conhecida,
+    verifica se essa data cai dentro do período oficial de uma ordem ANTERIOR
+    à ordem da própria prática — sinal de que o tutor gerenciou uma ordem
+    mais avançada antes da hora (agora possível desde que o GIOCONDA parou de
+    travar isso). Marca cada oferta com '_anomalia_ordem' (bool) e, quando
+    True, '_ordem_esperada_na_data' (qual ordem o período correspondia).
+    Não modifica 'gerenciado' nem nenhum outro campo — só sinaliza.
+    """
+    import datetime as _dt_ord
+
+    def _parse_data_br_ou_iso(s):
+        if not s:
+            return None
+        s = str(s).strip()
+        for fmt in ('%d/%m/%Y', '%Y-%m-%d'):
+            try:
+                return _dt_ord.datetime.strptime(s, fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    _ordem_num = {'Ordem 1': 1, 'Ordem 2': 2, 'Ordem 3': 3, 'Ordem 4': 4, 'Ordem 5': 5}
+    _periodos_parsed = []
+    for _ord_nome, _cfg in (periodos or {}).items():
+        _ini = _parse_data_br_ou_iso(_cfg.get('inicio', ''))
+        _fim = _parse_data_br_ou_iso(_cfg.get('fim', ''))
+        if _ini and _fim:
+            _periodos_parsed.append((_ordem_num.get(_ord_nome, 99), _ord_nome, _ini, _fim))
+    _periodos_parsed.sort()
+
+    for o in ofertas:
+        o['_anomalia_ordem'] = False
+        if not o.get('gerenciado'):
+            continue
+        _data_ger = _parse_data_br_ou_iso(o.get('dt_agenda', ''))
+        _ordem_propria_num = _ordem_num.get(o.get('ordem', ''))
+        if not _data_ger or not _ordem_propria_num:
+            continue
+        for _num, _nome, _ini, _fim in _periodos_parsed:
+            if _ini <= _data_ger <= _fim and _num < _ordem_propria_num:
+                o['_anomalia_ordem'] = True
+                o['_ordem_esperada_na_data'] = _nome
+                break
+    return ofertas
+
 def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
     """PATCH 32: injeta uma oferta-placeholder pra cada tutor ativo cujo
     polo+categoria não tem NENHUMA linha no GIOCONDA, e recalcula todos os
@@ -3458,6 +3514,21 @@ if __name__ == '__main__':
             # mesmo sem nenhuma oferta cadastrada no GIOCONDA pro polo dele
             for _sk in list(ger_por_semestre.keys()):
                 ger_por_semestre[_sk] = _injetar_tutores_sem_oferta(ger_por_semestre[_sk], dados.get('tutores', []))
+            # PATCH 97: o GIOCONDA passou a permitir gerenciar qualquer ordem a
+            # qualquer momento (antes travava fora do período vigente). Detecta
+            # e sinaliza quando uma prática de uma ordem MAIS AVANÇADA foi
+            # gerida enquanto a data ainda caía dentro do período de uma ordem
+            # ANTERIOR — ex: gerenciar Ordem 3 enquanto ainda estamos no
+            # período oficial da Ordem 2. Não bloqueia nada, só sinaliza pra
+            # visualização/auditoria.
+            for _sk in list(ger_por_semestre.keys()):
+                _periodos_sk = (ALL_SEMESTRES.get(_sk) or {}).get('periodos', {})
+                ger_por_semestre[_sk]['ger_ofertas'] = _detectar_gerenciamento_fora_ordem(
+                    ger_por_semestre[_sk].get('ger_ofertas', []), _periodos_sk)
+                _anomalias_sk = [o for o in ger_por_semestre[_sk]['ger_ofertas'] if o.get('_anomalia_ordem')]
+                ger_por_semestre[_sk]['ger_anomalias_ordem'] = _anomalias_sk
+                if _anomalias_sk:
+                    print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_sk)} gerenciamento(s) fora do período esperado da ordem")
             dados['gerenciamento_por_semestre'] = ger_por_semestre
             for _sk, _sv in ger_por_semestre.items():
                 print(f"[{ts()}] Gerenciamento {_sk}: {_sv['ger_kpis']['total_ofertas']} ofertas, {_sv['ger_kpis']['ofertas_gerenciadas']} ger.")
