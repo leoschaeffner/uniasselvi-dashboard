@@ -3566,8 +3566,37 @@ if __name__ == '__main__':
             print(f"[{ts()}] CH map Gerenciamento: {len(_ch_map)} entradas")
             # Injetar ch_semanal em cada oferta
             enr = 0
+            enr_subsequencia = 0
             # Pré-computar lista de (nome_normalizado, nome_fl, ch) para lookup rápido
             _lot_list = [(k, _nome_fl(k), v) for k, v in _ch_map.items()]
+
+            # PATCH 98: as antigas "Match 2"/"Match 3" comparavam por SUBSTRING
+            # de token (ex: "ana" IN "juliana") — isso podia casar CH de uma
+            # pessoa com o nome de outra completamente diferente, só porque um
+            # pedaço curto do nome aparecia dentro do outro (achado: Ana Keila
+            # Everton Araujo, CH real 8h, aparecendo com 4h — provável cruzamento
+            # errado por esse motivo). Troca pra correspondência por
+            # SUBSEQUÊNCIA de palavras inteiras (mesma lógica já validada em
+            # vários outros pontos do sistema) — exige que cada token bata
+            # como PALAVRA COMPLETA, na ordem certa, não como pedaço de outra.
+            def _eh_subsequencia_ch2(curtos, longos):
+                i = 0
+                for tok in longos:
+                    if i < len(curtos) and tok == curtos[i]:
+                        i += 1
+                return i == len(curtos)
+            def _nomes_batem_ch2(nome_a, nome_b):
+                if nome_a == nome_b:
+                    return True
+                ta, tb = nome_a.split(), nome_b.split()
+                if not ta or not tb:
+                    return False
+                if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+                    return True
+                curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+                if len(curtos) < 2:
+                    return False
+                return _eh_subsequencia_ch2(curtos, longos)
 
             for oferta in dados.get('ger_ofertas', []):
                 tutor = oferta.get('tutor', '')
@@ -3577,24 +3606,16 @@ if __name__ == '__main__':
                 # Match 1: exato ou FL
                 ch = _ch_map.get(tn) or _ch_map.get(tfl) or _ch_map_fl.get(tn) or _ch_map_fl.get(tfl)
 
-                # Match 2: tokens do GIOCONDA presentes no nome da lotação
-                if not ch:
-                    _tokens = [t for t in tfl.split() if len(t) > 2]
-                    if len(_tokens) >= 2:
-                        for lot_n, lot_fl, lot_ch in _lot_list:
-                            if all(tok in lot_n for tok in _tokens) or all(tok in lot_fl for tok in _tokens):
-                                ch = lot_ch; break
-
-                # Match 3: tokens da LOTAÇÃO presentes no nome do GIOCONDA (inverso)
+                # Match 2 (PATCH 98): subsequência de palavras completas — nome
+                # com uma parte a mais/a menos, ou uma palavra do meio diferente.
                 if not ch:
                     for lot_n, lot_fl, lot_ch in _lot_list:
-                        lot_tokens = [t for t in lot_fl.split() if len(t) > 2]
-                        if len(lot_tokens) >= 2 and all(tok in tn for tok in lot_tokens):
-                            ch = lot_ch; break
+                        if _nomes_batem_ch2(tn, lot_n):
+                            ch = lot_ch; enr_subsequencia += 1; break
 
                 if ch:
                     oferta['ch_semanal'] = ch; enr += 1
-            print(f"[{ts()}] CH enriquecida: {enr}/{len(dados.get('ger_ofertas',[]))} ofertas")
+            print(f"[{ts()}] CH enriquecida: {enr}/{len(dados.get('ger_ofertas',[]))} ofertas ({enr_subsequencia} via correspondência por subsequência)")
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar gerenciamento: {e}")
             import traceback; traceback.print_exc()
