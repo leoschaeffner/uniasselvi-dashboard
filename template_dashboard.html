@@ -1807,14 +1807,27 @@ function filterGerDetalhe(q){
       var normFL=function(s){var pts=normT(s).split(' ').filter(Boolean);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:normT(s);};
       var preJoinCH=t.ch_semanal||null;
       var _tn=normT(t.tutor||'');var _tnFL=normFL(t.tutor||'');
+      // PATCH 99: duas passadas — a EXATA (nome completo ou primeiro+último)
+      // primeiro, testando TODOS os candidatos antes de considerar o fallback
+      // por substring. Antes, um "find()" só, testando as duas condições
+      // juntas por candidato, podia parar num match FRACO (substring) de um
+      // tutor errado que aparecesse ANTES no array, mesmo o tutor CERTO (match
+      // exato) existindo mais adiante — foi a causa real da Ana Keila Everton
+      // Araujo (8h) aparecendo com CH de outra pessoa (4h) na tabela.
       var dbTutor=preJoinCH?{ch_semanal:preJoinCH}:(DB.tutores||[]).find(function(x){
         if(!x.n||!t.tutor)return false;
         var xn=normT(x.n),xFL=normFL(x.n);
-        if(xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL) return true;
-        var shortTokens=_tnFL.split(' ').filter(Boolean);
-        var longNorm=xn;
-        return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
-      });var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
+        return xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL;
+      });
+      if(!dbTutor && !preJoinCH){
+        dbTutor=(DB.tutores||[]).find(function(x){
+          if(!x.n||!t.tutor)return false;
+          var longNorm=normT(x.n);
+          var shortTokens=_tnFL.split(' ').filter(Boolean);
+          return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
+        });
+      }
+      var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
       // PATCH 48: o dbTutor acima é achado só por NOME (pra CH Contratada, que vem
       // do CONTROLE/LOTAÇÃO e não tem subcurso por prática) — mas usar esse mesmo
       // dbTutor pra decidir o "Curso/Lab" causava o bug reportado pelo Leo: uma
@@ -3133,14 +3146,21 @@ function _capOrdemPorNomeTutor(tutorNome){
   var normT=function(s){var n=(s||'').toLowerCase().split('(')[0].trim();n=n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();return n;};
   var normFL=function(s){var pts=normT(s).split(' ').filter(Boolean);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:normT(s);};
   var _tn=normT(tutorNome||'');var _tnFL=normFL(tutorNome||'');
+  // PATCH 99: mesma correção de duas passadas (ver comentário na tabela de
+  // Detalhe) — exato/primeiro+último primeiro, substring só como último recurso.
   var dbTutor=(DB.tutores||[]).find(function(x){
     if(!x.n||!tutorNome)return false;
     var xn=normT(x.n),xFL=normFL(x.n);
-    if(xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL) return true;
-    var shortTokens=_tnFL.split(' ').filter(Boolean);
-    var longNorm=xn;
-    return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
+    return xn===_tn||xFL===_tnFL||xFL===_tn||xn===_tnFL;
   });
+  if(!dbTutor){
+    dbTutor=(DB.tutores||[]).find(function(x){
+      if(!x.n||!tutorNome)return false;
+      var longNorm=normT(x.n);
+      var shortTokens=_tnFL.split(' ').filter(Boolean);
+      return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
+    });
+  }
   var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;
   var padraoCH=[4,8,12,20,24];
   var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});
