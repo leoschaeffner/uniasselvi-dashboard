@@ -605,8 +605,27 @@ def processar(p1, p2):
         df_at = df_t[~_sit_norm.isin(_SITUACOES_EXCLUIR)].copy()
         _contagem = df_at[col_sit].value_counts().to_dict()
         print(f"[{ts()}] Situações incluídas: {_contagem}")
+        # PATCH 105: captura os tutores desligados numa lista separada — o
+        # filtro acima os exclui de TUDO no Vinci (correto, pra não confundir
+        # com ativos), mas o Leo pediu um relatório específico de quem saiu,
+        # com a data de desligamento, filtrável por mês.
+        _situacoes_desligado = {'desligado', 'rescindido', 'demitido', 'encerrado'}
+        df_desligados_raw = df_t[_sit_norm.isin(_situacoes_desligado)].copy()
+        col_desligamento = next((c for c in df_t.columns if 'DESLIGAMENTO' in str(c).upper()), None)
+        tutores_desligados = []
+        for _, _tr in df_desligados_raw.iterrows():
+            _data_desl = str(_tr.get(col_desligamento, '') or '').strip() if col_desligamento else ''
+            tutores_desligados.append({
+                'n': str(_tr.get(col_nome, '') or ''),
+                'p': str(_tr.get(col_polo, '') or ''),
+                'c': str(_tr.get(col_cat, '') or '') if col_cat else '',
+                'situacao': str(_tr.get(col_sit, '') or ''),
+                'data_desligamento': _data_desl,
+            })
+        print(f"[{ts()}] Tutores desligados capturados (relatório separado): {len(tutores_desligados)}")
     else:
         df_at = df_t.copy()
+        tutores_desligados = []
     # Usar CHAVE LOTAÇÃO do CONTROLE diretamente (mesma chave usada pelo Forms)
     col_chave_lot = next((c for c in df_t.columns if 'CHAVE' in str(c).upper() and 'LOTA' in str(c).upper()
                           and 'CLASSIF' not in str(c).upper()), None)
@@ -1632,6 +1651,7 @@ def processar(p1, p2):
             'polos_ok': sum(1 for p in polo_stats if p['enviaram'] > 0),
         },
         'tutores': tutores_out, 'polo_stats': polo_stats,
+        'tutores_desligados': tutores_desligados,  # PATCH 105
         'por_ordem': por_ordem_dict, 'por_ordem_lista': por_ordem,
         'alunos_por_ordem': alunos_por_ordem, 'status_ordem': status_ordem,
         'cat_stats': [{'categoria': k, **v} for k, v in cs.items()],
