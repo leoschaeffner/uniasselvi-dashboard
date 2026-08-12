@@ -614,7 +614,17 @@ def processar(p1, p2):
         col_desligamento = next((c for c in df_t.columns if 'DESLIGAMENTO' in str(c).upper()), None)
         tutores_desligados = []
         for _, _tr in df_desligados_raw.iterrows():
-            _data_desl = str(_tr.get(col_desligamento, '') or '').strip() if col_desligamento else ''
+            # PATCH 106: a coluna DESLIGAMENTO vem como data/hora de verdade
+            # (pandas Timestamp), não texto — str() direto produzia algo tipo
+            # "2026-02-11 00:00:00", que nunca batia com o formato DD/MM/AAAA
+            # que o filtro de mês no Vinci espera. Formata explicitamente.
+            _val_desl = _tr.get(col_desligamento, '') if col_desligamento else ''
+            _data_desl = ''
+            if _val_desl not in ('', None) and not (isinstance(_val_desl, float) and str(_val_desl) == 'nan'):
+                try:
+                    _data_desl = pd.to_datetime(_val_desl).strftime('%d/%m/%Y')
+                except Exception:
+                    _data_desl = str(_val_desl).strip()
             tutores_desligados.append({
                 'n': str(_tr.get(col_nome, '') or ''),
                 'p': str(_tr.get(col_polo, '') or ''),
@@ -3467,6 +3477,13 @@ if __name__ == '__main__':
             print(f"[{ts()}] Onboarding: {_n_aplicados} tutores com acompanhamento aplicado")
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar onboarding: {e}")
+    # PATCH 107: processar_vagas(p4) estava aninhado dentro do "if p6:" acima
+    # por engano — vagas depende só da Lotação (p4), não tem NADA a ver com o
+    # arquivo de onboarding (p6). Como o secret do onboarding ainda não foi
+    # configurado (p6 = None), esse bloco inteiro nunca rodava, e a seção RH/
+    # Vagas ficava vazia/escondida no Vinci mesmo com a Lotação lida com
+    # sucesso. Agora roda independente, sempre que p4 existir.
+    if p4:
         try:
             dados['vagas'] = processar_vagas(p4)
         except Exception as e:
