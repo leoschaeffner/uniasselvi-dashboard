@@ -213,12 +213,12 @@ def forcar_download_onedrive(path_url_file, destino, label):
 
 _KEYWORDS = {
     '01_CONTROLE_TUTORIA.xlsx': ['CONTROLE'],
-    'PORTFOLIO_TUTOR.xlsx':     ['PORTFOLIO', 'PORTIFOLIO', 'PORTF'],
+    'PORTIFOLIO_TUTOR.xlsx':     ['PORTFOLIO', 'PORTIFOLIO', 'PORTF'],
     'REL_GERAL_DE_GERENCIAMENTO.xlsx': ['GERENCIAMENTO', 'REL_GERAL'],
 }
 _ONEDRIVE_NAMES = {
     '01_CONTROLE_TUTORIA.xlsx': ['CONTROLE'],
-    'PORTFOLIO_TUTOR.xlsx':     ['PORTF', 'PORTFOLIO'],
+    'PORTIFOLIO_TUTOR.xlsx':     ['PORTF', 'PORTFOLIO'],
 }
 
 
@@ -382,9 +382,13 @@ def verificar_e_localizar():
     if cam_p and os.path.isfile(cam_p):
         p2 = cam_p; print(f"  [OK] {os.path.basename(p2)}")
     else:
-        p2 = achar_arquivo(SCRIPT_DIR, "PORTFOLIO_TUTOR.xlsx")
+        # PATCH 102: nome do arquivo real é "PORTIFOLIO" (com I), não
+        # "PORTFOLIO" — sem isso, o match exato nunca acontece e cai sempre
+        # no fallback aproximado, que pode escolher o arquivo errado quando
+        # existe mais de um "PORTIFOLIO_TUTOR*" na pasta.
+        p2 = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR.xlsx")
         if p2: print(f"  [OK] {os.path.basename(p2)}")
-        else:  print(f"  [FALTA] PORTFOLIO_TUTOR.xlsx")
+        else:  print(f"  [FALTA] PORTIFOLIO_TUTOR.xlsx")
     # PATCH 10: planilha nova de portfólios 2026/2 (formulário customizado, schema próprio)
     p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
     if p2b: print(f"  [OK] {os.path.basename(p2b)}")
@@ -686,13 +690,13 @@ def processar(p1, p2):
     cat_cols = [c for c in df_p.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
     c_cat = cat_cols[0] if cat_cols else None
     print(f"[{ts()}] Colunas: chave={c_chave}, proto={c_proto}, data={c_data}, alunos={c_aluno}, cat={c_cat}")
-    # PATCH 25a: mesma validação crítica, agora pro PORTFOLIO_TUTOR — sem chave e
+    # PATCH 25a: mesma validação crítica, agora pro PORTIFOLIO_TUTOR — sem chave e
     # sem protocolo não há como casar nenhuma submissão a nenhum tutor; melhor
     # parar aqui com um erro explícito do que gerar um dashboard sem portfólios.
     _faltando_portfolio = [nome for nome, col in {'CHAVE/LINK': c_chave, 'PROTOCOLOS': c_proto}.items() if not col]
     if _faltando_portfolio:
         raise ValueError(
-            f"[FALHA CRÍTICA] Coluna(s) obrigatória(s) não encontrada(s) no PORTFOLIO_TUTOR: "
+            f"[FALHA CRÍTICA] Coluna(s) obrigatória(s) não encontrada(s) no PORTIFOLIO_TUTOR: "
             f"{_faltando_portfolio}. Colunas disponíveis na planilha: {list(df_p.columns)}. "
             f"Provável renomeação de coluna no formulário/planilha-fonte."
         )
