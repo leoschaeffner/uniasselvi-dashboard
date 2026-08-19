@@ -129,9 +129,11 @@ jobs:
         run: |
           cp saida/dashboard.html index.html
           cp saida/lookup.json lookup.json
+          if [ -f saida/coordenadores.html ]; then cp saida/coordenadores.html coordenadores.html; fi
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add index.html lookup.json
+          if [ -f coordenadores.html ]; then git add coordenadores.html; fi
           git diff --cached --quiet && echo "Sem mudanças" || {
             git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT"
             git pull --rebase -X ours origin main || {
@@ -139,6 +141,7 @@ jobs:
               git fetch origin main
               git reset --soft origin/main
               git add index.html lookup.json
+              if [ -f coordenadores.html ]; then git add coordenadores.html; fi
               git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT [retry]"
             }
             git push
