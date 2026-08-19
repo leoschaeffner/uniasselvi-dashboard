@@ -463,9 +463,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="card" style="margin-bottom:16px">
     <div class="card-hdr"><div class="card-title">🔎 Ver 1 por 1 (opcional)</div></div>
     <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <select class="sel" id="ae-filtro-curso" onchange="filterAgendasPoloTutor()"><option value="">Todos os cursos</option></select>
       <select class="sel" id="ae-filtro-polo" onchange="filterAgendasPoloTutor()"><option value="">Todos os polos</option></select>
       <select class="sel" id="ae-filtro-tutor" onchange="filterAgendasPoloTutor()"><option value="">Todos os tutores</option></select>
-      <span style="font-size:11px;color:var(--muted)">Deixa em "Todos" pra ver o agregado de sempre — escolhe um polo ou tutor pra ver só os horários dele.</span>
+      <span style="font-size:11px;color:var(--muted)">Deixa em "Todos" pra ver o agregado de sempre — escolhe um curso, polo ou tutor pra ver só os horários dele.</span>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
@@ -2968,34 +2969,74 @@ function _renderAgendasKpisDiasTurnos(ofertas){
     </div>`;
   }).join('');
 }
+// PATCH 112: mapa de código de curso -> nome legível. O código de engenharias
+// no backend (CURSOS_NOMES) tem os códigos colados numa chave composta só
+// ("ECE-ENM-ENS-...") que na prática nunca bate com um código individual —
+// aqui separo cada um, pra não sobrar código cru sem nome no filtro. Também
+// cobre EFM/ISC, achados nos dados reais como variantes de Enfermagem/
+// Instrumentação Cirúrgica que "EMF-ISN" sozinho não cobria.
+const _CURSOS_NOMES_JS = {
+  'EMF-ISN': 'Enfermagem', 'EMF-ISN2': 'Enfermagem', 'EMF-ISND': 'Enfermagem',
+  'EFM': 'Enfermagem', 'ISC': 'Instrumentação Cirúrgica',
+  'BFR': 'Farmácia', 'BBI': 'Biomedicina', 'BFI': 'Fisioterapia', 'BTO': 'T. Ocupacional',
+  'COS-TIP': 'Estética e Cosmética', 'COS': 'Estética e Cosmética', 'NTR': 'Nutrição', 'AGM': 'Agronomia',
+  'BAU': 'Arquitetura e Urbanismo',
+  'ECE': 'Engenharia Civil', 'ENM': 'Engenharia Mecânica', 'ENS': 'Engenharia Ambiental e Sanitária',
+  'ENG': 'Engenharia', 'EEA': 'Engenharia Elétrica', 'GPI': 'Gestão da Produção Industrial',
+  'CDE': 'Construção de Edifícios', 'OBR': 'Controle de Obras', 'SAN': 'Saneamento Ambiental',
+  'TER': 'Energias Renováveis', 'FSA': 'Licenciatura em Física', 'SLF': 'Segunda Licenciatura em Física',
+  'QUI': 'Licenciatura em Química',
+};
+function _nomeCursoOferta(o){
+  // PATCH 112 (correção): o backend às vezes grava .subcurso já com o nome
+  // certo (Multi III: "Fisioterapia", etc.), mas outras vezes grava o
+  // CÓDIGO cru sem traduzir (mesmo bug do CURSOS_NOMES com chave composta no
+  // backend) -- então sempre tenta traduzir o valor de .subcurso/.curso
+  // primeiro, e só usa como está se não achar tradução nenhuma.
+  if(o.subcurso) return _CURSOS_NOMES_JS[o.subcurso] || o.subcurso;
+  if(o.curso) return _CURSOS_NOMES_JS[o.curso] || o.curso;
+  return o.categoria || '';
+}
+function _popularFiltroCurso(){
+  const sel=document.getElementById('ae-filtro-curso');
+  if(!sel || sel.options.length>1) return; // só popula 1 vez -- curso não depende de polo/tutor
+  const base=window._aeOfertasCompletas||[];
+  const cursos=[...new Set(base.map(o=>_nomeCursoOferta(o)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
+  cursos.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+}
 function _popularFiltroTutor(){
-  // PATCH 79: lista de tutores do seletor "ver 1 por 1" passa a depender do
-  // polo escolhido — só mostra quem realmente atua naquele polo. Se o tutor
-  // que estava selecionado não existir mais nessa lista (porque o polo mudou
-  // pra um onde ele não atua), volta pra "Todos os tutores" em vez de manter
-  // uma seleção que não faz mais sentido.
+  // PATCH 79/112: lista de tutores do seletor "ver 1 por 1" passa a depender
+  // do curso e do polo escolhidos — só mostra quem realmente atua nesse
+  // recorte. Se o tutor selecionado não existir mais na lista (porque o
+  // curso/polo mudou), volta pra "Todos os tutores".
+  const selCurso=document.getElementById('ae-filtro-curso');
   const selPolo=document.getElementById('ae-filtro-polo');
   const selTutor=document.getElementById('ae-filtro-tutor');
   if(!selTutor) return;
+  const cursoAtual=(selCurso||{}).value||'';
   const poloAtual=(selPolo||{}).value||'';
   const prevTutor=selTutor.value;
   const base=window._aeOfertasCompletas||[];
-  const escopo=poloAtual?base.filter(o=>o.polo===poloAtual):base;
+  let escopo=base;
+  if(cursoAtual) escopo=escopo.filter(o=>_nomeCursoOferta(o)===cursoAtual);
+  if(poloAtual) escopo=escopo.filter(o=>o.polo===poloAtual);
   const tutores=[...new Set(escopo.map(o=>o.tutor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
   while(selTutor.options.length>1) selTutor.remove(1);
   tutores.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selTutor.appendChild(o);});
   selTutor.value=[...selTutor.options].some(o=>o.value===prevTutor)?prevTutor:'';
 }
 function filterAgendasPoloTutor(){
-  // PATCH 78/79: "ver 1 por 1" — filtra os KPIs + os dois gráficos por polo
-  // e/ou tutor escolhidos, sem mexer no resto da página (categoria, incomuns).
-  // Com os dois seletores em "Todos", volta a ser exatamente o agregado de
-  // sempre — nada muda pra quem não usa o filtro. Repopula o seletor de tutor
-  // ANTES de ler o valor dele, pra já refletir o polo recém-escolhido.
+  // PATCH 78/79/112: "ver 1 por 1" — filtra os KPIs + os dois gráficos por
+  // curso, polo e/ou tutor escolhidos, sem mexer no resto da página
+  // (categoria ampla, incomuns). Com os três seletores em "Todos", volta a
+  // ser exatamente o agregado de sempre.
+  _popularFiltroCurso();
   _popularFiltroTutor();
+  const curso=(document.getElementById('ae-filtro-curso')||{}).value||'';
   const polo=(document.getElementById('ae-filtro-polo')||{}).value||'';
   const tutor=(document.getElementById('ae-filtro-tutor')||{}).value||'';
   let ofertas=window._aeOfertasCompletas||[];
+  if(curso) ofertas=ofertas.filter(o=>_nomeCursoOferta(o)===curso);
   if(polo) ofertas=ofertas.filter(o=>o.polo===polo);
   if(tutor) ofertas=ofertas.filter(o=>o.tutor===tutor);
   _renderAgendasKpisDiasTurnos(ofertas);
@@ -3078,6 +3119,7 @@ function renderAgendasEstudo(){
     polos.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;selPolo.appendChild(o);});
     if([...selPolo.options].some(o=>o.value===prevPolo)) selPolo.value=prevPolo;
   })();
+  _popularFiltroCurso();
   _popularFiltroTutor();
   _renderAgendasKpisDiasTurnos(ofertas);
 
