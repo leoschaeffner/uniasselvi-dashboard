@@ -13,6 +13,7 @@ PATCHES v2 aplicados:
 """
 
 import pandas as pd
+import re
 import json, os, sys, math, webbrowser, time, threading, glob, hashlib, base64, unicodedata
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -2432,6 +2433,14 @@ def _processar_gerenciamento_novo(df_g):
     df['_CURSO'] = df[c_cursos].apply(_extrair_curso) if c_cursos else ''
     df['_SUBCURSO'] = df['_CURSO'].map(lambda c: _SUBCURSO_LABEL.get(c, c))
     df['_TUTOR'] = df[c_tutor].fillna('').astype(str).str.strip().replace('nan','') if c_tutor else ''
+    # PATCH 115: a fonte do GIOCONDA passou a trazer o nome do tutor com um
+    # número de chapa colado no final, tipo "Beatriz Henkels (17124304)" --
+    # isso quebrava silenciosamente qualquer comparação com o nome limpo em
+    # DB.tutores (nenhum é igual ao outro), inflando a contagem de "tutores
+    # únicos" na aba Detalhe (365 em vez dos 342/347 certos) e provavelmente
+    # atrapalhando outros cruzamentos por nome também. Remove o sufixo antes
+    # de qualquer outro processamento usar esse nome.
+    df['_TUTOR'] = df['_TUTOR'].str.replace(r'\s*\(\d{4,}\)\s*$', '', regex=True).str.strip()
     df['_MAT']   = pd.to_numeric(df[c_mat],  errors='coerce').fillna(0).astype(int) if c_mat  else 0
     df['_AGEND'] = pd.to_numeric(df[c_agend],errors='coerce').fillna(0).astype(int) if c_agend else 0
     df['_CAPA']  = pd.to_numeric(df[c_capa], errors='coerce').fillna(0).astype(int) if c_capa  else 0
@@ -3224,7 +3233,9 @@ def processar_gerenciamento(p3):
             'polo': str(row.get(c_polo, '')), 'categoria': str(row.get(c_cat, '')),
             'ordem': str(row.get('_ORDEM_G', '')), 'pratica': str(row.get('_PRATICA_G', '')),
             'curso': str(row.get(c_curso, '')),
-            'tutor': str(row.get(c_tutor, '')) if pd.notna(row.get(c_tutor)) else '',
+            # PATCH 115: mesma limpeza do sufixo de chapa aplicada no formato
+            # NOVO -- protege esse caminho (formato ANTIGO/GIOCONDA) também.
+            'tutor': re.sub(r'\s*\(\d{4,}\)\s*$', '', str(row.get(c_tutor, '')).strip()) if pd.notna(row.get(c_tutor)) else '',
             'gerenciado': bool(row.get('_GERENCIADO', False)),
             'tem_agenda': bool(row.get('_TEM_AGENDA', False)),
             'alunos_mat': int(row.get('_ALUNOS_MAT', 0)), 'alunos_agend': int(row.get('_QTD_ALUN', 0)),
