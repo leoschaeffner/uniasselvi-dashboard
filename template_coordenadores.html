@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>VinciLab · Coordenadores</title>
+<style>
+:root{--green:#006B5E;--green-l:#00A88F;--green-dim:rgba(0,107,94,.1);--yellow:#FFD100;--yellow-d:#E5BC00;--yellow-dim:rgba(255,209,0,.12);--teal:#00C9A7;--teal-dim:rgba(0,201,167,.1);--red:#dc2626;--red-dim:rgba(220,38,38,.08);--ok:#16a34a;--ok-dim:rgba(22,163,74,.1);--bg:#f4f6f8;--surface:#fff;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--dim:#9ca3af;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--radius:10px;--font:'Plus Jakarta Sans','Segoe UI',sans-serif;--mono:'Cascadia Code','Consolas',monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.topbar{background:var(--green);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-md)}
+.topbar-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;letter-spacing:1.5px;padding:5px 10px;border-radius:5px;}
+.topbar-title{font-size:16px;font-weight:700}
+.topbar-sub{font-size:11px;color:rgba(255,255,255,.6)}
+.container{max-width:1200px;margin:0 auto;padding:20px 24px}
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:16px 18px}
+.sel,.inp{padding:9px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-family:var(--font);background:var(--surface);color:var(--text)}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:var(--card);border-radius:var(--radius);padding:14px 16px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.kpi.kpi-ok::before{background:var(--ok)}.kpi.kpi-red::before{background:var(--red)}.kpi.kpi-teal::before{background:var(--teal)}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:24px;font-weight:800;line-height:1}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 10px;background:var(--bg);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:9px 10px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--bg)}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.badge-ok{background:var(--ok-dim);color:var(--ok)}
+.badge-red{background:var(--red-dim);color:var(--red)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty-state-icon{font-size:40px;margin-bottom:12px}
+/* Senha */
+#senha-overlay{position:fixed;inset:0;background:var(--green);display:flex;align-items:center;justify-content:center;z-index:1000}
+.senha-box{background:#fff;border-radius:16px;padding:40px 36px;width:360px;max-width:90vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.senha-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;letter-spacing:1.5px;padding:6px 12px;border-radius:6px;display:inline-block;margin-bottom:16px}
+.senha-title{font-size:17px;font-weight:800;margin-bottom:4px}
+.senha-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.senha-input{width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);font-size:14px;margin-bottom:12px;font-family:var(--font)}
+.senha-btn{width:100%;padding:11px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+.senha-btn:hover{background:var(--green-l)}
+.senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:16px}
+.senha-lgpd{font-size:10px;color:var(--dim);margin-top:18px}
+#app{display:none}
+.footer-note{text-align:center;font-size:11px;color:var(--dim);padding:20px}
+</style>
+</head>
+<body>
+
+<div id="senha-overlay">
+  <div class="senha-box">
+    <div class="senha-logo">VinciLab</div>
+    <div class="senha-title">Portal do Coordenador</div>
+    <div class="senha-sub">Acompanhamento de Ofertas por Curso</div>
+    <input class="senha-input" type="password" id="senha-input" placeholder="Digite a senha de acesso" onkeydown="if(event.key==='Enter')verificarSenha()"/>
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <div class="senha-err" id="senha-err"></div>
+    <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a coordenadores autorizados</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">VinciLab</div>
+    <div>
+      <div class="topbar-title">Portal do Coordenador</div>
+      <div class="topbar-sub" id="topbar-ts"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Selecione seu curso</label>
+          <select class="sel" id="coord-curso-sel" onchange="selecionarCurso()" style="min-width:280px">
+            <option value="">— Escolha um curso —</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Semestre</label>
+          <select class="sel" id="coord-sem-sel" onchange="selecionarCurso()">
+            <option value="Ambos">Ambos</option>
+            <option value="2026/1">2026/1</option>
+            <option value="2026/2" selected>2026/2</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Buscar polo ou prática</label>
+          <input class="inp" id="coord-busca" placeholder="Digite pra filtrar..." style="width:100%" oninput="filtrarTabela()">
+        </div>
+      </div>
+    </div>
+
+    <div id="coord-conteudo">
+      <div class="empty-state">
+        <div class="empty-state-icon">🎓</div>
+        <div>Selecione um curso acima pra ver o cenário de ofertas por polo.</div>
+      </div>
+    </div>
+
+    <div class="footer-note">VinciLab · Portal do Coordenador · Uso restrito, dados protegidos por LGPD Art.46</div>
+  </div>
+</div>
+
+<script>
+const ENCRYPTED_PAYLOAD = 'DATA_GOES_HERE';
+let DB = null;
+
+// ── SENHA / DESCRIPTOGRAFIA (mesmo mecanismo do Vinci principal) ──────────────
+async function _sha256Buf(msg){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg)); }
+function _hexToBytes(hex){ const bytes=new Uint8Array(hex.length/2); for(let i=0;i<bytes.length;i++) bytes[i]=parseInt(hex.substr(i*2,2),16); return bytes; }
+function _bytesToHex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+async function _decifrarDados(cryptoKey){
+  const [ivB64, ctB64] = ENCRYPTED_PAYLOAD.split(':');
+  const iv = Uint8Array.from(atob(ivB64), c=>c.charCodeAt(0));
+  const ct = Uint8Array.from(atob(ctB64), c=>c.charCodeAt(0));
+  const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, cryptoKey, ct);
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+async function verificarSenha(){
+  const val=document.getElementById('senha-input').value.trim();
+  if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
+  try{
+    const chaveBuf = await _sha256Buf(val);
+    const cryptoKey = await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+    DB = await _decifrarDados(cryptoKey);
+    const chaveHex = _bytesToHex(chaveBuf);
+    try{sessionStorage.setItem('uni_auth_key_coord', chaveHex);}catch(e){}
+    document.getElementById('senha-overlay').style.display='none';
+    document.getElementById('senha-input').value='';
+    _iniciarApp();
+  }catch(e){
+    document.getElementById('senha-err').textContent='Senha incorreta.';
+    document.getElementById('senha-input').value='';
+    document.getElementById('senha-input').focus();
+  }
+}
+async function initSenha(){
+  let chaveHex=null;
+  try{chaveHex=sessionStorage.getItem('uni_auth_key_coord');}catch(e){}
+  if(chaveHex){
+    try{
+      const chaveBuf=_hexToBytes(chaveHex);
+      const cryptoKey=await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+      DB = await _decifrarDados(cryptoKey);
+      document.getElementById('senha-overlay').style.display='none';
+      _iniciarApp();
+      return;
+    }catch(e){
+      try{sessionStorage.removeItem('uni_auth_key_coord');}catch(_){}
+    }
+  }
+  document.getElementById('senha-input').focus();
+}
+
+// ── LÓGICA DO PORTAL DO COORDENADOR ────────────────────────────────────────────
+// PATCH 110: mapa curso -> categoria ampla do Vinci (o mesmo mapeamento
+// usado no restante do sistema pra agrupar cursos em categoria de laboratório)
+const CURSO_PARA_CATEGORIA = {
+  'Biomedicina':'BIO-FAR (Multidisciplinar I)','Farmácia':'BIO-FAR (Multidisciplinar I)',
+  'Enfermagem':'ENF-INS (Multidisciplinar II)','Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
+  'Fisioterapia':'BIO-FISIO-EST-TO (Multidisciplinar III)','Terapia Ocupacional':'BIO-FISIO-EST-TO (Multidisciplinar III)','Estética e Imagem Pessoal':'BIO-FISIO-EST-TO (Multidisciplinar III)',
+  'Nutrição':'NUTRI (Multidisciplinar IV)',
+  'Agronomia':'QUÍMICA E FÍSICA','Licenciatura em Física':'QUÍMICA E FÍSICA','Licenciatura em Química':'QUÍMICA E FÍSICA','Segunda Licenciatura em Física':'QUÍMICA E FÍSICA',
+  'Arquitetura e Urbanismo':'ENGMAKER','Construção de Edifícios':'ENGMAKER','Controle de Obras':'ENGMAKER','Energias Renováveis':'ENGMAKER','Engenharia Ambiental e Sanitária':'ENGMAKER','Engenharia Civil':'ENGMAKER','Engenharia Elétrica':'ENGMAKER','Engenharia Mecânica':'ENGMAKER','Engenharia de Produção':'ENGMAKER','Gestão da Produção Industrial':'ENGMAKER','Saneamento Ambiental':'ENGMAKER',
+};
+
+function _normTxt(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+
+function _getOfertasAtual(){
+  const sem = document.getElementById('coord-sem-sel').value;
+  const porSem = DB.gerenciamento_por_semestre || {};
+  if(sem==='Ambos'){
+    const todas=[];
+    Object.values(porSem).forEach(s=>{ (s.ger_ofertas||[]).forEach(o=>todas.push(o)); });
+    return todas.length ? todas : (DB.ger_ofertas||[]);
+  }
+  return (porSem[sem] && porSem[sem].ger_ofertas) || DB.ger_ofertas || [];
+}
+
+function _iniciarApp(){
+  document.getElementById('app').style.display='block';
+  document.getElementById('topbar-ts').textContent = 'Dados atualizados: ' + (DB.gerado_em || '—');
+
+  // Popula o seletor de curso com a lista fixa de cursos conhecidos
+  const sel = document.getElementById('coord-curso-sel');
+  Object.keys(CURSO_PARA_CATEGORIA).sort().forEach(curso=>{
+    const o=document.createElement('option'); o.value=curso; o.textContent=curso; sel.appendChild(o);
+  });
+
+  // Se o coordenador já escolheu o curso antes nesta sessão, mantém selecionado
+  const cursoSalvo = sessionStorage.getItem('coord_curso_selecionado');
+  if(cursoSalvo){ sel.value = cursoSalvo; selecionarCurso(); }
+}
+
+function selecionarCurso(){
+  const curso = document.getElementById('coord-curso-sel').value;
+  const conteudo = document.getElementById('coord-conteudo');
+  if(!curso){
+    conteudo.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎓</div><div>Selecione um curso acima pra ver o cenário de ofertas por polo.</div></div>';
+    return;
+  }
+  sessionStorage.setItem('coord_curso_selecionado', curso);
+  const categoria = CURSO_PARA_CATEGORIA[curso];
+  const ofertas = _getOfertasAtual().filter(o => (o.categoria||'')===categoria);
+
+  // Agrega por (polo, prática): teve QUALQUER gerenciamento = oferta atendida
+  const mapa = {};
+  ofertas.forEach(o=>{
+    const key = (o.polo||'—') + '|||' + (o.pratica||'—');
+    if(!mapa[key]) mapa[key] = {polo:o.polo||'—', pratica:o.pratica||'—', teve:false};
+    if(o.gerenciado) mapa[key].teve = true;
+  });
+  const linhas = Object.values(mapa).sort((a,b)=> a.polo.localeCompare(b.polo,'pt') || a.pratica.localeCompare(b.pratica,'pt'));
+
+  const totalPolos = new Set(linhas.map(l=>l.polo)).size;
+  const comOferta = linhas.filter(l=>l.teve).length;
+  const semOferta = linhas.length - comOferta;
+
+  let html = `<div class="kpi-row">
+    <div class="kpi kpi-teal"><div class="kpi-label">Polos com Registro</div><div class="kpi-value">${totalPolos}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Combinações Polo × Prática Atendidas</div><div class="kpi-value">${comOferta}</div></div>
+    <div class="kpi kpi-red"><div class="kpi-label">Sem Oferta</div><div class="kpi-value">${semOferta}</div></div>
+  </div>`;
+
+  if(!linhas.length){
+    html += '<div class="card"><div class="card-body"><div class="empty-state"><div class="empty-state-icon">📭</div><div>Nenhum dado de oferta encontrado pra esse curso, no semestre selecionado.</div></div></div></div>';
+  }else{
+    html += `<div class="card">
+      <div class="card-hdr"><div class="card-title">Ofertas por Polo — ${curso}</div></div>
+      <div class="card-body" style="padding:0">
+        <table id="coord-tabela">
+          <thead><tr><th>Polo</th><th>Prática</th><th>Status</th></tr></thead>
+          <tbody>${linhas.map(l=>`<tr data-busca="${_normTxt(l.polo+' '+l.pratica)}">
+            <td>${l.polo}</td><td>${l.pratica}</td>
+            <td>${l.teve ? '<span class="badge badge-ok">✓ Teve oferta</span>' : '<span class="badge badge-red">✕ Sem oferta</span>'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+  conteudo.innerHTML = html;
+  document.getElementById('coord-busca').value='';
+}
+
+function filtrarTabela(){
+  const q = _normTxt(document.getElementById('coord-busca').value);
+  document.querySelectorAll('#coord-tabela tbody tr').forEach(tr=>{
+    tr.style.display = (!q || (tr.dataset.busca||'').includes(q)) ? '' : 'none';
+  });
+}
+
+initSenha();
+</script>
+</body>
+</html>
