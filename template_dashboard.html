@@ -2796,12 +2796,26 @@ function openDiaSemanaModal(dia){
     const h=o.hr_agenda||'(sem horário registrado)';
     const turno=o.turno||'—';
     const key=turno+'|||'+h;
-    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,mat:0,agend:0};
+    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,_grupos:{}};
     const p=porHorario[key];
-    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
+    p.qtd++;
+    // PATCH 114: mesma deduplicação por polo+categoria do openTurnoModal —
+    // ver comentário lá pra detalhe do porquê (evita inflar matriculados/
+    // agendados quando mais de uma prática do mesmo polo+categoria cai no
+    // mesmo dia+horário+turno).
+    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
+    if(!p._grupos[chaveGrupo]) p._grupos[chaveGrupo]={mat:0,agend:0};
+    const g=p._grupos[chaveGrupo];
+    g.mat=Math.max(g.mat,o.alunos_mat||0);
+    g.agend=Math.max(g.agend,o.alunos_agend||0);
   });
   const _turnoOrdem={'Manhã':0,'Tarde':1,'Noite':2,'Madrugada':3};
-  const rows=Object.values(porHorario).sort((a,b)=>{
+  const rows=Object.values(porHorario).map(p=>{
+    const grupos=Object.values(p._grupos);
+    p.mat=grupos.reduce((s,g)=>s+g.mat,0);
+    p.agend=grupos.reduce((s,g)=>s+g.agend,0);
+    return p;
+  }).sort((a,b)=>{
     const ta=_turnoOrdem[a.turno]??9, tb=_turnoOrdem[b.turno]??9;
     if(ta!==tb) return ta-tb;
     return a.horario.localeCompare(b.horario,'pt-BR',{numeric:true});
@@ -2859,12 +2873,28 @@ function openTurnoModal(turno){
   const porHorario={};
   ofertas.forEach(o=>{
     const h=o.hr_agenda||'(sem horário registrado)';
-    if(!porHorario[h]) porHorario[h]={horario:h,qtd:0,mat:0,agend:0};
+    if(!porHorario[h]) porHorario[h]={horario:h,qtd:0,_grupos:{}};
     const p=porHorario[h];
-    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
+    p.qtd++;
+    // PATCH 114: mesma regra do _dedupAlunos — cada prática de um mesmo
+    // polo+categoria repete o valor de alunos_mat/alunos_agend da origem, então
+    // somar linha a linha (como este modal fazia antes) inflava o total quando
+    // mais de uma prática do mesmo polo+categoria caía no mesmo horário. Agrupa
+    // por polo+categoria e pega o maior valor (não soma), igual ao resto do
+    // dashboard já faz pros KPIs principais.
+    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
+    if(!p._grupos[chaveGrupo]) p._grupos[chaveGrupo]={mat:0,agend:0};
+    const g=p._grupos[chaveGrupo];
+    g.mat=Math.max(g.mat,o.alunos_mat||0);
+    g.agend=Math.max(g.agend,o.alunos_agend||0);
   });
   // Ordena cronologicamente pelo horário de início — "1º horário", "2º horário" etc.
-  const rows=Object.values(porHorario).sort((a,b)=>a.horario.localeCompare(b.horario,'pt-BR',{numeric:true}));
+  const rows=Object.values(porHorario).map(p=>{
+    const grupos=Object.values(p._grupos);
+    p.mat=grupos.reduce((s,g)=>s+g.mat,0);
+    p.agend=grupos.reduce((s,g)=>s+g.agend,0);
+    return p;
+  }).sort((a,b)=>a.horario.localeCompare(b.horario,'pt-BR',{numeric:true}));
   const max=Math.max(...rows.map(r=>r.qtd),1);
   document.getElementById('m-title').textContent='Turno: '+turno;
   document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste turno · horários ordenados cronologicamente`;
