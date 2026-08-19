@@ -261,6 +261,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="toolbar">
       <input class="search" type="text" placeholder="Buscar prática…" oninput="filterPrac(this.value)" id="prac-search"/>
       <select class="sel" onchange="filterPrac(document.getElementById('prac-search').value)" id="prac-cat-sel"><option value="">Todas categorias</option></select>
+      <select class="sel" onchange="filterPrac(document.getElementById('prac-search').value)" id="prac-curso-sel"><option value="">Todos cursos</option></select>
       <span class="tbl-count" id="prac-count">—</span>
     </div>
     <div class="tbl-wrap"><table><thead><tr><th onclick="sortPrac('n')">Prática</th><th onclick="sortPrac('c')">Categoria</th><th onclick="sortPrac('env_n')" style="text-align:right">Enviaram</th><th onclick="sortPrac('pend_n')" style="text-align:right">Pendentes</th><th onclick="sortPrac('pct')">Conclusão</th></tr></thead><tbody id="prac-tbody"></tbody></table></div>
@@ -936,7 +937,7 @@ function setFilterPrac(cat){
   filterPrac(document.getElementById('prac-search').value||'');
   document.getElementById('prac-search').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-function filterPrac(q){q=q.toLowerCase();const cat=document.getElementById('prac-cat-sel').value;let d=getPraticas();if(q)d=d.filter(p=>(p.n+p.c).toLowerCase().includes(q));if(cat)d=d.filter(p=>(window._CAT_NORM_MAP&&window._CAT_NORM_MAP[p.c]||p.c)===cat);pracData=d;renderPracTbl(d);}
+function filterPrac(q){q=q.toLowerCase();const cat=document.getElementById('prac-cat-sel').value;const curso=(document.getElementById('prac-curso-sel')||{}).value||'';let d=getPraticas();if(q)d=d.filter(p=>(p.n+p.c).toLowerCase().includes(q));if(cat)d=d.filter(p=>(window._CAT_NORM_MAP&&window._CAT_NORM_MAP[p.c]||p.c)===cat);if(curso)d=d.filter(p=>(p.cursos||[]).includes(curso));pracData=d;renderPracTbl(d);}
 function sortPrac(k){if(pracSortK===k)pracSortA=!pracSortA;else{pracSortK=k;pracSortA=k==='n'}filterPrac(document.getElementById('prac-search').value)}
 function renderPracTbl(data){
   const sorted=[...data].sort((a,b)=>{const va=a[pracSortK],vb=b[pracSortK];if(typeof va==='string')return pracSortA?va.localeCompare(vb):vb.localeCompare(va);return pracSortA?va-vb:vb-va});
@@ -2489,6 +2490,10 @@ function populateFilters(){
   const tSel=document.getElementById('tutor-cat-sel');if(tSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tSel.appendChild(o)});
   const pracCats=[...new Set(getPraticas().map(p=>_normCat(p.c||'')).filter(Boolean))].sort();
   const pSel=document.getElementById('prac-cat-sel');if(pSel)pracCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pSel.appendChild(o)});
+  // PATCH 109: popula o filtro de curso específico (Biomedicina, Farmácia,
+  // Enfermagem, etc.) usando o campo "cursos" que cada prática agora carrega.
+  const pracCursos=[...new Set(getPraticas().flatMap(p=>p.cursos||[]).filter(Boolean))].sort();
+  const pcSel=document.getElementById('prac-curso-sel');if(pcSel)pracCursos.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pcSel.appendChild(o)});
   const ocSel=document.getElementById('ordem-cat-sel');if(ocSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;ocSel.appendChild(o)});
 }
 function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');}
