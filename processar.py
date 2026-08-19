@@ -1538,6 +1538,7 @@ def processar(p1, p2):
 
         _por_ordem = {}; _alunos_por_ordem = {}
         _polo_map = {}; _cat_stats = {}
+        _ps_sem = {}  # PATCH 108
 
         for _t in tutores_list:
             _sem_antigo = sorted(ALL_SEMESTRES.keys())[0]
@@ -1546,6 +1547,22 @@ def processar(p1, p2):
             _te_sem = len(_reais_sem)
             _tp = _t.get('tp', 0)
             _pct_sem = round(_te_sem / _tp * 100, 1) if _tp else 0
+
+            # PATCH 108: tally de práticas por semestre -- usa o catálogo
+            # COMPLETO do tutor (t['real'] + t['pend'], que juntos representam
+            # tudo que ele já teve atribuído, em qualquer semestre) como
+            # universo, e classifica cada prática como "enviada" ou "pendente"
+            # DENTRO DESTE semestre específico -- sem isso, a página de
+            # Práticas mostrava sempre o mesmo dado (global/todos os tempos),
+            # ignorando completamente o seletor de semestre no Vinci.
+            _catalogo_tutor = set(_t.get('real', [])) | set(_t.get('pend', []))
+            for _p_nome in _catalogo_tutor:
+                if _p_nome not in _ps_sem:
+                    _ps_sem[_p_nome] = {'enviou': 0, 'nao_enviou': 0, 'categoria': _t.get('cf', '')}
+                if _p_nome in _reais_sem:
+                    _ps_sem[_p_nome]['enviou'] += 1
+                else:
+                    _ps_sem[_p_nome]['nao_enviou'] += 1
 
             # por_ordem deste semestre
             _po = {}
@@ -1587,6 +1604,20 @@ def processar(p1, p2):
             _ps['pend'] = _ps['total'] - _ps['enviaram']
             _ps['pct']  = round(_ps['enviaram']/_ps['total']*100) if _ps['total'] else 0
 
+        # PATCH 108: monta pratica_stats/praticas deste semestre, no mesmo
+        # formato que a versão global (ps_all/praticas_template) usa --
+        # assim o frontend pode ler direto sem precisar de tratamento especial.
+        _ps_sem_all = sorted([{'nome': k, **v} for k, v in _ps_sem.items()], key=lambda x: -x['nao_enviou'])
+        _praticas_sem_template = []
+        for _p in _ps_sem_all:
+            _total_p = _p['enviou'] + _p['nao_enviou']
+            _praticas_sem_template.append({
+                'n': _p['nome'], 'c': _p['categoria'],
+                'env_n': _p['enviou'], 'pend_n': _p['nao_enviou'],
+                'pct': round(_p['enviou'] / _total_p * 100, 1) if _total_p else 0,
+                'nome': _p['nome'], 'enviou': _p['enviou'], 'nao_enviou': _p['nao_enviou'], 'categoria': _p['categoria'],
+            })
+
         _total = len(tutores_list)
         _sem_ant = sorted(ALL_SEMESTRES.keys())[0]
         _enviaram = sum(1 for _t in tutores_list if any(h.get('s',_sem_ant)==sem_key and h.get('p') for h in _t.get('hist',[])))
@@ -1622,6 +1653,7 @@ def processar(p1, p2):
             'prazos': prazos_dict,
             'periodos': periodos_dict,
             'cat_stats': [{'categoria':k,**v} for k,v in _cat_stats.items()],
+            'pratica_stats': _ps_sem_all[:30], 'praticas': _praticas_sem_template,  # PATCH 108
         }
 
     _dados_por_semestre = {}
