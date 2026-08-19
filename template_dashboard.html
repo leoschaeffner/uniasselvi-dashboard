@@ -463,6 +463,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="card" style="margin-bottom:16px">
     <div class="card-hdr"><div class="card-title">🔎 Ver 1 por 1 (opcional)</div></div>
     <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <select class="sel" id="ae-filtro-ordem" onchange="filterAgendasPoloTutor()"><option value="">Todas as ordens</option></select>
       <select class="sel" id="ae-filtro-curso" onchange="filterAgendasPoloTutor()"><option value="">Todos os cursos</option></select>
       <select class="sel" id="ae-filtro-polo" onchange="filterAgendasPoloTutor()"><option value="">Todos os polos</option></select>
       <select class="sel" id="ae-filtro-tutor" onchange="filterAgendasPoloTutor()"><option value="">Todos os tutores</option></select>
@@ -2997,12 +2998,47 @@ function _nomeCursoOferta(o){
   if(o.curso) return _CURSOS_NOMES_JS[o.curso] || o.curso;
   return o.categoria || '';
 }
+// PATCH 113: curso específico -> laboratório/categoria ampla, pra agrupar o
+// filtro de curso pelo mesmo critério já usado em Gerenciamento (a mesma
+// categorização da tabela "Por Laboratório / Curso" logo abaixo).
+const _CURSO_PARA_LAB_JS = {
+  'Biomedicina':'BIO-FAR (Multidisciplinar I)','Farmácia':'BIO-FAR (Multidisciplinar I)',
+  'Enfermagem':'ENF-INS (Multidisciplinar II)','Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
+  'Fisioterapia':'BIO-FISIO-EST-TO (Multidisciplinar III)','T. Ocupacional':'BIO-FISIO-EST-TO (Multidisciplinar III)','Terapia Ocupacional':'BIO-FISIO-EST-TO (Multidisciplinar III)','Estética e Cosmética':'BIO-FISIO-EST-TO (Multidisciplinar III)',
+  'Nutrição':'NUTRI (Multidisciplinar IV)',
+  'Agronomia':'QUÍMICA E FÍSICA','Licenciatura em Física':'QUÍMICA E FÍSICA','Licenciatura em Química':'QUÍMICA E FÍSICA','Segunda Licenciatura em Física':'QUÍMICA E FÍSICA',
+  'Arquitetura e Urbanismo':'ENGMAKER','Construção de Edifícios':'ENGMAKER','Controle de Obras':'ENGMAKER','Energias Renováveis':'ENGMAKER','Engenharia Ambiental e Sanitária':'ENGMAKER','Engenharia Civil':'ENGMAKER','Engenharia Elétrica':'ENGMAKER','Engenharia Mecânica':'ENGMAKER','Engenharia de Produção':'ENGMAKER','Gestão da Produção Industrial':'ENGMAKER','Saneamento Ambiental':'ENGMAKER','Engenharia':'ENGMAKER',
+};
 function _popularFiltroCurso(){
   const sel=document.getElementById('ae-filtro-curso');
-  if(!sel || sel.options.length>1) return; // só popula 1 vez -- curso não depende de polo/tutor
+  if(!sel || sel.options.length>1) return; // só popula 1 vez -- curso não depende de polo/tutor/ordem
   const base=window._aeOfertasCompletas||[];
-  const cursos=[...new Set(base.map(o=>_nomeCursoOferta(o)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
-  cursos.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  const cursos=[...new Set(base.map(o=>_nomeCursoOferta(o)).filter(Boolean))];
+  // Agrupa por laboratório, igual ao Gerenciamento -- cursos sem lab mapeado
+  // caem num grupo "Outros" no final, em vez de sumir.
+  const porLab={};
+  cursos.forEach(c=>{
+    const lab=_CURSO_PARA_LAB_JS[c]||'Outros';
+    if(!porLab[lab]) porLab[lab]=[];
+    porLab[lab].push(c);
+  });
+  const labsOrdenados=Object.keys(porLab).filter(l=>l!=='Outros').sort((a,b)=>a.localeCompare(b,'pt'));
+  if(porLab['Outros']) labsOrdenados.push('Outros');
+  labsOrdenados.forEach(lab=>{
+    const grp=document.createElement('optgroup');
+    grp.label=lab;
+    porLab[lab].sort((a,b)=>a.localeCompare(b,'pt')).forEach(c=>{
+      const o=document.createElement('option');o.value=c;o.textContent=c;grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  });
+}
+function _popularFiltroOrdem(){
+  const sel=document.getElementById('ae-filtro-ordem');
+  if(!sel || sel.options.length>1) return;
+  const base=window._aeOfertasCompletas||[];
+  const ordens=[...new Set(base.map(o=>o.ordem).filter(Boolean))].sort();
+  ordens.forEach(od=>{const o=document.createElement('option');o.value=od;o.textContent=od;sel.appendChild(o);});
 }
 function _popularFiltroTutor(){
   // PATCH 79/112: lista de tutores do seletor "ver 1 por 1" passa a depender
@@ -3026,16 +3062,19 @@ function _popularFiltroTutor(){
   selTutor.value=[...selTutor.options].some(o=>o.value===prevTutor)?prevTutor:'';
 }
 function filterAgendasPoloTutor(){
-  // PATCH 78/79/112: "ver 1 por 1" — filtra os KPIs + os dois gráficos por
-  // curso, polo e/ou tutor escolhidos, sem mexer no resto da página
-  // (categoria ampla, incomuns). Com os três seletores em "Todos", volta a
-  // ser exatamente o agregado de sempre.
+  // PATCH 78/79/112/113: "ver 1 por 1" — filtra os KPIs + os dois gráficos
+  // por ordem, curso, polo e/ou tutor escolhidos, sem mexer no resto da
+  // página (categoria ampla, incomuns). Com todos os seletores em "Todos",
+  // volta a ser exatamente o agregado de sempre.
+  _popularFiltroOrdem();
   _popularFiltroCurso();
   _popularFiltroTutor();
+  const ordem=(document.getElementById('ae-filtro-ordem')||{}).value||'';
   const curso=(document.getElementById('ae-filtro-curso')||{}).value||'';
   const polo=(document.getElementById('ae-filtro-polo')||{}).value||'';
   const tutor=(document.getElementById('ae-filtro-tutor')||{}).value||'';
   let ofertas=window._aeOfertasCompletas||[];
+  if(ordem) ofertas=ofertas.filter(o=>o.ordem===ordem);
   if(curso) ofertas=ofertas.filter(o=>_nomeCursoOferta(o)===curso);
   if(polo) ofertas=ofertas.filter(o=>o.polo===polo);
   if(tutor) ofertas=ofertas.filter(o=>o.tutor===tutor);
@@ -3119,6 +3158,7 @@ function renderAgendasEstudo(){
     polos.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;selPolo.appendChild(o);});
     if([...selPolo.options].some(o=>o.value===prevPolo)) selPolo.value=prevPolo;
   })();
+  _popularFiltroOrdem();
   _popularFiltroCurso();
   _popularFiltroTutor();
   _renderAgendasKpisDiasTurnos(ofertas);
