@@ -748,7 +748,25 @@ function gPT(p){return p.t||p.total||0}
 function gPE(p){return p.e||p.enviaram||0}
 function gPA(p){return p.a||p.alunos||0}
 function gTS(t){return t.sit||t.situacao||"urgente"}
-function getPraticas(){var pr=DB.praticas;if(pr&&pr.length)return pr;return(DB.pratica_stats||[]).map(function(p){var tot=(p.enviou||0)+(p.nao_enviou||0);return{n:p.nome||"",c:p.categoria||"",env_n:p.enviou||0,pend_n:p.nao_enviou||0,pct:tot?Math.round(p.enviou/tot*100):0}})}
+function getPraticas(){
+  // PATCH 108: antes lia DB.praticas direto (global, ignorando o semestre
+  // selecionado) -- agora usa a versão certa por semestre, igual já
+  // acontecia com Tutores/Polos/Ordens.
+  var pr=_getSemPraticas();
+  if(pr&&pr.length)return pr;
+  var ps=_getSemPraticaStats();
+  return (ps||[]).map(function(p){var tot=(p.enviou||0)+(p.nao_enviou||0);return{n:p.nome||"",c:p.categoria||"",env_n:p.enviou||0,pend_n:p.nao_enviou||0,pct:tot?Math.round(p.enviou/tot*100):0}})
+}
+function _getSemPraticas(){
+  if(!_SEM_ATUAL || _SEM_ATUAL==='Ambos') return DB.praticas;
+  var sd=_SEM_DB;
+  return (sd && sd.praticas) ? sd.praticas : DB.praticas;
+}
+function _getSemPraticaStats(){
+  if(!_SEM_ATUAL || _SEM_ATUAL==='Ambos') return DB.pratica_stats;
+  var sd=_SEM_DB;
+  return (sd && sd.pratica_stats) ? sd.pratica_stats : DB.pratica_stats;
+}
 function getOE(o){const _po=_getSemPorOrdem();if(_po&&!Array.isArray(_po))return _po[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
 function getOA(o){if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
 function getOS(o){const _so=_getSemStatusOrdem();if(_so)return _so[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
