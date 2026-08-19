@@ -4214,8 +4214,13 @@ function _tutMecSort(col){
 }
 
 // ── PORTAL DO COORDENADOR: trava por curso ─────────────────────────────────────
-// PATCH 111: mapa curso -> categoria ampla do Vinci (mesmo usado no restante
-// do sistema pra agrupar cursos em categoria de laboratório)
+// PATCH 111 (correção definitiva): tutores usam a categoria no formato CURTO
+// ("BIO-FAR (Multidisciplinar I)"), mas práticas usam o formato LONGO/
+// descritivo do CAT_MAP ("Multidisciplinar I - Biomedicina e Farmácia") --
+// são dados inconsistentes entre si. window._CAT_NORM_MAP também não existe
+// globalmente (é local de outra função) -- por isso a filtragem de Práticas
+// nunca batia com nada e vazava tudo. Agora comparamos contra os DOIS
+// formatos possíveis, sem depender de nenhuma função externa.
 const CURSO_PARA_CATEGORIA = {
   'Biomedicina':'BIO-FAR (Multidisciplinar I)','Farmácia':'BIO-FAR (Multidisciplinar I)',
   'Enfermagem':'ENF-INS (Multidisciplinar II)','Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
@@ -4224,6 +4229,23 @@ const CURSO_PARA_CATEGORIA = {
   'Agronomia':'QUÍMICA E FÍSICA','Licenciatura em Física':'QUÍMICA E FÍSICA','Licenciatura em Química':'QUÍMICA E FÍSICA','Segunda Licenciatura em Física':'QUÍMICA E FÍSICA',
   'Arquitetura e Urbanismo':'ENGMAKER','Construção de Edifícios':'ENGMAKER','Controle de Obras':'ENGMAKER','Energias Renováveis':'ENGMAKER','Engenharia Ambiental e Sanitária':'ENGMAKER','Engenharia Civil':'ENGMAKER','Engenharia Elétrica':'ENGMAKER','Engenharia Mecânica':'ENGMAKER','Engenharia de Produção':'ENGMAKER','Gestão da Produção Industrial':'ENGMAKER','Saneamento Ambiental':'ENGMAKER',
 };
+// formato longo/descritivo (CAT_MAP), pra bater com o campo .categoria/.c das práticas
+const CATEGORIA_CURTA_PARA_LONGA = {
+  'ENF-INS (Multidisciplinar II)': 'Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica',
+  'BIO-FISIO-EST-TO (Multidisciplinar III)': 'Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética',
+  'BIO-FAR (Multidisciplinar I)': 'Multidisciplinar I - Biomedicina e Farmácia',
+  'NUTRI (Multidisciplinar IV)': 'Multidisciplinar IV - Nutrição',
+  'QUÍMICA E FÍSICA': 'Química e Física - Agronomia',
+  'ENGMAKER': 'EngeMaker | Química e Física - Engenharias e Licenciaturas',
+};
+function _categoriaBate(valorNoDado, categoriaCurta){
+  if (!valorNoDado) return false;
+  const v = valorNoDado.trim();
+  if (v === categoriaCurta) return true;
+  const longa = CATEGORIA_CURTA_PARA_LONGA[categoriaCurta];
+  if (longa && v === longa) return true;
+  return false;
+}
 // código curto usado em Lotação/Vagas pra cada curso (pra filtrar 'cursos' das vagas)
 const CURSO_PARA_CODIGO = {
   'Biomedicina':'BBI','Farmácia':'BFR','Enfermagem':'EMF-ISN','Instrumentação Cirúrgica':'EMF-ISN',
@@ -4255,14 +4277,31 @@ function _confirmarCursoGate(){
   _aplicarMarcaCurso(curso);
 }
 function _aplicarMarcaCurso(curso){
-  // Mostra qual curso está travado no topo, junto do timestamp
+  // Mostra qual curso está travado no topo, junto do timestamp, com um botão
+  // pra trocar -- em vez de tentar re-filtrar tudo em memória (arriscado,
+  // várias telas já teriam rodado com o dado do curso anterior), recarrega a
+  // página com a senha ainda guardada -- assim só pede pra escolher o curso
+  // de novo, sem digitar senha outra vez.
   const alvo = document.querySelector('.topbar-breadcrumb') || document.querySelector('.sidebar-sub');
   if(alvo) alvo.textContent = (alvo.textContent||'') + ' · ' + curso;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-left:auto';
   const badge = document.createElement('div');
-  badge.style.cssText = 'background:var(--yellow);color:#1a1d23;font-weight:800;font-size:11px;padding:4px 10px;border-radius:6px;margin-left:auto';
+  badge.style.cssText = 'background:var(--yellow);color:#1a1d23;font-weight:800;font-size:11px;padding:4px 10px;border-radius:6px';
   badge.textContent = '🎓 ' + curso;
+  const btnTrocar = document.createElement('button');
+  btnTrocar.textContent = '↺ Trocar curso';
+  btnTrocar.style.cssText = 'background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer';
+  btnTrocar.onmouseover = ()=>{ btnTrocar.style.background='var(--bg)'; };
+  btnTrocar.onmouseout = ()=>{ btnTrocar.style.background='none'; };
+  btnTrocar.onclick = _trocarCurso;
+  wrap.appendChild(badge); wrap.appendChild(btnTrocar);
   const topbar = document.querySelector('.topbar');
-  if(topbar) topbar.appendChild(badge);
+  if(topbar) topbar.appendChild(wrap);
+}
+function _trocarCurso(){
+  try{ sessionStorage.removeItem('coord_curso_travado'); }catch(e){}
+  location.reload();
 }
 
 // PATCH 111: filtra TODAS as coleções relevantes de DB pra só o curso
@@ -4272,19 +4311,17 @@ function _aplicarMarcaCurso(curso){
 function _filtrarDBPorCurso(curso){
   const categoria = CURSO_PARA_CATEGORIA[curso];
   const codigo = CURSO_PARA_CODIGO[curso] || '';
-  const normCat = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) || c;
 
-  // 1. Tutores -- mantém só quem é da categoria certa (curso específico
-  // quando o campo 'cursos' bate, senão cai pra categoria ampla)
+  // 1. Tutores -- mantém só quem é da categoria certa
   if (Array.isArray(DB.tutores)) {
-    DB.tutores = DB.tutores.filter(t => normCat(t.c||'') === categoria);
+    DB.tutores = DB.tutores.filter(t => _categoriaBate(t.c||'', categoria));
   }
 
-  // 2. Práticas (raiz + cada semestre) -- já tem 'cursos' específico
-  // (PATCH 109), então filtra fino por curso quando disponível
+  // 2. Práticas (raiz + cada semestre) -- campo 'categoria'/'c' vem no
+  // formato LONGO (descritivo), diferente do formato curto dos tutores
   function _filtraPraticasArr(arr){
     if (!Array.isArray(arr)) return arr;
-    return arr.filter(p => (p.cursos && p.cursos.length) ? p.cursos.includes(curso) : normCat(p.c||p.categoria||'')===categoria);
+    return arr.filter(p => (p.cursos && p.cursos.length) ? p.cursos.includes(curso) : _categoriaBate(p.c||p.categoria||'', categoria));
   }
   if (DB.praticas) DB.praticas = _filtraPraticasArr(DB.praticas);
   if (DB.pratica_stats) DB.pratica_stats = _filtraPraticasArr(DB.pratica_stats);
@@ -4296,7 +4333,7 @@ function _filtrarDBPorCurso(curso){
       const s = DB.gerenciamento_por_semestre[sem];
       if (Array.isArray(s.ger_ofertas)) {
         s.ger_ofertas = s.ger_ofertas.filter(o=>{
-          if (normCat(o.categoria||'') !== categoria) return false;
+          if (!_categoriaBate(o.categoria||'', categoria)) return false;
           if (o.subcurso) return _normTxtCoord(o.subcurso) === _normTxtCoord(curso);
           if (o.curso && codigo) return o.curso === codigo;
           return true; // categoria já bate e não tem info mais fina -- mantém
@@ -4305,6 +4342,20 @@ function _filtrarDBPorCurso(curso){
       if (Array.isArray(s.polo_stats)) s.polo_stats = _recalcularPoloStatsDeTutores();
       if (Array.isArray(s.praticas)) s.praticas = _filtraPraticasArr(s.praticas);
       if (Array.isArray(s.pratica_stats)) s.pratica_stats = _filtraPraticasArr(s.pratica_stats);
+    });
+  }
+
+  // 3b. CORREÇÃO: dados_por_semestre é uma estrutura SEPARADA (lado
+  // Portfólios: Práticas/Polos/Visão Geral usam ela via _SEM_DB), diferente
+  // de gerenciamento_por_semestre (lado Gerenciamento: Detalhe/Agendas/
+  // Horários, via GER_DB) -- faltava filtrar essa também, por isso Práticas
+  // continuava mostrando tudo mesmo depois de escolher o curso.
+  if (DB.dados_por_semestre) {
+    Object.keys(DB.dados_por_semestre).forEach(sem=>{
+      const s = DB.dados_por_semestre[sem];
+      if (Array.isArray(s.praticas)) s.praticas = _filtraPraticasArr(s.praticas);
+      if (Array.isArray(s.pratica_stats)) s.pratica_stats = _filtraPraticasArr(s.pratica_stats);
+      if (Array.isArray(s.polo_stats)) s.polo_stats = _recalcularPoloStatsDeTutores();
     });
   }
 
