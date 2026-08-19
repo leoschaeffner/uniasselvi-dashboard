@@ -3404,6 +3404,27 @@ def cifrar_dados(dados_json_str, senha):
     ct_b64 = base64.b64encode(ct).decode('ascii')
     return f"{iv_b64}:{ct_b64}"
 
+def gerar_html_coordenadores(dados):
+    """
+    PATCH 110: gera coordenadores.html -- segunda página no mesmo GitHub Pages,
+    mesma senha e mesmo dado cifrado do dashboard principal, mas com uma
+    interface separada e simplificada (template_coordenadores.html), travada
+    por curso, focada só em "esse polo teve oferta dessa prática ou não".
+    """
+    saida = os.path.join(SCRIPT_DIR, "saida")
+    os.makedirs(saida, exist_ok=True)
+    output = os.path.join(saida, "coordenadores.html")
+    tmpl   = os.path.join(SCRIPT_DIR, "template_coordenadores.html")
+    if not os.path.isfile(tmpl):
+        print(f"[{ts()}] AVISO: template_coordenadores.html não encontrado -- pulando geração do portal de coordenadores")
+        return
+    with open(tmpl, encoding='utf-8') as f: html = f.read()
+    json_str = json.dumps(dados, ensure_ascii=False)
+    payload_cifrado = cifrar_dados(json_str, SENHA_DASHBOARD)
+    html = html.replace("'DATA_GOES_HERE'", json.dumps(payload_cifrado))
+    with open(output, 'w', encoding='utf-8') as f: f.write(html)
+    print(f"[{ts()}] Salvo: {output} (portal de coordenadores, mesma cifra AES-256-GCM)")
+
 def gerar_html(dados):
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
@@ -3825,6 +3846,10 @@ if __name__ == '__main__':
             print(f"[{ts()}] Alunos por curso (hub CSV): {len(dados['alunos_por_curso'])} categorias, total {_tot:,}")
 
     html = gerar_html(dados)
+    try:
+        gerar_html_coordenadores(dados)
+    except Exception as e:
+        print(f"[{ts()}] AVISO: Erro ao gerar portal de coordenadores: {e}")
     if '--sem-browser' not in sys.argv:
         print(f"[{ts()}] Abrindo navegador...")
         webbrowser.open(Path(html).as_uri())
