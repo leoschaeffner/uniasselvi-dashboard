@@ -806,8 +806,13 @@ function renderMes(){
   el.innerHTML=sorted.length?sorted.map(([m,v])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:11px;font-weight:600;min-width:50px;color:var(--muted)">${m}</span><div style="flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:${v/max*100}%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px"><span style="font-size:10px;font-weight:700;color:#fff">${v}</span></div></div></div>`).join(''):`<div style="color:var(--muted);text-align:center;padding:20px">Sem dados</div>`;
 }
 function renderCatOverview(){
+  // PATCH 117: o KPI "Total Tutores" já excluía entradas anônimas/"Aviso de
+  // Portfólio" (placeholders técnicos de erro de cadastro, não tutores de
+  // verdade), mas essa seção de Categorias nunca fazia a mesma exclusão --
+  // por isso a soma das categorias podia passar do "Total Tutores" lá em
+  // cima. Aplica o mesmo filtro aqui pra bater certinho com o resto da tela.
   const el=document.getElementById('pv-cats');const cats={};
-  (_getSemTutores()||DB.tutores||[]).forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
+  (_getSemTutores()||DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio').forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
   window._pvCats=cats;
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v],i)=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
