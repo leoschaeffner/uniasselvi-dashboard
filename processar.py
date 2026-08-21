@@ -1,4515 +1,3957 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta name="robots" content="noindex, nofollow, noarchive"/>
-<title>VinciLab · Gestão de Práticas</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--green:#006B5E;--green-l:#00A88F;--green-dim:rgba(0,107,94,.1);--yellow:#FFD100;--yellow-d:#E5BC00;--yellow-dim:rgba(255,209,0,.12);--teal:#00C9A7;--teal-dim:rgba(0,201,167,.1);--red:#dc2626;--red-dim:rgba(220,38,38,.08);--ok:#16a34a;--ok-dim:rgba(22,163,74,.1);--bg:#f4f6f8;--surface:#fff;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--dim:#9ca3af;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--radius:10px;--font:'Plus Jakarta Sans','Segoe UI',sans-serif;--mono:'Cascadia Code','Consolas',monospace;}
-*{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh}
-body.dark{--bg:#0f1419;--surface:#1a2028;--card:#1e2530;--border:#2d3748;--text:#e5e7eb;--muted:#9ca3af;--dim:#6b7280;}
-.sidebar{width:240px;min-height:100vh;background:var(--green);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:300;overflow:hidden;}
-.sidebar-brand{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
-.sidebar-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;letter-spacing:1.5px;padding:5px 10px;border-radius:5px;display:inline-block;}
-.sidebar-title{color:#fff;font-size:14px;font-weight:700;margin-top:8px}
-.sidebar-sub{color:rgba(255,255,255,.5);font-size:10px;margin-top:2px}
-.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
-.sidebar-section{margin-bottom:16px}
-.sidebar-section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.35);padding:0 12px;margin-bottom:6px;}
-.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.7);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left;}
-.sidebar-item:hover{background:rgba(255,255,255,.1);color:#fff}
-.sidebar-item.active{background:var(--yellow);color:#1a1d23;font-weight:700}
-.sidebar-item .si-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
-.sidebar-item .si-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);}
-.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:8px;}
-.sidebar-ts{font-size:10px;color:rgba(255,255,255,.4);font-family:var(--mono)}
-.sidebar-dark{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;margin-left:auto;padding:4px;}
-.main{margin-left:240px;flex:1;min-width:0}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:200;}
-.topbar-title{font-size:16px;font-weight:700;color:var(--text)}
-.topbar-breadcrumb{font-size:12px;color:var(--muted)}
-.container{max-width:1400px;margin:0 auto;padding:20px 24px}
-.page{display:none}.page.active{display:block}
-.ph{margin-bottom:20px}.ph-title{font-size:22px;font-weight:800}.ph-sub{font-size:13px;color:var(--muted);margin-top:4px}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
-.kpi{background:var(--card);border-radius:var(--radius);padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden;}
-.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
-.kpi.kpi-green::before{background:var(--green)}.kpi.kpi-yellow::before{background:var(--yellow)}
-.kpi.kpi-teal::before{background:var(--teal)}.kpi.kpi-red::before{background:var(--red)}.kpi.kpi-ok::before{background:var(--ok)}
-.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
-.kpi-value{font-size:26px;font-weight:800;line-height:1}
-.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px;}.kpi-detail{font-size:11px;color:var(--muted);margin-top:4px}
-.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
-.card-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.card-title{font-size:14px;font-weight:700}.card-badge{font-size:11px;color:var(--muted);font-weight:500}
-.card-body{padding:16px 18px}
-.toolbar{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
-.search{padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text);font-family:var(--font);min-width:200px;flex:1;max-width:320px;}
-.search:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
-.sel{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text);font-family:var(--font);cursor:pointer;}
-.tbl-count{font-size:11px;color:var(--muted);margin-left:auto;font-weight:600}
-.tbl-wrap{overflow-x:auto;max-height:500px;overflow-y:auto}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{position:sticky;top:0;background:var(--bg);padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;z-index:5;}
-td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
-tr:hover td{background:rgba(0,107,94,.02)}
-.tr-pend td{background:var(--red-dim)}.tr-ok td{background:var(--ok-dim)}
-.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap}
-.badge.ok{background:var(--ok-dim);color:var(--ok)}.badge.pend{background:var(--red-dim);color:var(--red)}
-.badge.parcial{background:var(--yellow-dim);color:#b45309}.badge.info{background:var(--green-dim);color:var(--green)}
-.prog{display:flex;align-items:center;gap:8px}
-.prog-track{flex:1;height:6px;background:var(--bg);border-radius:3px;min-width:60px}
-.prog-fill{height:100%;border-radius:3px;transition:width .3s}.prog-txt{font-size:11px;font-weight:700;min-width:36px;text-align:right}
-.stat-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:0 18px 12px;background:var(--bg)}
-.stat-bar div{height:100%;transition:width .5s}
-.rank-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
-.rank-item:last-child{border:none}
-.rank-pos{font-size:11px;font-weight:800;color:var(--muted);min-width:22px;text-align:center}
-.rank-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rank-bar-wrap{width:120px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
-.rank-bar{height:100%;border-radius:4px}.rank-val{font-size:12px;font-weight:700;min-width:40px;text-align:right}
-.heatmap{display:grid;gap:3px;margin:16px 0}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
-.modal-overlay.show{display:flex}
-.modal{background:var(--card);border-radius:12px;width:100%;max-width:700px;box-shadow:0 20px 40px rgba(0,0,0,.2);animation:slideUp .2s;}
-@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.modal-title{font-size:16px;font-weight:700}.modal-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.modal-close{background:none;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);font-family:var(--font);}
-.modal-close:hover{background:var(--bg)}
-.modal-body{padding:18px 20px;max-height:65vh;overflow-y:auto}
-.prac-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
-.prac-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
-.prac-icon.done{background:var(--ok-dim);color:var(--ok)}.prac-icon.miss{background:var(--red-dim);color:var(--red)}
-.prac-name{font-size:12px;font-weight:500}.prac-date{font-size:10px;color:var(--muted);text-align:right;min-width:80px}
-.sec-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:12px 0 6px}
-.sub-tabs{display:flex;gap:4px;margin-bottom:18px;flex-wrap:wrap;border-bottom:2px solid var(--border);padding-bottom:0}
-.sub-tab{padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--muted);font-family:var(--font);border-bottom:2px solid transparent;margin-bottom:-2px;}
-.sub-tab:hover{color:var(--text)}.sub-tab.active{color:var(--green);border-bottom-color:var(--green)}
-.rtabs{display:flex;gap:4px}.rtab{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:var(--font);}
-.rtab:hover{background:var(--bg)}.rtab.active{background:var(--green);color:#fff;border-color:var(--green)}
-.tr-polo-hdr{cursor:pointer}.tr-polo-hdr:hover td{background:var(--green-dim)!important}
-.tr-polo-hdr td.polo-toggle::before{content:'▶ ';font-size:9px;color:var(--green)}
-.tr-polo-hdr.open td.polo-toggle::before{content:'▼ ';color:var(--teal)}
-.tr-polo-child{display:none;background:var(--bg)!important}.tr-polo-child.vis{display:table-row}
-.tr-polo-child td{font-size:11px;padding-left:28px!important}
-.btn-export{background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:5px;}
-.btn-export:hover{opacity:.85}
-.kpi-link{cursor:pointer;transition:transform .12s,box-shadow .12s}
-.kpi-link:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
-.kpi-link .kpi-hint{font-size:9px;color:var(--muted);margin-top:2px;opacity:0}
-.kpi-link:hover .kpi-hint{opacity:1}
-.th-sort .sort-ind{color:var(--green);margin-left:4px}
-.ch-legend{background:var(--yellow-dim);border:1px solid var(--yellow-d);border-radius:6px;padding:8px 14px;font-size:11px;margin-bottom:12px;color:#92400e}
-.col-ch-lot{}
-#lgpd-bar{position:fixed;bottom:0;left:240px;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--dim);display:flex;justify-content:space-between;z-index:100;}
-#senha-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green) 0%,#0d2b25 100%);}
-#moria-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#1a1a1f 0%,#000 80%);font-family:Georgia,'Times New Roman',serif;}
-.moria-box{max-width:520px;text-align:center;padding:40px;color:#9a9a9a;}
-.moria-runas{font-size:42px;letter-spacing:18px;color:#5a6e5e;margin-bottom:24px;text-shadow:0 0 18px rgba(90,110,94,.5);}
-.moria-texto{font-size:15px;line-height:1.9;color:#b8b8b8;margin-bottom:8px;}
-.moria-frase{font-size:13px;color:#6e8a72;font-style:italic;margin-top:20px;letter-spacing:1px;}
-.moria-btn{margin-top:32px;background:transparent;border:1px solid #4a4a4a;color:#9a9a9a;padding:10px 28px;border-radius:4px;font-family:var(--font);font-size:12px;cursor:pointer;letter-spacing:1px;}
-.moria-btn:hover{border-color:#6e8a72;color:#cfe0d0;}
-.senha-box{background:var(--card);border-radius:16px;padding:40px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.senha-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;letter-spacing:2px;padding:6px 16px;border-radius:6px;display:inline-block;margin-bottom:16px;}
-.senha-title{font-size:18px;font-weight:800;margin-bottom:4px}
-.senha-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
-.senha-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:var(--font);background:var(--bg);color:var(--text);}
-.senha-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-dim)}
-.senha-btn{width:100%;padding:12px;border:none;border-radius:8px;margin-top:12px;background:var(--green);color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--font);}
-.senha-btn:hover{background:var(--green-l)}
-.senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
-.senha-lgpd{font-size:10px;color:var(--dim);margin-top:16px}
-@media(max-width:900px){.sidebar{width:60px}.sidebar .si-label,.sidebar-title,.sidebar-sub,.sidebar-section-label,.sidebar-ts{display:none}.sidebar-brand{padding:12px 8px;text-align:center}.sidebar-item{justify-content:center;padding:10px}.sidebar-item .si-badge{display:none}.main{margin-left:60px}#lgpd-bar{left:60px}.kpi-row{grid-template-columns:repeat(2,1fr)}}
-body.sidebar-collapsed .sidebar{width:60px}
-body.sidebar-collapsed .sidebar .si-label,body.sidebar-collapsed .sidebar-title,body.sidebar-collapsed .sidebar-sub,body.sidebar-collapsed .sidebar-section-label,body.sidebar-collapsed .sidebar-ts{display:none}
-body.sidebar-collapsed .sidebar-brand{padding:12px 8px;text-align:center}
-body.sidebar-collapsed .sidebar-item{justify-content:center;padding:10px}
-body.sidebar-collapsed .sidebar-item .si-badge{display:none}
-body.sidebar-collapsed .main{margin-left:60px}
-body.sidebar-collapsed #lgpd-bar{left:60px}
-body.sidebar-collapsed #sem-selector{display:none}
-body.sidebar-collapsed .sidebar-logo{display:none}
-.sidebar,.main,#lgpd-bar{transition:width .2s,margin-left .2s,left .2s}
-.sidebar-collapse-btn{position:absolute;top:14px;right:-12px;width:24px;height:24px;border-radius:50%;background:var(--card);border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:301;font-size:11px;color:var(--muted)}
-.sidebar-collapse-btn:hover{color:var(--green)}
-body.dark .sidebar{background:#0a1f1c}
-body.dark th{background:var(--surface)}
-body.dark .search,body.dark .sel{background:var(--surface)}
-</style>
-</head>
-<body>
-<nav class="sidebar">
-  <div class="sidebar-collapse-btn" onclick="toggleSidebar()" id="sidebar-collapse-btn" title="Recolher/expandir menu">‹</div>
-  <div class="sidebar-brand"><div class="sidebar-logo">VinciLab</div><div class="sidebar-title">Gestão de Práticas</div><div class="sidebar-sub">VinciLab · 2026</div></div>
-  <!-- Seletor de semestre -->
-  <div id="sem-selector" style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.1);display:none">
-    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.4);margin-bottom:6px">Semestre</div>
-    <div id="sem-tabs" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-  </div>
+"""
+UNIASSELVI - Dashboard de Portfolios
+Le as planilhas da pasta planilhas/ e gera saida/dashboard.html
 
-  <div class="sidebar-nav">
-    <div class="sidebar-section">
-      <div class="sidebar-section-label" id="sidebar-port-label">Portfólios</div>
-      <button class="sidebar-item active" onclick="navTo('port-visao')"><span class="si-icon">📊</span><span class="si-label">Visão Geral</span></button>
-      <button class="sidebar-item" onclick="navTo('port-praticas')"><span class="si-icon">🔬</span><span class="si-label">Práticas</span></button>
-      <button class="sidebar-item" onclick="navTo('port-polos')"><span class="si-icon">🏛️</span><span class="si-label">Polos</span></button>
-    </div>
-    <div class="sidebar-section" id="sidebar-ger" style="display:none">
-      <div class="sidebar-section-label">Gerenciamento</div>
-      <button class="sidebar-item" onclick="navTo('ger-agendas')"><span class="si-icon">📆</span><span class="si-label">Agendas</span></button>
-      <button class="sidebar-item" onclick="navTo('agendas-estudo')"><span class="si-icon">🕐</span><span class="si-label">Horários e Engajamento</span></button>
-      <button class="sidebar-item" onclick="navTo('ger-detalhe')"><span class="si-icon">🔍</span><span class="si-label">Detalhe</span></button>
-    </div>
-    <div class="sidebar-section" id="sidebar-vagas" style="display:none">
-      <div class="sidebar-section-label">Vagas</div>
-      <button class="sidebar-item" onclick="navTo('vagas')"><span class="si-icon">📝</span><span class="si-label">Vagas</span></button>
-    </div>
-    <div class="sidebar-section" id="sidebar-futuro" style="display:none">
-      <div class="sidebar-section-label">Em breve</div>
-      <button class="sidebar-item" disabled style="opacity:.4"><span class="si-icon">📦</span><span class="si-label">Insumos</span><span class="si-badge">Em breve</span></button>
-    </div>
-  </div>
-  <div class="sidebar-footer"><span class="sidebar-ts" id="ts-label">—</span><button class="sidebar-dark" onclick="toggleDark()" title="Modo escuro">🌙</button></div>
-</nav>
-<div class="main">
-<div class="topbar">
-  <span class="topbar-title" id="topbar-title">Visão Geral</span>
-  <span class="topbar-breadcrumb" id="topbar-bread">Portfólios</span>
-  <span id="sem-badge" style="margin-left:auto;font-size:11px;font-weight:700;background:var(--yellow);color:#1a1d23;padding:3px 10px;border-radius:6px;display:none"></span>
-  <span id="topbar-ts" style="margin-left:8px;font-size:10px;color:var(--dim);font-family:var(--mono)"></span>
-</div>
+PATCHES v2 aplicados:
+  1. CH SEMANAL lida de 01_CONTROLE_TUTORIA.xlsx (não depende de LOTACAO)
+  2. tem_lotacao = True somente quando há ch_semanal > 0 nos tutores
+  3. status_ordem usa PERIODOS_ORDENS para datas de início corretas
+  4. Situação do tutor corrigida quando nenhuma ordem está vencida ainda
+  5. Campo 'sit' sincronizado após deduplicação por email
+  6. Prints duplicados removidos de verificar_e_localizar()
+  7. datas_por_tutor adicionado no formato antigo de agendas
+"""
 
-<!-- ═══ PORTFÓLIOS — VISÃO GERAL ═════════════════════════════════════════ -->
-<div class="page active" id="page-port-visao"><div class="container">
-  <div class="ph"><div class="ph-title">Portfólios — Visão Geral</div><div class="ph-sub" id="pv-sub">—</div></div>
-  <div class="kpi-row" id="pv-kpis"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <div class="card"><div class="card-hdr"><div class="card-title">Situação dos Tutores</div></div><div class="stat-bar" id="pv-stat-bar"></div><div class="card-body" id="pv-ofensores"></div></div>
-    <div class="card"><div class="card-hdr"><div class="card-title">Envios por Mês</div></div><div class="card-body" id="pv-mes"></div></div>
-  </div>
-  <div class="card"><div class="card-hdr"><div class="card-title">Categorias</div></div><div class="card-body" id="pv-cats"></div></div>
-</div></div>
+import pandas as pd
+import re
+import json, os, sys, math, webbrowser, time, threading, glob, hashlib, base64, unicodedata
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+from collections import defaultdict
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-<!-- ═══ PORTFÓLIOS — ORDENS ══════════════════════════════════════════════ -->
-<div class="page" id="page-port-ordens"><div class="container">
-  <div class="ph"><div class="ph-title">Portfólios — Ordens</div><div class="ph-sub">Acompanhamento por ordem de disciplina</div></div>
-  <div id="po-cards"></div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar tutor, polo…" oninput="filterOrdemTbl(this.value)" id="ordem-search"/>
-      <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-sel"><option value="">Todas ordens</option></select>
-      <select class="sel" onchange="filterOrdemTbl(document.getElementById('ordem-search').value)" id="ordem-cat-sel"><option value="">Todas categorias</option></select>
-      <span class="tbl-count" id="ordem-count">—</span>
-      <button class="btn-export" onclick="exportPendentes()">⬇ Pendentes</button>
-      <button class="btn-export" onclick="exportEnviados()" style="background:var(--teal)">⬇ Enviados</button>
-    </div>
-    <div class="tbl-wrap"><table><thead><tr>
-      <th onclick="sortOrdem('n')">Tutor</th><th onclick="sortOrdem('p')">Polo</th><th onclick="sortOrdem('c')">Categoria</th>
-      <th onclick="sortOrdem('o1')">O.1</th><th onclick="sortOrdem('o2')">O.2</th><th onclick="sortOrdem('o3')">O.3</th><th onclick="sortOrdem('o4')">O.4</th><th onclick="sortOrdem('o5')">O.5</th>
-      <th onclick="sortOrdem('te')" style="text-align:right">Total</th>
-    </tr></thead><tbody id="ordem-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ PORTFÓLIOS — PRÁTICAS ════════════════════════════════════════════ -->
-<div class="page" id="page-port-praticas"><div class="container">
-  <div class="ph"><div class="ph-title">Portfólios — Práticas</div><div class="ph-sub">Análise por prática laboratorial</div></div>
-  <div class="kpi-row" id="pp-kpis"></div>
-  <div class="card"><div class="card-hdr"><div class="card-title">Por Categoria</div></div><div class="card-body" id="pp-cat-bars"></div></div>
-  <div class="card">
-    <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div style="display:flex;align-items:center;gap:8px"><div class="card-title" id="pp-rank-title">🔴 Top 20 — Mais Pendências</div><button class="btn-export" id="btn-export-prac" onclick="exportPraticas('pend')" style="font-size:10px;padding:3px 8px">⬇ Exportar</button></div>
-      <div class="rtabs"><button class="rtab active" id="rtab-pend" onclick="switchRankTab('pend')">Mais Pendentes</button><button class="rtab" id="rtab-env" onclick="switchRankTab('env')">Mais Aplicadas</button><button class="rtab" id="rtab-menos" onclick="switchRankTab('menos')">Menos Aplicadas</button></div>
-    </div>
-    <div class="card-body" id="pp-ranking"></div>
-  </div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar prática…" oninput="filterPrac(this.value)" id="prac-search"/>
-      <select class="sel" onchange="filterPrac(document.getElementById('prac-search').value)" id="prac-cat-sel"><option value="">Todas categorias</option></select>
-      <select class="sel" onchange="filterPrac(document.getElementById('prac-search').value)" id="prac-curso-sel"><option value="">Todos cursos</option></select>
-      <span class="tbl-count" id="prac-count">—</span>
-    </div>
-    <div class="tbl-wrap"><table><thead><tr><th onclick="sortPrac('n')">Prática</th><th onclick="sortPrac('c')">Categoria</th><th onclick="sortPrac('env_n')" style="text-align:right">Enviaram</th><th onclick="sortPrac('pend_n')" style="text-align:right">Pendentes</th><th onclick="sortPrac('pct')">Conclusão</th></tr></thead><tbody id="prac-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ PORTFÓLIOS — POLOS ═══════════════════════════════════════════════ -->
-<div class="page" id="page-port-polos"><div class="container">
-  <div class="ph"><div class="ph-title">Portfólios — Polos</div><div class="ph-sub" id="polo-sub">—</div></div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterPolos(this.value)" id="polo-search"/>
-      <select class="sel" onchange="filterPolos(document.getElementById('polo-search').value)" id="polo-status-sel"><option value="">Todos</option><option value="pend">Com pendências</option><option value="ok">100% enviado</option></select>
-      <span class="tbl-count" id="polo-count">—</span>
-    </div>
-    <div class="stat-bar" id="polo-stat-bar"></div>
-    <div class="tbl-wrap"><table><thead><tr><th onclick="sortPolo('n')">Polo</th><th onclick="sortPolo('t')" style="text-align:right">Tutores</th><th onclick="sortPolo('e')" style="text-align:right">Enviaram</th><th onclick="sortPolo('pend')" style="text-align:right">Pendentes</th><th onclick="sortPolo('a')" style="text-align:right">Alunos</th><th onclick="sortPolo('pct')">Conclusão</th></tr></thead><tbody id="polo-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ PORTFÓLIOS — TUTORES ═════════════════════════════════════════════ -->
-<div class="page" id="page-port-tutores"><div class="container">
-  <div class="ph"><div class="ph-title">Portfólios — Tutores</div><div class="ph-sub" id="tutor-sub">—</div></div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar tutor, polo ou categoria…" oninput="filterTutores(this.value)" id="tutor-search"/>
-      <select class="sel" onchange="filterTutores(document.getElementById('tutor-search').value)" id="tutor-status-sel"><option value="">Todos</option><option value="ok">Enviou</option><option value="pend">Pendente</option></select>
-      <select class="sel" onchange="filterTutores(document.getElementById('tutor-search').value)" id="tutor-cat-sel"><option value="">Todas categorias</option></select>
-      <span class="tbl-count" id="tutor-count">—</span>
-      <button class="btn-export" onclick="exportTutores()">⬇ Exportar</button>
-    </div>
-    <div class="stat-bar" id="tutor-stat-bar"></div>
-    <div class="tbl-wrap"><table><thead><tr><th onclick="sortTutor('n')">Tutor</th><th onclick="sortTutor('p')">Polo</th><th onclick="sortTutor('c')">Categoria</th><th onclick="sortTutor('te')" style="text-align:right">Portfólios</th><th onclick="sortTutor('pct')">Conclusão</th><th>Status</th><th>Detalhe</th></tr></thead><tbody id="tutor-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ GERENCIAMENTO — VISÃO GERAL ══════════════════════════════════════ -->
-<div class="page" id="page-tutores-mec"><div class="container">
-  <div class="ph"><div class="ph-title">Gestão de Tutores</div><div class="ph-sub" id="tutmec-sub">—</div></div>
-  <div class="kpi-row" id="tutmec-kpis" style="margin-bottom:12px"></div>
-  <div style="font-size:11px;color:var(--muted);margin:-6px 0 12px 2px">
-    <b>Gerenc.</b> = capacidade esperada, não quantidade de registros: CH contratada → práticas/semana → capacidade por ordem (4h→8, 8h→16, 12h→24, 20h→40, 24h→48), multiplicada pelas 5 ordens do semestre (O.1 a O.5) — não só as ordens em que o tutor já tem dado.
-  </div>
-  <div class="card" style="margin-bottom:12px">
-    <div class="toolbar" style="flex-wrap:wrap;gap:6px">
-      <input class="search" type="text" placeholder="Buscar tutor, polo…" oninput="filterTutoresMec(this.value)" id="tutmec-search" style="min-width:180px;flex:1"/>
-      <select class="sel" onchange="filterTutoresMec(document.getElementById('tutmec-search').value)" id="tutmec-cat-sel">
-        <option value="">Todas as categorias</option>
-      </select>
-      <select class="sel" onchange="filterTutoresMec(document.getElementById('tutmec-search').value)" id="tutmec-tit-sel">
-        <option value="">Todas as titulações</option>
-        <option value="Doutor">Doutor</option>
-        <option value="Mestre">Mestre</option>
-        <option value="Especialista">Especialista</option>
-        <option value="Graduado">Graduado</option>
-      </select>
-      <select class="sel" onchange="filterTutoresMec(document.getElementById('tutmec-search').value)" id="tutmec-lattes-sel">
-        <option value="">Lattes: todos</option>
-        <option value="com">Com Lattes</option>
-        <option value="sem">Sem Lattes</option>
-      </select>
-      <select class="sel" onchange="filterTutoresMec(document.getElementById('tutmec-search').value)" id="tutmec-port-sel">
-        <option value="">Portfólio: todos</option>
-        <option value="ok">Enviou portfólio</option>
-        <option value="pend">Não enviou</option>
-      </select>
-      <select class="sel" onchange="filterTutoresMec(document.getElementById('tutmec-search').value)" id="tutmec-ger-sel">
-        <option value="">Gerenc.: todos</option>
-        <option value="ok">100% gerenciado</option>
-        <option value="parcial">Parcialmente</option>
-        <option value="nao">Não gerenciado</option>
-        <option value="sem_dados">Sem dados</option>
-      </select>
-      <button class="btn-export" onclick="exportTutoresAtivosPorCurso()" style="background:var(--teal)">⬇ Exportar Tutores por Curso</button>
-      <input type="month" id="tutmec-desl-mes" class="sel" style="padding:6px 10px" title="Mês de referência pro relatório de desligados">
-      <button class="btn-export" onclick="exportTutoresDesligados()" style="background:var(--red)">⬇ Desligados do Mês</button>
-    </div>
-  </div>
-  <div id="tutmec-table-wrap"></div>
-</div></div>
-<div class="page" id="page-ger-visao"><div class="container">
-  <div class="ph"><div class="ph-title">Gerenciamento — Visão Geral</div><div class="ph-sub" id="gv-sub">—</div></div>
-  <div class="kpi-row" id="gv-kpis"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card"><div class="card-hdr"><div class="card-title">📊 Por Categoria</div></div><div class="card-body" id="gv-cat-cards"></div></div>
-    <div class="card"><div class="card-hdr"><div class="card-title">📅 Por Ordem</div></div><div class="card-body" id="gv-ordem-cards"></div></div>
-    <div class="card"><div class="card-hdr"><div class="card-title">👥 Tutores Gerenciaram, por Ordem</div></div><div class="card-body" id="gv-ordem-tutores-chart" style="padding:6px 0"></div></div>
-    <div class="card" id="gv-anomalia-ordem-card" style="display:none">
-      <div class="card-hdr"><div class="card-title">⚠️ Gerenciamento Fora do Período da Ordem</div></div>
-      <div class="card-body">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Práticas de uma ordem mais avançada geridas enquanto a data ainda caía dentro do período oficial de uma ordem anterior — possível desde que o GIOCONDA parou de travar isso.</div>
-        <div id="gv-anomalia-ordem-lista"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- LINHA PRINCIPAL: coluna esquerda (ranking+mapa+estados) | coluna direita (heatmap) -->
-  <div style="display:grid;grid-template-columns:1fr 1.05fr;gap:16px;align-items:start">
-
-    <!-- COLUNA ESQUERDA -->
-    <div style="display:flex;flex-direction:column;gap:16px">
-
-      <!-- Ranking -->
-      <div class="card"><div class="card-hdr"><div class="card-title">🔥 Top 10 Polos — Mais Ofertas sem Tutor</div></div><div class="card-body" id="gv-ranking"></div></div>
-
-      <!-- Mapa do Brasil -->
-      <div class="card">
-        <div class="card-hdr" style="flex-wrap:wrap;gap:8px">
-          <div class="card-title">🗺️ Gerenciamento por Estado</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);align-items:center">
-            <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:3px"></span>≥75%</span>
-            <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;opacity:.6;border-radius:2px;margin-right:3px"></span>50–75%</span>
-            <span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:3px"></span>25–50%</span>
-            <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:3px"></span>&lt;25%</span>
-            <span><span style="display:inline-block;width:10px;height:10px;background:#cbd5e1;border-radius:2px;margin-right:3px"></span>Sem dados</span>
-          </div>
-        </div>
-        <div class="card-body" style="padding:8px;text-align:center">
-          <svg id="mapa-brasil" viewBox="0 0 700 700" style="width:100%;max-width:800px;cursor:pointer" xmlns="http://www.w3.org/2000/svg"></svg>
-          <div id="mapa-tooltip" style="display:none;position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;pointer-events:none;z-index:400;box-shadow:var(--shadow-md);max-width:220px"></div>
-        </div>
-      </div>
-
-      <!-- Tabela de Estados -->
-      <div class="card">
-        <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-          <div class="card-title">📋 Estados</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="text" class="search" placeholder="Buscar estado…" style="max-width:160px;margin:0" oninput="filterGerEstadosInline(this.value)" id="gv-estados-search"/>
-            <span class="tbl-count" id="gv-estados-count">—</span>
-          </div>
-        </div>
-        <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
-          <th onclick="sortTable('gv-estados-tbody','uf','str')">UF / Estado</th>
-          <th style="text-align:right" onclick="sortTable('gv-estados-tbody','polos','num')">Polos</th>
-          <th style="text-align:right" onclick="sortTable('gv-estados-tbody','ofertas','num')">Ofertas</th>
-          <th style="text-align:right" onclick="sortTable('gv-estados-tbody','ger','num')">Ger.</th>
-          <th onclick="sortTable('gv-estados-tbody','pct','num')">%</th>
-          <th style="text-align:right;color:var(--red)" onclick="sortTable('gv-estados-tbody','st','num')">-Tutor</th>
-          <th style="text-align:right;color:var(--muted)" onclick="sortTable('gv-estados-tbody','mat','num')">Al. Mat.</th>
-        </tr></thead><tbody id="gv-estados-tbody"></tbody></table></div>
-      </div>
-
-    </div><!-- /coluna esquerda -->
-
-    <!-- COLUNA DIREITA — Heatmap TODOS os polos -->
-    <div class="card" style="height:fit-content">
-      <div class="card-hdr" style="justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <div class="card-title">🔲 Cobertura de Tutores por Polo × Categoria</div>
-        <div style="font-size:10px;color:var(--muted)"><span style="background:var(--ok-dim);color:var(--ok);padding:2px 6px;border-radius:3px;font-weight:700;margin-right:4px">✓</span>Com tutor <span style="background:var(--red-dim);color:var(--red);padding:2px 6px;border-radius:3px;font-weight:700;margin:0 4px">✕</span>Sem tutor</div>
-      </div>
-      <div id="gv-heatmap" style="padding:0"></div>
-    </div>
-
-  </div><!-- /grid principal -->
-
-</div></div><!-- /page-ger-visao  ← FECHADO CORRETAMENTE -->
-
-<!-- ═══ GERENCIAMENTO — OFERTAS ═══════════════════════════════════════════ -->
-<div class="page" id="page-ger-ofertas"><div class="container">
-  <div class="ph"><div class="ph-title">Gerenciamento — Ofertas por Polo</div></div>
-  <div class="card">
-    <div class="toolbar"><input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerPolo(this.value)" id="ger-polo-search"/><span class="tbl-count" id="ger-polo-count">—</span></div>
-    <div class="tbl-wrap"><table><thead><tr>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="polo" onclick="sortTable('ger-polo-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="tot" style="text-align:right" onclick="sortTable('ger-polo-tbody','tot','num')">Ofertas<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="ger" style="text-align:right" onclick="sortTable('ger-polo-tbody','ger','num')">Gerenciadas<span class="sort-ind"> ▼</span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="pct" onclick="sortTable('ger-polo-tbody','pct','num')">% Ger.<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="ct" style="text-align:right" onclick="sortTable('ger-polo-tbody','ct','num')">Com Tutor<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="st" style="text-align:right" onclick="sortTable('ger-polo-tbody','st','num')">Sem Tutor<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="mat" style="text-align:right" onclick="sortTable('ger-polo-tbody','mat','num')" title="Alunos Matriculados — total de alunos com oferta de laboratório">Al. Mat.<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="ag" style="text-align:right" onclick="sortTable('ger-polo-tbody','ag','num')" title="Alunos com data de agendamento confirmada">Al. Agend.<span class="sort-ind"></span></th>
-    </tr></thead><tbody id="ger-polo-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ GERENCIAMENTO — CONTRATAÇÃO ══════════════════════════════════════ -->
-<div class="page" id="page-ger-contratacao"><div class="container">
-  <div class="ph"><div class="ph-title">Gerenciamento — Status de Contratação</div></div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo ou categoria…" oninput="filterGerContr(this.value)" id="ger-contr-search"/>
-      <select class="sel" onchange="filterGerContr(document.getElementById('ger-contr-search').value)" id="ger-contr-status"><option value="">Todos</option><option value="sem">Sem tutor</option><option value="com">Contratado</option></select>
-      <span class="tbl-count" id="ger-contr-count">—</span>
-      <button class="btn-export" onclick="exportSemTutor()">⬇ Sem Tutor</button>
-    </div>
-    <div class="tbl-wrap"><table><thead><tr><th class="polo-toggle">Polo</th><th style="text-align:right">Labs</th><th style="text-align:right">Sem Tutor</th><th>Cobertura</th><th></th></tr></thead><tbody id="ger-contr-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ ANÁLISE DE AGENDAS (seção própria) ════════════════════════════════ -->
-<div class="page" id="page-agendas-estudo"><div class="container">
-  <div class="ph"><div class="ph-title">Análise de Agendas — Horários e Engajamento</div><div class="ph-sub" id="ae-sub">—</div></div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-hdr"><div class="card-title">📊 Gerenciamento de Ofertas</div></div>
-    <div id="ae-ofertas-resumo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:6px 0"></div>
-  </div>
-  <div class="kpi-row" id="ae-kpis"></div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-hdr"><div class="card-title">🔎 Ver 1 por 1 (opcional)</div></div>
-    <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-      <select class="sel" id="ae-filtro-polo" onchange="filterAgendasPoloTutor()"><option value="">Todos os polos</option></select>
-      <select class="sel" id="ae-filtro-tutor" onchange="filterAgendasPoloTutor()"><option value="">Todos os tutores</option></select>
-      <span style="font-size:11px;color:var(--muted)">Deixa em "Todos" pra ver o agregado de sempre — escolhe um polo ou tutor pra ver só os horários dele.</span>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card"><div class="card-hdr"><div class="card-title">📅 Distribuição por Dia da Semana</div></div><div class="card-body" id="ae-dias"></div></div>
-    <div class="card"><div class="card-hdr"><div class="card-title">🕐 Distribuição por Turno</div></div><div class="card-body" id="ae-turnos"></div></div>
-  </div>
-  <div class="card">
-    <div class="card-hdr"><div class="card-title">📚 Por Laboratório / Curso</div></div>
-    <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
-      <th onclick="sortTable('ae-cat-tbody','cat','str')">Laboratório/Curso<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('ae-cat-tbody','tot','num')">Ofertas c/ Agenda<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('ae-cat-tbody','inc','num')">Horários Incomuns<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('ae-cat-tbody','sa','num')">Sem Aluno<span class="sort-ind"></span></th>
-      <th onclick="sortTable('ae-cat-tbody','eng','num')">Engajamento<span class="sort-ind"></span></th>
-    </tr></thead><tbody id="ae-cat-tbody"></tbody></table></div>
-  </div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-hdr"><div class="card-title">🎓 Matriculados × Agendados por Prática</div><div class="card-badge" id="ae-pratica-count">—</div></div>
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar prática, polo, categoria…" oninput="filterAgendasPratica(this.value)" id="ae-pratica-search"/>
-      <span class="tbl-count" id="ae-pratica-tbl-count">—</span>
-      <button class="btn-export" onclick="exportAgendasPratica()">⬇ Exportar</button>
-    </div>
-    <div style="padding:8px 16px 0;font-size:11px;color:var(--muted)">ℹ️ Matriculados/Agendados vêm por turma (Polo+Categoria) no GIOCONDA, não por prática individual — práticas da mesma turma repetem o mesmo valor. Não somar esta coluna entre práticas da mesma turma (infla o total).</div>
-    <div class="tbl-wrap" style="max-height:420px"><table><thead><tr>
-      <th onclick="sortTable('ae-pratica-tbody','pratica','str')">Prática<span class="sort-ind"></span></th>
-      <th onclick="sortTable('ae-pratica-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
-      <th onclick="sortTable('ae-pratica-tbody','cat','str')">Categoria<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('ae-pratica-tbody','mat','num')">Matriculados (turma)<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('ae-pratica-tbody','agend','num')">Agendados (turma)<span class="sort-ind"></span></th>
-      <th onclick="sortTable('ae-pratica-tbody','pct','num')">Engajamento<span class="sort-ind"></span></th>
-    </tr></thead><tbody id="ae-pratica-tbody"></tbody></table></div>
-  </div>
-  <div class="card">
-    <div class="card-hdr"><div class="card-title">⚠️ Horários Incomuns — Domingo ou Madrugada (00h–06h)</div><div class="card-badge" id="ae-incomuns-count">—</div></div>
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo, tutor…" oninput="filterAgendasIncomuns(this.value)" id="ae-incomuns-search"/>
-      <span class="tbl-count" id="ae-incomuns-tbl-count">—</span>
-      <button class="btn-export" onclick="exportAgendasIncomuns()">⬇ Exportar</button>
-    </div>
-    <div class="tbl-wrap" style="max-height:400px"><table><thead><tr>
-      <th>Polo</th><th>Tutor</th><th>Curso/Lab</th><th>Dia</th><th>Turno</th><th>Data</th><th>Horário</th>
-    </tr></thead><tbody id="ae-incomuns-tbody"></tbody></table></div>
-  </div>
-  <div class="card">
-    <div class="card-hdr"><div class="card-title">🪑 Gerenciamentos sem Nenhum Aluno Agendado</div><div class="card-badge" id="ae-semaluno-count">—</div></div>
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo, tutor…" oninput="filterAgendasSemAluno(this.value)" id="ae-semaluno-search"/>
-      <span class="tbl-count" id="ae-semaluno-tbl-count">—</span>
-      <button class="btn-export" onclick="exportAgendasSemAluno()">⬇ Exportar</button>
-    </div>
-    <div class="tbl-wrap" style="max-height:400px"><table><thead><tr>
-      <th onclick="sortTable('ae-semaluno-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
-      <th onclick="sortTable('ae-semaluno-tbody','tutor','str')">Tutor<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('ae-semaluno-tbody','qtd','num')">Sessões sem aluno<span class="sort-ind"></span></th>
-      <th>Dias/turnos mais usados</th>
-    </tr></thead><tbody id="ae-semaluno-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ GERENCIAMENTO — AGENDAS ═══════════════════════════════════════════ -->
-<div class="page" id="page-ger-agendas"><div class="container">
-  <div class="ph"><div class="ph-title">Gerenciamento — Agendas por Polo</div><div class="ph-sub">⚡ Polos com muitos alunos matriculados e poucos agendamentos = baixa adesão dos estudantes</div></div>
-  <div class="kpi-row" id="ag-kpis"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0">
-    <div class="card"><div class="card-hdr"><div class="card-title">🏆 Top Polos — Mais Agendamentos</div></div><div class="card-body" id="ag-top-polos"></div></div>
-    <div class="card"><div class="card-hdr"><div class="card-title">📊 Agendamentos vs Pendentes</div></div><div class="card-body" id="ag-dist"></div></div>
-  </div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterGerAgenda(this.value)" id="ger-agenda-search"/>
-      <select class="sel" id="ag-status-sel" onchange="filterGerAgenda(document.getElementById('ger-agenda-search').value)"><option value="">Todos</option><option value="sem">Sem agenda</option><option value="com">Com agenda</option></select>
-      <span class="tbl-count" id="ger-agenda-count">—</span>
-    </div>
-    <div class="tbl-wrap"><table><thead><tr>
-      <th data-sort-table="ger-agenda-tbody" data-sort-col="polo" onclick="sortTable('ger-agenda-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-agenda-tbody" data-sort-col="tot" style="text-align:right" onclick="sortTable('ger-agenda-tbody','tot','num')">Total Ofertas<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-agenda-tbody" data-sort-col="ca" style="text-align:right" onclick="sortTable('ger-agenda-tbody','ca','num')">Com Agenda<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-agenda-tbody" data-sort-col="sa" style="text-align:right" onclick="sortTable('ger-agenda-tbody','sa','num')">Sem Agenda<span class="sort-ind"> ▼</span></th>
-      <th data-sort-table="ger-agenda-tbody" data-sort-col="pct" onclick="sortTable('ger-agenda-tbody','pct','num')">% Agendado<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-agenda-tbody" data-sort-col="prx" onclick="sortTable('ger-agenda-tbody','prx','str')">Próxima Data<span class="sort-ind"></span></th>
-    </tr></thead><tbody id="ger-agenda-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ GERENCIAMENTO — DETALHE ═══════════════════════════════════════════ -->
-<div class="page" id="page-ger-detalhe"><div class="container">
-  <div class="ph"><div class="ph-title">Gerenciamento — Detalhe de Ofertas</div></div>
-  <div class="ch-legend">
-    <strong>📌 Legenda — Colunas de Carga Horária:</strong>
-    &nbsp;|&nbsp; <strong>O.1–O.4</strong> = qtd. práticas gerenciadas na ordem (ex: 3/12 = gerenciou 3 de 12 práticas disponíveis)
-    &nbsp;|&nbsp; <strong>CH Cont.</strong> = carga horária semanal contratada (da planilha de Lotação)
-    &nbsp;|&nbsp; <strong>CH Real.</strong> = CH efetivamente realizada (nº práticas × 1,5h)
-    &nbsp;|&nbsp; <strong>CH Disp.</strong> = CH estimada disponível ainda. <span style="color:var(--red)">Vermelho = excedeu capacidade estimada.</span>
-  </div>
-  <div class="card" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
-    <div style="flex-shrink:0">
-      <div class="sec-label" style="margin-bottom:8px">Tutores Gerenciaram × Não Gerenciaram <span id="det-pizza-cat-label" style="font-weight:400;color:var(--muted)"></span></div>
-      <div id="det-pizza-chart" style="display:flex;align-items:center;gap:16px"></div>
-    </div>
-    <div id="det-pizza-ordem-wrap" style="flex-shrink:0;padding-left:24px;border-left:1px solid var(--border);display:none">
-      <div class="sec-label" style="margin-bottom:8px">Neste recorte <span id="det-pizza-ordem-label" style="font-weight:400;color:var(--muted)"></span></div>
-      <div id="det-pizza-chart-ordem" style="display:flex;align-items:center;gap:16px"></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo, prática, tutor…" oninput="filterGerDetalhe(this.value)" id="ger-det-search"/>
-      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todos os grupos</option></select>
-      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-subcurso" style="display:none"><option value="">Toda Exatas</option></select>
-      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem"><option value="">Todas ordens</option></select>
-      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status"><option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option></select>
-      <span class="tbl-count" id="ger-det-count">—</span>
-      <button class="btn-export" onclick="exportDetalhe()">⬇ Sem Gerenc.</button>
-      <button class="btn-export" onclick="exportPolosSemGerenc()" style="background:var(--red)">⬇ Polos sem Gerenc.</button>
-      <button class="btn-export" onclick="exportRelatorioPorCurso()" style="background:var(--yellow-d)">⬇ Relatório por Curso</button>
-      <button class="btn-export" onclick="abrirSemGerenciamento()" style="background:var(--teal)">🔍 Ver Sem Gerenc.</button>
-    </div>
-    <div class="tbl-wrap" style="max-height:600px"><table style="table-layout:fixed;width:100%">
-      <colgroup>
-        <col style="width:170px"><!-- Polo -->
-        <col style="width:150px"><!-- Tutor -->
-        <col style="width:140px"><!-- Curso/Lab -->
-        <col style="width:62px"><!-- O.1 -->
-        <col style="width:62px"><!-- O.2 -->
-        <col style="width:62px"><!-- O.3 -->
-        <col style="width:62px"><!-- O.4 -->
-        <col style="width:58px"><!-- O.5 -->
-        <col class="col-ch-lot" style="width:72px"><!-- CH Cont. -->
-        <col style="width:68px"><!-- CH Real. -->
-        <col class="col-ch-lot" style="width:68px"><!-- CH Disp. -->
-        <col style="width:82px"><!-- % Ger. -->
-      </colgroup>
-      <thead><tr style="height:38px">
-        <th onclick="sortDetalhe('polo')" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" id="gd-th-polo">Polo<span class="sort-ind" id="gd-ind-polo"></span></th>
-        <th onclick="sortDetalhe('tutor')" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" id="gd-th-tutor">Tutor<span class="sort-ind" id="gd-ind-tutor"></span></th>
-        <th style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Curso / Lab</th>
-        <th style="text-align:center;white-space:nowrap" title="Ordem 1: práticas ger./cap.">O.1<br><small style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap</small></th>
-        <th style="text-align:center;white-space:nowrap" title="Ordem 2">O.2<br><small style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap</small></th>
-        <th style="text-align:center;white-space:nowrap" title="Ordem 3">O.3<br><small style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap</small></th>
-        <th style="text-align:center;white-space:nowrap" title="Ordem 4">O.4<br><small style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap</small></th>
-        <th style="text-align:center;white-space:nowrap" title="Ordem 5 (EngMaker/Química)">O.5<br><small style="font-size:8px;font-weight:400;color:var(--muted)">ger/cap</small></th>
-        <th class="col-ch-lot" style="text-align:right;white-space:nowrap" title="CH Contratada Semanal (Planilha de Lotação)">CH Cont.<br><small style="font-size:8px;font-weight:400;color:var(--muted)">semanal</small></th>
-        <th style="text-align:right;white-space:nowrap" title="CH Realizada = práticas × 1,5h">CH Real.<br><small style="font-size:8px;font-weight:400;color:var(--muted)">×1,5h</small></th>
-        <th class="col-ch-lot" style="text-align:right;white-space:nowrap" title="CH Disponível estimada restante">CH Disp.<br><small style="font-size:8px;font-weight:400;color:var(--muted)">restante</small></th>
-        <th onclick="sortDetalhe('pct')" style="white-space:nowrap;cursor:pointer" id="gd-th-pct">% Ger.<span class="sort-ind" id="gd-ind-pct"></span></th>
-      </tr></thead><tbody id="ger-det-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- ═══ VAGAS (RH) ══════════════════════════════════════════════════════ -->
-<div class="page" id="page-vagas"><div class="container">
-  <div class="ph"><div class="ph-title">Vagas — Situação por Polo</div><div class="ph-sub">Onde tem tutor, onde não tem, e a previsão de contratação</div></div>
-  <div class="kpi-row" id="vagas-kpis"></div>
-  <div class="card">
-    <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterVagas(this.value)" id="vagas-search"/>
-      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-status-sel"><option value="">Todos os status</option><option value="Aumento de Quadro">Sem tutor (aumento de quadro)</option><option value="Substituição">Precisa substituir</option></select>
-      <span class="tbl-count" id="vagas-count">—</span>
-    </div>
-    <div class="tbl-wrap"><table><thead><tr>
-      <th onclick="sortVagas('polo')">Polo</th>
-      <th onclick="sortVagas('status')">Situação</th>
-      <th onclick="sortVagas('contratacao')">Previsão de Contratação</th>
-    </tr></thead><tbody id="vagas-tbody"></tbody></table></div>
-  </div>
-</div></div>
-
-<!-- MODAL -->
-<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <div class="modal-header"><div><div class="modal-title" id="m-title">—</div><div class="modal-sub" id="m-sub">—</div></div><button class="modal-close" onclick="closeModal()">✕ Fechar</button></div>
-    <div class="modal-body" id="m-body"></div>
-  </div>
-</div>
-<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · VinciLab 2026</span><span id="lgpd-ts"></span></div>
-<div id="moria-overlay">
-  <div class="moria-box">
-    <div class="moria-runas">⟁ ⟐ ⟁</div>
-    <div class="moria-texto">As portas de pedra permanecem fechadas.</div>
-    <div class="moria-texto">A senha que ecoou nas sombras não foi reconhecida.</div>
-    <div class="moria-texto">Apenas quem conhece a palavra certa atravessa este limiar.</div>
-    <div class="moria-frase">"Você não passará."</div>
-    <button class="moria-btn" onclick="document.getElementById('moria-overlay').style.display='none';document.getElementById('senha-overlay').style.display='flex';setTimeout(()=>document.getElementById('senha-input').focus(),100);">Tentar novamente</button>
-  </div>
-</div>
-<div id="senha-overlay">
-  <div class="senha-box">
-    <div class="senha-logo">VinciLab</div>
-    <div class="senha-title">Gestão de Práticas Laboratoriais</div>
-    <div class="senha-sub">VinciLab · 2026</div>
-    <input class="senha-input" type="password" id="senha-input" placeholder="Digite a senha de acesso" onkeydown="if(event.key==='Enter')verificarSenha()"/>
-    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
-    <div class="senha-err" id="senha-err"></div>
-    <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
-  </div>
-</div>
-<!-- PATCH 116: a seleção de curso deixou de ser uma tela cheia bloqueante --
-     agora é um painel que abre por cima do dashboard (que já carrega
-     normalmente depois da senha), e permite marcar mais de um curso. -->
-<div id="curso-painel-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998" onclick="_fecharPainelCurso()">
-  <div id="curso-painel" style="position:absolute;top:60px;right:24px;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);width:340px;max-height:70vh;display:flex;flex-direction:column;overflow:hidden" onclick="event.stopPropagation()">
-    <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
-      <div style="font-weight:800;font-size:14px;margin-bottom:2px">Selecione o(s) curso(s)</div>
-      <div style="font-size:11px;color:var(--muted)">Pode marcar mais de um — o painel mostra o conjunto combinado.</div>
-    </div>
-    <div id="curso-painel-lista" style="overflow-y:auto;padding:10px 18px;flex:1"></div>
-    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px">
-      <button class="senha-btn" style="flex:1;padding:9px" onclick="_aplicarCursosSelecionados()">Aplicar</button>
-      <button style="padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;font-size:13px" onclick="_fecharPainelCurso()">Cancelar</button>
-    </div>
-  </div>
-</div>
-<script>
-// ── SENHA / DESCRIPTOGRAFIA ───────────────────────────────────────────────────
-async function _sha256Buf(msg){
-  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+# ── Configuração multi-semestre ─────────────────────────────────────────────
+# Lida de config_semestre.json. Fallback hardcoded para 2026/1.
+_SEMESTRES_DEFAULT = {
+    '2026/1': {
+        'prazos': {
+            'Ordem 1': '14/03/2026', 'Ordem 2': '11/04/2026',
+            'Ordem 3': '09/05/2026', 'Ordem 4': '06/06/2026', 'Ordem 5': '04/07/2026',
+        },
+        'periodos': {
+            'Ordem 1': {'inicio': '16/02/2026', 'fim': '14/03/2026', 'semanas': 4},
+            'Ordem 2': {'inicio': '16/03/2026', 'fim': '11/04/2026', 'semanas': 4},
+            'Ordem 3': {'inicio': '13/04/2026', 'fim': '09/05/2026', 'semanas': 4},
+            'Ordem 4': {'inicio': '11/05/2026', 'fim': '06/06/2026', 'semanas': 4},
+            'Ordem 5': {'inicio': '08/06/2026', 'fim': '04/07/2026', 'semanas': 4},
+        },
+    },
+    '2026/2': {
+        'prazos': {
+            'Ordem 1': '22/08/2026', 'Ordem 2': '19/09/2026',
+            'Ordem 3': '17/10/2026', 'Ordem 4': '14/11/2026', 'Ordem 5': '12/12/2026',
+        },
+        'periodos': {
+            'Ordem 1': {'inicio': '27/07/2026', 'fim': '22/08/2026', 'semanas': 4},
+            'Ordem 2': {'inicio': '24/08/2026', 'fim': '19/09/2026', 'semanas': 4},
+            'Ordem 3': {'inicio': '21/09/2026', 'fim': '17/10/2026', 'semanas': 4},
+            'Ordem 4': {'inicio': '19/10/2026', 'fim': '14/11/2026', 'semanas': 4},
+            'Ordem 5': {'inicio': '16/11/2026', 'fim': '12/12/2026', 'semanas': 4},
+        },
+    },
 }
-function _hexToBytes(hex){
-  const bytes = new Uint8Array(hex.length/2);
-  for(let i=0;i<bytes.length;i++) bytes[i] = parseInt(hex.substr(i*2,2),16);
-  return bytes;
+
+_DISCIPLINAS_POR_ORDEM_GLOBAL = {}
+def _carregar_semestres():
+    import os as _os, json as _json
+    _cfg_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'config_semestre.json')
+    _sems = dict(_SEMESTRES_DEFAULT)
+    if _os.path.isfile(_cfg_path):
+        try:
+            with open(_cfg_path, encoding='utf-8') as _f: _cfg = _json.load(_f)
+            # config pode ter 'semestres' (dict) ou o formato antigo (semestre único)
+            if 'semestres' in _cfg:
+                _sems.update(_cfg['semestres'])
+            elif 'semestre' in _cfg:
+                _sem_key = _cfg['semestre']
+                _sems[_sem_key] = {'prazos': _cfg.get('prazos', {}), 'periodos': _cfg.get('periodos', {})}
+            print(f"  [CONFIG] Semestres carregados: {sorted(_sems.keys())}")
+            # Carregar mapeamento de disciplinas por ordem (opcional)
+            _disc_file = _cfg.get('disciplinas_por_ordem')
+            if _disc_file:
+                _disc_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), _disc_file)
+                if _os.path.isfile(_disc_path):
+                    with open(_disc_path, encoding='utf-8') as _fd:
+                        _DISCIPLINAS_POR_ORDEM_GLOBAL.update(_json.load(_fd))
+                    _total_disc = sum(len(v) for ordens in _DISCIPLINAS_POR_ORDEM_GLOBAL.values() for v in ordens.values())
+                    print(f"  [CONFIG] Disciplinas por ordem: {_total_disc} total")
+        except Exception as _e:
+            print(f"  [AVISO] Erro ao ler config_semestre.json: {_e} — usando padrão")
+    return _sems
+
+ALL_SEMESTRES = _carregar_semestres()
+
+def _data_para_semestre(data_str):
+    """Dado '2026-03-15', retorna '2026/1' ou '2026/2' ou None."""
+    if not data_str or data_str == 'None': return None
+    try:
+        from datetime import datetime as _dt
+        d = _dt.strptime(str(data_str)[:10], '%Y-%m-%d').date()
+        for sem, cfg in sorted(ALL_SEMESTRES.items()):
+            for ord_cfg in cfg.get('periodos', {}).values():
+                try:
+                    ini = _dt.strptime(ord_cfg['inicio'], '%d/%m/%Y').date()
+                    fim = _dt.strptime(ord_cfg['fim'],    '%d/%m/%Y').date()
+                    if ini <= d <= fim: return sem
+                except: pass
+    except: pass
+    return None
+
+def _ordem_relativa(ordem_forms, semestre):
+    """Ordem 1 no Forms sempre = Ordem 1 do semestre em questão."""
+    return ordem_forms  # As ordens são relativas dentro de cada semestre
+
+# Para compatibilidade com o resto do código — usa o semestre mais recente como padrão
+_sem_atual = sorted(ALL_SEMESTRES.keys())[-1]
+PRAZOS_ORDENS   = ALL_SEMESTRES[_sem_atual]['prazos']
+PERIODOS_ORDENS = ALL_SEMESTRES[_sem_atual]['periodos']
+SEMESTRE_ATUAL  = _sem_atual
+print(f"  [CONFIG] Semestre ativo (dashboard): {SEMESTRE_ATUAL}")
+# ── Fim configuração multi-semestre ──────────────────────────────────────────
+CH_ADMIN_FATOR   = 0.25
+CH_PRATICA_DURAC = 1.5
+
+
+def _parse_ch(v):
+    """PATCH 1 helper — converte CH SEMANAL (HH:MM ou decimal) para float horas."""
+    if v is None: return None
+    sv = str(v).strip()
+    if sv in ('', 'nan', 'NaN', 'None', '0', '0.0'): return None
+    try:
+        if ':' in sv:
+            parts = sv.split(':')
+            result = float(parts[0]) + float(parts[1]) / 60
+        else:
+            result = float(sv.replace(',', '.'))
+        return result if result > 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
+# PATCH 30: helpers pra item 4 (Análise de Agendas) — nenhum arquivo novo é
+# necessário pra isso; dia da semana e turno são derivados de DT_GERENCIADA/
+# HR_GERENCIADA, que já estão no CSV que alimenta o pipeline hoje.
+_DIAS_SEMANA_PT = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']  # Python weekday(): Segunda=0
+
+def _dia_semana_pt(iso_str):
+    """Dado '2026-03-15', retorna 'Domingo' (nome do dia em português) ou '' se vazio/inválido."""
+    if not iso_str:
+        return ''
+    try:
+        d = datetime.strptime(str(iso_str)[:10], '%Y-%m-%d')
+        return _DIAS_SEMANA_PT[d.weekday()]
+    except Exception:
+        return ''
+
+def _turno_de_horario(hr_str):
+    """Extrai a hora de início de uma string tipo '19:00 - 20:30' e classifica em
+    Madrugada (00h-05h59) / Manhã (06h-11h59) / Tarde (12h-17h59) / Noite (18h-23h59).
+    Madrugada é o sinal-chave pro alerta de 'horário incomum' (junto com Domingo)."""
+    import re as _re_turno
+    if not hr_str:
+        return ''
+    m = _re_turno.match(r'\s*(\d{1,2}):(\d{2})', str(hr_str))
+    if not m:
+        return ''
+    hora = int(m.group(1))
+    if 0 <= hora < 6: return 'Madrugada'
+    if 6 <= hora < 12: return 'Manhã'
+    if 12 <= hora < 18: return 'Tarde'
+    return 'Noite'
+
+
+def achar_pasta_script():
+    candidatos = []
+    try:
+        p = os.path.dirname(os.path.abspath(sys.argv[0]))
+        if os.path.isdir(p): candidatos.append(p)
+    except: pass
+    try:
+        p = os.path.dirname(os.path.abspath(__file__))
+        if os.path.isdir(p): candidatos.append(p)
+    except: pass
+    try:
+        p = os.getcwd()
+        if os.path.isdir(p): candidatos.append(p)
+    except: pass
+    for p in candidatos:
+        if os.path.isdir(os.path.join(p, "planilhas")): return p
+        if os.path.isfile(os.path.join(p, "processar.py")): return p
+    return candidatos[0] if candidatos else os.getcwd()
+
+
+SCRIPT_DIR = achar_pasta_script()
+
+
+def ler_url_file(path_url):
+    try:
+        with open(path_url, encoding='utf-8', errors='replace') as f:
+            for line in f:
+                if line.upper().startswith('URL='): return line[4:].strip()
+    except: pass
+    return None
+
+
+def forcar_download_onedrive(path_url_file, destino, label):
+    import subprocess, shutil, time
+    path_xlsx = path_url_file.replace('.url', '').replace('.URL', '')
+    try:
+        subprocess.run(['attrib', '-P', '+U', path_url_file], capture_output=True, timeout=10)
+    except Exception: pass
+    for _ in range(6):
+        if os.path.isfile(path_xlsx):
+            with open(path_xlsx, 'rb') as f:
+                header = f.read(4)
+            if header == b'PK\x03\x04':
+                shutil.copy2(path_xlsx, destino)
+                print(f"  [OneDrive] Sincronizado: {label}")
+                return destino
+        time.sleep(5)
+        print(f"  [OneDrive] Aguardando sync para {label}...")
+    print(f"  [OneDrive] Timeout aguardando {label}.")
+    return None
+
+
+_KEYWORDS = {
+    '01_CONTROLE_TUTORIA.xlsx': ['CONTROLE'],
+    'PORTIFOLIO_TUTOR.xlsx':     ['PORTFOLIO', 'PORTIFOLIO', 'PORTF'],
+    'REL_GERAL_DE_GERENCIAMENTO.xlsx': ['GERENCIAMENTO', 'REL_GERAL'],
 }
-function _bytesToHex(buf){
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+_ONEDRIVE_NAMES = {
+    '01_CONTROLE_TUTORIA.xlsx': ['CONTROLE'],
+    'PORTIFOLIO_TUTOR.xlsx':     ['PORTF', 'PORTFOLIO'],
 }
-async function _decifrarDados(cryptoKey){
-  const [ivB64, ctB64] = ENCRYPTED_PAYLOAD.split(':');
-  const iv = Uint8Array.from(atob(ivB64), c=>c.charCodeAt(0));
-  const ct = Uint8Array.from(atob(ctB64), c=>c.charCodeAt(0));
-  const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, cryptoKey, ct);
-  return JSON.parse(new TextDecoder().decode(plainBuf));
+
+
+def _bate(caminho_arq, padrao):
+    bn  = os.path.basename(caminho_arq).upper()
+    kws = _KEYWORDS.get(padrao, [os.path.splitext(padrao)[0].upper()])
+    return any(kw in bn for kw in kws)
+
+
+def achar_arquivo(pasta, padrao):
+    pasta_planilhas = os.path.join(pasta, "planilhas")
+    direto = os.path.join(pasta_planilhas, padrao)
+    if os.path.isfile(direto): return direto
+    for arq in glob.glob(os.path.join(pasta_planilhas, "*.xls")) + glob.glob(os.path.join(pasta_planilhas, "*.xlsx")):
+        if _bate(arq, padrao): return arq
+    for arq in glob.glob(os.path.join(pasta_planilhas, "*.url")) + glob.glob(os.path.join(pasta_planilhas, "*.xlsx.url")) + glob.glob(os.path.join(pasta_planilhas, "*.xls.url")):
+        if _bate(arq, padrao):
+            url = ler_url_file(arq)
+            if url:
+                destino = os.path.join(pasta_planilhas, padrao)
+                resultado = forcar_download_onedrive(arq, destino, padrao)
+                if resultado: return resultado
+    usuario = os.environ.get('USERNAME', os.environ.get('USER', 'leona'))
+    for base in [
+        f"C:\\Users\\{usuario}\\OneDrive - Uniasselvi",
+        f"C:\\Users\\{usuario}\\OneDrive - UNIASSELVI",
+        f"C:\\Users\\{usuario}\\OneDrive - Grupo Uniasselvi",
+        f"C:\\Users\\{usuario}\\OneDrive",
+    ]:
+        if not os.path.isdir(base): continue
+        for arq in glob.glob(os.path.join(base, "*.url")):
+            if _bate(arq, padrao):
+                url = ler_url_file(arq)
+                if url:
+                    destino = os.path.join(pasta_planilhas, padrao)
+                    resultado = forcar_download_onedrive(arq, destino, padrao)
+                    if resultado: return resultado
+        for arq in glob.glob(os.path.join(base, "**", "*.xls"), recursive=True) + glob.glob(os.path.join(base, "**", "*.xlsx"), recursive=True):
+            if _bate(arq, padrao): return arq
+    return None
+
+
+WATCH_MODE = len(sys.argv) > 1 and sys.argv[1].lower() == "watch"
+
+CAT_MAP = {
+    'ENF-INS (Multidisciplinar II)':
+        'Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica',
+    'BIO-FISIO-EST-TO (Multidisciplinar III)':
+        'Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética',
+    'BIO-FAR (Multidisciplinar I)':
+        'Multidisciplinar I - Biomedicina e Farmácia',
+    'NUTRI (Multidisciplinar IV)':
+        'Multidisciplinar IV - Nutrição',
+    'QUÍMICA E FÍSICA':
+        'Química e Física - Agronomia',
+    'ENGMAKER':
+        'EngeMaker | Química e Física - Engenharias e Licenciaturas',
+    'ENGMAKER+QUÍMICA E FÍSICA':
+        'EngeMaker | Química e Física - Engenharias e Licenciaturas',
 }
-async function verificarSenha(){
-  const val=document.getElementById('senha-input').value.trim();
-  if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
-  try{
-    const chaveBuf = await _sha256Buf(val);
-    const cryptoKey = await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
-    DB = await _decifrarDados(cryptoKey);
-    const chaveHex = _bytesToHex(chaveBuf);
-    try{sessionStorage.setItem('uni_auth_key_coord', chaveHex);}catch(e){}
-    document.getElementById('senha-overlay').style.display='none';
-    document.getElementById('senha-input').value='';
-    _iniciarPortalCoordenador();
-  }catch(e){
-    document.getElementById('senha-err').textContent='Senha incorreta.';
-    document.getElementById('senha-input').value='';
-    document.getElementById('senha-input').focus();
-  }
-}
-async function initSenha(){
-  let chaveHex=null;
-  try{chaveHex=sessionStorage.getItem('uni_auth_key_coord');}catch(e){}
-  if(chaveHex){
-    try{
-      const chaveBuf=_hexToBytes(chaveHex);
-      const cryptoKey=await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
-      DB = await _decifrarDados(cryptoKey);
-      const ov=document.getElementById('senha-overlay'); if(ov) ov.style.display='none';
-      _iniciarPortalCoordenador();
-      return;
-    }catch(e){
-      // chave guardada não decifra mais (senha mudou, ou dado corrompido) — pede de novo
-      try{sessionStorage.removeItem('uni_auth_key_coord');}catch(_){}
+
+# PATCH 82: mais de uma vez já apareceu uma variante do rótulo de categoria com
+# prefixo "BIO-" duplicado (ex: "BIO-BIO-FISIO-EST-TO"), vinda de uma exportação
+# diferente do CONTROLE/GIOCONDA — isso virava uma "categoria fantasma" separada
+# em qualquer lugar que agrupa pelo valor CRU da categoria (o filtro de
+# Portfólios, por exemplo), mesmo já existindo uma entrada no CAT_MAP pra dar o
+# nome de exibição certo a essa variante (band-aid que só cobria o texto
+# mostrado, não a contagem/agrupamento em si). Normaliza a categoria na
+# FONTE — assim ela nunca mais aparece como algo diferente da categoria certa
+# em nenhum lugar do sistema, e essa proteção vale pra qualquer futura
+# duplicação de prefixo "BIO-", não só esse caso específico.
+def _normaliza_categoria_bio_duplicado(s):
+    s2 = str(s or '').strip()
+    while s2.upper().startswith('BIO-BIO-'):
+        s2 = s2[4:]
+    return s2
+
+
+
+
+def ts():
+    BRT = timezone(timedelta(hours=-3))
+    return datetime.now(BRT).strftime('%H:%M:%S')
+
+
+def limpar(obj):
+    if isinstance(obj, dict):   return {k: limpar(v) for k, v in obj.items()}
+    if isinstance(obj, list):   return [limpar(v) for v in obj]
+    if isinstance(obj, float) and math.isnan(obj): return None
+    return obj
+
+
+# PATCH 25c: snapshot de colunas detectadas + contagens-chave, comparado contra
+# a rodada anterior. Só imprime avisos no log (GitHub Actions) — nada disso
+# aparece na UI do dashboard (decisão do Leo: um KPI de "match rate" visível
+# pros usuários geraria mais confusão do que ajuda). Objetivo: pegar cedo o
+# caso "alguém renomeou uma coluna na planilha-fonte" ou "a próxima rodada
+# perdeu um monte de submissões sem ninguém notar" — exatamente o tipo de
+# problema que causou o sumiço de portfólios da tutora Cleya Da Silva Santana.
+_SNAPSHOT_QUEDA_LIMIAR = 0.15  # aviso se uma contagem cair mais de 15% sem explicação
+
+def _verificar_snapshot_regressao(colunas_detectadas, contagens):
+    snap_path = os.path.join(SCRIPT_DIR, 'snapshot_manifest.json')
+    anterior = None
+    if os.path.isfile(snap_path):
+        try:
+            with open(snap_path, encoding='utf-8') as f:
+                anterior = json.load(f)
+        except Exception as e:
+            print(f"[{ts()}] [SNAPSHOT] Aviso: não consegui ler snapshot anterior ({e}) — seguindo sem comparação")
+
+    if anterior:
+        # 1) Mudança nas colunas detectadas (PATCH 25 / guardrail #4)
+        cols_ant = anterior.get('colunas_detectadas', {})
+        for chave_col, valor_atual in colunas_detectadas.items():
+            valor_anterior = cols_ant.get(chave_col)
+            if valor_anterior is not None and valor_anterior != valor_atual:
+                print(f"[{ts()}] ⚠️  [SNAPSHOT] Coluna '{chave_col}' mudou de nome entre rodadas: "
+                      f"{valor_anterior!r} -> {valor_atual!r}. Se isso não foi intencional, "
+                      f"confira se a planilha-fonte teve o cabeçalho renomeado.")
+        # 2) Queda anormal de contagem (guardrail #2)
+        cont_ant = anterior.get('contagens', {})
+        for chave_cont, valor_atual in contagens.items():
+            valor_anterior = cont_ant.get(chave_cont)
+            if isinstance(valor_anterior, (int, float)) and valor_anterior > 0:
+                queda = (valor_anterior - valor_atual) / valor_anterior
+                if queda > _SNAPSHOT_QUEDA_LIMIAR:
+                    print(f"[{ts()}] ⚠️  [SNAPSHOT] Queda de {queda*100:.1f}% em '{chave_cont}': "
+                          f"{valor_anterior} -> {valor_atual}. Pode ser problema real de dados "
+                          f"(ex: matching quebrado) — vale checar antes de considerar normal.")
+    else:
+        print(f"[{ts()}] [SNAPSHOT] Nenhum snapshot anterior encontrado — esta rodada vira a baseline.")
+
+    try:
+        with open(snap_path, 'w', encoding='utf-8') as f:
+            json.dump({'gerado_em': ts(), 'colunas_detectadas': colunas_detectadas, 'contagens': contagens}, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[{ts()}] [SNAPSHOT] Aviso: não consegui salvar snapshot desta rodada ({e})")
+
+
+def verificar_e_localizar():
+    pasta_planilhas = os.path.join(SCRIPT_DIR, "planilhas")
+    os.makedirs(pasta_planilhas, exist_ok=True)
+    print(f"  Script em : {SCRIPT_DIR}")
+    print(f"  Planilhas : {pasta_planilhas}")
+    print()
+    cfg = {}
+    cfg_file = os.path.join(SCRIPT_DIR, "config_links.json")
+    if os.path.isfile(cfg_file):
+        try:
+            with open(cfg_file, encoding="utf-8") as f: cfg = json.load(f)
+        except: pass
+    cam_t = cfg.get("caminho_planilha_tutores", "").strip().strip('"')
+    cam_p = cfg.get("caminho_planilha_portfolio", "").strip().strip('"')
+    if cam_t and os.path.isfile(cam_t):
+        p1 = cam_t; print(f"  [OK] {os.path.basename(p1)}")
+    else:
+        p1 = achar_arquivo(SCRIPT_DIR, "01_CONTROLE_TUTORIA.xlsx")
+        if p1: print(f"  [OK] {os.path.basename(p1)}")
+        else:  print(f"  [FALTA] 01_CONTROLE_TUTORIA.xlsx")
+    if cam_p and os.path.isfile(cam_p):
+        p2 = cam_p; print(f"  [OK] {os.path.basename(p2)}")
+    else:
+        # PATCH 102: nome do arquivo real é "PORTIFOLIO" (com I), não
+        # "PORTFOLIO" — sem isso, o match exato nunca acontece e cai sempre
+        # no fallback aproximado, que pode escolher o arquivo errado quando
+        # existe mais de um "PORTIFOLIO_TUTOR*" na pasta.
+        p2 = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR.xlsx")
+        if p2: print(f"  [OK] {os.path.basename(p2)}")
+        else:  print(f"  [FALTA] PORTIFOLIO_TUTOR.xlsx")
+    # PATCH 10: planilha nova de portfólios 2026/2 (formulário customizado, schema próprio)
+    p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
+    if p2b: print(f"  [OK] {os.path.basename(p2b)}")
+    else:   print(f"  [INFO] PORTIFOLIO_TUTOR_2026_2.xlsx não encontrada (ainda sem envios 2026/2?)")
+    # PATCH 6: prints duplicados de p1/p2 removidos aqui
+    tmpl = os.path.join(SCRIPT_DIR, "template_dashboard.html")
+    if os.path.isfile(tmpl): print(f"  [OK] template_dashboard.html")
+    else:                    print(f"  [FALTA] template_dashboard.html")
+    p3 = achar_arquivo(SCRIPT_DIR, "REL_GERAL_DE_GERENCIAMENTO.xlsx")
+    if p3: print(f"  [OK] {os.path.basename(p3)}")
+    else:  print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO.xlsx não encontrada (módulo desativado)")
+    # PATCH 18: planilha de gerenciamento específica de 2026/2 (export novo, CSV)
+    p3b = achar_arquivo(SCRIPT_DIR, "REL_GERAL_DE_GERENCIAMENTO_26_02.csv")
+    if p3b: print(f"  [OK] {os.path.basename(p3b)}")
+    else:   print(f"  [INFO] REL_GERAL_DE_GERENCIAMENTO_26_02.csv não encontrada")
+    p4 = achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsm") or achar_arquivo(SCRIPT_DIR, "LOTACAO_TUTORES.xlsx")
+    if p4: print(f"  [OK] {os.path.basename(p4)}")
+    else:  print(f"  [INFO] LOTACAO_TUTORES não encontrada (.xlsx/.xlsm)")
+    # ── CSV de alunos por hub (igual aos outros arquivos: URL no Secret/env) ──
+    p5 = None
+    # 1. Tentar achar na pasta planilhas/ (já baixado anteriormente)
+    p5 = achar_arquivo(SCRIPT_DIR, "Relatorio_alunos_por_hub.csv")
+    if p5:
+        print(f"  [OK] {os.path.basename(p5)}")
+    else:
+        # 2. Tentar baixar via variável de ambiente URL_ALUNOS_HUB (Secret GitHub)
+        import re
+        url_hub = os.environ.get("URL_ALUNOS_HUB", "").strip()
+        if url_hub:
+            print(f"  [Baixando] Relatorio_alunos_por_hub.csv via URL_ALUNOS_HUB...")
+            try:
+                import urllib.request
+                # Converter link SharePoint/OneDrive para download direto
+                # Tentar múltiplos formatos de URL
+                def _build_dl_urls(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        # Formato 1: adicionar &download=1
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        # Formato 2: download.aspx com token
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)  # URL original como último recurso
+                    return urls
+
+                dest = os.path.join(pasta_planilhas, "Relatorio_alunos_por_hub.csv")
+                downloaded = False
+                for url_dl in _build_dl_urls(url_hub):
+                    try:
+                        req = urllib.request.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with urllib.request.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 10000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest, 'wb') as f_out: f_out.write(data)
+                            p5 = dest
+                            print(f"  [OK] Relatorio_alunos_por_hub.csv ({len(data):,} bytes)")
+                            downloaded = True
+                            break
+                        else:
+                            print(f"  [AVISO] URL retornou conteúdo inválido ({len(data)} bytes): {url_dl[:80]}")
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar: {ex} | URL: {url_dl[:80]}")
+                if not downloaded:
+                    print(f"  [ERRO] Não foi possível baixar o CSV de alunos — verifique URL_ALUNOS_HUB")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar CSV de alunos: {e}")
+        else:
+            print(f"  [INFO] Relatorio_alunos_por_hub.csv não encontrado (defina URL_ALUNOS_HUB)")
+
+    # ── PATCH 88: planilha de acompanhamento de onboarding (preenchida pelos
+    # tutores/equipe) — mesmo padrão de secret+URL do Relatorio_alunos_por_hub,
+    # só que aqui é um .xlsx, não .csv. Precisa da variável de ambiente
+    # URL_ONBOARDING_TUTORES (secret novo no GitHub) apontando pro link de
+    # download direto do OneDrive/SharePoint desse arquivo.
+    p6 = achar_arquivo(SCRIPT_DIR, "Acompanhamento_Onboarding.xlsx")
+    if p6:
+        print(f"  [OK] {os.path.basename(p6)}")
+    else:
+        url_onb = os.environ.get("URL_ONBOARDING_TUTORES", "").strip()
+        if url_onb:
+            print(f"  [Baixando] Acompanhamento_Onboarding.xlsx via URL_ONBOARDING_TUTORES...")
+            try:
+                import urllib.request as _urlreq
+                def _build_dl_urls_onb(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)
+                    return urls
+                dest_onb = os.path.join(pasta_planilhas, "Acompanhamento_Onboarding.xlsx")
+                downloaded_onb = False
+                for url_dl in _build_dl_urls_onb(url_onb):
+                    try:
+                        req = _urlreq.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with _urlreq.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 2000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest_onb, 'wb') as f_out: f_out.write(data)
+                            p6 = dest_onb
+                            print(f"  [OK] Acompanhamento_Onboarding.xlsx ({len(data):,} bytes)")
+                            downloaded_onb = True
+                            break
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar onboarding: {ex} | URL: {url_dl[:80]}")
+                if not downloaded_onb:
+                    print(f"  [ERRO] Não foi possível baixar Acompanhamento_Onboarding.xlsx — verifique URL_ONBOARDING_TUTORES")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar onboarding: {e}")
+        else:
+            print(f"  [INFO] Acompanhamento_Onboarding.xlsx não encontrada (secret URL_ONBOARDING_TUTORES ainda não configurado)")
+    return p1, p2, tmpl, p3, p3b, p4, p5, p6
+
+
+def ler_excel(path, **kwargs):
+    for engine in ('openpyxl', 'xlrd', None):
+        try:
+            kw = dict(kwargs)
+            if engine: kw['engine'] = engine
+            return pd.read_excel(path, **kw)
+        except Exception: continue
+    raise ValueError(f"Não foi possível ler {path} com nenhum engine disponível")
+
+
+def _ler_arquivo_gerenciamento(path):
+    # PATCH 18: REL_GERAL_DE_GERENCIAMENTO pode vir como .xlsx (export antigo) ou
+    # .csv (export novo, ISO-8859-1, separador ';', tudo entre aspas)
+    if str(path).lower().endswith('.csv'):
+        last_err = None
+        for enc in ('latin-1', 'utf-8', 'cp1252'):
+            try:
+                df = pd.read_csv(path, sep=';', encoding=enc, dtype=str)
+                if len(df.columns) > 1: return df
+            except Exception as e:
+                last_err = e
+        raise ValueError(f"Não foi possível ler CSV de gerenciamento ({path}): {last_err}")
+    return ler_excel(path)
+
+
+def processar(p1, p2):
+    print(f"[{ts()}] Lendo tutores...")
+    with open(p1, 'rb') as _f:
+        _magic = _f.read(8); _preview = _f.read(200)
+    print(f"  [DEBUG] Magic bytes de {p1}: {_magic.hex()}")
+    if _magic[:2] == b'PK': print(f"  [DEBUG] Formato ZIP/XLSX confirmado")
+    elif _magic[:2] in (b'\xd0\xcf', b'\xCF\xD0'): print(f"  [DEBUG] Formato XLS (OLE2) confirmado")
+    else:
+        print(f"  [ERRO] Arquivo não é Excel válido. Conteúdo inicial:")
+        print((_magic + _preview).decode('utf-8', errors='replace')[:300])
+        raise ValueError(f"Arquivo {p1} não é um Excel válido — SharePoint pode ter retornado HTML de erro")
+    df_t = ler_excel(p1, sheet_name='Base de Tutores', header=1)
+    col_sit  = next((c for c in df_t.columns if 'SITUA' in str(c).upper()), None)
+    col_nome = next((c for c in df_t.columns if 'NOME'  in str(c).upper() and 'TUTOR' in str(c).upper()), None)
+    # Busca flexível de colunas no CONTROLE_TUTORIA
+    col_polo = next((c for c in df_t.columns if str(c).strip().upper() == 'POLO'), None) or                next((c for c in df_t.columns if 'POLO' in str(c).upper() and 'HUB' not in str(c).upper()), None) or                next((c for c in df_t.columns if 'POLO' in str(c).upper()), None) or 'POLO'
+    col_cur  = next((c for c in df_t.columns if str(c).strip().upper() == 'CURSOS'), None) or                next((c for c in df_t.columns if 'CURSO' in str(c).upper() and 'VINC' not in str(c).upper()), None) or                next((c for c in df_t.columns if 'CURSO' in str(c).upper()), None) or 'CURSOS'
+    col_email= next((c for c in df_t.columns if 'E-MAIL' in str(c).upper() or 'EMAIL' in str(c).upper()), None)
+    print(f"[{ts()}] CONTROLE colunas detectadas: polo='{col_polo}' cursos='{col_cur}' email='{col_email}'")
+    print(f"[{ts()}] CONTROLE todas colunas: {list(df_t.columns[:20])}")
+    # PATCH 25a: validação obrigatória de colunas críticas — se a busca flexível
+    # não achou a coluna de verdade, col_polo/col_cur caem no fallback literal
+    # ('POLO'/'CURSOS'), que NÃO existe no DataFrame. Sem essa checagem, o script
+    # seguia rodando silenciosamente com POLO/CURSOS vazios em todo mundo (dados
+    # incompletos sem nenhum aviso). Agora para a execução com um erro claro,
+    # listando as colunas disponíveis, assim que uma renomeação de coluna na
+    # planilha-fonte quebra a detecção — em vez de gerar um dashboard manco.
+    _colunas_criticas_controle = {
+        'POLO': col_polo, 'CURSOS': col_cur, 'NOME DO TUTOR': col_nome, 'E-MAIL': col_email,
     }
-  }
-  setTimeout(()=>{const inp=document.getElementById('senha-input');if(inp)inp.focus();},200);
-}
+    _faltando_controle = [nome for nome, col in _colunas_criticas_controle.items()
+                          if col is None or col not in df_t.columns]
+    if _faltando_controle:
+        raise ValueError(
+            f"[FALHA CRÍTICA] Coluna(s) obrigatória(s) não encontrada(s) no CONTROLE_TUTORIA: "
+            f"{_faltando_controle}. Colunas disponíveis na planilha: {list(df_t.columns)}. "
+            f"Provável renomeação de coluna na planilha-fonte — ajuste a busca flexível "
+            f"acima ou corrija o cabeçalho na planilha antes de rodar novamente."
+        )
+    col_cat    = next((c for c in df_t.columns if 'CATEGORIA' in str(c).upper()), None)
+    col_inicio = next((c for c in df_t.columns if str(c).upper().strip() in ('INÍCIO','INICIO')), None)
+    col_whats  = next((c for c in df_t.columns if 'WHATSAPP' in str(c).upper()), None)
+    col_chapa  = next((c for c in df_t.columns if 'CHAPA' in str(c).upper()), None)
+    # PATCH 1: Detectar coluna CH SEMANAL na planilha de controle
+    col_ch = next((c for c in df_t.columns if str(c).upper().strip() == 'CH SEMANAL' or
+                   ('CH' in str(c).upper() and 'SEMAL' in str(c).upper())), None)
+    if col_ch:
+        print(f"[{ts()}] CH SEMANAL encontrada: '{col_ch}'")
+        ch_vals = df_t[col_ch].dropna()
+        print(f"[{ts()}] Amostra CH SEMANAL: {list(ch_vals.head(5))}")
+    else:
+        print(f"[{ts()}] CH SEMANAL não encontrada — colunas CH disponíveis: {[c for c in df_t.columns if 'CH' in str(c).upper()]}")
+    # Filtrar tutores ativos: incluir Ativo + afastamentos temporários (Licença Maternidade, etc.)
+    # Excluir apenas Inativo e Desligado explicitamente
+    _SITUACOES_EXCLUIR = {'inativo', 'desligado', 'rescindido', 'demitido', 'encerrado',
+                           'admissão prox.mês', 'admissao prox.mes', 'em admissão',
+                           'pendente', 'aguardando'}
+    if col_sit:
+        _sit_norm = df_t[col_sit].astype(str).str.strip().str.lower()
+        df_at = df_t[~_sit_norm.isin(_SITUACOES_EXCLUIR)].copy()
+        _contagem = df_at[col_sit].value_counts().to_dict()
+        print(f"[{ts()}] Situações incluídas: {_contagem}")
+        # PATCH 105: captura os tutores desligados numa lista separada — o
+        # filtro acima os exclui de TUDO no Vinci (correto, pra não confundir
+        # com ativos), mas o Leo pediu um relatório específico de quem saiu,
+        # com a data de desligamento, filtrável por mês.
+        _situacoes_desligado = {'desligado', 'rescindido', 'demitido', 'encerrado'}
+        df_desligados_raw = df_t[_sit_norm.isin(_situacoes_desligado)].copy()
+        col_desligamento = next((c for c in df_t.columns if 'DESLIGAMENTO' in str(c).upper()), None)
+        tutores_desligados = []
+        for _, _tr in df_desligados_raw.iterrows():
+            # PATCH 106: a coluna DESLIGAMENTO vem como data/hora de verdade
+            # (pandas Timestamp), não texto — str() direto produzia algo tipo
+            # "2026-02-11 00:00:00", que nunca batia com o formato DD/MM/AAAA
+            # que o filtro de mês no Vinci espera. Formata explicitamente.
+            _val_desl = _tr.get(col_desligamento, '') if col_desligamento else ''
+            _data_desl = ''
+            if _val_desl not in ('', None) and not (isinstance(_val_desl, float) and str(_val_desl) == 'nan'):
+                try:
+                    _data_desl = pd.to_datetime(_val_desl).strftime('%d/%m/%Y')
+                except Exception:
+                    _data_desl = str(_val_desl).strip()
+            tutores_desligados.append({
+                'n': str(_tr.get(col_nome, '') or ''),
+                'p': str(_tr.get(col_polo, '') or ''),
+                'c': str(_tr.get(col_cat, '') or '') if col_cat else '',
+                'situacao': str(_tr.get(col_sit, '') or ''),
+                'data_desligamento': _data_desl,
+            })
+        print(f"[{ts()}] Tutores desligados capturados (relatório separado): {len(tutores_desligados)}")
+    else:
+        df_at = df_t.copy()
+        tutores_desligados = []
+    # Usar CHAVE LOTAÇÃO do CONTROLE diretamente (mesma chave usada pelo Forms)
+    col_chave_lot = next((c for c in df_t.columns if 'CHAVE' in str(c).upper() and 'LOTA' in str(c).upper()
+                          and 'CLASSIF' not in str(c).upper()), None)
+    if col_chave_lot:
+        df_at['_CHAVE'] = df_at[col_chave_lot].astype(str).str.strip()
+        print(f"[{ts()}] CONTROLE usando coluna '{col_chave_lot}' como chave")
+    else:
+        df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
+        print(f"[{ts()}] CONTROLE chave construída de POLO + CURSOS")
+    _sample_chaves = df_at['_CHAVE'].dropna().head(8).tolist()
+    print(f"[{ts()}] CONTROLE chaves (amostra): {_sample_chaves}")
+    print(f"[{ts()}] Lendo portfolios...")
+    df_p = ler_excel(p2, sheet_name='Sheet1')
 
-// ── BLOQUEIO DE INSPEÇÃO ──────────────────────────────────────────────────────
-function _ativarMoria(){
-  document.getElementById('senha-overlay').style.display='none';
-  document.getElementById('moria-overlay').style.display='flex';
-}
-document.addEventListener('keydown',function(e){
-  if(e.key==='F12'){e.preventDefault();_ativarMoria();return;}
-  if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
-  if(e.ctrlKey&&!e.shiftKey&&['u','U'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
-});
-document.addEventListener('contextmenu',function(e){e.preventDefault();_ativarMoria();});
 
-const ENCRYPTED_PAYLOAD = 'DATA_GOES_HERE';
-let DB;
-let poloSortK='pend',poloSortA=false,tutorSortK='n',tutorSortA=true,pracSortK='pend_n',pracSortA=false,ordemSortK='n',ordemSortA=true;
-let poloData=[],tutorData=[],pracData=[],ordemData=[];
-let gerPoloData=[],gerContrData=[],gerAgendaData=[],gerDetData=[];
-let _detSortCol=null,_detSortAsc=true;  // PATCH 19: ordenação da tabela Detalhe (Polo/Tutor/% Ger.)
-let _rankTab='pend';  // PATCH 18: faltava declaração — sem isso, renderTopPrac() quebrava em silêncio e abortava o resto de _renderComSemestre()
-let _sortState={};  // PATCH 20: faltava declaração — toda chamada a sortTable() (cabeçalhos clicáveis em várias tabelas) quebrava com "ReferenceError: _sortState is not defined", silenciosamente, sem nenhum aviso visual
+    def col(df, *partes):
+        for c in df.columns:
+            cu = str(c).upper()
+            if all(p.upper() in cu for p in partes): return c
+        return None
+    c_chave = col(df_p, 'CHAVE', 'LINK')
+    c_proto = col(df_p, 'PROTOCOLOS', 'ATIVIDADES')
+    for sfx in (':7', ':8', ':6', ':9'):
+        proto_sfx = [c for c in df_p.columns if 'PROTOCOLOS' in str(c).upper() and str(c).endswith(sfx)]
+        if proto_sfx: c_proto = proto_sfx[0]; break
+    else:
+        proto_any = [c for c in df_p.columns if 'PROTOCOLOS' in str(c).upper() or 'ATIVIDADE' in str(c).upper()]
+        if proto_any: c_proto = proto_any[0]
+    data_cols = [c for c in df_p.columns if 'DATA DA APLICA' in str(c).upper() and str(c).endswith(':7')]
+    if not data_cols: data_cols = [c for c in df_p.columns if 'DATA DA APLICA' in str(c).upper()]
+    if not data_cols: data_cols = [c for c in df_p.columns if 'DATA' in str(c).upper() and 'APLICA' in str(c).upper()]
+    c_data = data_cols[0] if data_cols else None
+    def find_aluno_col(df):
+        cols = df.columns.tolist()
+        for suffix_end in ('72', '73', '74', '70', '71', '75'):
+            for c in cols:
+                if 'ESTUDANTES' in str(c).upper() and str(c).endswith(suffix_end): return c
+        for c in cols:
+            if 'ESTUDANTES' in str(c).upper() and 'PONTOS' not in str(c).upper(): return c
+        for c in cols:
+            cu = str(c).upper()
+            if ('ALUNO' in cu or 'ALUNOS' in cu) and 'PONTOS' not in cu and 'COMENT' not in cu: return c
+        for c in cols:
+            cu = str(c).upper()
+            if 'QUANTIDADE' in cu or 'QTD' in cu: return c
+        return None
+    c_aluno = find_aluno_col(df_p)
+    cat_cols = [c for c in df_p.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
+    c_cat = cat_cols[0] if cat_cols else None
+    print(f"[{ts()}] Colunas: chave={c_chave}, proto={c_proto}, data={c_data}, alunos={c_aluno}, cat={c_cat}")
+    # PATCH 25a: mesma validação crítica, agora pro PORTIFOLIO_TUTOR — sem chave e
+    # sem protocolo não há como casar nenhuma submissão a nenhum tutor; melhor
+    # parar aqui com um erro explícito do que gerar um dashboard sem portfólios.
+    _faltando_portfolio = [nome for nome, col in {'CHAVE/LINK': c_chave, 'PROTOCOLOS': c_proto}.items() if not col]
+    if _faltando_portfolio:
+        raise ValueError(
+            f"[FALHA CRÍTICA] Coluna(s) obrigatória(s) não encontrada(s) no PORTIFOLIO_TUTOR: "
+            f"{_faltando_portfolio}. Colunas disponíveis na planilha: {list(df_p.columns)}. "
+            f"Provável renomeação de coluna no formulário/planilha-fonte."
+        )
+    c_ordem_cols = [c for c in df_p.columns if 'ORDEM' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
+    c_ordem = c_ordem_cols[0] if c_ordem_cols else None
+    print(f"[{ts()}] Coluna ordem: {c_ordem}")
+    df_p['_CHAVE']  = df_p[c_chave].astype(str).str.strip() if c_chave else ''
+    df_p['_PROTO']  = df_p[c_proto].astype(str).str.strip() if c_proto else ''
+    df_p['_DATA']   = pd.to_datetime(df_p[c_data], errors='coerce') if c_data else pd.NaT
+    df_p['_ALUNOS'] = pd.to_numeric(df_p[c_aluno], errors='coerce').fillna(0).astype(int) if c_aluno else 0
+    df_p['_CAT']    = df_p[c_cat].astype(str).str.strip() if c_cat else ''
+    df_p['_ORDEM']  = df_p[c_ordem].astype(str).str.strip() if c_ordem else 'Ordem 1'
+    # ── MEC Cache ────────────────────────────────────────────────────────────
+    mec_cache = {}
+    mec_file = os.path.join(SCRIPT_DIR, 'mec_cache.json')
+    if os.path.isfile(mec_file):
+        with open(mec_file, encoding='utf-8') as f: mec_cache = json.load(f)
+        print(f"[{ts()}] MEC cache: {len(mec_cache)} tutores")
+    # ── Fim MEC Cache ─────────────────────────────────────────────────────────
 
-function gPN(p){return p.n||p.polo||p.POLO||"N/A"}
-function gPT(p){return p.t||p.total||0}
-function gPE(p){return p.e||p.enviaram||0}
-function gPA(p){return p.a||p.alunos||0}
-function gTS(t){return t.sit||t.situacao||"urgente"}
-function getPraticas(){
-  // PATCH 108: antes lia DB.praticas direto (global, ignorando o semestre
-  // selecionado) -- agora usa a versão certa por semestre, igual já
-  // acontecia com Tutores/Polos/Ordens.
-  var pr=_getSemPraticas();
-  if(pr&&pr.length)return pr;
-  var ps=_getSemPraticaStats();
-  return (ps||[]).map(function(p){var tot=(p.enviou||0)+(p.nao_enviou||0);return{n:p.nome||"",c:p.categoria||"",env_n:p.enviou||0,pend_n:p.nao_enviou||0,pct:tot?Math.round(p.enviou/tot*100):0}})
-}
-function _getSemPraticas(){
-  if(!_SEM_ATUAL || _SEM_ATUAL==='Ambos') return DB.praticas;
-  var sd=_SEM_DB;
-  return (sd && sd.praticas) ? sd.praticas : DB.praticas;
-}
-function _getSemPraticaStats(){
-  if(!_SEM_ATUAL || _SEM_ATUAL==='Ambos') return DB.pratica_stats;
-  var sd=_SEM_DB;
-  return (sd && sd.pratica_stats) ? sd.pratica_stats : DB.pratica_stats;
-}
-function getOE(o){const _po=_getSemPorOrdem();if(_po&&!Array.isArray(_po))return _po[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
-function getOA(o){if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
-function getOS(o){const _so=_getSemStatusOrdem();if(_so)return _so[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
+    catalogo_oficial = {}
+    id_to_perfil = {}  # PATCH 10: id da prática -> código de perfil (ex: '206'->'EMF-ISN')
+    cat_file = os.path.join(SCRIPT_DIR, 'catalogo_oficial.json')
+    if os.path.isfile(cat_file):
+        with open(cat_file, encoding='utf-8') as f: raw = json.load(f)
+        for cat_nome, praticas in raw.items():
+            if isinstance(praticas, list) and praticas:
+                if isinstance(praticas[0], dict):
+                    catalogo_oficial[cat_nome] = sorted(set(p['nome'] for p in praticas))
+                    for p in praticas:
+                        if p.get('id') and p.get('perfil'): id_to_perfil.setdefault(str(p['id']), p['perfil'])
+                else: catalogo_oficial[cat_nome] = sorted(set(praticas))
+        print(f"[{ts()}] Catalogo oficial (JSON): {len(catalogo_oficial)} categorias")
+    # PATCH 10: reforça id_to_perfil com mapa verificado direto do catálogo do formulário
+    # (garante a correspondência mesmo se catalogo_oficial.json não tiver id/perfil)
+    idp_file = os.path.join(SCRIPT_DIR, 'id_to_perfil.json')
+    if os.path.isfile(idp_file):
+        with open(idp_file, encoding='utf-8') as f: idp_extra = json.load(f)
+        for k, v in idp_extra.items(): id_to_perfil.setdefault(k, v)
+        print(f"[{ts()}] id_to_perfil: {len(id_to_perfil)} práticas mapeadas")
 
-const pageTitles={
-  'port-visao':['Visão Geral','Portfólios'],'port-ordens':['Ordens','Portfólios'],
-  'port-praticas':['Práticas','Portfólios'],'port-polos':['Polos','Portfólios'],
-  'port-tutores':['Tutores','Portfólios'],
-  'tutores-mec':['Tutores','Gestão de Tutores'],
-  'agendas-estudo':['Horários e Engajamento','Gerenciamento'],
-  'ger-visao':['Visão Geral','Gerenciamento'],'ger-ofertas':['Ofertas','Gerenciamento'],
-  'ger-contratacao':['Contratação','Gerenciamento'],
-  'ger-agendas':['Agendas','Gerenciamento'],'ger-detalhe':['Detalhe','Gerenciamento'],
-  'vagas':['Vagas','RH'],
-};
-function navTo(name){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
-  const pg=document.getElementById('page-'+name);
-  if(pg) pg.classList.add('active');
-  const btn=document.querySelector(`[onclick="navTo('${name}')"]`);
-  if(btn) btn.classList.add('active');
-  const t=pageTitles[name];
-  if(t){document.getElementById('topbar-title').textContent=t[0];document.getElementById('topbar-bread').textContent=t[1]}
-  // Hooks de render por página
-  if(name==='tutores-mec') renderTutoresMec();
-  if(name==='port-tutores') filterTutores(document.getElementById('tutor-search')?.value||'');
-  if(name==='port-visao') { renderKPIs(); renderOfensores(); renderMes(); }
-  if(name==='vagas') { filterVagas(document.getElementById('vagas-search')?.value||''); }
-  if(name==='agendas-estudo') { renderAgendasEstudo(); }
-}
-function esc(s){return(s||'').replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function pctColor(p){return p===100?'var(--ok)':p===0?'var(--red)':p>=60?'var(--teal)':'var(--red)'}
-function pctBadge(p){if(p===100)return '<span class="badge ok">✓ 100%</span>';if(p===0)return '<span class="badge pend">Pendente</span>';return `<span class="badge parcial">${p.toFixed(0)}%</span>`;}
-function progCell(p){const c=pctColor(p);return `<div class="prog"><div class="prog-track"><div class="prog-fill" style="width:${p}%;background:${c}"></div></div><span class="prog-txt" style="color:${c}">${p.toFixed(0)}%</span></div>`;}
-function fmtNum(n){return(n||0).toLocaleString('pt-BR')}
-function ordemNum(k){return{'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}[k]||0}
+    # PATCH 15: nome da prática -> perfil correto (só pra códigos ambíguos BFI/BTO/COS-TIP)
+    def _norm_proto(s):
+        # normaliza unicode (resolve variantes de hífen/travessão), colapsa espaços
+        s = unicodedata.normalize('NFKC', str(s or ''))
+        s = s.replace('–', '-').replace('—', '-')  # en-dash/em-dash -> hífen comum
+        return ' '.join(s.split()).strip()
+    NOME_TO_PERFIL = {}
+    nomep_file = os.path.join(SCRIPT_DIR, 'nome_to_perfil.json')
+    if os.path.isfile(nomep_file):
+        with open(nomep_file, encoding='utf-8') as f: _ntp_raw = json.load(f)
+        NOME_TO_PERFIL = {_norm_proto(k): v for k, v in _ntp_raw.items()}
+        print(f"[{ts()}] nome_to_perfil: {len(NOME_TO_PERFIL)} práticas (correção BFI/BTO/COS-TIP)")
+    if not catalogo_oficial:
+        cat_xlsx = achar_arquivo(SCRIPT_DIR, 'CATALOGO_EXPERIMENTOS.xlsx')
+        if not cat_xlsx:
+            for f in os.listdir(os.path.join(SCRIPT_DIR, 'planilhas')) if os.path.isdir(os.path.join(SCRIPT_DIR, 'planilhas')) else []:
+                fu = f.upper()
+                if ('RELAT' in fu and 'EXPER' in fu) or ('CATALOGO' in fu and 'EXPER' in fu):
+                    cat_xlsx = os.path.join(SCRIPT_DIR, 'planilhas', f); break
+        if cat_xlsx and os.path.isfile(cat_xlsx):
+            try:
+                df_cat = pd.read_excel(cat_xlsx)
+                c_cat_nome = next((c for c in df_cat.columns if 'CATEGORIA' in str(c).upper()), None)
+                c_exp_nome = next((c for c in df_cat.columns if 'EXPERIMENTO' in str(c).upper() or 'NOME' in str(c).upper()), None)
+                c_sit = next((c for c in df_cat.columns if 'SITUA' in str(c).upper()), None)
+                if c_cat_nome and c_exp_nome:
+                    if c_sit: df_cat = df_cat[df_cat[c_sit].astype(str).str.strip().str.upper() == 'ATIVO']
+                    for cat_val, grp in df_cat.groupby(c_cat_nome):
+                        cat_str = str(cat_val).strip()
+                        if cat_str and cat_str != 'nan':
+                            nomes = sorted(set(str(n).strip() for n in grp[c_exp_nome].dropna() if str(n).strip() and str(n).strip() != 'nan'))
+                            if nomes: catalogo_oficial[cat_str] = nomes
+                    print(f"[{ts()}] Catalogo oficial (Excel): {len(catalogo_oficial)} categorias, {sum(len(v) for v in catalogo_oficial.values())} práticas")
+            except Exception as e: print(f"[{ts()}] AVISO: Erro ao ler catálogo Excel: {e}")
 
-// ── PORTFÓLIOS VISÃO GERAL ────────────────────────────────────────────────────
-function renderKPIs(){
-  const k=_getSemKpis()||DB.kpis||{};
-  // Calcular total/enviaram excluindo anônimos e 'Aviso de Portfólio'
-  const _tutBase=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);
-  const _tutReais=_tutBase.filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio');
-  const _total=_tutReais.length;
-  const _enviaram=_tutReais.filter(t=>(t.te||0)>0).length;
-  const pct=_total?((_enviaram/_total)*100).toFixed(1):'0.0';
-  document.getElementById('pv-sub').textContent=`${_total} tutores · ${_enviaram} enviaram · ${k.atrasados} atrasados · ${k.urgentes} urgentes`;
-  document.getElementById('pv-kpis').innerHTML=`
-    <div class="kpi kpi-green kpi-link" onclick="openListModal('todos')"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${_total}</div><div class="kpi-hint">clique para ver lista</div></div>
-    <div class="kpi kpi-ok kpi-link" onclick="openListModal('enviaram')"><div class="kpi-label">Enviaram</div><div class="kpi-value">${_enviaram}</div><div class="kpi-detail">${pct}% do total</div><div class="kpi-hint">clique para ver lista</div></div>
-    <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div><div class="kpi-hint">clique para ver lista</div></div>
-    <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
-    <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos nas Práticas</div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
-    <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div><div class="kpi-hint">clique para ver lista</div></div>`;
-}
-function renderOfensores(){
-  const el=document.getElementById('pv-ofensores');const sb=document.getElementById('pv-stat-bar');
-  const k=_getSemKpis()||DB.kpis||{total:0,enviaram:0,atrasados:0,urgentes:0};const total=k.total||1;
-  sb.innerHTML=`<div style="width:${k.enviaram/total*100}%;background:var(--ok)"></div><div style="width:${k.atrasados/total*100}%;background:var(--yellow)"></div><div style="width:${k.urgentes/total*100}%;background:var(--red)"></div>`;
-  const _tutUrgentes=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);
-  const urg=_tutUrgentes.filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado'&&t.c!=='Aviso de Portfólio').slice(0,8);
-  el.innerHTML=urg.length?`<div class="sec-label">🚨 Tutores Urgentes (top 8)</div>`+urg.map(t=>`<div class="rank-item" style="cursor:pointer" onclick="openTutorModal('${esc(t.n)}')"><div class="rank-pos" style="color:var(--red)">!</div><div class="rank-name">${t.n}</div><div style="font-size:10px;color:var(--muted)">${t.p}</div></div>`).join(''):`<div style="color:var(--ok);font-size:13px;text-align:center;padding:20px">✓ Nenhum tutor urgente</div>`;
-}
-function renderMes(){
-  const el=document.getElementById('pv-mes');const meses={};
-  (DB.tutores||[]).forEach(t=>(t.hist||[]).forEach(h=>{if(!h.d)return;const parts=h.d.split('/');const mk=parts.length===3?parts[1]+'/'+parts[2]:h.d.substring(0,7);meses[mk]=(meses[mk]||0)+1;}));
-  const sorted=Object.entries(meses).sort((a,b)=>a[0].localeCompare(b[0]));const max=Math.max(...sorted.map(s=>s[1]),1);
-  el.innerHTML=sorted.length?sorted.map(([m,v])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:11px;font-weight:600;min-width:50px;color:var(--muted)">${m}</span><div style="flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:${v/max*100}%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px"><span style="font-size:10px;font-weight:700;color:#fff">${v}</span></div></div></div>`).join(''):`<div style="color:var(--muted);text-align:center;padding:20px">Sem dados</div>`;
-}
-function renderCatOverview(){
-  // PATCH 117: o KPI "Total Tutores" já excluía entradas anônimas/"Aviso de
-  // Portfólio" (placeholders técnicos de erro de cadastro, não tutores de
-  // verdade), mas essa seção de Categorias nunca fazia a mesma exclusão --
-  // por isso a soma das categorias podia passar do "Total Tutores" lá em
-  // cima. Aplica o mesmo filtro aqui pra bater certinho com o resto da tela.
-  const el=document.getElementById('pv-cats');const cats={};
-  (_getSemTutores()||DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio').forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
-  window._pvCats=cats;
-  el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v],i)=>{
-    const pct=v.t?Math.round(v.e/v.t*100):0;
-    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" data-cat="'+i+'" onclick="openCatModal('+i+')">'
-      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+c+'</div><div style="font-size:10px;color:var(--muted)">'+v.t+' tutores · '+v.e+' enviaram · '+fmtNum(v.al)+' alunos</div></div>'+progCell(pct)+'<span style="font-size:11px;color:var(--muted)">↗</span></div>';
-  }).join('');
-}
+    # PATCH 10: ler e mesclar PORTIFOLIO_TUTOR_2026_2.xlsx (formulário novo, schema próprio)
+    p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
+    if p2b:
+        try:
+            df_novo = ler_excel(p2b, sheet_name='PORTIFOLIOS')
+        except Exception:
+            df_novo = ler_excel(p2b, sheet_name=0)
+        df_novo.columns = [str(c).strip().upper() for c in df_novo.columns]
+        if len(df_novo):
+            def _g(col): return df_novo[col] if col in df_novo.columns else ''
+            _protoid = _g('PROTOCOLO_ID').astype(str).str.strip()
+            df_novo['_CHAVE']  = _g('POLO').astype(str).str.strip() + _protoid.map(id_to_perfil).fillna('')
+            df_novo['_PROTO']  = _g('PROTOCOLO_NOME').astype(str).str.strip()
+            df_novo['_DATA']   = pd.to_datetime(_g('DATA_APLICACAO'), errors='coerce')
+            df_novo['_ALUNOS'] = pd.to_numeric(_g('QTD_ESTUDANTES'), errors='coerce').fillna(0).astype(int)
+            df_novo['_CAT']    = _g('CATEGORIA_LAB').astype(str).str.strip()
+            df_novo['_ORDEM']  = _g('ORDEM_DISCIPLINA').astype(str).str.strip().replace('', 'Ordem 1')
+            df_novo['EMAIL']      = _g('EMAIL_TUTOR').astype(str).str.strip()  # nome exato p/ busca col_email_p
+            df_novo['NOME_TUTOR'] = _g('NOME_TUTOR').astype(str).str.strip()   # contém NOME+TUTOR p/ busca col_nome_tutor_p
+            _sem_perfil = int(_protoid.map(id_to_perfil).isna().sum())
+            if _sem_perfil: print(f"[{ts()}] AVISO: {_sem_perfil} envios em PORTIFOLIO_TUTOR_2026_2 sem PROTOCOLO_ID mapeado em id_to_perfil")
+            df_p = pd.concat([df_p, df_novo], ignore_index=True)
+            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2)")
+        else:
+            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: 0 envios ainda")
+    else:
+        print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2.xlsx não encontrada — só 2026/1 nesta rodada")
 
-// ── PORTFÓLIOS ORDENS ─────────────────────────────────────────────────────────
-function renderOrdens(){
-  const el=document.getElementById('po-cards');
-  // PATCH 84: usava DB.prazos direto (sempre o semestre mais recente/global),
-  // enquanto o status (getOS) já usava a função certa por semestre — mostrando
-  // a data de prazo do 2026/2 junto com uma conclusão de VENCIDO/ABERTA que não
-  // batia com aquela data, quando "2026/1" estava selecionado. Agora os dois
-  // vêm da mesma fonte, sempre o semestre selecionado no momento.
-  const ordens=Object.entries(_getSemPrazos()||{}).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0]));
-  el.innerHTML=`<div class="kpi-row">`+ordens.map(([o,prazo])=>{const s=getOS(o);const corS=s==='VENCIDO'?'var(--red)':s==='ABERTA'?'var(--ok)':'var(--muted)';return `<div class="kpi kpi-green"><div class="kpi-label">${o}</div><div class="kpi-value" style="font-size:20px">${getOE(o)} <small style="font-size:11px;color:var(--muted)">envios</small></div><div class="kpi-detail">${fmtNum(getOA(o))} alunos · Prazo: ${prazo}</div><div style="margin-top:4px"><span class="badge" style="background:${corS}20;color:${corS}">${s||'—'}</span></div></div>`;}).join('')+'</div>';
-  const sel=document.getElementById('ordem-sel');
-  if(sel.options.length<=1) ordens.forEach(([o])=>{const op=document.createElement('option');op.value=o;op.textContent=o;sel.appendChild(op)});
-}
-function filterOrdemTbl(q){
-  q=q.toLowerCase();const selO=document.getElementById('ordem-sel').value;const selC=(document.getElementById('ordem-cat-sel')||{}).value||'';
-  let d=_getSemTutores();if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(selC)d=d.filter(t=>t.c===selC);if(selO)d=d.filter(t=>{const po=t.por_ordem||t.porOrdem||{};return (po[selO]||0)>0;});
-  ordemData=d;renderOrdemTbl(d);
-}
-function sortOrdem(k){if(ordemSortK===k)ordemSortA=!ordemSortA;else{ordemSortK=k;ordemSortA=k==='n'}filterOrdemTbl(document.getElementById('ordem-search').value)}
-function renderOrdemTbl(data){
-  const sorted=[...data].sort((a,b)=>{let va,vb;if(['o1','o2','o3','o4','o5'].includes(ordemSortK)){const o='Ordem '+ordemSortK[1];va=((a.por_ordem||a.porOrdem||{})[o])||0;vb=((b.por_ordem||b.porOrdem||{})[o])||0;}else{va=a[ordemSortK]||0;vb=b[ordemSortK]||0;}if(typeof va==='string')return ordemSortA?va.localeCompare(vb):vb.localeCompare(va);return ordemSortA?va-vb:vb-va;});
-  const tb=document.getElementById('ordem-tbody');
-  tb.innerHTML=sorted.map(t=>{const po=t.por_ordem||t.porOrdem||{};const cell=o=>{const v=po[o]||0;return `<td style="text-align:center;font-weight:600;color:${v?'var(--ok)':'var(--dim)'}"><span style="background:${v?'var(--ok-dim)':'var(--bg)'};padding:3px 8px;border-radius:4px;font-size:11px">${v||'—'}</span></td>`};return `<tr><td><strong>${t._anonimo?'<span style="color:#dc2626;font-style:italic;font-size:11px">⚠ Tutor desligado</span>':t.n}</strong></td><td style="font-size:11px">${t._anonimo?t.p.replace(/[A-Z]{2,6}(-[A-Z]{2,6})?$/,'').trim():t.p}</td><td style="font-size:11px">${t.c_exibicao||t.c||'—'}</td>${cell('Ordem 1')}${cell('Ordem 2')}${cell('Ordem 3')}${cell('Ordem 4')}${cell('Ordem 5')}<td style="text-align:right;font-weight:700">${t.te}</td></tr>`;}).join('');
-  document.getElementById('ordem-count').textContent=sorted.length+' tutor'+(sorted.length!==1?'es':'');if(!sorted.length)document.getElementById('ordem-tbody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">Nenhum tutor encontrado com este filtro.</td></tr>';
-}
+    chave_to_cat_raw = {}; chave_to_cf = {}; chave_alias = {}
+    polo_biofar_cursos = {}
+    for _, t in df_at.iterrows():
+        polo_   = str(t.get(col_polo, '') or '').strip()
+        cursos_ = str(t.get(col_cur,  '') or '').strip()
+        cat_    = _normaliza_categoria_bio_duplicado(str(t.get(col_cat,  '') or '').strip()) if col_cat else ''
+        if cursos_ in ('BBI', 'BFR') and 'BIO-FAR' in cat_.upper():
+            if polo_ not in polo_biofar_cursos: polo_biofar_cursos[polo_] = set()
+            polo_biofar_cursos[polo_].add(cursos_)
+    # Pré-calcular polos que têm tutor BFI legítimo (para não criar alias conflitante)
+    _polos_com_bfi = set()
+    for _, t in df_at.iterrows():
+        _cur_t = str(t.get(col_cur, '') or '').strip()
+        _pol_t = str(t.get(col_polo, '') or '').strip()
+        if _cur_t == 'BFI':
+            _polos_com_bfi.add(_pol_t)
+    for _, t in df_at.iterrows():
+        polo = str(t.get(col_polo, '') or '').strip()
+        cursos = str(t.get(col_cur, '') or '').strip()
+        cat_raw = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
+        cf = CAT_MAP.get(cat_raw, cat_raw)
+        chave = polo + cursos
+        if chave and cat_raw:
+            chave_to_cat_raw[chave] = cat_raw
+            chave_to_cf[chave] = cf
+            if cursos in ('BBI', 'BFR'):
+                outros = polo_biofar_cursos.get(polo, set()) - {cursos}
+                # Só adicionar alias BFI se NÃO existe tutor BFI legítimo neste polo
+                # (evita colisão que faz portfólios BFI serem atribuídos a BIO-FAR)
+                variantes = [] if polo in _polos_com_bfi else [polo + 'BFI']
+                for outro in outros:
+                    variantes += [polo+cursos+'-'+outro, polo+outro+'-'+cursos, polo+cursos+outro, polo+outro+cursos]
+                for v in variantes:
+                    chave_to_cf.setdefault(v, cf)
+                    chave_alias.setdefault(v, chave)
 
-// ── PORTFÓLIOS PRÁTICAS ───────────────────────────────────────────────────────
-function renderPracKPIs(){
-  const pracs=getPraticas();
-  const total=pracs.length;
-  const complete=pracs.filter(p=>p.pend_n===0).length;
-  document.getElementById('pp-kpis').innerHTML=
-    `<div class="kpi kpi-green"><div class="kpi-label">Total Práticas</div><div class="kpi-value">${total}</div></div>`+
-    `<div class="kpi kpi-ok"><div class="kpi-label">100% Concluídas</div><div class="kpi-value">${complete}</div></div>`+
-    `<div class="kpi kpi-red"><div class="kpi-label">Com Pendências</div><div class="kpi-value">${total-complete}</div></div>`;
-}
-function renderCatPracBars(){
-  const el=document.getElementById('pp-cat-bars');
-  const cats={};
-  const _normC=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;
-  (getPraticas()).forEach(p=>{
-    const c=_normC(p.c||'Outro');
-    if(!cats[c])cats[c]={t:0,e100:0,envN:0,pendN:0};
-    cats[c].t++;
-    if((p.pend_n||0)===0)cats[c].e100++;
-    cats[c].envN+=(p.env_n||0);
-    cats[c].pendN+=(p.pend_n||0);
-  });
-  const hubCat=((DB.alunos_hub||{}).por_cat)||{};
-  el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
-    const tot=v.envN+v.pendN;
-    const pct=tot?Math.round(v.envN/tot*100):0;
-    const cor=pct>=75?'var(--green)':pct>=40?'var(--yellow)':'var(--red)';
-    const hubKey=Object.keys(hubCat).find(k=>_normC(k)===c||k===c)||'';
-    const alunos=hubCat[hubKey]||0;
-    const alunosStr=alunos?`<span style="color:var(--muted);font-size:10px">${fmtNum(alunos)} alunos</span>`:'';
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" data-cat="${c.replace(/"/g,'&quot;')}" onclick="setFilterPrac(this.getAttribute('data-cat'))">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-weight:600;font-size:13px;white-space:nowrap">${c}</span>
-          ${alunosStr}
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${v.e100}/${v.t} práticas 100% · ${fmtNum(v.envN)} envios de ${fmtNum(tot)}</div>
-        <div style="height:5px;background:var(--border);border-radius:3px;margin-top:6px">
-          <div style="height:5px;background:${cor};border-radius:3px;width:${pct}%;transition:width .4s"></div>
-        </div>
-      </div>
-      <div style="font-size:16px;font-weight:700;color:${cor};min-width:38px;text-align:right">${pct}%</div>
-    </div>`;
-  }).join('');
-}
 
-function switchRankTab(tab){_rankTab=tab;document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('active'));document.getElementById('rtab-'+tab).classList.add('active');var btnExp=document.getElementById('btn-export-prac');if(btnExp)btnExp.onclick=function(){exportPraticas(tab);};renderTopPrac();}
-function renderTopPrac(){
-  const el=document.getElementById('pp-ranking');const all=getPraticas();let pracs,color,valFn,titleTxt;
-  if(_rankTab==='env'){pracs=[...all].sort((a,b)=>b.env_n-a.env_n).slice(0,20);color='var(--ok)';valFn=p=>p.env_n+' enviadas';titleTxt='🟢 Top 20 — Mais Aplicadas';}
-  else if(_rankTab==='menos'){pracs=[...all].filter(p=>p.env_n>0).sort((a,b)=>a.env_n-b.env_n).slice(0,20);color='var(--yellow-d)';valFn=p=>p.env_n+' enviadas';titleTxt='🟡 Menos Aplicadas (bottom 20)';}
-  else{pracs=[...all].filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,20);color='var(--red)';valFn=p=>p.pend_n+' pendentes';titleTxt='🔴 Top 20 — Mais Pendências';}
-  const titleEl=document.getElementById('pp-rank-title');if(titleEl)titleEl.textContent=titleTxt;
-  const max=pracs.length?Math.max(...pracs.map(p=>_rankTab==='pend'?p.pend_n:p.env_n)):1;
-  el.innerHTML=pracs.map((p,i)=>'<div class="rank-item"><div class="rank-pos">'+(i+1)+'</div><div style="flex:1;min-width:0"><div class="rank-name" title="'+p.n+'">'+p.n+'</div><div style="font-size:9px;color:var(--muted)">'+(p.c||'')+'</div></div><div class="rank-bar-wrap"><div class="rank-bar" style="width:'+(((_rankTab==='pend'?p.pend_n:p.env_n)/max*100))+'%;background:'+color+'"></div></div><div class="rank-val" style="color:'+color+'">'+valFn(p)+'</div></div>').join('');
-}
-function setFilterPrac(cat){
-  const sel=document.getElementById('prac-cat-sel');
-  if(sel){sel.value=cat;}
-  filterPrac(document.getElementById('prac-search').value||'');
-  document.getElementById('prac-search').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-function filterPrac(q){q=q.toLowerCase();const cat=document.getElementById('prac-cat-sel').value;const curso=(document.getElementById('prac-curso-sel')||{}).value||'';let d=getPraticas();if(q)d=d.filter(p=>(p.n+p.c).toLowerCase().includes(q));if(cat)d=d.filter(p=>(window._CAT_NORM_MAP&&window._CAT_NORM_MAP[p.c]||p.c)===cat);if(curso)d=d.filter(p=>(p.cursos||[]).includes(curso));pracData=d;renderPracTbl(d);}
-function sortPrac(k){if(pracSortK===k)pracSortA=!pracSortA;else{pracSortK=k;pracSortA=k==='n'}filterPrac(document.getElementById('prac-search').value)}
-function renderPracTbl(data){
-  const sorted=[...data].sort((a,b)=>{const va=a[pracSortK],vb=b[pracSortK];if(typeof va==='string')return pracSortA?va.localeCompare(vb):vb.localeCompare(va);return pracSortA?va-vb:vb-va});
-  document.getElementById('prac-tbody').innerHTML=sorted.map(p=>`<tr><td><strong>${p.n}</strong></td><td style="font-size:11px">${(window._CAT_NORM_MAP&&window._CAT_NORM_MAP[p.c])||p.c||'—'}</td><td style="text-align:right">${p.env_n}</td><td style="text-align:right;color:var(--red)">${p.pend_n}</td><td>${progCell(p.pct)}</td></tr>`).join('');
-  document.getElementById('prac-count').textContent=data.length+' prática'+(data.length!==1?'s':'');if(!data.length)document.getElementById('prac-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma prática encontrada.</td></tr>';
-}
+    oficial_p_to_cat = {}
+    for cat, pracs in catalogo_oficial.items():
+        for p in pracs: oficial_p_to_cat.setdefault(p, cat)
+    catalogo_real = defaultdict(set)
+    for _, r in df_p.iterrows():
+        chave = str(r.get('_CHAVE', '') or '').strip()
+        chave = chave_alias.get(chave, chave)
+        proto = r['_PROTO']
+        if not chave or chave == 'nan' or not proto or proto == 'nan': continue
+        cf = chave_to_cf.get(chave, '')
+        if not cf: continue
+        for p in proto.split(';'):
+            p = p.strip()
+            if not p: continue
+            cat_oficial = oficial_p_to_cat.get(p)
+            if cat_oficial and cat_oficial != cf: continue
+            catalogo_real[cf].add(p)
+    catalogo = {}
+    all_cats = set(list(catalogo_oficial.keys()) + list(catalogo_real.keys()))
+    for cat in all_cats:
+        base = set(catalogo_oficial.get(cat, [])); real = catalogo_real.get(cat, set())
+        catalogo[cat] = sorted(base | real)
+    print(f"[{ts()}] Catalogo final: {len(catalogo)} cats, {sum(len(v) for v in catalogo.values())} praticas")
+    email_to_cf = {}; email_to_chave_tutor = {}
+    col_email_t = next((c for c in df_t.columns if 'E-MAIL' in str(c).upper() or 'EMAIL' in str(c).upper()), None)
+    _email_chaves_vistas = defaultdict(set)  # PATCH 25b: detectar e-mail duplicado no CONTROLE
+    if col_email_t:
+        for _, t in df_at.iterrows():
+            em = str(t.get(col_email_t, '') or '').strip().lower()
+            chave_t = t['_CHAVE']
+            cat_raw_ = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
+            cf_ = CAT_MAP.get(cat_raw_, cat_raw_)
+            if em and em != 'nan':
+                _email_chaves_vistas[em].add(chave_t)
+                email_to_cf[em] = cf_; email_to_chave_tutor[em] = chave_t
+    # PATCH 25b: se o mesmo e-mail aparece em mais de uma linha ATIVA do CONTROLE
+    # com chaves (polo+curso) diferentes, a última linha processada sobrescreve
+    # silenciosamente as anteriores em email_to_chave_tutor — isso faz submissões
+    # de fallback-por-email irem parar no destino errado, sem nenhum aviso. Foi
+    # exatamente esse padrão suspeito no caso da tutora Cleya Da Silva Santana
+    # Cruz (Diamantina/MG · EMF-ISN). Agora isso gera um aviso alto no log.
+    _emails_duplicados = {em: chaves for em, chaves in _email_chaves_vistas.items() if len(chaves) > 1}
+    if _emails_duplicados:
+        print(f"[{ts()}] ⚠️  AVISO CRÍTICO: {len(_emails_duplicados)} e-mail(s) duplicado(s) no CONTROLE com chaves diferentes — fallback por e-mail pode estar direcionando submissões pro destino errado:")
+        for _em, _chaves in _emails_duplicados.items():
+            print(f"[{ts()}]     {_em} -> {sorted(_chaves)} (usando apenas a última chave processada: {email_to_chave_tutor.get(_em)!r})")
+    col_email_p = next((c for c in df_p.columns if c.upper() in ('EMAIL', 'E-MAIL')), None)
+    # ── Mapeamentos de fallback adicionais ──────────────────────────────────
+    # Fallback 3: por nome do tutor (coluna "Nome do tutor" no Forms)
+    col_nome_tutor_p = None
+    for c in df_p.columns:
+        cu = str(c).upper()
+        if 'NOME' in cu and 'TUTOR' in cu: col_nome_tutor_p = c; break
+    if not col_nome_tutor_p:
+        for c in df_p.columns:
+            cu = str(c).upper()
+            if 'TUTOR' in cu and 'PONTOS' not in cu and 'COMENT' not in cu:
+                col_nome_tutor_p = c; break
 
-// ── PORTFÓLIOS POLOS ──────────────────────────────────────────────────────────
-function filterPolos(q){q=q.toLowerCase();const st=document.getElementById('polo-status-sel').value;let d=_getSemPoloStats();if(q)d=d.filter(p=>gPN(p).toLowerCase().includes(q));if(st==='pend')d=d.filter(p=>p.pend>0);if(st==='ok')d=d.filter(p=>p.pend===0);poloData=d;renderPoloTbl(d);}
-function sortPolo(k){if(poloSortK===k)poloSortA=!poloSortA;else{poloSortK=k;poloSortA=k==='n'}filterPolos(document.getElementById('polo-search').value)}
-function renderPoloTbl(data){
-  const sorted=[...data].sort((a,b)=>{const va=a[poloSortK],vb=b[poloSortK];if(typeof va==='string')return poloSortA?va.localeCompare(vb):vb.localeCompare(va);return poloSortA?va-vb:vb-va});
-  const sb=document.getElementById('polo-stat-bar');const ok=sorted.filter(p=>(p.pend||0)===0).length,pend=sorted.length-ok;
-  sb.innerHTML=`<div style="width:${ok/sorted.length*100}%;background:var(--ok)"></div><div style="width:${pend/sorted.length*100}%;background:var(--red)"></div>`;
-  document.getElementById('polo-tbody').innerHTML=sorted.map(p=>`<tr class="${p.pend?'tr-pend':'tr-ok'}" style="cursor:pointer" onclick="openPoloModal('${esc(gPN(p))}')"><td><strong>${gPN(p)}</strong></td><td style="text-align:right">${gPT(p)}</td><td style="text-align:right">${gPE(p)}</td><td style="text-align:right;color:var(--red)">${p.pend}</td><td style="text-align:right">${fmtNum(gPA(p))}</td><td>${progCell(p.pct)}</td></tr>`).join('');
-  document.getElementById('polo-count').textContent=sorted.length+' polo'+(sorted.length!==1?'s':'');if(!sorted.length)document.getElementById('polo-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhum polo encontrado com este filtro.</td></tr>';
-  document.getElementById('polo-sub').textContent=`${sorted.length} polos · ${ok} sem pendências · ${pend} com pendências`;
-}
+    def _norm_nome_match(s):
+        import unicodedata
+        s = str(s or '').strip().lower()
+        s = unicodedata.normalize('NFD', s)
+        s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+        return s
 
-// ── PORTFÓLIOS TUTORES ────────────────────────────────────────────────────────
-function filterTutores(q){q=q.toLowerCase();const st=document.getElementById('tutor-status-sel').value;const cat=document.getElementById('tutor-cat-sel').value;let d=_getSemTutores();if(q)d=d.filter(t=>(t.n+t.p+t.c).toLowerCase().includes(q));if(st==='ok')d=d.filter(t=>t.te>0);if(st==='pend')d=d.filter(t=>t.te===0);if(cat){const _CAT_NORM_MAP={'Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I - Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Multidisciplinar I – Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)','Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Multidisciplinar II – Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)','Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV - Nutrição':'NUTRI (Multidisciplinar IV)','Multidisciplinar IV – Nutrição':'NUTRI (Multidisciplinar IV)','Engenharias e Licenciaturas':'ENGMAKER','ENGMAKER+QUÍMICA E FÍSICA':'QUÍMICA E FÍSICA','EngeMaker | Química e Física - Engenharias e Licenciaturas':'ENGMAKER','Química e Física - Agronomia':'QUÍMICA E FÍSICA'};d=d.filter(t=>(_CAT_NORM_MAP[t.c||'']||t.c)===cat);}tutorData=d;tutoresFiltrados=d;renderTutorTbl(d);}
-function sortTutor(k){if(tutorSortK===k)tutorSortA=!tutorSortA;else{tutorSortK=k;tutorSortA=k==='n'}filterTutores(document.getElementById('tutor-search').value)}
-function renderTutorTbl(data){
-  const sorted=[...data].sort((a,b)=>{const va=a[tutorSortK],vb=b[tutorSortK];if(typeof va==='string')return tutorSortA?va.localeCompare(vb):vb.localeCompare(va);return tutorSortA?va-vb:vb-va});
-  const sb=document.getElementById('tutor-stat-bar');const env=sorted.filter(t=>t.te>0).length,pend=sorted.length-env;
-  sb.innerHTML=`<div style="width:${env/sorted.length*100}%;background:var(--ok)"></div><div style="width:${pend/sorted.length*100}%;background:var(--red)"></div>`;
-  document.getElementById('tutor-tbody').innerHTML=sorted.map(t=>{
-    const sit=gTS(t);
-    return `<tr class="${t.te>0?'':'tr-pend'}">
-      <td><strong>${t.n}</strong></td>
-      <td style="font-size:11px">${t.p}</td>
-      <td style="font-size:11px">${t.c_exibicao||t.c||'—'}</td>
-      <td style="text-align:right;font-weight:600">${t.te}/${t.tp||'?'}</td>
-      <td>${progCell(t.pct)}</td>
-      <td><span class="badge ${sit==='ok'?'ok':sit==='atrasado'?'parcial':'pend'}">${sit==='ok'?'OK':sit==='atrasado'?'Atrasado':'Urgente'}</span></td>
-      <td><button style="font-size:10px;padding:4px 10px;border:1px solid var(--border);border-radius:5px;background:var(--bg);cursor:pointer;font-family:var(--font)" onclick="openTutorModal('${esc(t.n)}')">Ver</button></td>
-    </tr>`; }).join('');
-  document.getElementById('tutor-count').textContent=sorted.length+' tutor'+(sorted.length!==1?'es':'');if(!sorted.length)document.getElementById('tutor-tbody').innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Nenhum tutor encontrado com este filtro.</td></tr>';
-  document.getElementById('tutor-sub').textContent=`${sorted.length} tutores · ${env} enviaram · ${pend} pendentes`;
-}
+    # PATCH 83: mesma lógica de subsequência já usada noutros pontos do arquivo
+    # (nome com uma parte a mais ou a menos, tipo "Jose Cicero..." vs "Cicero...")
+    # — aqui serve pra resolver submissões do Forms de portfólio que caem em
+    # "Aviso de Portfólio" só porque o nome digitado no formulário tem uma
+    # grafia levemente diferente do nome oficial no CONTROLE, mesmo a pessoa
+    # sendo um tutor real e corretamente cadastrado.
+    def _eh_subsequencia_nome_match(curtos, longos):
+        i = 0
+        for tok in longos:
+            if i < len(curtos) and tok == curtos[i]:
+                i += 1
+        return i == len(curtos)
 
-// ── MODALS ────────────────────────────────────────────────────────────────────
-function openListModal(tipo){
-  const tutores=DB.tutores||[];let lista,titulo,sub;
-  const _tutSem=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos'?_getSemTutores():DB.tutores||[]);
-  if(tipo==='todos'){lista=_tutSem.filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio');titulo='Todos os Tutores';sub=lista.length+' tutores ativos';}
-  else if(tipo==='enviaram'){lista=_tutSem.filter(t=>(t.te||0)>0&&!t._anonimo);titulo='Tutores que Enviaram';sub=lista.length+' enviaram portfólio';}
-  else if(tipo==='urgentes'){lista=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos'?_getSemTutores():DB.tutores||[]).filter(t=>gTS(t)==='urgente'&&!t._anonimo&&t.n!=='Tutor desligado'&&t.c!=='Aviso de Portfólio');titulo='⚠️ Tutores Urgentes';sub=lista.length+' com prazo crítico';}
-  else if(tipo==='atrasados'){const _tutAt=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos'?_getSemTutores():DB.tutores||[]);lista=_tutAt.filter(t=>gTS(t)==='atrasado'&&!t._anonimo&&t.c!=='Aviso de Portfólio');titulo='🕐 Tutores Atrasados';sub=lista.length+' com prazo vencido';}
-  else if(tipo==='polos'){
-    const polos=[...DB.polo_stats||[]].sort((a,b)=>(b.pend||0)-(a.pend||0));window._ml=polos;
-    document.getElementById('m-title').textContent='Ranking de Polos';document.getElementById('m-sub').textContent=polos.length+' polos · clique para detalhar';
-    document.getElementById('m-body').innerHTML=polos.map((p,i)=>'<div class="modal-list-item" data-mli="'+i+'" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+gPN(p)+'</div><div style="font-size:10px;color:var(--muted)">'+p.t+' tutores · '+p.pend+' pendentes</div></div>'+progCell(p.pct||0)+'</div>').join('');
-    document.querySelectorAll('[data-mli]').forEach(function(el){el.addEventListener('click',function(){const p=window._ml[+this.dataset.mli];closeModal();setTimeout(function(){openPoloModal(gPN(p));},100);});});
-    document.getElementById('modal-overlay').classList.add('show');return;
-  }
-  const sorted=[...lista].sort((a,b)=>a.n.localeCompare(b.n));window._ml=sorted;
-  document.getElementById('m-title').textContent=titulo;document.getElementById('m-sub').textContent=sub;
-  document.getElementById('m-body').innerHTML=sorted.map((t,i)=>'<div class="modal-list-item" data-mli="'+i+'" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+t.n+'</div><div style="font-size:10px;color:var(--muted)">'+t.p+' · '+(t.c||'—')+'</div></div>'+pctBadge(t.pct)+'</div>').join('');
-  document.querySelectorAll('[data-mli]').forEach(function(el){el.addEventListener('click',function(){const t=window._ml[+this.dataset.mli];closeModal();setTimeout(function(){openTutorModal(t.n);},100);});});
-  document.getElementById('modal-overlay').classList.add('show');
-}
-function openCatModal(idx){const entry=Object.entries(window._pvCats||{}).sort((a,b)=>b[1].t-a[1].t)[idx];if(!entry)return;const[cat]=entry;const lista=(DB.tutores||[]).filter(t=>t.c===cat);window._ml=lista;document.getElementById('m-title').textContent=cat;document.getElementById('m-sub').textContent=lista.length+' tutores nesta categoria';document.getElementById('m-body').innerHTML=lista.map((t,i)=>'<div class="modal-list-item" data-mli="'+i+'" style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+t.n+'</div><div style="font-size:10px;color:var(--muted)">'+t.p+'</div></div>'+pctBadge(t.pct)+'</div>').join('');document.querySelectorAll('[data-mli]').forEach(function(el){el.addEventListener('click',function(){const t=window._ml[+this.dataset.mli];closeModal();setTimeout(function(){openTutorModal(t.n);},100);});});document.getElementById('modal-overlay').classList.add('show');}
-function openTutorModal(nome){
-  const t=(DB.tutores||[]).find(x=>x.n===nome);if(!t){document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent='Tutor não encontrado nos dados carregados';document.getElementById('m-body').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">Este tutor não foi localizado na base de dados atual. O arquivo pode ter sido atualizado.</div>';document.getElementById('modal-overlay').classList.add('show');return;}
-  document.getElementById('m-title').textContent=t.n;document.getElementById('m-sub').textContent=`${t.p} · ${t.c_exibicao||t.c||'—'} · ${t.pct.toFixed(0)}% concluído`;
-  let perfilHtml='';
-  {const _temDados=t.perfil||t.cursos||t.ch_semanal||t.titulacao||t.inicio||t.lattes_id||t.email;
-  if(_temDados){perfilHtml='<div style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--border)">';
-  const _perfTit=[];
-  if(t.perfil)_perfTit.push('👤 '+t.perfil);
-  if(t.titulacao)_perfTit.push('<span style="background:var(--green-dim);color:var(--green);padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700">'+t.titulacao+'</span>');
-  if(_perfTit.length)perfilHtml+='<div style="font-size:12px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px">'+_perfTit.join(' ')+'</div>';
-  if(t.graduacao)perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">🎓 Graduação: <strong>'+t.graduacao.substring(0,60)+'</strong></div>';
-  if(t.especializacao&&t.especializacao!=='—')perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">📋 Especialização: '+t.especializacao.substring(0,80)+'</div>';
-  if(t.mestrado&&t.mestrado!=='—')perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">🔬 Mestrado: '+t.mestrado.substring(0,80)+'</div>';
-  if(t.cursos)perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-bottom:3px">🧪 Laboratório: <strong>'+t.cursos+'</strong></div>';
-  const _infos=[];
-  if(t.ch_semanal||t.ch_ideal){const chS=t.ch_semanal?t.ch_semanal.toFixed(1)+'h':'—';const chI=t.ch_ideal?t.ch_ideal.toFixed(1)+'h':'—';const pp=t.ch_ideal?Math.floor(t.ch_ideal/1.5):0;_infos.push('⏱ CH: <strong>'+chS+'</strong>'+(pp?' · '+pp+' práticas/sem':''));}
-  if(t.inicio){const _d=new Date(t.inicio);const _m=Math.round((new Date()-_d)/(1000*60*60*24*30.5));_infos.push('📅 Admissão: <strong>'+t.inicio.split('-').reverse().join('/')+'</strong> ('+(_m/12).toFixed(1)+' anos)');}
-  if(t.exp_tutor_uni_meses>0)_infos.push('🕐 Exp. tutoria: <strong>'+t.exp_tutor_uni_meses+' meses</strong>');
-  if(_infos.length)perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-top:4px">'+_infos.join(' &nbsp;·&nbsp; ')+'</div>';
-  if(t.chapa&&t.chapa!=='None'&&t.chapa!=='nan')perfilHtml+='<div style="font-size:10px;color:var(--muted);margin-top:5px;border-top:1px solid var(--border);padding-top:6px">🪪 Chapa: '+t.chapa+'</div>';
-  if(t.lattes_id||t.lattes_url){const _u=t.lattes_id?'https://lattes.cnpq.br/'+t.lattes_id:(t.lattes_url||'');perfilHtml+='<div style="margin-top:6px"><a href="'+_u+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#1a3a5c;color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🔗 Currículo Lattes</a></div>';}
-  perfilHtml+='</div>';}}
-  // PATCH 13: bloco de acompanhamento de comunicação (relatório manual)
-  let comunicacaoHtml='';
-  if(t.comunicacao){
-    const c=t.comunicacao;
-    const cor=c.atencao?'var(--red)':'var(--yellow-d)';
-    const bg=c.atencao?'var(--red-dim)':'var(--yellow-dim)';
-    comunicacaoHtml=`<div style="background:${bg};border-left:3px solid ${cor};border-radius:8px;padding:12px 14px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:${cor};margin-bottom:6px">${c.atencao?'🚨':'📞'} Acompanhamento de Comunicação</div>
-      <div style="font-size:12px;color:var(--ink);margin-bottom:6px">${esc(c.resumo||'')}</div>
-      ${c.ultimo_contato?`<div style="font-size:11px;color:var(--muted)">Último contato: <strong>${esc(c.ultimo_contato)}</strong></div>`:''}
-      ${(c.tentativas_contato&&c.tentativas_contato.length)?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Tentativas: ${c.tentativas_contato.join(', ')}</div>`:''}
-      ${c.observacao?`<div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Obs: ${esc(c.observacao)}</div>`:''}
-    </div>`;
-  }
-  let html=comunicacaoHtml+perfilHtml+`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div></div>`;
-  html+=`<div style="margin-bottom:12px"><div class="kpi-label" style="margin-bottom:6px">Progresso Geral</div>${progCell(t.pct)}</div>`;
-  const po=t.por_ordem||t.porOrdem||{};if(Object.keys(po).length){html+=`<div class="sec-label">Portfólios por Ordem</div>`;html+=Object.entries(po).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0])).map(([o,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="font-size:11px;font-weight:600;min-width:60px">${o}</span><span style="font-size:11px;font-weight:700;color:var(--ok)">${v} envio${v>1?'s':''}</span></div>`).join('');}
-  if(t.real&&t.real.length){html+=`<div class="sec-label">✅ Realizadas (${t.real.length})</div>`;html+=t.real.map(r=>`<div class="prac-item"><div class="prac-icon done">✓</div><div style="flex:1"><div class="prac-name">${typeof r==='object'?r.n:r}</div></div><div class="prac-date">${typeof r==='object'?(r.d||'—'):'—'}</div></div>`).join('');}
-  if(t.pend&&t.pend.length){html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;const hoje=new Date();const _prazosAtual=_getSemPrazos()||DB.prazos;const ordensInfo=_ordensParaCategoria(t.c).map(o=>{const prazoStr=_prazosAtual[o]||'';const parts=prazoStr.split('/');const prazoDate=parts.length===3?new Date(parts[2],parts[1]-1,parts[0]):null;const vencido=prazoDate?hoje>prazoDate:false;const enviou=((t.por_ordem||t.porOrdem||{})[o]||0)>0;return{nome:o,prazo:prazoStr,prazoDate,vencido,enviou};});const ordensPendentes=ordensInfo.filter(o=>!o.vencido&&!o.enviou);const ordensVencidas=ordensInfo.filter(o=>o.vencido&&!o.enviou);const totalOrdens=ordensPendentes.length||1;const porOrdem=Math.ceil(t.pend.length/totalOrdens);ordensVencidas.forEach(o=>{html+=`<div style="font-size:10px;font-weight:700;color:var(--red);margin:8px 0 4px;padding:4px 8px;background:var(--red-dim);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;});if(ordensPendentes.length>0){ordensPendentes.forEach((o,oi)=>{const start=oi*porOrdem;const end=Math.min(start+porOrdem,t.pend.length);if(start>=t.pend.length)return;const pracs=t.pend.slice(start,end);html+=`<div style="font-size:10px;font-weight:700;color:var(--teal);margin:8px 0 4px;padding:4px 8px;background:var(--teal-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;html+=pracs.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name">${p}</div></div><div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div></div>`).join('');});}else{html+=t.pend.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name" style="color:var(--red)">${p}</div></div><div class="prac-date" style="color:var(--red)">Atrasado</div></div>`).join('');}}
-  if(t.hist&&t.hist.length){html+=`<div class="sec-label">📋 Histórico de Envios</div>`;html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`<div class="prac-item"><div class="prac-icon done">📄</div><div style="flex:1"><div class="prac-name">${h.p||'—'}</div><div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.a||0} alunos</div></div><div class="prac-date">${h.d||'—'}</div></div>`).join('');}
-  document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');
-}
-function openPoloModal(nome){
-  const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
-  const poloStats=(DB.polo_stats||[]).find(p=>(p.n||p.polo||p.POLO||'')==nome)||{};
-  const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,pend:tutores.filter(t=>t.te===0).length,
-    alunos:poloStats.a||poloStats.alunos||tutores.reduce((s,t)=>s+(t.al||0),0)};
-  document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
-  let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div><div class="sec-label">Tutores</div>`;
-  html+=tutores.map(t=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)"><div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c_exibicao||t.c||'—'}</div></div><div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>${pctBadge(t.pct)}</div>`).join('');
-  document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');
-}
-function closeModal(){document.getElementById('modal-overlay').classList.remove('show')}
+    def _nomes_batem_match(nome_a, nome_b):
+        if nome_a == nome_b:
+            return True
+        ta, tb = nome_a.split(), nome_b.split()
+        if not ta or not tb:
+            return False
+        if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+            return True
+        curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+        if len(curtos) < 2:
+            return False
+        return _eh_subsequencia_nome_match(curtos, longos)
 
-// ── GERENCIAMENTO ─────────────────────────────────────────────────────────────
+    # Mapear: nome_normalizado → chave CONTROLE
+    nome_to_chave_tutor = {}
+    for _, t in df_at.iterrows():
+        nome_t = str(t.get(col_nome, '') or '').strip()
+        chave_t = t['_CHAVE']
+        if nome_t and chave_t:
+            nome_to_chave_tutor[_norm_nome_match(nome_t)] = chave_t
+            # Também mapear primeiro+último nome
+            parts = _norm_nome_match(nome_t).split()
+            if len(parts) >= 2:
+                fl = parts[0] + ' ' + parts[-1]
+                nome_to_chave_tutor.setdefault(fl, chave_t)
 
-function openAlunosModal(){
-  // Usar dados do CSV de alunos (DB.alunos_hub) se disponível, senão usar ger_kpis por categoria
-  var hub = DB.alunos_hub || null;
-  if(!GER_DB) GER_DB = DB;
-  var kpis = GER_DB.ger_kpis || {};
-  var cats = GER_DB.ger_cat || [];
-  
-  var fonte = hub ? 'Relatório de Alunos por Hub (matrículas únicas por POLO_HUB × GRUPO_HUB)' 
-                  : 'Estimativa baseada no GIOCONDA (pode ter contagem múltipla)';
-  
-  var rows = '';
-  if(hub && hub.por_cat){
-    var total = hub.total_distintos || 0;
-    Object.entries(hub.por_cat).sort((a,b)=>b[1]-a[1]).forEach(([cat,n])=>{
-      var pct = total ? Math.round(n/total*100) : 0;
-      rows += `<tr><td style="padding:8px 12px;font-size:13px">${cat}</td>`
-        + `<td style="padding:8px 12px;font-size:13px;font-weight:700;text-align:right">${n.toLocaleString('pt-BR')}</td>`
-        + `<td style="padding:8px 12px;font-size:12px;color:var(--muted);text-align:right">${pct}%</td></tr>`;
-    });
-    rows += `<tr style="border-top:2px solid var(--border)"><td style="padding:8px 12px;font-weight:700">Total distintos</td>`
-          + `<td style="padding:8px 12px;font-weight:700;text-align:right">${total.toLocaleString('pt-BR')}</td><td></td></tr>`;
-  } else if(cats.length){
-    var totalEst = cats.reduce((s,c)=>s+(c.alunos_matriculados||c.alunos_mat||0), 0);
-    cats.slice().sort((a,b)=>((b.alunos_matriculados||b.alunos_mat||0))-((a.alunos_matriculados||a.alunos_mat||0))).forEach(c=>{
-      var n = c.alunos_matriculados || c.alunos_mat || 0;
-      var pct = totalEst ? Math.round(n/totalEst*100) : 0;
-      rows += `<tr><td style="padding:8px 12px;font-size:13px">${c.categoria||c.cat||'—'}</td>`
-        + `<td style="padding:8px 12px;font-size:13px;font-weight:700;text-align:right">${n.toLocaleString('pt-BR')}</td>`
-        + `<td style="padding:8px 12px;font-size:12px;color:var(--muted);text-align:right">${pct}%</td></tr>`;
-    });
-    rows += `<tr style="border-top:2px solid var(--border)"><td style="padding:8px 12px;font-weight:700">Total (estimativa)</td>`
-          + `<td style="padding:8px 12px;font-weight:700;text-align:right">${totalEst.toLocaleString('pt-BR')}</td>`
-          + `<td style="padding:8px 12px;font-size:11px;color:var(--muted);text-align:right">100%</td></tr>`;
-  } else {
-    rows = '<tr><td colspan="3" style="padding:16px;color:var(--muted);text-align:center">Dados por categoria não disponíveis</td></tr>';
-  }
+    sem_match = 0; com_match = 0; match_por_email = 0; match_por_nome = 0
 
-  var html = `<div style="padding:20px 24px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div>
-        <h3 style="margin:0;font-size:18px">Alunos Matriculados por Categoria</h3>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">${fonte}</div>
-      </div>
-      <button onclick="document.getElementById('modal-alunos').style.display='none'" 
-        style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px">✕ Fechar</button>
-    </div>
-    ${!hub?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:11px;margin-bottom:12px">⚠ Sem o Relatório de Alunos por Hub — os valores abaixo são estimativas e podem ter contagem múltipla (mesmo aluno em mais de um curso).</div>':''}
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:var(--bg)">
-        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600">CATEGORIA</th>
-        <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);font-weight:600">ALUNOS</th>
-        <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--muted);font-weight:600">%</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
+    # ── Constantes de tratamento de portfólios ───────────────────────────────
+    # Emails a ignorar completamente (gestão — não são tutores de prática)
+    EMAILS_IGNORAR = {'elienai.cesar@uniasselvi.com.br'}
 
-  var modal = document.getElementById('modal-alunos');
-  if(!modal){
-    modal = document.createElement('div');
-    modal.id = 'modal-alunos';
-    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
-    modal.innerHTML = '<div style="background:var(--card);border-radius:12px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)" id="modal-alunos-inner"></div>';
-    modal.onclick = function(e){ if(e.target===modal) modal.style.display='none'; };
-    document.body.appendChild(modal);
-  }
-  document.getElementById('modal-alunos-inner').innerHTML = html;
-  modal.style.display = 'flex';
-}
-function renderGerenciamento(){
-  if(!DB.tem_gerenciamento)return;
-  if(!GER_DB) GER_DB = DB;  // PATCH 18: fallback antes do seletor de semestre inicializar
-  document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';
-  const k=GER_DB.ger_kpis;document.getElementById('gv-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
-  document.getElementById('gv-kpis').innerHTML=`
-    <div class="kpi kpi-green" title="Total de combinações tutor × laboratório × ordem no GIOCONDA"><div class="kpi-label">Total Ofertas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
-    <div class="kpi kpi-ok" title="Ofertas com agenda configurada no GIOCONDA: datas, capacidade e locais definidos"><div class="kpi-label">Gerenciadas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_gerenciadas)}</div><div class="kpi-detail">${k.pct_gerenciado}% do total</div></div>
-    <div class="kpi kpi-red" title="Polos/labs sem nenhum tutor alocado — bloqueante total para gerenciamento"><div class="kpi-label">Sem Tutor <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_sem_tutor)}</div></div>
-    <div class="kpi kpi-teal" style="cursor:pointer" onclick="openAlunosModal()" title="Clique para ver detalhes por categoria"><div class="kpi-label">Alunos Mat. <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div><div class="kpi-detail" style="color:var(--teal);font-size:9px">${k.alunos_mat_fonte==='hub_csv'?'✓ matrículas únicas':'estimativa · clique p/ detalhar'}</div></div>
-    <div class="kpi kpi-yellow" title="Alunos com prática agendada (práticas gerenciadas × capacidade estimada por ordem)"><div class="kpi-label">Alunos Agendados <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>
-    <div class="kpi kpi-green" title="% de alunos matriculados com prática agendada: Agendados ÷ Matriculados × 100"><div class="kpi-label">Ocupação <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${k.pct_ocupacao}%</div></div>`;
-  const catColors=['#006B5E','#00A88F','#00C9A7','#FFD100','#E5BC00','#dc2626'];
-  document.getElementById('gv-cat-cards').innerHTML=(GER_DB.ger_cat||[]).map((c,i)=>{const cor=catColors[i%catColors.length];return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:${cor}08;border-left:4px solid ${cor}"><div style="font-size:13px;font-weight:700;margin-bottom:6px">${c.categoria}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700;font-size:15px">${fmtNum(c.total_ofertas)}</div></div><div><span style="color:var(--muted)">Gerenciadas</span><div style="font-weight:700;font-size:15px;color:var(--ok)">${c.pct_gerenciado}%</div></div><div><span style="color:var(--muted)">Sem tutor</span><div style="font-weight:700;font-size:15px;color:${c.sem_tutor>0?'var(--red)':'var(--ok)'}">-${fmtNum(c.sem_tutor)}</div></div></div></div>`;}).join('');
-  document.getElementById('gv-ordem-cards').innerHTML=(GER_DB.ger_ordem||[]).map(o=>{const pct=o.pct_gerenciado;return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:14px;font-weight:700">${o.ordem}</div><span style="font-size:10px;color:var(--muted)">${o.dt_inicio||''}${o.dt_inicio?' → ':''}${o.dt_fim||''}</span></div>${progCell(pct)}<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;font-size:10px;margin-top:6px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700">${fmtNum(o.total_ofertas)}</div></div><div><span style="color:var(--muted)">Al. Mat.</span><div style="font-weight:700">${fmtNum(o.alunos_matriculados)}</div></div><div><span style="color:var(--muted)">Agendados</span><div style="font-weight:700">${fmtNum(o.alunos_agendados)}</div></div><div><span style="color:var(--muted)">Tutores Gerenciaram ⓘ</span><div style="font-weight:700;color:var(--teal)" title="Tutores distintos que gerenciaram QUALQUER prática nesta ordem — acumula à parte pra cada ordem, sem misturar com as outras">${fmtNum(o.tutores_gerenciaram||0)}</div></div></div></div>`;}).join('');
-  // PATCH 86 (P6): gráfico comparando "tutores gerenciaram" entre as ordens —
-  // cada ordem conta separada, atualizando sozinha conforme ela acontece (não
-  // soma com as anteriores, não é afetada pelas seguintes ainda não iniciadas).
-  (function(){
-    var elChart=document.getElementById('gv-ordem-tutores-chart');
-    if(!elChart) return;
-    var ordens=(GER_DB.ger_ordem||[]);
-    var maxT=Math.max.apply(null,ordens.map(function(o){return o.tutores_gerenciaram||0;}).concat([1]));
-    elChart.innerHTML=ordens.map(function(o){
-      var v=o.tutores_gerenciaram||0; var w=Math.round(v/maxT*100);
-      return '<div style="display:flex;align-items:center;gap:10px;padding:5px 0">'+
-        '<span style="font-size:11px;min-width:64px;font-weight:600">'+o.ordem+'</span>'+
-        '<div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:'+w+'%;background:var(--teal);border-radius:4px"></div></div>'+
-        '<span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">'+v+'</span>'+
-      '</div>';
-    }).join('');
-  })();
-  // PATCH 97: lista de gerenciamento fora do período da ordem — só aparece o
-  // card quando existe pelo menos uma ocorrência real, pra não poluir a tela
-  // com um card vazio na maior parte do tempo.
-  (function(){
-    var _cardAnom=document.getElementById('gv-anomalia-ordem-card');
-    var _elLista=document.getElementById('gv-anomalia-ordem-lista');
-    if(!_cardAnom||!_elLista) return;
-    var _anomalias=(GER_DB.ger_anomalias_ordem||(GER_DB.ger_ofertas||[]).filter(function(o){return o._anomalia_ordem;}));
-    if(!_anomalias.length){ _cardAnom.style.display='none'; return; }
-    _cardAnom.style.display='';
-    _elLista.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
-      '<thead><tr style="text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase">'+
-      '<th style="padding:6px 8px">Polo</th><th style="padding:6px 8px">Tutor</th><th style="padding:6px 8px">Prática</th>'+
-      '<th style="padding:6px 8px">Ordem da Prática</th><th style="padding:6px 8px">Gerido em</th><th style="padding:6px 8px">Período Vigente na Data</th></tr></thead><tbody>'+
-      _anomalias.slice(0,200).map(function(o){
-        return '<tr style="border-top:1px solid var(--border)">'+
-          '<td style="padding:6px 8px">'+(o.polo||'—')+'</td>'+
-          '<td style="padding:6px 8px;font-weight:600">'+(o.tutor||'—')+'</td>'+
-          '<td style="padding:6px 8px;color:var(--muted)">'+(o.pratica||'—')+'</td>'+
-          '<td style="padding:6px 8px;font-weight:700;color:var(--red)">'+(o.ordem||'—')+'</td>'+
-          '<td style="padding:6px 8px">'+(o.dt_agenda||'—')+'</td>'+
-          '<td style="padding:6px 8px;font-weight:700">'+(o._ordem_esperada_na_data||'—')+'</td>'+
-        '</tr>';
-      }).join('')+'</tbody></table>'+
-      (_anomalias.length>200?'<div style="font-size:11px;color:var(--muted);margin-top:8px">Mostrando 200 de '+_anomalias.length+' — exporte pra ver todos.</div>':'');
-  })();
-  const topPolos=(GER_DB.ger_polo||[]).filter(p=>p.sem_tutor>0).sort((a,b)=>b.sem_tutor-a.sem_tutor).slice(0,10);const maxST=topPolos.length?topPolos[0].sem_tutor:1;
-  document.getElementById('gv-ranking').innerHTML=topPolos.map((p,i)=>`<div class="rank-item" style="cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')"><div class="rank-pos" style="color:${i<3?'var(--red)':'var(--muted)'}">${i+1}</div><div class="rank-name" title="${p.polo}">${p.polo}</div><div class="rank-bar-wrap"><div class="rank-bar" style="width:${p.sem_tutor/maxST*100}%;background:linear-gradient(90deg,var(--red),#f87171)"></div></div><div class="rank-val" style="color:var(--red)">${p.sem_tutor}</div></div>`).join('')||'<div style="color:var(--ok);text-align:center;padding:20px">✓ Todos os polos com tutor</div>';
+    # Domínio válido para tutores de prática
+    DOMINIO_TUTORIA = 'tutorpratica.uniasselvi.com.br'
 
-  // Heatmap compacto (scroll interno)
-  const cats=(GER_DB.ger_cat||[]).map(c=>c.categoria);
-  const topHM=(GER_DB.ger_polo||[]).sort((a,b)=>b.total_ofertas-a.total_ofertas);
-  const contrMap={};(GER_DB.ger_contratacao||[]).forEach(c=>{contrMap[c.polo+'|'+c.categoria]=c.tem_tutor});
-  let hmHTML=`<div style="overflow-x:auto;overflow-y:auto;max-height:500px"><table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr><th style="position:sticky;top:0;left:0;background:var(--bg);z-index:10;padding:4px 6px;white-space:nowrap;min-width:140px;border-bottom:2px solid var(--border)">Polo</th>`;
-  cats.forEach(c=>{hmHTML+=`<th style="position:sticky;top:0;background:var(--bg);z-index:9;padding:4px 3px;text-align:center;border-bottom:2px solid var(--border);white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis" title="${c}">${c.split('(')[0].trim().substring(0,10)}</th>`;});
-  hmHTML+='</tr></thead><tbody>';
-  topHM.forEach(p=>{
-    hmHTML+=`<tr><td style="padding:3px 6px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;border-bottom:1px solid var(--border)" title="${p.polo}">${p.polo.replace(/^LAP\s*-\s*/i,'').substring(0,28)}</td>`;
-    cats.forEach(c=>{const has=contrMap[p.polo+'|'+c];if(has===undefined)hmHTML+=`<td style="padding:3px;text-align:center;border-bottom:1px solid var(--border);color:var(--dim)">—</td>`;else if(has)hmHTML+=`<td style="padding:3px;text-align:center;background:var(--ok-dim);border-bottom:1px solid var(--border);cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')" title="${p.polo}">✓</td>`;else hmHTML+=`<td style="padding:3px;text-align:center;background:var(--red-dim);border-bottom:1px solid var(--border);cursor:pointer" onclick="openGerPoloModal('${esc(p.polo)}')" title="${p.polo}">✕</td>`;});
-    hmHTML+='</tr>';
-  });
-  hmHTML+='</tbody></table></div>';
-  document.getElementById('gv-heatmap').innerHTML=hmHTML;
+    # Avisos de portfólio (email incorreto, preenchimento incorreto, etc.)
+    _avisos_raw = {}  # key → {email, nome, polo, tipo, msg, count}
 
-  gerPoloData=GER_DB.ger_polo||[];renderGerPoloTbl(gerPoloData);
-  var temLot=DB.tem_lotacao&&(DB.tutores||[]).some(function(t){return t.ch_semanal&&t.ch_semanal>0;});document.querySelectorAll('.col-ch-lot').forEach(function(el){el.style.display=temLot?'':'none';});if(!temLot){var notaLot=document.getElementById('ch-lot-aviso');if(notaLot)notaLot.style.display='none';}
-  if(!temLot){var notaLot=document.createElement('div');notaLot.style.cssText='font-size:10px;color:var(--yellow);padding:4px 18px;background:var(--yellow-dim)';notaLot.textContent='⚠ Colunas CH Contratada disponíveis após configurar Planilha de Lotação';var detCard=document.querySelector('#page-ger-detalhe .card');if(detCard)detCard.insertBefore(notaLot,detCard.firstChild);}
-  var estadosData=agruparPorEstado(gerPoloData);window._estadosData=estadosData;
-  renderEstadosInline(estadosData);renderMapaBrasil(estadosData);
-  gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
-  gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
-  // PATCH 118 (replicado do Vinci principal): exclui da FONTE linhas de
-  // tutores sem nenhum vínculo ativo hoje (desligados sem registro ativo
-  // correspondente, ou categorizados como "Aviso de Portfólio") — ver
-  // comentário completo no template_dashboard.html.
-  var _tutoresAtivosKeysGD=(function(){
-    var s=new Set();
-    (DB.tutores||[]).filter(function(t){return !t._anonimo&&t.n&&t.n!=='Tutor desligado';}).forEach(function(t){s.add(_normTutorKey(t.n));});
-    return s;
-  })();
-  var _semVinculoAtivoKeysGD=(function(){
-    var s=new Set();
-    (DB.tutores_desligados||[]).forEach(function(t){
-      var k=_normTutorKey(t.n);
-      if(!_tutoresAtivosKeysGD.has(k)) s.add(k);
-    });
-    (DB.tutores||[]).filter(function(t){return t.c==='Aviso de Portfólio';}).forEach(function(t){s.add(_normTutorKey(t.n));});
-    return s;
-  })();
-  gerDetData=(GER_DB.ger_ofertas||[]).filter(function(r){ if(!r.tutor) return true; return !_semVinculoAtivoKeysGD.has(_normTutorKey(r.tutor)); });
-  // PATCH 77: o Leo reportou a MESMA pessoa (Renata Souza da/De Silva) ainda
-  // duplicada mesmo depois do PATCH 75/76 bloquearem a re-injeção de "sem
-  // oferta" — a causa real nesse caso é outra: um mecanismo ANTERIOR no
-  // processar.py preenche práticas sem tutor nenhum usando o nome do CONTROLE
-  // (backfill), criando uma linha REAL (não sintética) com grafia de nome
-  // DIFERENTE da que aparece nas linhas que o próprio tutor já tem atribuídas
-  // no GIOCONDA. Cada bloqueio de duplicidade (aqui e no processar.py) só
-  // cobre o SEU caminho específico — a causa raiz é sempre a mesma (grafias
-  // diferentes = "pessoas" diferentes pro sistema), não importa qual
-  // mecanismo introduziu a grafia divergente dessa vez. Resolve na raiz:
-  // canoniza o nome do tutor de TODA oferta pro nome oficial do CONTROLE (por
-  // polo, pra não juntar homônimos de polos diferentes), com a mesma
-  // tolerância a nome com parte a mais/a menos ou palavra do meio diferente
-  // do PATCH 74/75/76 — assim toda linha da mesma pessoa vira uma identidade
-  // só, antes de qualquer agrupamento.
-  (function(){
-    function _poloKeyCanon(p){
-      return String(p||'').replace(/^LAP\s*[-–]\s*/i,'').replace(/\([^)]*\)/g,'')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+    def _dividir_codigo_composto(chave):
+        """Divide chave com código composto (BFR-BBI) em sub-chaves individuais."""
+        import re as _re2
+        m = _re2.search(r'([A-Z]{2,4}-[A-Z]{2,4})$', chave)
+        if m:
+            polo_base = chave[:-len(m.group(1))]
+            partes = m.group(1).split('-')
+            candidatos = [polo_base + p for p in partes]
+            encontrados = [c for c in candidatos if c in chave_to_cf]
+            if encontrados:
+                return encontrados
+        return []
+
+    def _encontrar_por_polo(chave, cat_subm=''):
+        """Opção B: vincula submissão ao tutor ativo no mesmo polo.
+        Remove sufixos progressivos da chave para encontrar o polo base."""
+        cat_up = str(cat_subm).upper()
+        # Palavras-chave por categoria para priorizar match
+        _cat_kw = {
+            'BIO': ['BFR','BBI','BIO'],
+            'FAR': ['BFR','BBI','BIO'],
+            'ENF': ['ENF','ISN','INS'],
+            'NTR': ['NTR','NUTRI'],
+            'ENG': ['EMF','ENG','MEC'],
+            'FIS': ['BFI','FIS','FISIO'],
+        }
+        # Determinar categoria da submissão para priorizar candidatos
+        _pref_codigos = []
+        for kw, codigos in _cat_kw.items():
+            if kw in cat_up:
+                _pref_codigos = codigos; break
+
+        for code_len in range(3, min(len(chave), 12)):
+            polo_prefix = chave[:-code_len]
+            if len(polo_prefix) < 6: break
+            candidatos = [k for k in chave_to_cf if k.startswith(polo_prefix)]
+            if candidatos:
+                # Priorizar por categoria
+                if _pref_codigos:
+                    pref = [c for c in candidatos if any(cod in c for cod in _pref_codigos)]
+                    if pref: return pref[0]
+                return candidatos[0]
+        return None
+
+    enviados = defaultdict(list)
+    polo_sem_tutor = defaultdict(list)  # polo+cat → práticas de tutores desligados
+    _correcoes_perfil = 0
+    _correcoes_perfil_falhou = set()
+    for _, r in df_p.iterrows():
+        chave = r['_CHAVE']; proto = r['_PROTO']
+        if not chave or chave == 'nan' or not proto or proto == 'nan': continue
+
+        # Ignorar emails de gestão
+        _email_subm = str(r.get(col_email_p, '') or '').strip().lower() if col_email_p else ''
+        if _email_subm in EMAILS_IGNORAR:
+            continue
+
+        chave = chave_alias.get(chave, chave)
+
+        # PATCH 23: o email do remetente identifica a tutora de forma inequívoca.
+        # Quando a chave submetida aponta pra outro tutor (casos EMF-ISN2, EMF-ISND,
+        # etc. — o Forms só tinha a opção genérica, então a chave veio "errada"),
+        # corrige pra chave real do tutor que enviou ANTES de qualquer outra checagem.
+        if _email_subm and _email_subm in email_to_chave_tutor:
+            _chave_by_email = email_to_chave_tutor[_email_subm]
+            if _chave_by_email and _chave_by_email != chave and _chave_by_email in chave_to_cf:
+                chave = _chave_by_email
+        # que não distingue Fisio (BFI) / T.O. (BTO) / Estética (COS-TIP) corretamente
+        # quando os 3 cursos compartilham o mesmo polo/laboratório — corrige usando o
+        # nome da prática (inequívoco), que é mais confiável que a chave pronta.
+        if NOME_TO_PERFIL and _norm_proto(proto) in NOME_TO_PERFIL:
+            perfil_certo = NOME_TO_PERFIL[_norm_proto(proto)]
+            for _cod_errado in ('BFI', 'BTO', 'COS-TIP', 'TIP-COS'):
+                if chave.endswith(_cod_errado) and _cod_errado != perfil_certo:
+                    chave_corrigida = chave[:-len(_cod_errado)] + perfil_certo
+                    # Aplica sempre, mesmo sem tutor ativo no destino — é melhor cair
+                    # no fluxo de "sem match" (vira anônimo no polo) do que ficar
+                    # silenciosamente contado pro curso errado.
+                    if chave_corrigida in chave_to_cf:
+                        _correcoes_perfil += 1
+                    else:
+                        _correcoes_perfil_falhou.add((chave, chave_corrigida, proto))
+                    chave = chave_corrigida
+                    break
+
+        if chave not in chave_to_cf:
+            # Fallback 1: por email
+            if col_email_p:
+                em_p = str(r.get(col_email_p, '') or '').strip().lower()
+                if em_p in email_to_chave_tutor:
+                    chave = email_to_chave_tutor[em_p]
+                    match_por_email += 1
+                    # Sinalizar envio por e-mail de Regente de Polo (informativo)
+                    if '@regentedepolo.' in em_p:
+                        _nome_rp = str(r.get(col_nome_tutor_p, '') or '') if col_nome_tutor_p else ''
+                        _aviso_key_rp = f"{em_p}||regente_de_polo"
+                        if _aviso_key_rp not in _avisos_raw:
+                            _avisos_raw[_aviso_key_rp] = {
+                                'email': em_p, 'nome': _nome_rp, 'chave': chave,
+                                'tipo': 'regente_de_polo',
+                                'msg': 'Envio realizado pelo e-mail de Regente de Polo — tutor também é regente',
+                                'count': 0
+                            }
+                        _avisos_raw[_aviso_key_rp]['count'] += 1
+
+        if chave not in chave_to_cf:
+            # Fallback 2: por nome do tutor na coluna específica
+            if col_nome_tutor_p:
+                nome_p = _norm_nome_match(str(r.get(col_nome_tutor_p, '') or ''))
+                if nome_p in nome_to_chave_tutor:
+                    chave = nome_to_chave_tutor[nome_p]
+                    match_por_nome += 1
+                else:
+                    # Tentar primeiro+último nome
+                    parts_p = nome_p.split()
+                    if len(parts_p) >= 2:
+                        fl_p = parts_p[0] + ' ' + parts_p[-1]
+                        if fl_p in nome_to_chave_tutor:
+                            chave = nome_to_chave_tutor[fl_p]
+                            match_por_nome += 1
+                    # PATCH 83: se nem nome exato nem primeiro+último bateram,
+                    # tenta por subsequência (nome com parte a mais/a menos) —
+                    # antes disso, esses tutores caíam direto em "Aviso de
+                    # Portfólio" mesmo estando corretamente cadastrados, só
+                    # porque o nome digitado no Forms tinha uma grafia
+                    # levemente diferente da oficial no CONTROLE.
+                    if chave not in chave_to_cf:
+                        for _nome_ctrl, _chave_ctrl in nome_to_chave_tutor.items():
+                            if _nomes_batem_match(nome_p, _nome_ctrl):
+                                chave = _chave_ctrl
+                                match_por_nome += 1
+                                break
+
+        if chave not in chave_to_cf:
+            # Fallback 3: normalizar a própria chave (diferenças de espaços/acentos)
+            chave_norm = _norm_nome_match(chave.replace(' ', ''))
+            for k in chave_to_cf:
+                if _norm_nome_match(k.replace(' ', '')) == chave_norm:
+                    chave = k; match_por_nome += 1; break
+
+        # Fallback 4: código composto (ex: BFR-BBI → BFR e BBI)
+        if chave not in chave_to_cf:
+            _sub_chaves = _dividir_codigo_composto(chave)
+            if _sub_chaves:
+                chave = _sub_chaves[0]  # usar primeira sub-chave
+                match_por_nome += 1
+                # Se houver mais de uma sub-chave, adicionar às demais depois
+                for _sc in _sub_chaves[1:]:
+                    if _sc in chave_to_cf:
+                        _extra_proto = str(r.get('_PROTO', '') or '').strip()
+                        _extra_data  = r['_DATA']
+                        _extra_aluno = int(r['_ALUNOS'])
+                        _extra_ordem = str(r.get('_ORDEM', 'Ordem 1') or 'Ordem 1').strip()
+                        for _p in _extra_proto.split(';'):
+                            _p = _p.strip()
+                            if _p: enviados[_sc].append({'p':_p,'d':str(_extra_data)[:10] if pd.notna(_extra_data) else None,'a':_extra_aluno,'o':_extra_ordem})
+
+        if chave in chave_to_cf:
+            com_match += 1
+        else:
+            sem_match += 1
+            # Criar aviso de portfólio
+            _nome_subm  = str(r.get(col_nome_tutor_p, '') or '-') if col_nome_tutor_p else '-'
+            _polo_subm  = chave  # chave contém polo+código
+            if '@regentedepolo.' in _email_subm:
+                _tipo = 'regente_de_polo'
+                _msg  = 'Envio por e-mail de Regente de Polo sem correspondência no CONTROLE_TUTORIA'
+            elif _email_subm and not _email_subm.endswith('@' + DOMINIO_TUTORIA):
+                _dom = _email_subm.split('@')[1] if '@' in _email_subm else 'desconhecido'
+                _tipo = 'email_incorreto'
+                _msg  = f'E-mail incorreto: @{_dom} ao invés de @{DOMINIO_TUTORIA}'
+            else:
+                _tipo = 'chave_invalida'
+                _msg  = f'Polo/categoria não encontrado no CONTROLE: {chave}'
+            _aviso_key = f"{_email_subm}||{_tipo}"
+            if _aviso_key not in _avisos_raw:
+                _avisos_raw[_aviso_key] = {'email':_email_subm,'nome':_nome_subm,'chave':chave,'tipo':_tipo,'msg':_msg,'count':0}
+            _avisos_raw[_aviso_key]['count'] += 1
+            # Guardar práticas em polo_sem_tutor para entry anônimo no polo
+            _polo_part = chave  # chave = polo+código sem separador
+            for _pfb in str(r.get('_PROTO','') or '').split(';'):
+                _pfb = _pfb.strip()
+                if _pfb:
+                    _ordem_pfb = str(r.get('_ORDEM','Ordem 1') or 'Ordem 1').strip()
+                    polo_sem_tutor[_polo_part].append({'p':_pfb[:80],'d':None,'a':0,'o':_ordem_pfb})
+
+        data = r['_DATA']; aluno = int(r['_ALUNOS'])
+        for p in proto.split(';'):
+            p = p.strip()
+            if p:
+                ordem_val = str(r.get('_ORDEM', 'Ordem 1') or 'Ordem 1').strip()
+                if not any(o in ordem_val for o in ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5']):
+                    ordem_val = 'Ordem 1'
+                _data_str = str(data)[:10] if pd.notna(data) else None
+                _sem_envio = _data_para_semestre(_data_str)
+                if _sem_envio is None:
+                    # Data fora de qualquer janela → semestre mais antigo
+                    _sem_envio = sorted(ALL_SEMESTRES.keys())[0]
+                    # Log apenas se data estranha (debug)
+                    if _data_str and _data_str < '2026-02-01':
+                        pass  # silencioso — serão agrupados no 2026/1
+                enviados[chave].append({'p': p, 'd': _data_str, 'a': aluno, 'o': ordem_val, 's': _sem_envio})
+    # Finalizar avisos
+    avisos_portfolio = sorted(_avisos_raw.values(), key=lambda x: -x['count'])
+    print(f"[{ts()}] Matching submissões: {com_match} com chave, {match_por_email} por email, {match_por_nome} por nome/código, {sem_match} sem match")
+    if _correcoes_perfil:
+        print(f"[{ts()}] Correções BFI/BTO/COS-TIP por nome de prática: {_correcoes_perfil}")
+    if _correcoes_perfil_falhou:
+        print(f"[{ts()}] AVISO: {len(_correcoes_perfil_falhou)} correções de perfil sem tutor ativo no destino (foram para anônimo/polo):")
+        for _ch, _chc, _pr in list(_correcoes_perfil_falhou)[:10]:
+            print(f"    {_ch!r} -> {_chc!r} (não encontrado) | prática: {_pr!r}")
+    if sem_match > 0:
+        print(f"[{ts()}] Avisos de portfólio gerados: {len(avisos_portfolio)}")
+        for av in avisos_portfolio:
+            print(f"[{ts()}]   {av['tipo'].upper()} ({av['count']}x): {av['email']} | {av['nome']} | {av['msg']}")
+    tutores = []
+    # Pré-computar: para cada polo+CURSO ESPECÍFICO, agregar TODOS os envios
+    # (resolve o caso de múltiplos tutores por polo que compartilham o mesmo curso)
+    # PATCH 17: agrupar por curso específico (col_cur), não pela categoria ampla —
+    # BFI/BTO/COS-TIP têm a mesma categoria ampla (Multidisciplinar III) mas são
+    # cursos diferentes; agrupar pela categoria ampla juntava os 3 indevidamente.
+    _polo_cat_enviados = {}  # (polo_str, curso_especifico) → lista merged de hist
+    for _, t in df_at.iterrows():
+        _ch = t['_CHAVE']
+        _cursos_t = str(t.get(col_cur, '') or '').strip()
+        _polo_str = str(t.get(col_polo, '') or '').strip()
+        _key_pc = (_polo_str, _cursos_t)
+        if _key_pc not in _polo_cat_enviados:
+            # Buscar enviados pela chave canônica E por variantes de chave do mesmo
+            # polo que tenham o MESMO curso específico (não só a mesma categoria ampla)
+            _hist_merged = list(enviados.get(_ch, []))
+            for _k, _h in enviados.items():
+                if _k == _ch: continue
+                if _k.startswith(_polo_str) and _k[len(_polo_str):] == _cursos_t:
+                    for _item in _h:
+                        if _item not in _hist_merged:
+                            _hist_merged.append(_item)
+            _polo_cat_enviados[_key_pc] = _hist_merged
+    print(f"[{ts()}] Polo×curso com envios: {len([v for v in _polo_cat_enviados.values() if v])}")
+
+    # PATCH 24: nome_to_perfil também é usado para SEPARAR o catálogo de "previstas"
+    # (tp) por curso específico dentro de categorias compartilhadas (Multi III:
+    # BFI/BTO/COS-TIP; Multi I: BBI/BFR). Sem isso, um tutor de BFI é cobrado pelas
+    # práticas de BTO e COS-TIP também (e vice-versa), porque `catalogo` é indexado
+    # só pela categoria AMPLA (cat_form), que soma as práticas dos 3 cursos juntos.
+    def _catalogo_por_curso(praticas_full, cursos_t):
+        if not NOME_TO_PERFIL or not cursos_t:
+            return praticas_full
+        filtradas = [p for p in praticas_full if NOME_TO_PERFIL.get(_norm_proto(p)) == cursos_t]
+        # Só filtra se o mapa cobrir pelo menos 1 prática desse curso específico —
+        # caso contrário (categoria não coberta pelo nome_to_perfil.json), mantém
+        # o comportamento antigo em vez de zerar o catálogo do tutor.
+        return filtradas if filtradas else praticas_full
+
+    _hist_pre_admissao = 0
+    for _, t in df_at.iterrows():
+        chave    = t['_CHAVE']
+        cat_raw  = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
+        cat_form = CAT_MAP.get(cat_raw, cat_raw)
+        polo_str = str(t.get(col_polo, '') or '').strip()
+        cursos_t = str(t.get(col_cur, '') or '').strip()
+        praticas_full = catalogo.get(cat_form, catalogo.get(cat_raw, []))
+        praticas = _catalogo_por_curso(praticas_full, cursos_t)  # PATCH 24
+        # Enriquecimento MEC / data de admissão (calculado antes do filtro de hist)
+        _email_t = str(t.get(col_email, '') or '').strip().lower() if col_email else ''
+        _mec = mec_cache.get(_email_t, {})
+        _inicio_ctrl = t.get(col_inicio) if col_inicio else None
+        _inicio_str = None
+        if _inicio_ctrl and str(_inicio_ctrl) not in ('nan','NaT','None',''):
+            try:
+                _inicio_str = _inicio_ctrl.strftime('%Y-%m-%d') if hasattr(_inicio_ctrl,'strftime') else str(_inicio_ctrl)[:10]
+            except: pass
+        if not _inicio_str: _inicio_str = _mec.get('admissao')
+
+        # PATCH 17: agregado por polo+CURSO ESPECÍFICO (não categoria ampla) — cobre
+        # múltiplos tutores do mesmo curso no mesmo polo, sem juntar BFI/BTO/COS-TIP
+        hist_bruto = _polo_cat_enviados.get((polo_str, cursos_t), enviados.get(chave, []))
+        # PATCH 16: práticas enviadas ANTES da admissão do tutor atual não são dele —
+        # provavelmente foram enviadas por quem ocupava essa vaga antes (desligado).
+        # Vão pro bucket anônimo do polo em vez de ficarem com o tutor novo.
+        if _inicio_str:
+            hist = []
+            for h in hist_bruto:
+                if h.get('d') and h['d'] < _inicio_str:
+                    polo_sem_tutor[chave].append(h)
+                    _hist_pre_admissao += 1
+                else:
+                    hist.append(h)
+        else:
+            hist = hist_bruto
+        reais    = set(h['p'] for h in hist)
+        pend     = [p for p in praticas if p not in reais]
+        te = len(reais); tp = len(praticas)
+
+        # PATCH 90: campo só de EXIBIÇÃO com o curso específico (Fisioterapia/
+        # T. Ocupacional/Estética e Cosmética) pra Multi III — sem mexer em
+        # 'c' (categoria ampla crua), que o resto do sistema usa pra filtro/
+        # agrupamento de grupo. Só a coluna "Categoria" na tela usa isso.
+        _cat_exibicao = cat_raw
+        if str(cat_raw).strip() == 'BIO-FISIO-EST-TO (Multidisciplinar III)':
+            _primeiro_curso = str(t.get(col_cur, '') or '').split('|')[0].strip()
+            _cat_exibicao = CURSOS_NOMES.get(_primeiro_curso, cat_raw)
+
+        tutores.append({
+            'n': str(t.get(col_nome, '') or ''),
+            'p': str(t.get(col_polo, '') or ''),
+            'c': cat_raw, 'cf': cat_form or 'Sem mapeamento', 'c_exibicao': _cat_exibicao,
+            'cursos': str(t.get(col_cur, '') or ''),  # código específico (BFI, BTO, COS-TIP, etc.)
+            'tp': tp, 'te': te,
+            'pend': pend, 'real': sorted(reais), 'hist': hist,
+            'pct': round(te / tp * 100, 1) if tp else 0,
+            'ch_semanal': _parse_ch(t.get(col_ch)) if col_ch else None,
+            # Campos MEC / CONTROLE
+            'inicio': _inicio_str,
+            'lattes_url': _mec.get('lattes_url'),
+            'lattes_id': _mec.get('lattes_id'),
+            'titulacao': _mec.get('titulacao'),
+            'graduacao': _mec.get('graduacao'),
+            'especializacao': _mec.get('especializacao'),
+            'mestrado': _mec.get('mestrado'),
+            'doutorado': _mec.get('doutorado'),
+            'exp_fora_meses': _mec.get('exp_fora_meses'),
+            'exp_tutor_uni_meses': _mec.get('exp_tutor_uni_meses'),
+            'whatsapp': str(t.get(col_whats,'') or '') if col_whats else None,
+            'chapa': str(t.get(col_chapa,'') or '') if col_chapa else None,
+        })
+    if _hist_pre_admissao:
+        print(f"[{ts()}] Práticas pré-admissão removidas do tutor atual (vão pro polo): {_hist_pre_admissao}")
+    seen = {}; tutores_dedup = []
+    for t in tutores:
+        key = (t.get('p',''), t.get('n','').strip().lower())
+        if key in seen:
+            existing = seen[key]
+            existing['te'] = max(existing['te'], t['te'])
+            existing['hist'] = existing['hist'] + [h for h in t['hist'] if h not in existing['hist']]
+            existing['real'] = sorted(set(existing['real']) | set(t['real']))
+            existing['pend'] = [p for p in existing['pend'] if p not in existing['real']]
+            existing['tp'] = max(existing['tp'], t['tp'])
+            existing['pct'] = round(existing['te'] / existing['tp'] * 100, 1) if existing['tp'] else 0
+            if t.get('ch_semanal') and not existing.get('ch_semanal'):
+                existing['ch_semanal'] = t['ch_semanal']
+        else:
+            seen[key] = t; tutores_dedup.append(t)
+    tutores = tutores_dedup
+
+    # Criar entries anônimos para práticas de tutores desligados (vinculado ao polo)
+    for chave_polo, hist_polo in polo_sem_tutor.items():
+        if not hist_polo: continue
+        _reais_polo = set(h['p'] for h in hist_polo)
+        _cf_polo = ''
+        for _p_polo in _reais_polo:
+            _cf_polo = oficial_p_to_cat.get(_p_polo, '')
+            if _cf_polo: break
+        # Normalizar nome da categoria para o padrão do dashboard (usando CAT_MAP invertido)
+        _CAT_MAP_INV = {v: k for k, v in CAT_MAP.items()}
+        # Também mapear nomes parciais
+        _cf_polo_norm = _cf_polo
+        for _full, _short in _CAT_MAP_INV.items():
+            if _full.lower() in _cf_polo.lower() or _cf_polo.lower() in _full.lower():
+                _cf_polo_norm = _short; break
+        # Verificar se já está no formato correto (chave do CAT_MAP)
+        if _cf_polo_norm not in CAT_MAP:
+            for _short in CAT_MAP:
+                if _cf_polo.lower() in CAT_MAP[_short].lower():
+                    _cf_polo_norm = _short; break
+        if _cf_polo_norm in CAT_MAP:
+            _cf_polo = _cf_polo_norm
+        _praticas_polo = catalogo.get(_cf_polo, [])
+        _pend_polo = [p for p in _praticas_polo if p not in _reais_polo]
+        # Extrair nome do polo (remover código de curso do fim da chave)
+        import re as _re_anon
+        _polo_limpo = _re_anon.sub(r'[A-Z]{2,6}(-[A-Z]{2,6})?$', '', chave_polo).strip()
+        if not _polo_limpo: _polo_limpo = chave_polo
+        tutores.append({
+            'n': 'Tutor desligado', 'p': _polo_limpo, 'c': _cf_polo, 'cf': _cf_polo or 'Sem categoria',
+            'tp': len(_praticas_polo), 'te': len(_reais_polo),
+            'pend': _pend_polo, 'real': sorted(_reais_polo), 'hist': hist_polo,
+            'pct': round(len(_reais_polo)/len(_praticas_polo)*100,1) if _praticas_polo else 0,
+            'ch_semanal': None, '_anonimo': True,
+        })
+    if polo_sem_tutor:
+        print(f"[{ts()}] Entries anônimos criados: {len(polo_sem_tutor)} polos com práticas de tutores desligados")
+
+    p_to_cat = {}
+    for cat, pracs in catalogo.items():
+        for p in pracs:
+            if p not in p_to_cat: p_to_cat[p] = cat
+    ps = defaultdict(lambda: {'enviou': 0, 'nao_enviou': 0, 'categoria': ''})
+    for t in tutores:
+        for p in t['real']:  ps[p]['enviou']    += 1
+        for p in t['pend']:  ps[p]['nao_enviou'] += 1
+    _p_fallback = {}
+    for t in tutores:
+        for p in t['real'] + t['pend']: _p_fallback.setdefault(p, t['cf'])
+    for p in ps: ps[p]['categoria'] = p_to_cat.get(p, _p_fallback.get(p, ''))
+    ps_all = sorted([{'nome': k, **v} for k, v in ps.items()], key=lambda x: -x['nao_enviou'])
+    ps_list = ps_all[:30]
+    cs = defaultdict(lambda: {'total_tutores': 0, 'com_100pct': 0, 'total_previstas': 0, 'total_enviadas': 0})
+    for t in tutores:
+        if not t['tp']: continue
+        c = t['cf']
+        cs[c]['total_tutores'] += 1
+        if t['pct'] == 100: cs[c]['com_100pct'] += 1
+        cs[c]['total_previstas'] += t['tp']; cs[c]['total_enviadas'] += t['te']
+    print(f"[{ts()}] {len(tutores)} tutores, {sum(len(v) for v in catalogo.values())} praticas")
+    prazos = PRAZOS_ORDENS.copy()
+    hoje = datetime.now()
+    status_ordem = {}
+    # PATCH 3: usar datas de início reais de PERIODOS_ORDENS
+    for ordem, prazo_str in prazos.items():
+        prazo_date = datetime.strptime(prazo_str, '%d/%m/%Y')
+        periodo = PERIODOS_ORDENS.get(ordem, {})
+        inicio_str = periodo.get('inicio', '')
+        if inicio_str:
+            try: inicio_date = datetime.strptime(inicio_str, '%d/%m/%Y')
+            except ValueError: inicio_date = prazo_date.replace(day=1)
+        else: inicio_date = prazo_date.replace(day=1)
+        if hoje > prazo_date: status_ordem[ordem] = 'VENCIDO'
+        elif hoje >= inicio_date: status_ordem[ordem] = 'ABERTA'
+        else: status_ordem[ordem] = 'FUTURA'
+    tutores_out = []
+    for t in tutores:
+        por_ordem = {}
+        for h in t['hist']:
+            o = h.get('o', 'Ordem 1') or 'Ordem 1'
+            por_ordem[o] = por_ordem.get(o, 0) + 1
+        # PATCH 4: situação corrigida quando não há ordens vencidas
+        ordens_vencidas = [o for o, s in status_ordem.items() if s == 'VENCIDO']
+        ordens_abertas  = [o for o, s in status_ordem.items() if s == 'ABERTA']
+        if not ordens_vencidas:
+            if any(por_ordem.get(o, 0) > 0 for o in ordens_abertas) if ordens_abertas else False:
+                sit = 'ok'
+            elif ordens_abertas: sit = 'atrasado'
+            else: sit = 'ok'
+        else:
+            if all(por_ordem.get(o, 0) > 0 for o in ordens_vencidas): sit = 'ok'
+            elif any(por_ordem.get(o, 0) > 0 for o in ordens_vencidas): sit = 'atrasado'
+            else: sit = 'urgente'
+        tutores_out.append({
+            **t,
+            'nome': t.get('n',''), 'polo': t.get('p',''), 'cat': t.get('c',''),
+            'n': t.get('n',''), 'p': t.get('p',''), 'c': t.get('c',''),
+            'cf': t.get('cf','Sem mapeamento'),
+            'por_ordem': por_ordem, 'porOrdem': por_ordem, 'situacao': sit,
+        })
+    col_email_key = next((c for c in df_t.columns if 'E-MAIL' in str(c).upper()), None)
+    nome_to_email = {}
+    if col_email_key:
+        for _, row in df_at.iterrows():
+            nome = str(row.get(col_nome, '') or '').strip()
+            email = str(row.get(col_email_key, '') or '').strip().lower()
+            if nome and email and email != 'nan': nome_to_email[nome] = email
+    seen = {}; tutores_dedup = []
+    for t in tutores_out:
+        nome = t['n']; polo = t['p']
+        email = nome_to_email.get(nome, '')
+        key = email if email else (nome + '|' + polo).lower()
+        if key not in seen:
+            seen[key] = len(tutores_dedup); tutores_dedup.append(dict(t))
+        else:
+            ex = tutores_dedup[seen[key]]
+            ex['hist'] = ex['hist'] + t['hist']
+            merged_real = sorted(set(ex['real']) | set(t['real']))
+            ex['real'] = merged_real; ex['te'] = len(merged_real)
+            for o, cnt in t['por_ordem'].items():
+                ex['por_ordem'][o] = ex['por_ordem'].get(o, 0) + cnt
+                ex['porOrdem'][o]  = ex['porOrdem'].get(o, 0) + cnt
+            real_set = set(merged_real)
+            ex['pend'] = [p for p in ex['pend'] if p not in real_set]
+            if ex['tp'] > 0: ex['pct'] = round(ex['te'] / ex['tp'] * 100, 1)
+            # PATCH 5: reavalia situação + sincroniza sit
+            _orv = [o for o, s in status_ordem.items() if s == 'VENCIDO']
+            if not _orv: ex['situacao'] = 'ok'
+            elif all(ex['por_ordem'].get(o, 0) > 0 for o in _orv): ex['situacao'] = 'ok'
+            elif any(ex['por_ordem'].get(o, 0) > 0 for o in _orv): ex['situacao'] = 'atrasado'
+            else: ex['situacao'] = 'urgente'
+            ex['sit'] = ex['situacao']  # PATCH 5: sync shortcut
+            if t.get('ch_semanal') and not ex.get('ch_semanal'): ex['ch_semanal'] = t['ch_semanal']
+    tutores_out = tutores_dedup
+    print(f"[{ts()}] Após deduplicação: {len(tutores_out)} tutores únicos")
+
+    # PATCH 13: anexa o relatório de acompanhamento/comunicação na ficha do tutor
+    def _norm_nome(s):
+        s = unicodedata.normalize('NFKD', str(s or '')).encode('ascii', 'ignore').decode('ascii')
+        return ' '.join(s.upper().split())
+    com_file = os.path.join(SCRIPT_DIR, 'tutores_comunicacao.json')
+    if os.path.isfile(com_file):
+        with open(com_file, encoding='utf-8') as f: com_lista = json.load(f)
+        # PATCH 14: nomes do relatório costumam vir incompletos (ex: "Gabriella Ribeiro"
+        # vs "Gabriella Ribeiro Sousa" no cadastro) — casa por prefixo de tokens, não
+        # só por igualdade exata
+        com_tokens = [(tuple(_norm_nome(c['nome']).split()), c) for c in com_lista]
+        _matches = 0
+        for t in tutores_out:
+            t_tokens = tuple(_norm_nome(t.get('n','')).split())
+            achou = None
+            for ctoks, c in com_tokens:
+                n = min(len(ctoks), len(t_tokens))
+                if n >= 2 and ctoks[:n] == t_tokens[:n]:
+                    achou = c; break
+            if achou:
+                t['comunicacao'] = achou
+                _matches += 1
+        print(f"[{ts()}] Comunicação de tutores: {_matches}/{len(com_lista)} vinculados por nome")
+
+    total     = len(tutores_out)
+    enviaram  = sum(1 for t in tutores_out if t['te'] > 0)
+    atrasados = sum(1 for t in tutores_out if t['situacao'] == 'atrasado')
+    urgentes  = sum(1 for t in tutores_out if t['situacao'] == 'urgente')
+    total_alunos = sum(h['a'] for t in tutores_out for h in t['hist'])
+    polo_map = {}
+    for t in tutores_out:
+        p = t['polo']
+        if p not in polo_map:
+            polo_map[p] = {'POLO': p, 'polo': p, 'n': p, 'total': 0, 'enviaram': 0, 'atrasados': 0, 'alunos': 0}
+        polo_map[p]['total'] += 1
+        if t['te'] > 0: polo_map[p]['enviaram'] += 1
+        if t['situacao'] == 'atrasado': polo_map[p]['atrasados'] += 1
+        polo_map[p]['alunos'] += sum(h['a'] for h in t['hist'])
+    polo_envios = {}
+    for t in tutores_out:
+        p = t['polo']
+        polo_envios[p] = polo_envios.get(p, 0) + len(t.get('hist', []))
+    polo_stats = sorted(polo_map.values(), key=lambda x: -x['atrasados'])
+    for p in polo_stats:
+        p['n'] = p.get('polo', p.get('POLO', ''))
+        p['t'] = p['total']; p['e'] = p['enviaram']; p['a'] = p['alunos']
+        p['pend'] = p['total'] - p['enviaram']
+        p['pct'] = round(p['enviaram'] / p['total'] * 100) if p['total'] else 0
+        p['envios'] = polo_envios.get(p['POLO'], 0)
+    ordem_map = {o: {'envios': 0, 'alunos': 0} for o in prazos}
+    for t in tutores_out:
+        for h in t['hist']:
+            o = h.get('o', 'Ordem 1') or 'Ordem 1'
+            if o in ordem_map: ordem_map[o]['envios'] += 1; ordem_map[o]['alunos'] += h['a']
+    por_ordem = [
+        {'ordem': o, 'prazo': prazos[o], 'status': status_ordem[o],
+         'envios': ordem_map[o]['envios'], 'alunos': ordem_map[o]['alunos']}
+        for o in prazos
+    ]
+    mes_map = {}
+    for t in tutores_out:
+        for h in t['hist']:
+            d = h.get('d') or ''
+            mes = d[:7] if d and len(d) >= 7 else 'Sem data'
+            if mes not in mes_map: mes_map[mes] = {'MES': mes, 'mes': mes, 'envios': 0, 'alunos': 0}
+            mes_map[mes]['envios'] += 1; mes_map[mes]['alunos'] += h.get('a', 0)
+    por_mes = sorted(mes_map.values(), key=lambda x: x['mes'])
+    por_ordem_dict = {o: ordem_map[o]['envios'] for o in prazos}
+    alunos_por_ordem = {o: ordem_map[o]['alunos'] for o in prazos}
+    for p in polo_stats:
+        p['n'] = p.get('polo', p.get('POLO', ''))
+        p['t'] = p.get('total', 0); p['e'] = p.get('enviaram', 0); p['a'] = p.get('alunos', 0)
+    for t in tutores_out:
+        t['sit'] = t.get('situacao', 'urgente')
+        t['al'] = sum(h.get('a', 0) for h in t.get('hist', []))
+        t['email'] = nome_to_email.get(t.get('n', ''), '')
+    praticas_template = []
+    for p in ps_all:
+        total_p = p['enviou'] + p['nao_enviou']
+        praticas_template.append({
+            'n': p['nome'], 'c': p['categoria'],
+            'env_n': p['enviou'], 'pend_n': p['nao_enviou'],
+            'pct': round(p['enviou'] / total_p * 100, 1) if total_p else 0,
+            'nome': p['nome'], 'enviou': p['enviou'], 'nao_enviou': p['nao_enviou'], 'categoria': p['categoria'],
+        })
+    # ── Estatísticas por semestre ────────────────────────────────────────────
+    def _stats_semestre(sem_key, tutores_list, catalogo_dict, prazos_dict, periodos_dict):
+        """Gera o mesmo bloco de dados que processar() retorna, mas filtrado por semestre."""
+        from datetime import datetime as _dt2
+        _hoje = datetime.now()
+        _status_ord = {}
+        for _o, _pz in prazos_dict.items():
+            try:
+                _pz_d = _dt2.strptime(_pz, '%d/%m/%Y')
+                _ini  = _dt2.strptime(periodos_dict.get(_o,{}).get('inicio',_pz), '%d/%m/%Y')
+                if _hoje > _pz_d: _status_ord[_o] = 'VENCIDO'
+                elif _hoje >= _ini: _status_ord[_o] = 'ABERTA'
+                else: _status_ord[_o] = 'FUTURA'
+            except: _status_ord[_o] = 'FUTURA'
+
+        _por_ordem = {}; _alunos_por_ordem = {}
+        _polo_map = {}; _cat_stats = {}
+        _ps_sem = {}  # PATCH 108
+
+        for _t in tutores_list:
+            _sem_antigo = sorted(ALL_SEMESTRES.keys())[0]
+            _hist_sem = [h for h in _t.get('hist', []) if h.get('s', _sem_antigo) == sem_key]
+            _reais_sem = set(h['p'] for h in _hist_sem)
+            _te_sem = len(_reais_sem)
+            _tp = _t.get('tp', 0)
+            _pct_sem = round(_te_sem / _tp * 100, 1) if _tp else 0
+
+            # PATCH 108: tally de práticas por semestre -- usa o catálogo
+            # COMPLETO do tutor (t['real'] + t['pend'], que juntos representam
+            # tudo que ele já teve atribuído, em qualquer semestre) como
+            # universo, e classifica cada prática como "enviada" ou "pendente"
+            # DENTRO DESTE semestre específico -- sem isso, a página de
+            # Práticas mostrava sempre o mesmo dado (global/todos os tempos),
+            # ignorando completamente o seletor de semestre no Vinci.
+            _catalogo_tutor = set(_t.get('real', [])) | set(_t.get('pend', []))
+            for _p_nome in _catalogo_tutor:
+                if _p_nome not in _ps_sem:
+                    _ps_sem[_p_nome] = {'enviou': 0, 'nao_enviou': 0, 'categoria': _t.get('cf', '')}
+                if _p_nome in _reais_sem:
+                    _ps_sem[_p_nome]['enviou'] += 1
+                else:
+                    _ps_sem[_p_nome]['nao_enviou'] += 1
+
+            # por_ordem deste semestre
+            _po = {}
+            for _h in _hist_sem:
+                _o = _h.get('o','Ordem 1') or 'Ordem 1'
+                _po[_o] = _po.get(_o, 0) + 1
+                _por_ordem[_o] = _por_ordem.get(_o, 0) + 1
+                _alunos_por_ordem[_o] = _alunos_por_ordem.get(_o, 0) + _h.get('a', 0)
+
+            # situação neste semestre
+            _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
+            if not _orv: _sit = 'ok' if _te_sem > 0 else 'atrasado'
+            elif all(_po.get(_o,0) > 0 for _o in _orv): _sit = 'ok'
+            elif any(_po.get(_o,0) > 0 for _o in _orv): _sit = 'atrasado'
+            else: _sit = 'urgente'
+
+            # polo
+            _p = _t.get('p','')
+            if _p not in _polo_map:
+                _polo_map[_p] = {'n':_p,'polo':_p,'POLO':_p,'total':0,'enviaram':0,'atrasados':0,'alunos':0,'pend':0,'pct':0,'envios':0,'t':0,'e':0,'a':0}
+            _polo_map[_p]['total'] += 1; _polo_map[_p]['t'] += 1
+            if _te_sem > 0: _polo_map[_p]['enviaram'] += 1; _polo_map[_p]['e'] += 1
+            if _sit == 'atrasado': _polo_map[_p]['atrasados'] += 1
+            _polo_map[_p]['alunos'] += sum(h.get('a',0) for h in _hist_sem)
+            _polo_map[_p]['a'] = _polo_map[_p]['alunos']
+
+            # cat_stats
+            _cf = _t.get('cf','')
+            if _cf not in _cat_stats:
+                _cat_stats[_cf] = {'total_tutores':0,'com_100pct':0,'total_previstas':0,'total_enviadas':0}
+            if _tp:
+                _cat_stats[_cf]['total_tutores'] += 1
+                if _pct_sem == 100: _cat_stats[_cf]['com_100pct'] += 1
+                _cat_stats[_cf]['total_previstas'] += _tp
+                _cat_stats[_cf]['total_enviadas'] += _te_sem
+
+        # Calcular pct e pend nos polos
+        for _ps in _polo_map.values():
+            _ps['pend'] = _ps['total'] - _ps['enviaram']
+            _ps['pct']  = round(_ps['enviaram']/_ps['total']*100) if _ps['total'] else 0
+
+        # PATCH 108: monta pratica_stats/praticas deste semestre, no mesmo
+        # formato que a versão global (ps_all/praticas_template) usa --
+        # assim o frontend pode ler direto sem precisar de tratamento especial.
+        _ps_sem_all = sorted([{'nome': k, **v} for k, v in _ps_sem.items()], key=lambda x: -x['nao_enviou'])
+        _praticas_sem_template = []
+        for _p in _ps_sem_all:
+            _total_p = _p['enviou'] + _p['nao_enviou']
+            _praticas_sem_template.append({
+                'n': _p['nome'], 'c': _p['categoria'],
+                'env_n': _p['enviou'], 'pend_n': _p['nao_enviou'],
+                'pct': round(_p['enviou'] / _total_p * 100, 1) if _total_p else 0,
+                'nome': _p['nome'], 'enviou': _p['enviou'], 'nao_enviou': _p['nao_enviou'], 'categoria': _p['categoria'],
+            })
+
+        _total = len(tutores_list)
+        _sem_ant = sorted(ALL_SEMESTRES.keys())[0]
+        _enviaram = sum(1 for _t in tutores_list if any(h.get('s',_sem_ant)==sem_key and h.get('p') for h in _t.get('hist',[])))
+        # Calcular urgentes e atrasados corretamente
+        _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
+        _urgentes = 0; _atrasados = 0
+        for _t in tutores_list:
+            _sem_ant2 = sorted(ALL_SEMESTRES.keys())[0]
+            _h = [h for h in _t.get('hist', []) if h.get('s', _sem_ant2) == sem_key]
+            _po = {}
+            for _hh in _h:
+                _o = _hh.get('o', 'Ordem 1') or 'Ordem 1'
+                _po[_o] = _po.get(_o, 0) + 1
+            if _orv:
+                _venc_ok = [_o for _o in _orv if _po.get(_o, 0) > 0]
+                if len(_venc_ok) == 0:
+                    _urgentes += 1
+                elif len(_venc_ok) < len(_orv):
+                    _atrasados += 1
+
+        return {
+            'semestre': sem_key,
+            'kpis': {
+                'total': _total, 'enviaram': _enviaram, 'pendentes': _total - _enviaram,
+                'urgentes': _urgentes, 'atrasados': _atrasados,
+                'total_polos': len(_polo_map),
+                'polos_ok': sum(1 for _ps in _polo_map.values() if _ps['pend']==0),
+            },
+            'polo_stats': sorted(_polo_map.values(), key=lambda x: -x.get('pend',0)),
+            'por_ordem': _por_ordem,
+            'alunos_por_ordem': _alunos_por_ordem,
+            'status_ordem': _status_ord,
+            'prazos': prazos_dict,
+            'periodos': periodos_dict,
+            'cat_stats': [{'categoria':k,**v} for k,v in _cat_stats.items()],
+            'pratica_stats': _ps_sem_all[:30], 'praticas': _praticas_sem_template,  # PATCH 108
+        }
+
+    _dados_por_semestre = {}
+    for _sem_k, _sem_cfg in ALL_SEMESTRES.items():
+        _dados_por_semestre[_sem_k] = _stats_semestre(
+            _sem_k, tutores_out,
+            catalogo, _sem_cfg['prazos'], _sem_cfg['periodos']
+        )
+        _env_s = _dados_por_semestre[_sem_k]['kpis']['enviaram']
+        print(f"[{ts()}] Semestre {_sem_k}: {_env_s} tutores com envios")
+    # ── Fim estatísticas por semestre ─────────────────────────────────────────
+
+    BRT = timezone(timedelta(hours=-3))
+    gerado = datetime.now(BRT).strftime('%d/%m/%Y %H:%M')
+    ch_ok = sum(1 for t in tutores_out if t.get('ch_semanal'))
+    print(f"[{ts()}] {total} tutores · {enviaram} enviaram · {atrasados} atrasados · {urgentes} urgentes")
+    print(f"[{ts()}] CH SEMANAL preenchida: {ch_ok}/{total} tutores")
+
+    # PATCH 25c: snapshot/regressão — colunas detectadas + contagens-chave desta
+    # rodada, comparadas contra a rodada anterior (avisos só em log, nunca na UI)
+    _verificar_snapshot_regressao(
+        colunas_detectadas={
+            'CONTROLE.POLO': col_polo, 'CONTROLE.CURSOS': col_cur,
+            'CONTROLE.NOME_TUTOR': col_nome, 'CONTROLE.EMAIL': col_email,
+            'CONTROLE.CATEGORIA': col_cat,
+            'PORTFOLIO.CHAVE': c_chave, 'PORTFOLIO.PROTOCOLOS': c_proto,
+            'PORTFOLIO.DATA': c_data, 'PORTFOLIO.ALUNOS': c_aluno,
+        },
+        contagens={
+            'total_tutores': total, 'enviaram': enviaram,
+            'com_match': com_match, 'sem_match': sem_match,
+            'total_submissoes': sum(len(t.get('hist', [])) for t in tutores_out),
+        },
+    )
+
+    return limpar({
+        'kpis': {
+            'total': total, 'enviaram': enviaram, 'pendentes': total - enviaram,
+            'atrasados': atrasados, 'urgentes': urgentes,
+            'total_alunos': total_alunos, 'total_polos': len(polo_map),
+            'polos_ok': sum(1 for p in polo_stats if p['enviaram'] > 0),
+        },
+        'tutores': tutores_out, 'polo_stats': polo_stats,
+        'tutores_desligados': tutores_desligados,  # PATCH 105
+        'por_ordem': por_ordem_dict, 'por_ordem_lista': por_ordem,
+        'alunos_por_ordem': alunos_por_ordem, 'status_ordem': status_ordem,
+        'cat_stats': [{'categoria': k, **v} for k, v in cs.items()],
+        'pratica_stats': ps_list, 'praticas': praticas_template,
+        'catalogo': catalogo, 'prazos': prazos,
+        'por_mes': por_mes, 'gerado_em': gerado,
+        'avisos_portfolio': avisos_portfolio,
+        'semestre': SEMESTRE_ATUAL,
+        'todos_semestres': sorted(ALL_SEMESTRES.keys()),
+        'dados_por_semestre': _dados_por_semestre,
+        'disciplinas_por_ordem': _DISCIPLINAS_POR_ORDEM_GLOBAL,
+        'laboratorios': _carregar_laboratorios(),
+    })
+
+
+def _carregar_laboratorios():
+    # PATCH 13: dados pré-processados da seção "Laboratórios" (gerados fora do
+    # pipeline, a partir das bases da Juliana + do dataset de práticas 2026/1)
+    path = os.path.join(SCRIPT_DIR, 'laboratorios_data.json')
+    if not os.path.isfile(path):
+        print(f"[{ts()}] laboratorios_data.json não encontrado — seção Laboratórios fica vazia")
+        return {}
+    with open(path, encoding='utf-8') as f:
+        lab = json.load(f)
+    print(f"[{ts()}] Laboratórios: {len(lab.get('ricos',{}))} categorias ricas, {len(lab.get('simples',{}))} categorias simples")
+    return lab
+
+
+def _detectar_e_corrigir_base64(p4):
+    import base64 as _b64
+    try:
+        with open(str(p4), 'rb') as f: raw = f.read(16)
+        if raw[:4] == b'PK\x03\x04': return
+        with open(str(p4), 'rb') as f: full = f.read()
+        for padded in [full.strip(), full.strip() + b'==']:
+            try:
+                decoded = _b64.b64decode(padded)
+                if decoded[:4] == b'PK\x03\x04':
+                    with open(str(p4), 'wb') as fw: fw.write(decoded)
+                    print(f"  [FIX] Base64 detectado e corrigido ({len(full)}->{len(decoded)} bytes)")
+                    return
+            except Exception: continue
+        if raw[:5] in (b'\r\n<!D', b'<!DOC', b'<html'):
+            print(f"  [ERRO] Arquivo é uma página HTML (login Microsoft)")
+        else:
+            print(f"  [INFO] Arquivo não é ZIP nem base64 ({raw[:4].hex()})")
+    except Exception as e: print(f"  [AVISO] Verificação base64 falhou: {e}")
+
+
+def _ler_lotacao_xlsx(p4):
+    from openpyxl import load_workbook as _lwb
+    wb = _lwb(str(p4), read_only=True, data_only=True, keep_vba=False)
+    ws = wb['Quadro Geral de Lotação'] if 'Quadro Geral de Lotação' in wb.sheetnames else list(wb.worksheets)[0]
+    return list(ws.iter_rows(values_only=True))
+
+def _ler_lotacao_xls(p4):
+    import xlrd
+    wb = xlrd.open_workbook(str(p4))
+    try: ws = wb.sheet_by_name('Quadro Geral de Lotação')
+    except xlrd.XLRDError: ws = wb.sheet_by_index(0)
+    rows = []
+    for i in range(ws.nrows):
+        row = []
+        for j in range(ws.ncols):
+            cell = ws.cell(i, j)
+            if cell.ctype == xlrd.XL_CELL_DATE:
+                import xlrd.xldate
+                row.append(xlrd.xldate.xldate_as_datetime(cell.value, wb.datemode))
+            else: row.append(cell.value if cell.ctype != xlrd.XL_CELL_EMPTY else None)
+        rows.append(tuple(row))
+    return rows
+
+def _ler_lotacao_pandas(p4):
+    p = str(p4)
+    try: df = pd.read_excel(p, sheet_name='Quadro Geral de Lotação', header=None)
+    except Exception: df = pd.read_excel(p, sheet_name=0, header=None)
+    return [tuple(row) for row in df.fillna('').values.tolist()]
+
+def carregar_lotacao(p4):
+    fname = os.path.basename(str(p4))
+    print(f"[{ts()}] Lendo lotação de tutores ({fname})...")
+    _detectar_e_corrigir_base64(p4)
+    _rows = None
+    for estrategia, fn in [('openpyxl', _ler_lotacao_xlsx), ('xlrd', _ler_lotacao_xls), ('pandas', _ler_lotacao_pandas)]:
+        try:
+            _rows = fn(p4)
+            print(f"[{ts()}] Lotação lida via {estrategia}: {len(_rows)} linhas")
+            break
+        except Exception as e: print(f"[{ts()}] Tentativa {estrategia}: {e}")
+    if not _rows: raise RuntimeError(f"Não foi possível ler {fname}")
+    lotacao = {}
+    # Diagnóstico: mostrar cabeçalhos (linha 0) e linha 2 para verificar estrutura
+    if _rows:
+        _hdrs = [str(c or '').strip()[:20] for c in _rows[0]] if _rows[0] else []
+        print(f"[{ts()}] Lotação colunas (linha 1): {_hdrs[:35]}")
+        if len(_rows) > 1:
+            _r2 = [str(c or '')[:15] for c in _rows[1]]
+            print(f"[{ts()}] Lotação linha 2: {_r2[:35]}")
+        # Detectar coluna de total_alunos automaticamente
+        _col_alunos = 26  # default
+        for _ci, _h in enumerate(_hdrs):
+            _hu = _h.upper()
+            if any(k in _hu for k in ['TOTAL', 'ALUNOS', 'MATR']):
+                _col_alunos = _ci
+                print(f"[{ts()}] Coluna alunos detectada: {_ci} = '{_h}'")
+                break
+    else:
+        _col_alunos = 26
+
+    for r in _rows[2:]:
+        if not r[8] or str(r[8]).strip() in ('', '-', 'None', 'nan'): continue
+        nome_raw = str(r[8]).strip(); nome_lower = nome_raw.lower()
+        try: total_al = int(float(str(r[27] if len(r) > 27 else 0) or 0))
+        except: total_al = 0
+        # Colunas detectadas da planilha Lotação de Tutores_2026_2:
+        # [5]=CURSOS, [7]=CONTRATAÇÃO, [8]=TUTOR, [14]=PERFIL, [15]=CH SEMANAL
+        # [16]=CH IDEAL, [27]=TOTAL ALUNOS, [30]=CATEGORIA GIOCONDA
+        lotacao[nome_lower] = {
+            'nome_oficial': nome_raw,
+            'perfil':       str(r[14] if len(r) > 14 else '') or '',
+            'cursos':       str(r[5]  if len(r) > 5  else '') or '',
+            'ch_semanal':   _parse_ch(r[15] if len(r) > 15 else None),
+            # CH IDEAL: usar r[16] se preenchido, senão CH PROPOSTA (r[13])
+            '_ch_ideal_raw': _parse_ch(r[16] if len(r) > 16 else None) or 0.0,
+            '_ch_prop_raw':  _parse_ch(r[13] if len(r) > 13 else None) or 0.0,
+            'ch_ideal': (_parse_ch(r[16] if len(r) > 16 else None) or
+                         _parse_ch(r[13] if len(r) > 13 else None) or 0.0),
+            'contratacao':  str(r[7]  if len(r) > 7  else '') or '',
+            'polo_hub':     str(r[4]  if len(r) > 4  else '') or '',
+            'categoria_gio':str(r[30] if len(r) > 30 else '') or '',
+            'total_alunos': total_al,
+        }
+        # Indexar também por nome primeiro+último para match mais abrangente
+        _parts = nome_lower.split()
+        if len(_parts) >= 2:
+            _nfl = _parts[0] + ' ' + _parts[-1]
+            if _nfl not in lotacao:
+                lotacao[_nfl] = lotacao[nome_lower]
+    print(f"[{ts()}] Lotação: {len(lotacao)} tutores mapeados")
+    return lotacao
+
+
+# PATCH 29: página de Vagas — extrai posições em aberto (Aumento de Quadro /
+# Substituição) diretamente da aba "Quadro Geral de Lotação". Usa a coluna
+# LOTAÇÃO como sinal de pendência (vazia = posição preenchida, sem vaga).
+# IMPORTANTE: por decisão explícita do Leo, NENHUM dado financeiro é lido ou
+# exposto aqui — a coluna "Salário Phill" e a aba "Controle Orçamento" ficam
+# de fora por completo, mesmo que estejam na mesma planilha-fonte.
+def processar_vagas(p4):
+    print(f"[{ts()}] Lendo vagas (Lotação)...")
+    _rows = None
+    for estrategia, fn in [('openpyxl', _ler_lotacao_xlsx), ('xlrd', _ler_lotacao_xls), ('pandas', _ler_lotacao_pandas)]:
+        try:
+            _rows = fn(p4)
+            break
+        except Exception as e:
+            print(f"[{ts()}] Vagas — tentativa {estrategia}: {e}")
+    if not _rows or len(_rows) < 3:
+        print(f"[{ts()}] Vagas: não foi possível ler a planilha de lotação")
+        return {'vagas': [], 'kpis': {}}
+
+    def _gv(r, i):
+        try:
+            v = r[i]
+            return v if v is not None else ''
+        except IndexError:
+            return ''
+
+    vagas = []
+    for r in _rows[2:]:
+        lotacao_status = str(_gv(r, 6)).strip()  # coluna 6 = LOTAÇÃO
+        if not lotacao_status:
+            continue  # posição preenchida — sem pendência de vaga
+        polo = str(_gv(r, 4)).strip()  # coluna 4 = POLO HUB
+        if not polo:
+            continue
+        cursos = str(_gv(r, 5)).strip()  # coluna 5 = CURSOS
+        contratacao = str(_gv(r, 7)).strip()  # coluna 7 = CONTRATAÇÃO
+        tutor_atual = str(_gv(r, 8)).strip()  # coluna 8 = TUTOR DE PRATICA
+        if tutor_atual in ('-', 'None', 'nan'):
+            tutor_atual = ''
+        status = 'Substituição' if 'Substitui' in lotacao_status else 'Aumento de Quadro'
+        # PATCH 29a: 'Aumento de Quadro' só conta como vaga de verdade quando a
+        # posição está 100% vazia (sem tutor atribuído) — confirmado pelo Leo.
+        # Linhas de "Aumento de Quadro" com tutor já preenchido representam outra
+        # coisa (CH a ampliar pra quem já está lá), não uma vaga em aberto.
+        # 'Substituição' continua contando mesmo com tutor preenchido (é normal
+        # o substituído ainda aparecer ativo até a troca de fato acontecer).
+        if status == 'Aumento de Quadro' and tutor_atual:
+            continue
+        chamado_sydle = str(_gv(r, 10)).strip()  # coluna 10 = CHAMADO SYDLE
+        if chamado_sydle in ('None', 'nan', '0'):
+            chamado_sydle = ''
+        status_chamado = str(_gv(r, 11)).strip()  # coluna 11 = STATUS CHAMADO
+        perfil = str(_gv(r, 14)).strip()  # coluna 14 = PERFIL DO TUTOR
+        ch_semanal = _parse_ch(_gv(r, 15))  # coluna 15 = CH SEMANAL
+        ch_ideal = _parse_ch(_gv(r, 16))  # coluna 16 = CH IDEAL
+        prioridade = str(_gv(r, 34)).strip() or 'Sem Prioridade'  # coluna 34
+        autorizado = str(_gv(r, 35)).strip()  # coluna 35 = Aumento de Quadro
+        vagas.append({
+            'polo': polo, 'cursos': cursos, 'perfil': perfil,
+            'status': status,
+            'contratacao': contratacao, 'tutor_atual': tutor_atual,
+            'chamado_sydle': chamado_sydle, 'status_chamado': status_chamado,
+            'ch_semanal': ch_semanal, 'ch_ideal': ch_ideal,
+            'prioridade': prioridade, 'autorizado': autorizado,
+        })
+
+    total = len(vagas)
+    kpis = {
+        'total_vagas': total,
+        'aumento_quadro': sum(1 for v in vagas if v['status'] == 'Aumento de Quadro'),
+        'substituicao': sum(1 for v in vagas if v['status'] == 'Substituição'),
+        'com_previsao': sum(1 for v in vagas if 'Com previsão' in v['contratacao']),
+        'sem_previsao': sum(1 for v in vagas if 'Sem previsão' in v['contratacao']),
+        'nao_liberada': sum(1 for v in vagas if 'liberada' in v['contratacao'].lower()),
+        'autorizadas': sum(1 for v in vagas if v['autorizado'].startswith('Autorizado')),
+        'prioridade_alta': sum(1 for v in vagas if v['prioridade'] == 'Alta'),
+        'com_chamado_aberto': sum(1 for v in vagas if v['chamado_sydle']),
     }
-    function _semChapaCanon(nome){ return String(nome||'').replace(/\s*\(\d+\)\s*$/,'').trim(); }
-    function _ehSubsequenciaCanon(curtos, longos){
-      var i=0;
-      for(var j=0;j<longos.length && i<curtos.length;j++){ if(longos[j]===curtos[i]) i++; }
-      return i===curtos.length;
-    }
-    function _nomesBatemCanon(nomeA, nomeB){
-      if(nomeA===nomeB) return true;
-      var tA=nomeA.split(' ').filter(Boolean), tB=nomeB.split(' ').filter(Boolean);
-      if(!tA.length||!tB.length) return false;
-      if(tA.length>=2 && tB.length>=2 && tA[0]===tB[0] && tA[tA.length-1]===tB[tB.length-1]) return true;
-      var curtos=tA.length<=tB.length?tA:tB, longos=tA.length<=tB.length?tB:tA;
-      if(curtos.length<2) return false;
-      return _ehSubsequenciaCanon(curtos, longos);
-    }
-    var candidatosPorPolo={};
-    (DB.tutores||[]).forEach(function(t){
-      if(!t.n || !t.p) return;
-      var pk=_poloKeyCanon(t.p);
-      (candidatosPorPolo[pk]=candidatosPorPolo[pk]||[]).push({nomeCanonico:_semChapaCanon(t.n), nomeNorm:_normTutorKey(t.n)});
-    });
-    gerDetData.forEach(function(r){
-      if(!r.tutor) return;
-      var pk=_poloKeyCanon(r.polo);
-      var nomeNormAtual=_normTutorKey(r.tutor);
-      var candidatos=candidatosPorPolo[pk]||[];
-      if(candidatos.some(function(c){return c.nomeNorm===nomeNormAtual;})) return; // já bate exato
-      var match=candidatos.find(function(c){return _nomesBatemCanon(nomeNormAtual, c.nomeNorm);});
-      if(match){
-        var chapaOriginal=(String(r.tutor).match(/\(\d+\)\s*$/)||[])[0]||'';
-        r.tutor = match.nomeCanonico + (chapaOriginal?' '+chapaOriginal:'');
-      }
-    });
-  })();
-  // PATCH 56: o Leo reportou tutores de Estética/Bio-Far aparecendo classificados
-  // como Terapia Ocupacional (e o mesmo em outras áreas) — "diversos tutores, sem
-  // exceção". A especialidade de um tutor é uma característica DELE (registrada
-  // no CONTROLE/LOTAÇÃO, coluna CURSOS — ex: Beatriz Henkels = BBI/Biomedicina),
-  // não deveria mudar de prática pra prática. Mas o subcurso vindo do GIOCONDA é
-  // calculado por LINHA/prática, e parece não ser confiável nesse nível — a
-  // mesma pessoa aparece com códigos diferentes em práticas diferentes. Como o
-  // CONTROLE é o cadastro mestre da especialidade do tutor, ele passa a ter
-  // prioridade: sobrescreve o subcurso de cada oferta com o subcurso do CADASTRO
-  // do tutor (por nome) quando existir, e só usa o subcurso da própria oferta
-  // (GIOCONDA) quando o tutor não tiver esse dado no CONTROLE.
-  // PATCH 58: a versão anterior resolvia a especialidade só pelo NOME normalizado
-  // — se duas pessoas reais diferentes tiverem o mesmo nome (o próprio dashboard
-  // já documentou esse tipo de caso, ex: PATCH 49 chapa/homônimo), a última
-  // processada "vencia" e podia sobrescrever a especialidade errada nas ofertas
-  // da outra pessoa. Agora tenta, em ordem de precisão: nome+chapa exata (quando
-  // o nome tem "(nnnn)") > nome+polo (só se todos os registros desse nome+polo
-  // no CONTROLE concordarem numa única especialidade) > nome sozinho (só se
-  // TODOS os registros desse nome no CONTROLE, em qualquer polo, concordarem).
-  // Se houver ambiguidade real em algum nível, não decide — mantém o subcurso
-  // original da oferta (GIOCONDA) em vez de arriscar um palpite errado.
-  (function(){
-    function _chapaDe(nome){ var m=String(nome||'').match(/\((\d+)\)\s*$/); return m?m[1]:null; }
-    function _poloKeySimples(p){
-      return String(p||'').replace(/^LAP\s*[-–]\s*/i,'').replace(/\([^)]*\)/g,'')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
-    }
-    var porNomeChapa={}, porNomePolo={}, porNomePoloAmbiguo={}, porNome={}, porNomeAmbiguo={};
-    (DB.tutores||[]).forEach(function(t){
-      if(!t.n) return;
-      var sub=_subcursoDeCodigo(t.cursos);
-      if(!sub) return;
-      var nk=_normTutorKey(t.n);
-      var chapa=_chapaDe(t.n);
-      if(chapa) porNomeChapa[nk+'|||'+chapa]=sub;
-      var pk=nk+'|||'+_poloKeySimples(t.p);
-      if(pk in porNomePolo && porNomePolo[pk]!==sub) porNomePoloAmbiguo[pk]=true; else porNomePolo[pk]=sub;
-      if(nk in porNome && porNome[nk]!==sub) porNomeAmbiguo[nk]=true; else porNome[nk]=sub;
-    });
-    gerDetData.forEach(function(r){
-      if(!r.tutor) return;
-      var nk=_normTutorKey(r.tutor);
-      var chapa=_chapaDe(r.tutor);
-      var sub=null;
-      if(chapa && porNomeChapa[nk+'|||'+chapa]){
-        sub=porNomeChapa[nk+'|||'+chapa];
-      }else{
-        var pk=nk+'|||'+_poloKeySimples(r.polo);
-        if(!porNomePoloAmbiguo[pk] && porNomePolo[pk]) sub=porNomePolo[pk];
-        else if(!porNomeAmbiguo[nk] && porNome[nk]) sub=porNome[nk];
-      }
-      if(sub) r.subcurso=sub;
-    });
-  })();
-  const dcats=[...new Set(gerDetData.map(d=>d.categoria).filter(Boolean))];
-  const ordemKeys=(GER_DB.ger_ordem||[]).map(o=>o.ordem).filter(Boolean).sort();
-  const dordens=ordemKeys.length?ordemKeys:[...new Set(gerDetData.map(d=>d.ordem).filter(Boolean))].sort();
-  // PATCH 19: limpa antes de repopular — renderGerenciamento() agora roda a cada
-  // troca de semestre, e sem isso as opções duplicavam a cada chamada
-  // PATCH 47: dropdown agora lista os 5 grupos de área (GRUPOS_GER), não mais as
-  // categorias cruas — só mostra um grupo se pelo menos uma das categorias dele
-  // realmente aparecer nos dados do semestre atual.
-  const cs=document.getElementById('ger-det-cat');
-  const _csPrev=cs.value;
-  while(cs.options.length>1) cs.remove(1);
-  GRUPOS_GER.filter(g=>dcats.some(c=>g.base.indexOf(_grupoBaseDaCategoria(c))>=0))
-    .forEach(g=>{const o=document.createElement('option');o.value=g.id;o.textContent=g.label;cs.appendChild(o)});
-  if([...cs.options].some(o=>o.value===_csPrev)) cs.value=_csPrev;
-  _updateGerSubfiltro();
-  const os2=document.getElementById('ger-det-ordem');
-  const _osPrev=os2.value;
-  if(!dordens.includes('Ordem 5'))dordens.push('Ordem 5');
-  dordens.sort((a,b)=>{var n=s=>parseInt((s||'0').replace(/\D/g,''));return n(a)-n(b);});
-  while(os2.options.length>1) os2.remove(1);
-  dordens.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;os2.appendChild(op)});
-  if([...os2.options].some(o=>o.value===_osPrev)) os2.value=_osPrev;
-  filterGerDetalhe('');
+    print(f"[{ts()}] Vagas: {total} pendentes ({kpis['aumento_quadro']} aumento de quadro, {kpis['substituicao']} substituição, {kpis['com_previsao']} com previsão)")
+    return {'vagas': vagas, 'kpis': kpis}
+
+
+CURSOS_NOMES = {
+    'EMF-ISN': 'Enfermagem e Instrumentação Cirúrgica', 'EMF-ISN2': 'Enfermagem e Instrumentação Cirúrgica',
+    'BFR': 'Farmácia', 'BBI': 'Biomedicina', 'BFI': 'Fisioterapia', 'BTO': 'T. Ocupacional',
+    'COS-TIP': 'Estética e Cosmética', 'NTR': 'Nutrição', 'AGM': 'Agronomia',
+    'BAU': 'Arquitetura e Urbanismo', 'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI': 'Engenharias e Licenciaturas',
+    'BIOMEDICINA': 'Biomedicina', 'FARMÁCIA': 'Farmácia', 'FISIOTERAPIA': 'Fisioterapia',
+    'TERAPIA OCUPACIONAL': 'T. Ocupacional', 'NUTRIÇÃO': 'Nutrição', 'AGRONOMIA': 'Agronomia',
+    'ARQUITETURA E URBANISMO': 'Arquitetura e Urbanismo',
 }
 
-function openGerPoloModal(polo){
-  if(!GER_DB) GER_DB = DB;
-  const labs=(GER_DB.ger_contratacao||[]).filter(c=>c.polo===polo);
-  if(!labs.length){
-    const pd=gerPoloData.find(p=>p.polo===polo);
-    document.getElementById('m-title').textContent=polo;
-    if(!pd){
-      document.getElementById('m-sub').textContent='Polo sem dados de gerenciamento no período';
-      document.getElementById('m-body').innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">⚠️ Este polo não possui dados de laboratório/categoria lançados no GIOCONDA para o período atual.<br><br>Verifique se as ofertas foram registradas corretamente no sistema.</div>';
-    }else{
-      const pct=pd.total_ofertas?Math.round(pd.gerenciadas/pd.total_ofertas*100):0;
-      document.getElementById('m-sub').textContent=`${fmtNum(pd.total_ofertas)} ofertas · ${fmtNum(pd.gerenciadas)} gerenciadas · ${pct}%`;
-      document.getElementById('m-body').innerHTML=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">${fmtNum(pd.total_ofertas)}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">${fmtNum(pd.gerenciadas)}</div></div><div class="kpi kpi-red"><div class="kpi-label">Sem Tutor</div><div class="kpi-value">${fmtNum(pd.sem_tutor)}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Al. Matriculados</div><div class="kpi-value">${fmtNum(pd.alunos_matriculados)}</div></div></div>${progCell(pct)}<div style="font-size:11px;color:var(--muted);margin-top:14px;padding:10px 12px;background:var(--yellow-dim);border-radius:6px;border-left:3px solid var(--yellow-d)">ℹ️ Detalhes por categoria não disponíveis. Os dados acima vêm do resumo geral do GIOCONDA.</div>`;
+def gerar_onboarding_atualizado(p1, p6, destino):
+    """
+    PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding.
+    - p1: caminho do 01_CONTROLE_TUTORIA.xlsx (fonte dos tutores ativos)
+    - p6: caminho da Acompanhamento_Onboarding.xlsx ATUAL (pode ser None na
+      primeira vez) — usado só pra preservar os flags já marcados
+    - destino: onde salvar a planilha atualizada
+
+    Regra: tutor ativo com "INÍCIO" nos últimos 2 meses entra na lista
+    automaticamente. Se já estava na planilha antiga, mantém os flags dele
+    (Trilha/Checklist/1:1/Observações) tal como estavam. Tutor que já tem as
+    3 colunas em "Sim" (virou "apto") sai da lista — não precisa de uma
+    coluna a mais pra isso, o próprio critério das 3 colunas já resolve.
+    """
+    import pandas as _pd
+    import openpyxl as _oxl
+    from openpyxl.styles import Font as _Font, PatternFill as _Fill, Alignment as _Align, Border as _Border, Side as _Side
+    from openpyxl.utils import get_column_letter as _gcl
+
+    df = _pd.read_excel(p1, sheet_name='Base de Tutores', header=1)
+    ativos = df[df['SITUAÇÃO'].astype(str).str.strip().str.upper() == 'ATIVO'].copy()
+
+    def _categoria_exibicao(categoria, cursos):
+        cat = str(categoria or '').strip()
+        if cat == 'BIO-FISIO-EST-TO (Multidisciplinar III)':
+            primeiro = str(cursos or '').split('|')[0].strip()
+            return CURSOS_NOMES.get(primeiro, cat)
+        return cat
+
+    ativos['_CAT_EXIB'] = ativos.apply(lambda r: _categoria_exibicao(r.get('CATEGORIA'), r.get('CURSOS')), axis=1)
+
+    hoje = _pd.Timestamp.now().normalize()
+    corte = hoje - _pd.Timedelta(days=60)
+    novos = ativos[_pd.to_datetime(ativos['INÍCIO'], errors='coerce') >= corte].copy()
+
+    # Carrega flags já existentes (se a planilha anterior estiver disponível)
+    flags_por_chapa = {}
+    if p6:
+        try:
+            df_old = _pd.read_excel(p6, sheet_name='Onboarding Tutores')
+            for _, r in df_old.iterrows():
+                chapa = str(r.get('Chapa', '') or '').strip()
+                if chapa:
+                    flags_por_chapa[chapa] = {
+                        'trilha': str(r.get('Trilha de Aprendizagem', '') or '').strip(),
+                        'checklist': str(r.get('Checklist Realizado', '') or '').strip(),
+                        'um_a_um': str(r.get('1:1 de Gerenciamento', '') or '').strip(),
+                        'obs': r.get('Observações', '') or '',
+                    }
+        except Exception as e:
+            print(f"[{ts()}] AVISO: não consegui ler onboarding anterior pra preservar flags: {e}")
+
+    linhas = []
+    for _, t in novos.iterrows():
+        chapa = str(t.get('CHAPA', '') or '').strip()
+        antigos = flags_por_chapa.get(chapa, {})
+        trilha = antigos.get('trilha', 'Não') or 'Não'
+        checklist = antigos.get('checklist', 'Não') or 'Não'
+        um_a_um = antigos.get('um_a_um', 'Não') or 'Não'
+        # PATCH 89: tutor com as 3 colunas em "Sim" virou apto — não entra
+        # (ou sai) da planilha de acompanhamento.
+        if trilha.lower() == 'sim' and checklist.lower() == 'sim' and um_a_um.lower() == 'sim':
+            continue
+        inicio_val = t.get('INÍCIO')
+        inicio_str = _pd.to_datetime(inicio_val).strftime('%d/%m/%Y') if _pd.notna(inicio_val) else ''
+        linhas.append({
+            'Chapa': chapa, 'Nome do Tutor': t.get('NOME DO TUTOR', ''), 'Polo': t.get('POLO', ''),
+            'Categoria': t.get('_CAT_EXIB', ''), 'Data de Início': inicio_str,
+            'Trilha de Aprendizagem': trilha, 'Checklist Realizado': checklist,
+            '1:1 de Gerenciamento': um_a_um, 'Observações': antigos.get('obs', ''),
+        })
+    linhas.sort(key=lambda x: x['Data de Início'], reverse=True)
+
+    wb = _oxl.Workbook()
+    ws = wb.active
+    ws.title = 'Onboarding Tutores'
+    headers = ['Chapa', 'Nome do Tutor', 'Polo', 'Categoria', 'Data de Início',
+               'Trilha de Aprendizagem', 'Checklist Realizado', '1:1 de Gerenciamento', 'Observações']
+    font_header = _Font(name='Arial', bold=True, color='FFFFFF', size=10)
+    fill_header = _Fill('solid', fgColor='1B4D3E')
+    font_body = _Font(name='Arial', size=10)
+    align_center = _Align(horizontal='center', vertical='center')
+    align_left = _Align(horizontal='left', vertical='center')
+    thin = _Side(style='thin', color='D9D9D9')
+    border = _Border(left=thin, right=thin, top=thin, bottom=thin)
+    fill_pendente = _Fill('solid', fgColor='FCE8B2')
+
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(row=1, column=col, value=h)
+        c.font = font_header; c.fill = fill_header; c.alignment = align_center; c.border = border
+    ws.freeze_panes = 'A2'
+
+    for row_idx, linha in enumerate(linhas, start=2):
+        for col, h in enumerate(headers, 1):
+            v = linha[h]
+            c = ws.cell(row=row_idx, column=col, value=v)
+            c.font = font_body; c.border = border
+            c.alignment = align_left if h in ('Nome do Tutor', 'Polo', 'Categoria', 'Observações') else align_center
+            if h in ('Trilha de Aprendizagem', 'Checklist Realizado', '1:1 de Gerenciamento') and str(v).strip().lower() != 'sim':
+                c.fill = fill_pendente
+
+    widths = [14, 30, 30, 26, 14, 20, 18, 18, 24]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[_gcl(i)].width = w
+    ws.row_dimensions[1].height = 28
+
+    ws2 = wb.create_sheet('Instruções')
+    instrucoes = [
+        'Como preencher — Acompanhamento de Onboarding', '',
+        '• Esta planilha lista os tutores contratados nos últimos 2 meses (calculado automaticamente a partir da Data de Início).',
+        '• A categoria mostra o curso ESPECÍFICO do tutor (ex: Fisioterapia, T. Ocupacional, Estética e Cosmética dentro do Multi III) — não a categoria ampla.',
+        '• Marque "Sim" nas 3 colunas conforme cada etapa for concluída: Trilha de Aprendizagem, Checklist Realizado, 1:1 de Gerenciamento.',
+        '• Quando as 3 colunas estiverem "Sim", o tutor sai da lista automaticamente na próxima atualização — é considerado "apto".',
+        '• Não altere Chapa, Nome, Polo, Categoria ou Data de Início — são usados para localizar o tutor certo.',
+        '• Esta planilha é atualizada automaticamente a cada ciclo — tutores novos entram sozinhos, e o que você já preencheu NÃO é apagado.',
+    ]
+    for r, texto in enumerate(instrucoes, 1):
+        cell = ws2.cell(row=r, column=1, value=texto if texto else None)
+        if r == 1:
+            cell.font = _Font(name='Arial', bold=True, size=13)
+    ws2.column_dimensions['A'].width = 100
+
+    wb.save(destino)
+    print(f"[{ts()}] Onboarding atualizado: {len(linhas)} tutores em acompanhamento -> {destino}")
+
+def enriquecer_tutores(dados, lotacao):
+    tutores = dados.get('tutores', [])
+    matched = 0
+    LAB_PARA_CAT = {
+        'ENFERMAGEM,INSTRUMENTAÇÃO CIRÚRGICA': 'Enfermagem e Instrumentação Cirúrgica',
+        'ENFERMAGEM,INSTRUMENTAÇÃO CIRÚRGICA2': 'Enfermagem e Instrumentação Cirúrgica',
+        'BIOMEDICINA': 'Biomedicina', 'FARMÁCIA': 'Farmácia', 'FISIOTERAPIA': 'Fisioterapia',
+        'TERAPIA OCUPACIONAL': 'T. Ocupacional',
+        'TECNOLOGIA EM ESTÉTICA E COSMÉTICA,ESTÉTICA E IMAGEM PESSOAL': 'Estética e Cosmética',
+        'NUTRIÇÃO': 'Nutrição', 'AGRONOMIA': 'Agronomia', 'ARQUITETURA E URBANISMO': 'Arquitetura e Urbanismo',
+        'CONSTRUÇÃO DE EDIFÍCIOS,ENGENHARIA CIVIL,ENGENHARIA ELÉTRICA,ENGENHARIA DE PRODUÇÃO,ENGENHARIA MECÂNICA,ENGENHARIA AMBIENTAL E SANITÁRIA,FORMAÇÃO PEDAGÓGICA EM FÍSICA,FÍSICA,GESTÃO DA PRODUÇÃO INDUSTRIAL,CONTROLE DE OBRAS,QUÍMICA,SANEAMENTO AMBIENTAL,SEGUNDA LICENCIATURA EM FÍSICA,TECNOLOGIA EM ENERGIAS RENOVÁVEIS': 'Engenharias e Licenciaturas',
+        'ENGENHARIA CIVIL,ENGENHARIA ELÉTRICA,ENGENHARIA DE PRODUÇÃO,ENGENHARIA MECÂNICA': 'Engenharias (Civil/Elét./Prod./Mec.)',
+        'EMF-ISN': 'Enfermagem e Instrumentação Cirúrgica', 'BFR': 'Farmácia',
+        'BBI': 'Biomedicina', 'BFI': 'Fisioterapia', 'BTO': 'T. Ocupacional',
+        'COS-TIP': 'Estética e Cosmética', 'NTR': 'Nutrição', 'AGM': 'Agronomia',
+        'BAU': 'Arquitetura e Urbanismo',
     }
-    document.getElementById('modal-overlay').classList.add('show');
-    return;
-  }
-  const semTutor=labs.filter(c=>!c.tem_tutor).length;document.getElementById('m-title').textContent=polo;document.getElementById('m-sub').textContent=labs.length+' laboratórios · '+semTutor+' sem tutor';
-  const ofertasPolo=(GER_DB.ger_ofertas||[]).filter(o=>o.polo===polo);
-  let bodyHtml='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Categoria / Lab</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Ofertas</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Agend.</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Status</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Tutor(es)</th></tr></thead><tbody>';
-  labs.sort((a,b)=>a.tem_tutor-b.tem_tutor).forEach(c=>{const bg=c.tem_tutor?'':'var(--red-dim)';const ofCat=ofertasPolo.filter(o=>o.categoria===c.categoria);const agend=ofCat.filter(o=>o.tem_agenda).length;bodyHtml+='<tr style="background:'+bg+';border-bottom:1px solid var(--border)"><td style="padding:6px 8px;font-weight:600">'+c.categoria+'</td><td style="padding:6px 8px;text-align:right">'+c.total_ofertas+'</td><td style="padding:6px 8px;text-align:center">'+(agend>0?'<span style="color:var(--ok)">'+agend+'✓</span>':'<span style="color:var(--muted)">0</span>')+'</td><td style="padding:6px 8px"><span class="badge '+(c.tem_tutor?'ok':'pend')+'">'+c.status+'</span></td><td style="padding:6px 8px;font-size:11px">'+(c.tutores&&c.tutores.length?c.tutores.join(', '):'<span style="color:var(--red)">—</span>')+'</td></tr>';});
-  bodyHtml+='</tbody></table>';document.getElementById('m-body').innerHTML=bodyHtml;document.getElementById('modal-overlay').classList.add('show');
-}
-function renderGerPoloTbl(data){
-  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr class="sort-row" style="cursor:pointer" data-vpolo="${esc(p.polo)}" data-vtot="${p.total_ofertas}" data-vger="${p.gerenciadas}" data-vpct="${p.pct_gerenciado}" data-vct="${p.com_tutor}" data-vst="${p.sem_tutor}" data-vmat="${p.alunos_matriculados}" data-vag="${p.alunos_agendados}" onclick="openGerPoloModal('${esc(p.polo)}')"><td><strong>${p.polo}</strong></td><td style="text-align:right">${fmtNum(p.total_ofertas)}</td><td style="text-align:right">${fmtNum(p.gerenciadas)}</td><td>${progCell(p.pct_gerenciado)}</td><td style="text-align:right">${fmtNum(p.com_tutor)}</td><td style="text-align:right;color:${p.sem_tutor>0?'var(--red)':'var(--ok)'}">${fmtNum(p.sem_tutor)}</td><td style="text-align:right">${fmtNum(p.alunos_matriculados)}</td><td style="text-align:right">${fmtNum(p.alunos_agendados)}</td></tr>`).join('');
-  document.getElementById('ger-polo-count').textContent=data.length+' polo'+(data.length!==1?'s':'')+' (clique para detalhar)';if(!data.length)document.getElementById('ger-polo-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhum polo encontrado.</td></tr>';
-}
-function filterGerPolo(q){q=q.toLowerCase();renderGerPoloTbl(q?gerPoloData.filter(p=>p.polo.toLowerCase().includes(q)):gerPoloData)}
-function renderGerContrTbl(data){
-  var grps={};data.forEach(function(c){var k=c.polo||'—';if(!grps[k])grps[k]={polo:k,total:0,semTutor:0,labs:[]};grps[k].total++;if(!c.tem_tutor)grps[k].semTutor++;grps[k].labs.push(c);});
-  var sorted=Object.values(grps).sort(function(a,b){return b.semTutor-a.semTutor;});var rows='';
-  sorted.forEach(function(g,gi){var pend=g.semTutor>0;var pct=g.total?Math.round((g.total-g.semTutor)/g.total*100):100;rows+='<tr class="sort-row tr-polo-hdr'+(pend?' tr-pend':'')+'" data-vpolo="'+g.polo+'" data-vlabs="'+g.total+'" data-vst="'+g.semTutor+'" data-vpct="'+pct+'"><td class="polo-toggle"><strong>'+g.polo+'</strong></td><td style="text-align:right">'+g.total+'</td><td style="text-align:right;color:'+(pend?'var(--red)':'var(--ok)')+'">'+g.semTutor+'</td><td>'+progCell(pct)+'</td><td><button class="btn-expand" data-grp="cg'+gi+'">expandir</button></td></tr>';
-  g.labs.sort(function(a,b){return a.tem_tutor-b.tem_tutor;}).forEach(function(c){rows+='<tr class="tr-polo-child" data-cg="cg'+gi+'"><td style="padding-left:28px!important">'+c.categoria+'</td><td style="text-align:right">'+c.total_ofertas+' of.</td><td style="color:'+(c.tem_tutor?'var(--ok)':'var(--red)')+'">'+c.status+'</td><td><span class="badge '+(c.tem_tutor?'ok':'pend')+'">'+c.status+'</span></td><td style="font-size:11px">'+(c.tutores&&c.tutores.length?c.tutores.join(', '):'—')+'</td></tr>';});});
-  document.getElementById('ger-contr-tbody').innerHTML=rows;document.getElementById('ger-contr-count').textContent=sorted.length+' polos ('+data.length+' labs)';
-}
-function toggleContrGrp(hdr,gid){hdr.classList.toggle('open');document.querySelectorAll('[data-cg="'+gid+'"]').forEach(function(r){r.classList.toggle('vis');});}
-function filterGerContr(q){q=q.toLowerCase();const st=document.getElementById('ger-contr-status').value;let d=gerContrData;if(q)d=d.filter(c=>(c.polo+c.categoria+(c.tutores||[]).join('')).toLowerCase().includes(q));if(st==='sem')d=d.filter(c=>!c.tem_tutor);if(st==='com')d=d.filter(c=>c.tem_tutor);renderGerContrTbl(d);}
-function renderAgendaKPIs(){var data=gerAgendaData||[];var comA=data.filter(function(a){return a.com_agenda>0;}).length;var semA=data.length-comA;var totAg=data.reduce(function(s,a){return s+(a.com_agenda||0);},0);var totOf=data.reduce(function(s,a){return s+(a.total||0);},0);var pct=totOf?Math.round(totAg/totOf*100):0;
-  // PATCH: conta tutores únicos que têm ao menos 1 oferta agendada
-  var tutoresComAgenda=new Set((GER_DB||DB).ger_ofertas&&((GER_DB||DB).ger_ofertas).filter(o=>o.tem_agenda&&o.tutor).map(o=>o.tutor)||[]).size;
-  var el=document.getElementById('ag-kpis');if(!el)return;el.innerHTML='<div class="kpi kpi-teal"><div class="kpi-label">Polos com Agenda</div><div class="kpi-value">'+comA+'</div><div class="kpi-detail">de '+data.length+' polos</div></div><div class="kpi kpi-red"><div class="kpi-label">Polos sem Agenda</div><div class="kpi-value">'+semA+'</div></div><div class="kpi kpi-green"><div class="kpi-label">Total Agendados</div><div class="kpi-value">'+fmtNum(totAg)+'</div><div class="kpi-detail">'+pct+'% das ofertas</div></div><div class="kpi kpi-yellow"><div class="kpi-label">Pendentes de Agenda</div><div class="kpi-value">'+fmtNum(totOf-totAg)+'</div></div><div class="kpi kpi-ok"><div class="kpi-label">Tutores com Agenda</div><div class="kpi-value">'+tutoresComAgenda+'</div><div class="kpi-detail">gerenciaram ao menos 1</div></div>';
-  var topEl=document.getElementById('ag-top-polos');if(topEl&&data.length){var top=[...data].sort(function(a,b){return (b.com_agenda||0)-(a.com_agenda||0);}).slice(0,10);var mx=top[0].com_agenda||1;topEl.innerHTML=top.map(function(a,i){return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:10px;font-weight:700;min-width:16px;color:var(--muted)">'+(i+1)+'</span><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.polo+'</div><div style="height:6px;background:var(--bg);border-radius:3px;margin-top:3px"><div style="height:100%;width:'+(a.com_agenda/mx*100)+'%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:3px"></div></div></div><span style="font-size:11px;font-weight:700;color:var(--teal)">'+a.com_agenda+'</span></div>';}).join('');}
-  var distEl=document.getElementById('ag-dist');if(distEl&&data.length){var comTot=data.reduce(function(s,a){return s+(a.com_agenda||0);},0);var semTot=data.reduce(function(s,a){return s+(a.sem_agenda||0);},0);var total2=comTot+semTot||1;distEl.innerHTML='<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--ok)">✓ Com agenda</span><span style="font-weight:700">'+fmtNum(comTot)+'</span></div><div style="height:12px;background:var(--bg);border-radius:6px;overflow:hidden"><div style="height:100%;width:'+(comTot/total2*100)+'%;background:linear-gradient(90deg,var(--ok),var(--teal));border-radius:6px"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--red)">✗ Sem agenda</span><span style="font-weight:700">'+fmtNum(semTot)+'</span></div><div style="height:12px;background:var(--bg);border-radius:6px;overflow:hidden"><div style="height:100%;width:'+(semTot/total2*100)+'%;background:linear-gradient(90deg,var(--red),#f87171);border-radius:6px"></div></div></div>';}}
-function renderGerAgendaTbl(data){
-  var el=document.getElementById('ger-agenda-tbody');if(!el)return;window._agData=data;
-  el.innerHTML=data.map(function(a,i){var cor=a.sem_agenda>0?'var(--red)':'var(--ok)';var proxData=a.datas_agenda&&a.datas_agenda.length?a.datas_agenda.filter(function(d){return d>=new Date().toISOString().slice(0,10);}).sort()[0]||'—':'—';return '<tr class="sort-row" style="cursor:pointer" data-ag="'+i+'" data-polo="'+a.polo.replace(/"/g,'&quot;')+'" data-vpolo="'+a.polo+'" data-vtot="'+a.total+'" data-vca="'+a.com_agenda+'" data-vsa="'+a.sem_agenda+'" data-vpct="'+a.pct_agendado+'" data-vprx="'+proxData+'"><td><strong>'+a.polo+'</strong></td><td style="text-align:right">'+a.total+'</td><td style="text-align:right;color:var(--ok)">'+a.com_agenda+'</td><td style="text-align:right;color:'+cor+'">'+a.sem_agenda+'</td><td>'+progCell(a.pct_agendado)+'</td><td style="font-size:11px;color:var(--muted)">'+proxData+'</td></tr>';}).join('');
-  el.onclick=function(e){var row=e.target.closest('[data-ag]');if(!row)return;var polo=row.dataset.polo||'';var a=polo?(window._agData||[]).find(function(x){return x.polo===polo;}):window._agData[+row.dataset.ag];if(!a)return;
-    var kpiHtml='<div class="kpi-row"><div class="kpi kpi-teal"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">'+a.total+'</div></div><div class="kpi kpi-ok"><div class="kpi-label">Com Agenda</div><div class="kpi-value">'+a.com_agenda+'</div></div><div class="kpi kpi-red"><div class="kpi-label">Sem Agenda</div><div class="kpi-value">'+a.sem_agenda+'</div></div><div class="kpi kpi-green"><div class="kpi-label">% Agendado</div><div class="kpi-value">'+a.pct_agendado+'%</div></div></div>';
-    var datas=a.datas_agenda||[];var datCat=a.datas_por_cat||{};var datTutor=a.datas_por_tutor||{};var datHorario=a.datas_por_horario||{};var calHtml='';
-    if(datas.length){var mesesMap={};datas.forEach(function(d){var m=d.slice(0,7);if(!mesesMap[m])mesesMap[m]=[];mesesMap[m].push(d);});var mesesNames=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];calHtml='<div style="font-size:11px;font-weight:700;margin:12px 0 8px">📅 Datas de Agendamento ('+datas.length+' datas)</div>';var mesKeys=Object.keys(mesesMap).sort();calHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px">';mesKeys.forEach(function(mes){var parts=mes.split('-');var yr=parseInt(parts[0]),mo=parseInt(parts[1])-1;var label=mesesNames[mo]+'/'+yr;var diasDoMes=new Date(yr,mo+1,0).getDate();var firstDay=new Date(yr,mo,1).getDay();var datasSet=new Set(mesesMap[mes]);calHtml+='<div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:4px">'+label+'</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">';['D','S','T','Q','Q','S','S'].forEach(function(d){calHtml+='<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:2px 0">'+d+'</div>';});for(var i=0;i<firstDay;i++)calHtml+='<div></div>';for(var d2=1;d2<=diasDoMes;d2++){var key=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d2).padStart(2,'0');var temAg=datasSet.has(key);var cats=(datCat[key]||[]);var bgColor=temAg?(cats.length?getCatColor(cats[0]):'var(--green)'):'var(--bg)';
-      // PATCH 85 (P7): tooltip agora inclui o horário de cada agendamento
-      // daquele dia (quando disponível), não só a data crua.
-      var horariosDia=(datHorario[key]||[]);
-      var tituloCel=temAg?(key+(horariosDia.length?(': '+horariosDia.join('; ')):'')):'';
-      calHtml+='<div style="text-align:center;font-size:9px;padding:2px;border-radius:3px;'+(temAg?'background:'+bgColor+';color:#fff;font-weight:700':'color:var(--muted)')+'" title="'+esc(tituloCel)+'">'+d2+'</div>';  }calHtml+='</div></div>';});calHtml+='</div>';
-    // Legenda de tutores por data (formato: Primeiro Último · Cat)
-    var tutoresDatas=Object.keys(datTutor).sort();
-    if(tutoresDatas.length){
-      calHtml+='<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;border-top:1px solid var(--border);padding-top:8px">👤 Tutores Agendados por Data</div>';
-      // Legenda: 1 linha por tutor (sem repetição), cor = categoria, sem datas
-      var tutorLegenda={};
-      tutoresDatas.forEach(function(d){
-        (datTutor[d]||[]).forEach(function(t){
-          var nFmt=formatTutorShort(t);
-          if(tutorLegenda[nFmt])return;                    // já registrado
-          var ca=getTutorCatAbrev(t,a.polo);
-          // Cor: buscar categoria real do tutor em gerDetData
-          var _tNrm=(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s*\(\d+\)\s*$/,'').trim();
-          var tutorEntry=(gerDetData||[]).find(function(r){
-            var rn=(r.tutor||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s*\(\d+\)\s*$/,'').trim();
-            return rn===_tNrm||(rn.split(' ').filter(Boolean)[0]===_tNrm.split(' ')[0]&&rn.split(' ').filter(Boolean).slice(-1)[0]===_tNrm.split(' ').slice(-1)[0]);
-          });
-          var catFull=tutorEntry?tutorEntry.categoria||'':'';
-          if(!catFull){var cats=datCat[d]||[];catFull=cats.length?cats[0]:'';}
-          // Se ca vazio mas temos catFull, derivar abreviatura
-          if(!ca&&catFull){
-            var _cu=catFull.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-            for(var _kw in _CAT_ABREV){if(_cu.includes(_kw)){ca=_CAT_ABREV[_kw];break;}}
-          }
-          var cor=catFull?getCatColor(catFull):'var(--teal)';
-          tutorLegenda[nFmt]={display:nFmt+(ca?' · '+ca:''),cor:cor};
-        });
-      });
-      Object.keys(tutorLegenda).sort().forEach(function(nome){
-        var info=tutorLegenda[nome];
-        calHtml+='<div style="padding:3px 0;display:flex;align-items:center;gap:6px">'
-          +'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+info.cor+';flex-shrink:0"></span>'
-          +'<span style="font-size:11px;font-weight:500">'+info.display+'</span></div>';
-      });calHtml+='</div>';}
-  }else{calHtml='<div style="color:var(--muted);font-size:11px;margin-top:8px">Sem datas de agendamento.</div>';}
-    document.getElementById('m-title').textContent=a.polo;document.getElementById('m-sub').textContent='Com agenda: '+a.com_agenda+' · Sem agenda: '+a.sem_agenda;document.getElementById('m-body').innerHTML=kpiHtml+calHtml;document.getElementById('modal-overlay').classList.add('show');};
-  var cnt=document.getElementById('ger-agenda-count');if(cnt)cnt.textContent=data.length+' polo'+(data.length!==1?'s':'');if(!data.length&&el)el.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhum polo com dados de agenda encontrado.</td></tr>';}
-function filterGerAgenda(q){q=q.toLowerCase();var stv=(document.getElementById('ag-status-sel')||{}).value||'';var d=gerAgendaData||[];if(q)d=d.filter(function(a){return a.polo.toLowerCase().includes(q);});if(stv==='sem')d=d.filter(function(a){return a.sem_agenda>0;});if(stv==='com')d=d.filter(function(a){return a.com_agenda>0;});renderGerAgendaTbl(d);}
-function sortDetalhe(col){
-  _detSortAsc = (_detSortCol===col) ? !_detSortAsc : true;
-  _detSortCol = col;
-  filterGerDetalhe(document.getElementById('ger-det-search')?.value||'');
-}
-// PATCH 47: reagrupamento dos filtros de Gerenciamento por área de atuação real,
-// a pedido do Leo — os grupos antigos usavam a categoria "crua" (ENF-INS, BIO-FAR,
-// BIO-FISIO-EST-TO, QUÍMICA E FÍSICA, ENGMAKER, NUTRI), o que misturava Fisio/T.O.
-// com Estética/Cosmética dentro do mesmo filtro de Multi III (o subcurso existia,
-// mas era só um filtro OPCIONAL adicional — selecionar Multi III sozinho, ou
-// esquecer de escolher um subcurso, ainda misturava tudo). Agora os 5 grupos que o
-// Leo pediu são a ÚNICA opção do dropdown principal:
-// 1) Enfermagem (ENF-INS, inclui instrumentação cirúrgica dentro da mesma cat.)
-// 2) Fisioterapia e T.O. (só a fatia de Multi III com esse subcurso)
-// 3) Biomedicina, Farmácia e Estética/Cosmética (BIO-FAR inteira + a fatia de
-//    Multi III que é Estética/Cosmética — "Biomedicina"/BBI dentro de Multi III
-//    continua fora, como já era: não é uma especialidade real desse laboratório)
-// 4) Nutrição (NUTRI)
-// 5) Exatas (QUÍMICA E FÍSICA + ENGMAKER + a categoria composta dos dois) — com
-//    um sub-filtro pra escolher Engenharias/Licenciaturas vs Química e Física/
-//    Agronomia, que é a separação que o Leo pediu ("separar qual é qual")
-var GRUPOS_GER = [
-  {id:'enfermagem', label:'Enfermagem', base:['enfermagem']},
-  {id:'fisio-to', label:'Fisioterapia e Terapia Ocupacional', base:['multi3'],
-    subcursos:['Fisioterapia','Terapia Ocupacional']},
-  {id:'bio-far-est', label:'Biomedicina, Farmácia e Estética/Cosmética', base:['bio-far','multi3'],
-    // PATCH 51: sub-filtro pra separar as duas fatias quando o Leo achar a
-    // lista combinada confusa demais (mesmo mecanismo genérico já usado em
-    // Exatas) — por padrão continua mostrando as duas juntas.
-    subfiltro:[
-      {id:'bio-far', label:'Biomedicina e Farmácia', base:['bio-far']},
-      {id:'estetica', label:'Estética e Cosmética', base:['multi3']}
-    ], subfiltroTodosLabel:'Todo o grupo'},
-  {id:'nutricao', label:'Nutrição', base:['nutricao']},
-  {id:'exatas', label:'Exatas', base:['exatas'],
-    subfiltro:[
-      {id:'engenharias', label:'Engenharias e Licenciaturas', keyword:'MAKER'},
-      {id:'quimica-fisica', label:'Química e Física / Agronomia', keyword:'QUIMICA'}
-    ], subfiltroTodosLabel:'Toda Exatas'},
-];
-function _grupoById(id){return GRUPOS_GER.find(function(g){return g.id===id;})||null;}
-function _semAcento(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-// PATCH 52: o Leo reportou tutores de Enfermagem aparecendo em "Biomedicina,
-// Farmácia e Estética/Cosmética", engenheiros em Nutrição/Fisioterapia — em
-// TODOS os cursos, não caso isolado. Causa provável: o filtro comparava a
-// categoria da oferta (r.categoria, vinda do export GIOCONDA) com uma string
-// EXATA fixa — e o próprio código já documentava (PATCH 19, _CAT_RAW_NORM) que
-// o export novo de 2026/2 renomeia rótulos de categoria (confirmado pra Multi
-// III: "FISIO-TO-EST-BIO" virou "BIO-FISIO-EST-TO", e só esse caso foi
-// normalizado). Se as OUTRAS categorias também vieram renomeadas no export
-// novo sem um ajuste equivalente, a comparação exata simplesmente nunca batia
-// pra elas — e o fallback de "tutor sem oferta" (que usa t.c, vindo do
-// CONTROLE, formato antigo) virava o único jeito desses tutores aparecerem,
-// caindo no grupo que seu t.c antigo bate, mesmo que a oferta real dele no
-// GIOCONDA seja de outra categoria. Esta função troca a comparação exata por
-// uma baseada no NÚMERO do Multidisciplinar (I/II/III/IV — estável entre
-// formatos) + palavra-chave pra Exatas (que não tem numeração), bem mais
-// resistente a mudanças no texto descritivo da categoria em si.
-function _grupoBaseDaCategoria(catStr){
-  var s=_semAcento(catStr).toUpperCase();
-  // PATCH 57: sem exigir ")" logo depois do numeral — o próprio CAT_MAP usa um
-  // formato descritivo longo sem parênteses nenhum ("Multidisciplinar I -
-  // Biomedicina e Farmácia"), e exigir ")" fazia essa forma (ou qualquer outra
-  // pontuação diferente) nunca bater
-  var m=s.match(/MULTIDISCIPLINAR\s+(IV|III|II|I)\b/);
-  if(m){
-    var r=m[1];
-    if(r==='IV') return 'nutricao';
-    if(r==='III') return 'multi3';
-    if(r==='II') return 'enfermagem';
-    if(r==='I') return 'bio-far';
-  }
-  if(s.indexOf('ENGMAKER')>=0 || s.indexOf('ENGEMAKER')>=0 || s.indexOf('QUIMICA')>=0) return 'exatas';
-  return null;
-}
-// Código de curso específico (coluna CURSOS do CONTROLE/LOTAÇÃO: BFI/BTO/COS-TIP/
-// BBI/BFR/EMF-ISN/NTR) → subcurso. Espelha o _SUBCURSO_LABEL do processar.py.
-// Usado só pra classificar tutores que ainda não têm NENHUMA oferta no GIOCONDA
-// (o fallback do PATCH 32/33) — sem isso, esse fallback injetava o tutor no
-// grupo errado (ex: um tutor de Fisioterapia aparecendo com o filtro em
-// "Biomedicina, Farmácia e Estética/Cosmética"), que foi o bug relatado pelo Leo.
-var _SUBCURSO_LABEL_JS = {
-  'BFI':'Fisioterapia', 'BTO':'Terapia Ocupacional',
-  'COS-TIP':'Estética e Cosmética', 'TIP-COS':'Estética e Cosmética', 'COS':'Estética e Cosmética',
-  'BBI':'Biomedicina', 'BFR':'Farmácia',
-  'EMF-ISN':'Enfermagem/Instrumentação', 'NTR':'Nutrição'
-};
-function _subcursoDeCodigo(codigo){
-  var raw=(codigo||'').split('|')[0].trim().toUpperCase();
-  return _SUBCURSO_LABEL_JS[raw]||null;
-}
-// Testa se uma linha de OFERTA (tem .categoria e .subcurso já vindos do processar.py)
-// pertence ao grupo selecionado (e, se houver, ao sub-filtro)
-function _rowMatchesGrupo(catRow, subcursoRow, grupo, subfiltroId){
-  if(!grupo) return true;
-  var base=_grupoBaseDaCategoria(catRow);
-  if(!base || grupo.base.indexOf(base)<0) return false;
-  if(grupo.id==='fisio-to' && (!subcursoRow || grupo.subcursos.indexOf(subcursoRow)<0)) return false;
-  if(grupo.id==='bio-far-est' && base==='multi3' && subcursoRow!=='Estética e Cosmética') return false;
-  if(grupo.subfiltro && subfiltroId){
-    var sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
-    if(sf){
-      if(sf.base && sf.base.indexOf(base)<0) return false;
-      if(sf.keyword && _semAcento(catRow).toUpperCase().indexOf(sf.keyword)<0) return false;
+    polo_lab_seen = set(); alunos_por_lab_raw = {}
+    for nome_lower, info in lotacao.items():
+        cursos_raw = info.get('cursos', '').strip().upper()
+        polo_hub   = info.get('polo_hub', '').strip()
+        total_al   = info.get('total_alunos', 0)
+        if not cursos_raw or not total_al: continue
+        chave_polo_lab = f"{polo_hub}||{cursos_raw}"
+        if chave_polo_lab in polo_lab_seen: continue
+        polo_lab_seen.add(chave_polo_lab)
+        sep = '+' if '+' in cursos_raw else ','
+        componentes = sorted([c.strip() for c in cursos_raw.split(sep)])
+        lab_key = (','.join(componentes) if any(len(c) > 8 for c in componentes) else '+'.join(componentes))
+        alunos_por_lab_raw[lab_key] = alunos_por_lab_raw.get(lab_key, 0) + total_al
+    def _norm_lab_key(k):
+        sep = '+' if '+' in k else ','
+        partes = sorted([p.strip().upper() for p in k.split(sep)])
+        return (','.join(partes) if any(len(p) > 8 for p in partes) else '+'.join(partes))
+    lab_cat_norm = {_norm_lab_key(k): v for k, v in LAB_PARA_CAT.items()}
+    alunos_por_curso = []
+    if alunos_por_lab_raw:
+        # Fonte 1: TOTAL ALUNOS da lotação (quando preenchido)
+        for lab_key, total in sorted(alunos_por_lab_raw.items(), key=lambda x: -x[1]):
+            nome = lab_cat_norm.get(lab_key)
+            if not nome:
+                primeiro = lab_key.split(',')[0].split('+')[0].strip()
+                nome = CURSOS_NOMES.get(primeiro, primeiro.title())
+            alunos_por_curso.append({'sigla': lab_key, 'curso': nome, 'alunos': total})
+    else:
+        # Fonte 2 (fallback): agrupar matrículas do hub CSV por categoria
+        # Usa alunos_hub_por_grupo gerado no processar_alunos_hub()
+        # Fallback: usar por_cat do hub CSV (matrículas únicas por categoria)
+        # Disponível em dados['hub']['por_cat'] após processar_alunos_hub()
+        _hub_por_cat = (dados.get('hub') or {}).get('por_cat', {})
+        _CAT_NOME = {
+            'ENF-INS (Multidisciplinar II)':        'Enfermagem e Instrumentação Cirúrgica',
+            'BIO-FAR (Multidisciplinar I)':         'Biomedicina e Farmácia',
+            'BIO-FISIO-EST-TO (Multidisciplinar III)': 'Fisioterapia, T.Ocupacional e Estética',
+            'NUTRI (Multidisciplinar IV)':          'Nutrição',
+            'ENGMAKER':                             'Engenharias e Licenciaturas',
+            'QUÍMICA E FÍSICA':                     'Química e Física',
+        }
+        if _hub_por_cat:
+            for sigla, total in sorted(_hub_por_cat.items(), key=lambda x: -x[1]):
+                if total > 0:
+                    alunos_por_curso.append({
+                        'sigla': sigla,
+                        'curso': _CAT_NOME.get(sigla, sigla),
+                        'alunos': int(total)
+                    })
+            print(f"[{ts()}] Alunos por curso (hub CSV): {len(alunos_por_curso)} categorias, total {sum(x['alunos'] for x in alunos_por_curso)}")
+        else:
+            print(f"[{ts()}] Alunos por curso: sem dados disponíveis")
+    dados['alunos_por_curso'] = alunos_por_curso
+    total_al_sum = sum(x['alunos'] for x in alunos_por_curso)
+    print(f"[{ts()}] Alunos por lab: {len(alunos_por_curso)} labs, total {total_al_sum:,}")
+
+    import unicodedata as _ud_ch, re as _re_ch
+    def _norm_ch(s):
+        s = str(s or '').strip().lower()
+        s = _ud_ch.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_ch.category(c) != 'Mn')
+        return _re_ch.sub(r'\s+', ' ', s)
+    def _eh_subsequencia_ch(curtos, longos):
+        i = 0
+        for tok in longos:
+            if i < len(curtos) and tok == curtos[i]:
+                i += 1
+        return i == len(curtos)
+    def _nomes_batem_ch(nome_a, nome_b):
+        if nome_a == nome_b:
+            return True
+        ta, tb = nome_a.split(), nome_b.split()
+        if not ta or not tb:
+            return False
+        if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+            return True
+        curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+        if len(curtos) < 2:
+            return False
+        return _eh_subsequencia_ch(curtos, longos)
+    _lotacao_norm = {_norm_ch(k): v for k, v in lotacao.items()}
+    _matched_subsequencia_ch = 0
+    for t in tutores:
+        nome_lower = str(t.get('n', '')).lower()
+        info = lotacao.get(nome_lower)
+        if not info:
+            nome_norm_t = _norm_ch(nome_lower)
+            info = _lotacao_norm.get(nome_norm_t)
+            if not info:
+                # PATCH 96: fallback por subsequência (nome com parte a mais/a
+                # menos, ou uma palavra do meio diferente) — antes disso, só
+                # existia um teste de substring simples, que não cobre o caso
+                # de palavra SUBSTITUÍDA no meio (ex: "Souza da Silva" vs
+                # "Souza De Silva").
+                for k_norm, v in _lotacao_norm.items():
+                    if _nomes_batem_ch(nome_norm_t, k_norm):
+                        info = v
+                        _matched_subsequencia_ch += 1
+                        break
+        if info:
+            t['perfil'] = info['perfil']; t['cursos'] = info['cursos']
+            # Lotação tem prioridade sobre CH da planilha de controle
+            if info.get('ch_semanal') and info['ch_semanal'] > 0:
+                t['ch_semanal'] = info['ch_semanal']
+            t['ch_ideal'] = info.get('ch_ideal', 0)
+            t['contratacao_lot'] = info['contratacao']
+            t['lab'] = info.get('cursos', '')  # curso da planilha de lotação (para Multi 3)
+            t['polo_hub_lot'] = info.get('polo_hub', '')
+            matched += 1
+    print(f"[{ts()}] Enriquecimento: {matched}/{len(tutores)} tutores com perfil/CH ({_matched_subsequencia_ch} via correspondência por subsequência)")
+    # ── Adicionar tutores sintéticos para avisos (aparecem na aba Tutores) ────
+    # PATCH 120: dois casos confirmados pelo Leo em 21/08 como erro de
+    # preenchimento no Forms (não erro de matching) — o tutor É real e a
+    # submissão de portfólio deve contar pra ele normalmente, não cair em
+    # "Aviso de Portfólio". Categoria/polo confirmados via atividade real de
+    # gerenciamento no GIOCONDA (não veio do CONTROLE, que não tem registro
+    # localizável pra essas duas pessoas sob esse nome). Correção pontual e
+    # nominal — não altera a lógica geral de matching de chave/e-mail/nome,
+    # só esses dois casos já investigados e confirmados.
+    _CORRECOES_MANUAIS_AVISO = {
+        'ingrid schroeder pineiro': {
+            'polo': 'Imbituba/SC',
+            'c': 'ENF-INS (Multidisciplinar II)', 'cf': 'ENF-INS (Multidisciplinar II)',
+        },
+        'kellen ferreira nascimento': {
+            'polo': 'Goiânia/GO - Jardim Europa',
+            'c': 'NUTRI (Multidisciplinar IV)', 'cf': 'NUTRI (Multidisciplinar IV)',
+        },
     }
-  }
-  return true;
-}
-// Testa se um TUTOR de DB.tutores (só tem t.c = categoria crua e t.cursos = código
-// específico, sem subcurso pronto) pertence ao grupo selecionado. Quando o código
-// de curso do tutor não está mapeado em _SUBCURSO_LABEL_JS (subcurso desconhecido),
-// não excluímos o tutor — ele aparece nos grupos que dividem essa categoria, pra não
-// sumir da tela por falta de dado (mesmo espírito do resto do dashboard: anomalia
-// visível, não erro escondido).
-function _tutorMatchesGrupo(t, grupo, subfiltroId){
-  if(!grupo) return true;
-  var catT=t.c||'';
-  var base=_grupoBaseDaCategoria(catT);
-  if(!base || grupo.base.indexOf(base)<0) return false;
-  var subT=_subcursoDeCodigo(t.cursos);
-  if(grupo.id==='fisio-to' && subT && grupo.subcursos.indexOf(subT)<0) return false;
-  if(grupo.id==='bio-far-est' && base==='multi3' && subT && subT!=='Estética e Cosmética') return false;
-  if(grupo.subfiltro && subfiltroId){
-    var sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
-    if(sf){
-      if(sf.base && sf.base.indexOf(base)<0) return false;
-      if(sf.keyword && _semAcento(catT).toUpperCase().indexOf(sf.keyword)<0) return false;
+    def _norm_nome_aviso(s):
+        import unicodedata as _ud
+        s = str(s or '').strip().lower()
+        s = _ud.normalize('NFD', s)
+        return ''.join(c for c in s if _ud.category(c) != 'Mn')
+
+    _avisos_enr = dados.get('avisos_portfolio', [])
+    if _avisos_enr:
+        for av in _avisos_enr:
+            if av['nome'] and av['nome'] not in ('nan', '-', ''):
+                nome_display = av['nome']
+            else:
+                # Extrair nome do email
+                local = av['email'].split('@')[0] if '@' in av['email'] else av['email']
+                nome_display = local.replace('.', ' ').replace('_', ' ').title()
+            _correcao = _CORRECOES_MANUAIS_AVISO.get(_norm_nome_aviso(nome_display))
+            if _correcao:
+                tutores.append({
+                    'n': nome_display,
+                    'p': _correcao['polo'],
+                    'c': _correcao['c'], 'cf': _correcao['cf'], 'c_exibicao': _correcao['c'],
+                    'cursos': '',
+                    'tp': 0, 'te': av['count'],
+                    'pend': [], 'real': [], 'hist': [],
+                    'pct': None,  # tp desconhecido (não temos o catálogo real dela) — não fabricar 100%
+                    'ch_semanal': None,
+                    'correcao_manual': True,
+                    'correcao_manual_motivo': 'Erro de preenchimento no Forms (categoria/polo digitados errado) — confirmado com o Leo em 21/08, submissão é real.',
+                })
+                continue
+            tutores.append({
+                'n': nome_display,
+                'p': av.get('chave', '').replace('BFR-BBI','').replace('EMF-ISN','').replace('NTR','').strip(),
+                'c': 'Aviso de Portfólio', 'cf': 'Aviso de Portfólio',
+                'tp': 0, 'te': av['count'],
+                'pend': [], 'real': [], 'hist': [],
+                'pct': 0,
+                'ch_semanal': None,
+                'aviso_tipo': av['tipo'],
+                'aviso_msg': av['msg'],
+                'aviso_email': av['email'],
+                'aviso_count': av['count'],
+            })
+    dados['tutores'] = tutores
+
+
+    # avisos_portfolio já está em dados (vindo de processar()) — não sobrescrever com []
+    if 'avisos_portfolio' not in dados:
+        dados['avisos_portfolio'] = []
+    return dados
+
+
+def processar_gerenciamento_csv(p5):
+    """Processa CSV detalhado de gerenciamento (REL_DETALHADO.csv)."""
+    import csv, re as _re
+    print(f"[{ts()}] Lendo gerenciamento (CSV)...")
+    for enc in ('utf-8-sig', 'utf-8', 'latin-1', 'cp1252'):
+        try:
+            with open(str(p5), 'r', encoding=enc, errors='replace') as f:
+                rows = list(csv.reader(f, delimiter=';'))
+            break
+        except: continue
+    header = rows[0]; data = rows[1:]
+    col = {h.strip().upper(): i for i, h in enumerate(header)}
+    def gc(name): return col.get(name.upper())
+    ci_polo = gc('LABORATORIO'); ci_cat = gc('CATEGORIA'); ci_exp = gc('NOME_EXPERIMENTO')
+    ci_tutor = gc('TUTOR'); ci_mat = gc('ALUNOS_MATRICULADOS'); ci_agend = gc('ALUNOS_AGENDADOS')
+    ci_capa = gc('CAPACIDADE_TOTAL'); ci_ofe = gc('OFERTAS_CADASTRADAS')
+    ci_situ = gc('SITU_OFERTA'); ci_dt_ag = gc('DT_GERENCIADA'); ci_hr_ag = gc('HR_GERENCIADA')
+    def gv(row, ci, default=''):
+        try: return str(row[ci]).strip() if ci is not None and ci < len(row) else default
+        except: return default
+    def gn(row, ci):
+        try: return float(str(row[ci]).replace(',','.').strip()) if ci is not None and ci < len(row) and row[ci] else 0
+        except: return 0
+    print(f"[{ts()}] Gerenciamento CSV: {len(data)} linhas, {len(header)} colunas")
+    def extrair_ordem_exp(val):
+        m = _re.match(r'O\.(\d+):\s*(.*)', str(val or ''))
+        if m: return f'Ordem {m.group(1)}', m.group(2).strip()
+        return '', str(val or '').strip()
+    registros = []
+    for r in data:
+        polo = gv(r, ci_polo)
+        if not polo: continue
+        cat = gv(r, ci_cat); exp = gv(r, ci_exp); tutor = gv(r, ci_tutor); situ = gv(r, ci_situ)
+        ordem, pratica = extrair_ordem_exp(exp)
+        mat = int(gn(r, ci_mat)); agend = int(gn(r, ci_agend))
+        capa = int(gn(r, ci_capa)); ofe = int(gn(r, ci_ofe))
+        dt_ag = gv(r, ci_dt_ag); hr_ag = gv(r, ci_hr_ag)
+        dt_ag_iso = ''
+        if dt_ag and '/' in dt_ag:
+            try:
+                parts = dt_ag.split('/')
+                dt_ag_iso = f"{parts[2]}-{parts[1]}-{parts[0]}"
+            except: pass
+        registros.append({
+            'polo': polo, 'categoria': cat, 'pratica': pratica, 'ordem': ordem,
+            'tutor': tutor if bool(tutor) else '',
+            'tem_tutor': bool(tutor), 'tem_agenda': bool(dt_ag_iso),
+            'gerenciado': ofe > 0, 'situ': situ,
+            'alunos_mat': mat, 'alunos_agend': agend, 'capacidade': capa,
+            'dt_agenda_iso': dt_ag_iso, 'hr_agenda': hr_ag,
+        })
+    df_r = pd.DataFrame(registros)
+    if df_r.empty:
+        return {'ger_kpis': {}, 'ger_polo': [], 'ger_cat': [], 'ger_ordem': [],
+                'ger_contratacao': [], 'ger_agendas': [], 'ger_ofertas': []}
+    polo_cat_tem_tutor = (
+        df_r[df_r['tem_tutor']].groupby(['polo','categoria']).size()
+        .reset_index(name='_qt').assign(_tem=True)
+        .set_index(['polo','categoria'])['_tem']
+    )
+    def _fix_tem_tutor(row):
+        return polo_cat_tem_tutor.get((row['polo'], row['categoria']), row['tem_tutor'])
+    df_r['tem_tutor'] = df_r.apply(_fix_tem_tutor, axis=1)
+    total = len(df_r); com_tutor = int(df_r['tem_tutor'].sum()); sem_tutor = total - com_tutor
+    gerenciadas = int(df_r['gerenciado'].sum()); com_agenda = int(df_r['tem_agenda'].sum())
+    tot_mat = int(df_r['alunos_mat'].sum()); tot_agend = int(df_r['alunos_agend'].sum())
+    tot_capa = int(df_r['capacidade'].sum())
+    print(f"[{ts()}] Gerenciamento: {total} ofertas, {gerenciadas} ger., {sem_tutor} sem tutor")
+    ger_kpis = {
+        'total_ofertas': total, 'ofertas_gerenciadas': gerenciadas,
+        'ofertas_nao_gerenciadas': total - gerenciadas,
+        'pct_gerenciado': round(gerenciadas/total*100,1) if total else 0,
+        'ofertas_com_tutor': com_tutor, 'ofertas_sem_tutor': sem_tutor,
+        'pct_com_tutor': round(com_tutor/total*100,1) if total else 0,
+        'ofertas_com_agenda': com_agenda, 'total_alunos_matriculados': tot_mat,
+        'total_alunos_agendados': tot_agend, 'total_capacidade': tot_capa,
+        'pct_ocupacao': round(tot_agend/tot_capa*100,1) if tot_capa else 0,
+        'polos_total': df_r['polo'].nunique(),
+        'polos_sem_tutor': int(df_r[~df_r['tem_tutor']].groupby('polo').ngroups),
     }
-  }
-  return true;
-}
-function _updateGerSubfiltro(){
-  const grupoId=(document.getElementById('ger-det-cat')||{}).value||'';
-  const grupo=_grupoById(grupoId);
-  const subSel=document.getElementById('ger-det-subcurso');
-  if(!subSel) return;
-  if(!grupo || !grupo.subfiltro){
-    subSel.style.display='none';
-    subSel.value='';
-    while(subSel.options.length>1) subSel.remove(1);
-    return;
-  }
-  const _prev=subSel.value;
-  while(subSel.options.length>1) subSel.remove(1);
-  // PATCH 60: o placeholder da opção "todos" (value="") ficava sempre com o
-  // texto fixo "Toda Exatas" no HTML, mesmo quando o grupo ativo era outro
-  // (ex: Biomedicina, Farmácia e Estética/Cosmética) — exatamente o "filtro de
-  // Exatas aparecendo em Bio-Far" que o Leo reportou. Agora o texto da primeira
-  // opção é atualizado pra bater com o grupo selecionado.
-  if(subSel.options[0]) subSel.options[0].textContent = grupo.subfiltroTodosLabel || ('Todo(a) '+grupo.label);
-  grupo.subfiltro.forEach(function(s){const o=document.createElement('option');o.value=s.id;o.textContent=s.label;subSel.appendChild(o);});
-  subSel.style.display='';
-  if([...subSel.options].some(o=>o.value===_prev)) subSel.value=_prev; else subSel.value='';
-}
-function filterGerDetalhe(q){
-  q=q.toLowerCase();var grupoId=document.getElementById('ger-det-cat').value;var grupo=_grupoById(grupoId);var ord=document.getElementById('ger-det-ordem').value;var st=document.getElementById('ger-det-status').value;var d=gerDetData;
-  _updateGerSubfiltro();
-  var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
-  if(q)d=d.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
-  if(grupo)d=d.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
-  // PATCH 81: o filtro de Ordem NÃO restringe mais os dados usados pra montar
-  // a tabela (t.ordens) — só decide quem aparece na lista (mais abaixo, junto
-  // com o status). Antes, escolher "Ordem 2" fazia a Ordem 1 sumir da tela
-  // como se o tutor nunca tivesse feito nada nela — a tabela sempre mostra o
-  // histórico REAL e completo do tutor em todas as 5 ordens; o filtro de
-  // Ordem só decide QUEM aparece, olhando o status daquela ordem específica.
-  var dBuild=d;
-  // PATCH 49: descobre, ANTES de agregar, se alguma combinação nome+polo+categoria
-  // tem MAIS DE UMA chapa distinta nos dados — indício forte de duas pessoas reais
-  // diferentes com o mesmo nome (não apenas variação de formatação "com/sem
-  // chapa" da MESMA pessoa, que é o caso normal e deve continuar mesclado).
-  // PATCH 55: só separa a linha por subcurso quando ele é uma especialidade
-  // "limpa" e conhecida (as mesmas do _SUBCURSO_LABEL_JS) — em Exatas, o campo
-  // subcurso cai pro código de curso INTERNO cru quando não reconhecido (dezenas
-  // de códigos diferentes por disciplina de engenharia, já documentado no PATCH
-  // 46: "não formam uma lista limpa de especialidades"). Sem essa restrição, um
-  // único tutor de Exatas fragmentaria em várias linhas (uma por código interno)
-  // em vez de resolver o problema — o objetivo aqui é separar especialidades
-  // REAIS e reconhecíveis (Fisioterapia × T.O., Farmácia × Biomedicina, etc.),
-  // não qualquer valor bruto que caia no campo subcurso.
-  // PATCH 67: Farmácia e Biomedicina são a MESMA categoria/vaga (Bio-Far) — um
-  // tutor de Bio-Far cobre as duas legitimamente, não são especialistas
-  // diferentes. Confirmado pelo Leo: um tutor só aparece 2x quando está
-  // registrado em DUAS categorias diferentes de verdade (Bio-Far E, à parte,
-  // Estética e Cosmética do Multi III) — isso já acontece naturalmente porque
-  // a categoria (BIO-FAR vs BIO-FISIO-EST-TO) já é parte da chave da linha, sem
-  // precisar quebrar por subcurso dentro do Bio-Far. Só continuam "limpos" pra
-  // separar em linhas os subcursos que são especialidades REALMENTE distintas
-  // dentro da MESMA categoria ampla (Multi III: Fisioterapia × Terapia
-  // Ocupacional × Estética e Cosmética são vagas/registros diferentes).
-  var _SUBCURSOS_LIMPOS = {'Fisioterapia':1,'Terapia Ocupacional':1,'Estética e Cosmética':1};
-  function _baseKeyOferta(r){
-    var subLimpo = _SUBCURSOS_LIMPOS[r.subcurso] ? r.subcurso : '';
-    return _normTutorKey(r.tutor)+'|||'+(r.polo||'')+'|||'+(r.categoria||'')+'|||'+subLimpo;
-  }
-  var _chapaPorGrupo={};
-  dBuild.forEach(function(r){
-    var baseKey=_baseKeyOferta(r);
-    var m=String(r.tutor||'').match(/\((\d+)\)\s*$/);
-    if(m){ (_chapaPorGrupo[baseKey]=_chapaPorGrupo[baseKey]||new Set()).add(m[1]); }
-  });
-  var tutorMap={};dBuild.forEach(function(r){
-    // PATCH 65: o Leo confirmou com a planilha real que uma tutora de 4h com 8
-    // práticas geridas está em 100% — os "15" que apareciam vinham de práticas
-    // do catálogo SEM NENHUM tutor atribuído (campo TUTOR vazio no GIOCONDA)
-    // sendo contadas dentro do total dela. Isso nunca deveria acontecer — uma
-    // linha sem tutor não pertence a nenhum tutor nomeado. Blindagem explícita:
-    // linha sem tutor nunca conta pra dentro de uma entrada de tutor nomeado.
-    if(!r.tutor) return;
-    var baseKey=_baseKeyOferta(r);
-    var _mChapaAtual=String(r.tutor||'').match(/\((\d+)\)\s*$/);var _chapaAtual=_mChapaAtual?_mChapaAtual[1]:null;
-    var _chapasDoGrupo=_chapaPorGrupo[baseKey];
-    var key=(_chapasDoGrupo && _chapasDoGrupo.size>1) ? baseKey+'|||'+(_chapaAtual||'sem-chapa') : baseKey;
-    if(!tutorMap[key])tutorMap[key]={tutor:r.tutor||'',polo:r.polo||'—',categoria:r.categoria||'—',ordens:{},totalGer:0,totalOfertas:0,totalMat:0,totalAgend:0,_subcursos:{},_baseKeyOferta:baseKey};var t=tutorMap[key];
-    // PATCH 26: preferir sempre a variante do nome que tem chapa (mais completa/rastreável)
-    if(r.tutor && (!t.tutor || (!/\(\d+\)/.test(t.tutor) && /\(\d+\)/.test(r.tutor)))) t.tutor = r.tutor;
-    // PATCH 48: guarda o(s) subcurso(s) REAL(is) dessa oferta (vindo do GIOCONDA,
-    // o mesmo campo usado pra filtrar o grupo) — necessário pra exibir "Curso/Lab"
-    // consistente com o filtro aplicado (ver correção logo abaixo, na montagem de cuLab)
-    // PATCH 53: como o baseKey agora já inclui o subcurso, cada linha só recebe UM
-    // subcurso na prática (mantido como mapa por segurança/compatibilidade)
-    if(r.subcurso) t._subcursos[r.subcurso]=(t._subcursos[r.subcurso]||0)+1;
-    t.totalOfertas++;t.totalMat+=r.alunos_mat||0;t.totalAgend+=r.alunos_agend||0;if(!t.ordens[r.ordem])t.ordens[r.ordem]={ger:0,total:0,praticas:[]};t.ordens[r.ordem].total++;if(r.gerenciado){t.ordens[r.ordem].ger++;t.totalGer++;}t.ordens[r.ordem].praticas.push(r);});
-  var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
-  var sorted=Object.values(tutorMap).sort(function(a,b){if(!a.tutor&&b.tutor)return 1;if(a.tutor&&!b.tutor)return -1;return a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt');});
-  // PATCH 72: lista de tutores "sem oferta no GIOCONDA" SEMPRE preenchida,
-  // independente do filtro de status da tabela — usada pelo pizza (ver
-  // sortedParaPizza mais abaixo) pra não perder esses tutores da conta quando
-  // o filtro da TABELA está em "Gerenciadas" (nesse caso eles corretamente não
-  // entram na tabela, mas continuam existindo e contando como "não geriu" no
-  // gráfico geral).
-  var _semOfertaInjetadosTodos = [];
-  // PATCH 33: reforça ainda mais o PATCH 32 — corrige falso-positivo de "Sem
-  // oferta no GIOCONDA" reportado pelo Leo (tutor com gerenciamento REAL em
-  // 2026/2 ainda assim marcado como sem oferta). Causa provável: a grafia do
-  // polo no GIOCONDA (LABORATORIO, ex: "LAP - Blumenau/SC - Salto Do Norte
-  // (Centro Universitário Dante)") pode diferir da grafia no CONTROLE (POLO)
-  // em acentos, espaços duplicados ou parênteses — a normalização anterior só
-  // tirava o prefixo "LAP -". Agora: (1) normalização de polo remove também
-  // acentos e o conteúdo entre parênteses; (2) além do match por polo, existe
-  // um fallback GLOBAL por nome — se o tutor aparece em QUALQUER lugar de
-  // 'sorted' com dado real (independente do polo bater), não é mais marcado
-  // como "sem oferta", porque o dado dele claramente existe em algum lugar.
-  (function(){
-    function _normPoloComparavel(p){
-      var s=(p||'').replace(/^LAP\s*[-–]\s*/i,'');
-      s=s.replace(/\([^)]*\)/g,'');  // remove parenteses e conteudo (ex: nome do centro universitario)
-      s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');  // remove acentos
-      return s.trim().toLowerCase().replace(/\s+/g,' ');
-    }
-    function _primeiroUltimo(key){
-      var pts=key.split(' ').filter(Boolean);
-      return pts.length>=2 ? pts[0]+' '+pts[pts.length-1] : key;
-    }
-    // PATCH 74: nome+primeiro/último não cobre quando um dos dois nomes tem
-    // MAIS ou MENOS partes que o outro (nome do meio faltando ou sobrando) —
-    // confirmado com dado real: "Cicero Rosendo da Silva Filho" (GIOCONDA) vs
-    // "Jose Cicero Rosendo Da Silva Filho" (CONTROLE, "Jose" a mais na frente)
-    // e "Gabriela Fanck dos Santos de Oliveira" (GIOCONDA) vs "Gabriela Fanck
-    // Dos Santos" (CONTROLE, sem o "de Oliveira") — em ambos os casos o
-    // primeiro OU o último token muda, então nem a chave exata nem o
-    // primeiro+último batem, e a mesma pessoa real acaba contada 2x (uma vez
-    // pelo dado real do GIOCONDA, outra pelo "sem oferta" injetado errado).
-    // Considera match quando todos os tokens do nome MAIS CURTO aparecem, na
-    // mesma ordem, dentro do nome mais longo (mesmo que não sejam contíguos).
-    function _ehSubsequencia(curtos, longos){
-      var i=0;
-      for(var j=0;j<longos.length && i<curtos.length;j++){
-        if(longos[j]===curtos[i]) i++;
-      }
-      return i===curtos.length;
-    }
-    function _nomesBatem(keyA, keyB){
-      if(keyA===keyB) return true;
-      var tA=keyA.split(' ').filter(Boolean), tB=keyB.split(' ').filter(Boolean);
-      if(tA.length===0||tB.length===0) return false;
-      var curtos=tA.length<=tB.length?tA:tB, longos=tA.length<=tB.length?tB:tA;
-      if(curtos.length<2) return false; // nome de 1 token só é arriscado demais pra casar por subsequência
-      return _ehSubsequencia(curtos, longos);
-    }
-    // PATCH 50: como a tabela agora é filtrada de verdade por ordem/status, um
-    // tutor 100% gerenciado pode legitimamente ficar de fora de "sorted" quando
-    // o filtro é "Não gerenciadas" (ele não tem NADA pendente pra mostrar ali).
-    // Isso não pode ser confundido com "sem oferta no GIOCONDA" — então a checagem
-    // de "já representado" usa o universo INTEIRO de ofertas dentro do
-    // grupo/busca escolhidos (ignorando ordem/status), não mais 'sorted'.
-    var dTodosNoEscopo=gerDetData.filter(function(r){
-      if(q&&!(r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q))return false;
-      if(grupo&&!_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId))return false;
-      return true;
-    });
-    // Índice por polo -> lista de {key, fl} + índice GLOBAL (todos os polos juntos)
-    var _porPolo={}; var _global=[];
-    dTodosNoEscopo.forEach(function(r){
-      if(!r.tutor) return;  // linhas sem tutor não contam como representação de ninguém específico
-      var poloN=_normPoloComparavel(r.polo);
-      var key=_normTutorKey(r.tutor);
-      var entry={key:key, fl:_primeiroUltimo(key)};
-      (_porPolo[poloN]=_porPolo[poloN]||[]).push(entry);
-      _global.push(entry);
-    });
-    (DB.tutores||[]).filter(function(t){ return !t._anonimo && t.c!=='Aviso de Portfólio' && t.n && t.n!=='Tutor desligado'; }).forEach(function(t){
-      var poloN=_normPoloComparavel(t.p);
-      var alvoKey=_normTutorKey(t.n);
-      var alvoFL=_primeiroUltimo(alvoKey);
-      var candidatosPolo=_porPolo[poloN]||[];
-      var jaRepresentado=candidatosPolo.some(function(c){ return c.key===alvoKey || c.fl===alvoFL || _nomesBatem(alvoKey,c.key); })
-        || _global.some(function(c){ return c.key===alvoKey || c.fl===alvoFL || _nomesBatem(alvoKey,c.key); });  // fallback global por nome
-      if(jaRepresentado) return;
-      if(q && !((t.n+t.p+(t.c||'')).toLowerCase().includes(q))) return;
-      // PATCH 47: antes só checava a categoria ampla (t.c!==cat) — um tutor de
-      // Fisioterapia dentro de Multi III passava mesmo com o filtro em "Biomedicina,
-      // Farmácia e Estética/Cosmética", porque as duas fatias compartilham a mesma
-      // categoria crua. Agora usa _tutorMatchesGrupo, que também olha o subcurso
-      // (código de curso do tutor) quando o grupo exige isso.
-      if(grupo && !_tutorMatchesGrupo(t, grupo, subfiltroId)) return;
-      // PATCH 72: registra SEMPRE nessa lista à parte (pro pizza usar, ver
-      // sortedParaPizza mais abaixo) — mas só entra em "sorted" (a tabela) quando
-      // o filtro de status permite (um tutor sem NENHUMA oferta real nunca pode
-      // satisfazer "Gerenciadas", então continua fora da tabela nesse caso; mas
-      // ele CONTINUA existindo e contando como "não gerenciou" no pizza, mesmo
-      // com o filtro da tabela em "Gerenciadas").
-      _semOfertaInjetadosTodos.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
-      if(st!=='ger'){
-        sorted.push({tutor:t.n, polo:t.p||'—', categoria:t.c||'—', ordens:{}, totalGer:0, totalOfertas:0, totalMat:0, totalAgend:0, _semOfertaGioconda:true});
-      }
-      // Registrar imediatamente pra não adicionar o mesmo tutor 2x se ele tiver
-      // mais de uma entrada em DB.tutores pro mesmo polo (ex: registro duplicado)
-      var novaEntry={key:alvoKey, fl:alvoFL};
-      (_porPolo[poloN]=_porPolo[poloN]||[]).push(novaEntry);
-      _global.push(novaEntry);
-    });
-  })();
-  // PATCH 69: o Leo confirmou que "Não gerenciadas" deve mostrar só quem NÃO
-  // GERIU NADA (zero práticas geridas) — progresso parcial (ex: 5/8, 6/8) não
-  // conta como "não gerenciada", mesmo estando abaixo da capacidade. Então
-  // "Gerenciadas" = tem QUALQUER prática gerida (mesmo que não tenha batido a
-  // capacidade ainda); "Não gerenciadas" = zero práticas geridas. Isso substitui
-  // o critério de capacidade do PATCH 68 (que ainda causava um tutor com 5/8
-  // aparecer em "Não gerenciadas" por não ter chegado a 8) — mas mantém a
-  // correção principal do PATCH 68 (comparação agregada por tutor+ordem, não
-  // linha a linha), só troca o LIMIAR de "capacidade" pra "zero".
-  // PATCH 70: guarda a lista COMPLETA (antes do filtro de status) pro gráfico
-  // de pizza usar — sem isso, com "Não gerenciadas" selecionado, o pizza sempre
-  // mostraria 0%/100% (já que só sobram tutores com zero gerido nesse recorte),
-  // não a proporção real de quem geriu entre TODOS os tutores do grupo/ordem
-  // selecionados. O pizza deve responder "de todo mundo nesse grupo, quantos
-  // geriram?" — uma pergunta independente de qual filtro de status a TABELA
-  // está usando pra decidir quais linhas mostrar.
-  // PATCH 71: o pizza precisa refletir TODOS os tutores do grupo/busca
-  // selecionados, independente de qual ORDEM está selecionada na tabela — não
-  // só independente do filtro de status (PATCH 70). Um tutor cujo único dado
-  // real é de uma ordem diferente da selecionada sumia inteiramente da conta
-  // (nem "geriu" nem "não geriu" — simplesmente não existia no recorte),
-  // causando a diferença "314 de 322" que o Leo reportou. Reconstrói a lista
-  // aqui SEM o filtro de ordem (só busca + grupo), reaproveitando a mesma
-  // lógica de "tutor sem oferta nenhuma" já calculada acima.
-  var sortedParaPizza = (function(){
-    var dSemOrdem = gerDetData;
-    if(q) dSemOrdem = dSemOrdem.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
-    if(grupo) dSemOrdem = dSemOrdem.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
-    var mapa = {};
-    dSemOrdem.forEach(function(r){
-      if(!r.tutor) return;
-      var key=_baseKeyOferta(r);
-      if(!mapa[key]) mapa[key] = {tutor:r.tutor, totalGer:0};
-      if(r.gerenciado) mapa[key].totalGer++;
-    });
-    var lista = Object.values(mapa);
-    // Reaproveita a lista de "sem oferta no GIOCONDA" SEMPRE preenchida (PATCH
-    // 72) — ao contrário de ler de 'sorted', que fica sem esses tutores quando
-    // o filtro de status da tabela é "Gerenciadas".
-    _semOfertaInjetadosTodos.forEach(function(t){
-      lista.push({tutor:t.tutor, totalGer:0});
-    });
-    return lista;
-  })();
-  // PATCH 81: filtro de Ordem e de Status agora decidem JUNTOS quem aparece na
-  // lista — sem afetar o que já foi construído em t.ordens (que continua
-  // sempre completo, todas as 5 ordens, real). Regra:
-  // - Só Ordem selecionada (sem status): mostra quem tem QUALQUER dado real
-  //   registrado pra aquela ordem específica (gerido ou não).
-  // - Só Status selecionado (sem ordem): usa o agregado do tutor (todas as
-  //   ordens somadas) — critério do PATCH 69 (zero geridas = "não gerenciada").
-  // - Os dois juntos: olha o status especificamente DENTRO da ordem escolhida.
-  if(ord || st){
-    sorted = sorted.filter(function(t){
-      if(t._semOfertaGioconda){
-        // Tutor sem nenhuma oferta real: só faz sentido aparecer numa visão
-        // sem ordem específica selecionada (não tem como "ter dado" numa
-        // ordem que ele nunca teve prática nenhuma), e nunca em "Gerenciadas".
-        if(ord) return false;
-        return st!=='ger';
-      }
-      var od = ord ? t.ordens[ord] : null;
-      if(ord && !st) return !!od; // só a ordem importa: precisa ter algum dado real nela
-      var geriu = ord ? (od ? od.ger>0 : false) : (t.totalGer>0);
-      return st==='ger' ? geriu : !geriu;
-    });
-  }
-  // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
-  // montar as linhas, em vez de tentar mexer no DOM depois (a tabela tem linhas
-  // filhas agrupadas por tutor, que quebrariam com reordenação direta de <tr>)
-  if(_detSortCol){
-    sorted=sorted.slice().sort(function(a,b){
-      var va,vb;
-      if(_detSortCol==='pct'){va=a.totalOfertas?a.totalGer/a.totalOfertas:0;vb=b.totalOfertas?b.totalGer/b.totalOfertas:0;}
-      else{va=(a[_detSortCol]||'').toString();vb=(b[_detSortCol]||'').toString();}
-      var cmp=(typeof va==='number')?(va-vb):va.localeCompare(vb,'pt');
-      return _detSortAsc?cmp:-cmp;
-    });
-  }
-  ['polo','tutor','pct'].forEach(function(c){var el=document.getElementById('gd-ind-'+c);if(el)el.textContent=(_detSortCol===c)?(_detSortAsc?' ▲':' ▼'):'';});
-  var rows='';
-  var _prevPoloTutor='';sorted.forEach(function(t,gi){
-    var pct=t.totalOfertas?Math.round(t.totalGer/t.totalOfertas*100):0;
-    var semTutor=!t.tutor;var tutorDisplay=t.tutor||'<span style="color:var(--red)">Sem tutor</span>';
-    // Curso/Lab
-    var cuLab;
-    {
-      var normT=function(s){var n=(s||'').toLowerCase().split('(')[0].trim();n=n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();return n;};
-      var normFL=function(s){var pts=normT(s).split(' ').filter(Boolean);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:normT(s);};
-      var preJoinCH=t.ch_semanal||null;
-      var _tn=normT(t.tutor||'');var _tnFL=normFL(t.tutor||'');
-      // PATCH 99/100: três passadas, da mais confiável pra menos — nome
-      // completo exato primeiro (testando TODOS os candidatos), depois
-      // primeiro+último nome (só se nada exato existir em lugar nenhum), e só
-      // por último o fallback por substring. Antes, um "find()" só testava
-      // tudo junto e parava no primeiro que batesse — um match FRACO (nome
-      // parecido ou primeiro+último coincidente de OUTRA pessoa) que
-      // aparecesse antes no array escondia o match EXATO que existia mais
-      // adiante. Casos reais confirmados: "Ana Keila Everton Araujo" (8h)
-      // pegando CH de "Juliana Araujo..." (substring "ana"/"araujo"), e
-      // "Paulo Roberto Souza Da Silva" (8h) pegando CH de "Paulo Vitor Santos
-      // Da Silva" (mesmo primeiro+último "Paulo...Silva", pessoa diferente).
-      var dbTutor=preJoinCH?{ch_semanal:preJoinCH}:(DB.tutores||[]).find(function(x){
-        return x.n&&t.tutor&&normT(x.n)===_tn;
-      });
-      if(!dbTutor && !preJoinCH){
-        dbTutor=(DB.tutores||[]).find(function(x){
-          if(!x.n||!t.tutor)return false;
-          var xFL=normFL(x.n);
-          return xFL===_tnFL||xFL===_tn||normT(x.n)===_tnFL;
-        });
-      }
-      if(!dbTutor && !preJoinCH){
-        dbTutor=(DB.tutores||[]).find(function(x){
-          if(!x.n||!t.tutor)return false;
-          var longNorm=normT(x.n);
-          var shortTokens=_tnFL.split(' ').filter(Boolean);
-          return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
-        });
-      }
-      var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;var padraoCH=[4,8,12,20,24];var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;var capOrdem=praticasSemana?praticasSemana*4:null;
-      // PATCH 48: o dbTutor acima é achado só por NOME (pra CH Contratada, que vem
-      // do CONTROLE/LOTAÇÃO e não tem subcurso por prática) — mas usar esse mesmo
-      // dbTutor pra decidir o "Curso/Lab" causava o bug reportado pelo Leo: uma
-      // oferta classificada como Estética e Cosmética no GIOCONDA (e que por isso
-      // passa certinho no filtro de grupo) aparecia com o rótulo "Fisioterapia" na
-      // tabela, porque o CONTROLE tinha esse tutor registrado sob outro código de
-      // curso. Preferir sempre o subcurso que veio de fato das ofertas do GIOCONDA
-      // (guardado em t._subcursos durante a agregação) resolve a divergência —
-      // só cai pro dbTutor/categoria ampla quando não há subcurso nenhum (ex:
-      // Enfermagem/Nutrição, que não têm essa quebra).
-      var _subNomes=Object.keys(t._subcursos||{});
-      cuLab=_subNomes.length?_subNomes.sort().join(' + '):(dbTutor?cursoLabel(dbTutor):catParaCurso(t.categoria));
-      window._tmpChCont=chCont;window._tmpCapOrdem=capOrdem;
-    }
-    var chCont=window._tmpChCont, capOrdem=window._tmpCapOrdem;
-    var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];var ordCells='';
-    ordensExibir.forEach(function(o){var od=t.ordens[o];
-      if(!od){
-      // PATCH 37: sem dado de oferta no GIOCONDA ainda não é "sem capacidade" —
-      // usa a mesma capacidade (baseada na CH do tutor) que qualquer outro
-      // tutor usaria, mostrando "0 de X" em vez de um "0/0" que parecia dizer
-      // que não existe nem capacidade nenhuma.
-      var denomSemDado = capOrdem||null;
-      ordCells+= denomSemDado
-        ? '<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:var(--red)">0<span style="font-size:10px;color:var(--dim)">/'+denomSemDado+'</span></div></td>'
-        : '<td style="text-align:center;color:var(--dim)">—</td>';
-      return;
-    }var ger=od.ger,total=od.total;
-    // PATCH 65: o Leo confirmou com a planilha real (REL_GERAL_DE_GERENCIAMENTO)
-    // que a capacidade da CH É o número real de práticas esperadas por ordem —
-    // não um teto teórico que o catálogo pode superar. As tentativas anteriores
-    // (PATCH 61/63/64) de usar um "total real" diferente da capacidade partiam
-    // de um entendimento errado; o "15" que aparecia vinha de práticas do
-    // catálogo SEM tutor atribuído sendo contadas por engano (ver PATCH 65 na
-    // agregação, que já bloqueia isso na raiz). Denominador sempre = capacidade.
-    var denom=capOrdem||total;var pO=denom?Math.round(ger/denom*100):0;var corO=pO>=100?'var(--ok)':pO>=75?'var(--teal)':pO>0?'var(--yellow-d)':'var(--red)';var chRestO=capOrdem?((Math.max(0,capOrdem-ger))*1.5).toFixed(1)+'h':null;
-    ordCells+='<td style="text-align:center;vertical-align:middle"><div style="font-size:12px;font-weight:700;color:'+corO+'">'+ger+'<span style="font-size:10px;color:var(--dim)">/'+denom+'</span></div>'+'</td>';});    var chGer=(t.totalGer*1.5).toFixed(1)+'h';var nOrdens=Object.keys(t.ordens).length||1;var capTotal=capOrdem?capOrdem*nOrdens:null;var praticasRest=capTotal!==null?Math.max(0,capTotal-t.totalGer):null;var chRestH=praticasRest!==null?(praticasRest*1.5).toFixed(1):null;
-    // ── Nova abordagem: truncar strings diretamente no JS ──────────────────
-    var _trunc=function(s,n){s=(s||'').trim();return s.length>n?s.substring(0,n-1)+'…':s;};
-    // Polo: remover prefixo "LAP – " e limitar
-    var poloDisp=t.polo.replace(/^LAP\s*[–\-]\s*/i,'');
-    poloDisp=_trunc(poloDisp,28);
-    // Tutor: extrair Primeiro + Último (sem matrícula), limitar
-    var _tRaw=(t.tutor||'').replace(/\s*\(\d+\)\s*$/,'').trim();
-    var _tPts=_tRaw.split(/\s+/).filter(Boolean);
-    var tutorFmt=_tPts.length>2?_tPts[0]+' '+_tPts[_tPts.length-1]:_tRaw;
-    tutorFmt=_trunc(tutorFmt,25);
-    tutorDisplay=t.tutor
-      ?('<span title="'+t.tutor+'">'+tutorFmt+'</span>')
-      :'<span style="color:var(--red);font-size:10px">⚠ Sem tutor</span>';
-    // Curso/Lab: limitar
-    var cuLabDisp=_trunc(cuLab,26);
-    var _curPoloTutor=t.polo+'|||'+(t.tutor||'');
-      var _isRepeat=(_curPoloTutor===_prevPoloTutor);
-      _prevPoloTutor=_curPoloTutor;
-      // ↳ linhas de continuação: mostrar polo/tutor em cinza claro (não esconder)
-      var _poloCss=_isRepeat?'color:var(--muted);':'';
-      var _tutorCss=_isRepeat?'color:var(--muted);':'';
-      rows+='<tr class="tr-polo-hdr" style="cursor:pointer;height:46px;overflow:hidden" data-det="'+gi+'">'
-      +'<td class="polo-toggle" title="'+t.polo+'" style="overflow:hidden;padding:6px 8px;'+_poloCss+'"><strong style="font-size:11px">'+(_isRepeat?'↳ ':'')+poloDisp+'</strong></td>'
-      +'<td title="'+t.tutor+'" style="overflow:hidden;padding:6px 4px;font-size:11px;'+_tutorCss+'">'+tutorDisplay+'</td>'
-      +'<td title="'+cuLab+'" style="overflow:hidden;padding:6px 4px;font-size:10px;color:var(--muted)">'+cuLabDisp+'</td>'+ordCells
-      +'<td class="col-ch-lot" style="text-align:right;font-size:11px;font-weight:700;color:var(--teal)">'+(chCont?chCont+'h':'—')+'</td>'
-      +'<td style="text-align:right;font-size:11px">'+chGer+'</td>'
-      +'<td class="col-ch-lot" style="text-align:right;font-size:11px">'+(chRestH!==null?chRestH+'h':'—')+'</td>'
-      +'<td>'+progCell(pct)+'</td></tr>';
-    Object.keys(t.ordens).sort(function(a,b){return (ordemOrder[a]||9)-(ordemOrder[b]||9);}).forEach(function(o){var od=t.ordens[o];rows+='<tr class="tr-polo-child" data-dg="dg'+gi+'"><td colspan="2" style="padding-left:28px!important;font-size:11px"><strong>'+o+'</strong> — '+od.ger+' de '+od.total+'</td><td colspan="2" style="font-size:11px">'+od.praticas.filter(function(r){return r.gerenciado;}).map(function(r){return r.pratica;}).slice(0,3).join('; ')+'</td><td style="text-align:right;font-size:11px">'+(od.ger*1.5).toFixed(1)+'h</td><td></td><td>'+progCell(od.total?Math.round(od.ger/od.total*100):0)+'</td></tr>';});
-  });
-  var nTutoresUnicos = new Set(sorted.map(g=>g.tutor).filter(Boolean)).size;
-  document.getElementById('ger-det-tbody').innerHTML=rows;document.getElementById('ger-det-count').textContent=nTutoresUnicos+' tutor'+(nTutoresUnicos!==1?'es':'')+' ('+d.length+' oferta'+(d.length!==1?'s':'')+')';if(!sorted.length)document.getElementById('ger-det-tbody').innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--muted)">Nenhum resultado encontrado com este filtro.</td></tr>';
-  document.querySelectorAll('[data-det]').forEach(function(row){row.addEventListener('click',function(e){if(e.target.closest('.btn-expand'))return;var gi=this.dataset.det;var t=sorted[+gi];if(!t)return;_openDetTutorModal(t,sorted);});});
-  // PATCH 39: guarda a lista atual (respeitando os filtros ativos) pra exportação
-  // por curso, e atualiza o gráfico de pizza Gerenciaram x Não Gerenciaram
-  window._detSortedAtual = sorted;
-  var grupoLabel='';
-  if(grupo){
-    grupoLabel=grupo.label;
-    if(grupo.subfiltro && subfiltroId){
-      var _sf=grupo.subfiltro.find(function(s){return s.id===subfiltroId;});
-      if(_sf) grupoLabel+=' — '+_sf.label;
-    }
-  }
-  window._detCatAtual = grupoLabel;
-  renderDetPizza(sortedParaPizza, grupoLabel);
-  // PATCH 93: segundo gráfico, lado a lado — reflete a ORDEM selecionada
-  // especificamente (sem trivializar 100%/0% com o filtro de Status, mesma
-  // lógica de sempre: "geriu alguma coisa nesta ordem" independente do
-  // Status escolhido na tabela). Só aparece quando uma ordem específica está
-  // selecionada — com "Todas ordens", os dois gráficos seriam idênticos.
-  var _wrapOrdemPizza = document.getElementById('det-pizza-ordem-wrap');
-  if(ord){
-    if(_wrapOrdemPizza) _wrapOrdemPizza.style.display='';
-    var sortedParaPizzaOrdem = (function(){
-      var dOrdem = gerDetData;
-      if(q) dOrdem = dOrdem.filter(function(r){return (r.polo+r.pratica+(r.tutor||'')+r.categoria).toLowerCase().includes(q);});
-      if(grupo) dOrdem = dOrdem.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
-      // PATCH 94: NÃO filtra por ordem aqui — o universo de tutores tem que
-      // ser o MESMO do gráfico da esquerda (todo mundo do grupo/subfiltro),
-      // senão um tutor sem nenhum dado registrado justo NESSA ordem específica
-      // simplesmente sumia da conta (o total nunca batia com o outro gráfico).
-      // "totalGer" agora conta só o que foi gerido DENTRO da ordem selecionada
-      // — sem dado nela = 0 = "não gerenciou nesta ordem", não excluído.
-      var mapaOrdem = {};
-      dOrdem.forEach(function(r){
-        if(!r.tutor) return;
-        var key=_baseKeyOferta(r);
-        if(!mapaOrdem[key]) mapaOrdem[key] = {tutor:r.tutor, totalGer:0};
-        if(r.ordem===ord && r.gerenciado) mapaOrdem[key].totalGer++;
-      });
-      var listaOrdem = Object.values(mapaOrdem);
-      // tutores sem oferta nenhuma nunca "gerenciaram" nesta ordem específica também
-      _semOfertaInjetadosTodos.forEach(function(t){ listaOrdem.push({tutor:t.tutor, totalGer:0}); });
-      return listaOrdem;
-    })();
-    renderDetPizza(sortedParaPizzaOrdem, ord, 'det-pizza-chart-ordem', 'det-pizza-ordem-label');
-  }else{
-    if(_wrapOrdemPizza) _wrapOrdemPizza.style.display='none';
-  }
-}
-function renderDetPizza(sorted, cat, targetChartId, targetLabelId){
-  targetChartId = targetChartId || 'det-pizza-chart';
-  targetLabelId = targetLabelId || 'det-pizza-cat-label';
-  // PATCH 44: deduplicar por NOME de tutor (não por grupo tutor+polo+categoria).
-  // Um mesmo tutor pode aparecer em mais de um grupo em 'sorted' (ex: categoria
-  // composta dividida em duas entradas reais, ou pequenas variações de grafia
-  // que não colapsaram 100%) — sem dedup aqui, o gráfico contava esse tutor
-  // 2x, dando um total diferente do texto acima da tabela (que já deduplica).
-  var porNome={};
-  sorted.forEach(function(t){
-    if(!t.tutor) return; // exclui buckets "sem tutor"
-    var key=_normTutorKey(t.tutor);
-    if(!porNome[key]) porNome[key]={gerenciouAlgo:false};
-    if(t.totalGer>0) porNome[key].gerenciouAlgo=true;
-  });
-  var nomesUnicos=Object.values(porNome);
-  var gerenciaram=nomesUnicos.filter(function(x){return x.gerenciouAlgo;}).length;
-  var naoGerenciaram=nomesUnicos.length-gerenciaram;
-  var total=nomesUnicos.length || 1;
-  var pctGer = Math.round(gerenciaram/total*100);
-  var _lblEl = document.getElementById(targetLabelId);
-  if(_lblEl) _lblEl.textContent = cat ? '— '+cat : '— todas as categorias';
-  var anguloGer = gerenciaram/total*360;
-  var corGer='#16a34a', corNao='#dc2626';
-  function fatiaSVG(anguloIni, anguloFim, cor){
-    var r=42,cx=50,cy=50;
-    var a1=(anguloIni-90)*Math.PI/180, a2=(anguloFim-90)*Math.PI/180;
-    var x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
-    var x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
-    var largeArc = (anguloFim-anguloIni)>180 ? 1 : 0;
-    if((anguloFim-anguloIni)>=360) return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+cor+'"/>';
-    if(anguloFim===anguloIni) return '';
-    return '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+cor+'"/>';
-  }
-  var svg = '<svg viewBox="0 0 100 100" width="110" height="110">'
-    + fatiaSVG(0, anguloGer, corGer)
-    + fatiaSVG(anguloGer, 360, corNao)
-    + '<circle cx="50" cy="50" r="24" fill="var(--surface)"/>'
-    + '<text x="50" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="var(--font)">'+pctGer+'%</text>'
-    + '<text x="50" y="60" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--font)">gerenciaram</text>'
-    + '</svg>';
-  var legenda = '<div style="font-size:12px">'
-    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corGer+';display:inline-block"></span> Gerenciaram: <strong>'+gerenciaram+'</strong></div>'
-    + '<div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corNao+';display:inline-block"></span> Não Gerenciaram: <strong>'+naoGerenciaram+'</strong></div>'
-    + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+'</div>'
-    + '</div>';
-  document.getElementById(targetChartId).innerHTML = svg + legenda;
-}
-function exportRelatorioPorCurso(){
-  var sorted = window._detSortedAtual || [];
-  var cat = window._detCatAtual || '';
-  var tutoresReais = sorted.filter(function(t){ return t.tutor; });
-  if(!tutoresReais.length){ alert('Sem tutores pra exportar com o filtro atual.'); return; }
-  // PATCH 103: inclui data de admissão, buscando no cadastro (DB.tutores) por
-  // nome — pra ter a informação junto sem precisar abrir tutor por tutor.
-  var normAdm=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};
-  var rows = tutoresReais.map(function(t){
-    var dbT=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normAdm(x.n)===normAdm(t.tutor);});
+    ger_polo = []
+    for polo, grp in df_r.groupby('polo'):
+        tuts = list(grp[grp['tem_tutor']]['tutor'].dropna().unique())
+        ger_polo.append({
+            'polo': str(polo), 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['gerenciado'].sum()),
+            'pct_gerenciado': round(grp['gerenciado'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['tem_tutor'].sum()), 'sem_tutor': int((~grp['tem_tutor']).sum()),
+            'com_agenda': int(grp['tem_agenda'].sum()),
+            'alunos_matriculados': int(grp['alunos_mat'].sum()), 'alunos_agendados': int(grp['alunos_agend'].sum()),
+            'capacidade': int(grp['capacidade'].sum()), 'tutores_unicos': [str(t) for t in tuts],
+        })
+    ger_polo.sort(key=lambda x: -x['sem_tutor'])
+    ger_cat = []
+    for cat, grp in df_r.groupby('categoria'):
+        ger_cat.append({
+            'categoria': str(cat), 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['gerenciado'].sum()),
+            'pct_gerenciado': round(grp['gerenciado'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['tem_tutor'].sum()), 'sem_tutor': int((~grp['tem_tutor']).sum()),
+            'alunos_matriculados': int(grp['alunos_mat'].sum()), 'alunos_agendados': int(grp['alunos_agend'].sum()),
+        })
+    ger_cat.sort(key=lambda x: -x['total_ofertas'])
+    ger_ordem = []
+    ordem_sort = {'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}
+    for ordem in sorted(df_r['ordem'].unique(), key=lambda x: ordem_sort.get(x,9)):
+        if not ordem: continue
+        grp = df_r[df_r['ordem']==ordem]
+        ger_ordem.append({
+            'ordem': ordem, 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['gerenciado'].sum()),
+            'pct_gerenciado': round(grp['gerenciado'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['tem_tutor'].sum()),
+            'alunos_matriculados': int(grp['alunos_mat'].sum()), 'alunos_agendados': int(grp['alunos_agend'].sum()),
+            'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(ordem,''),
+            # PATCH 86 (P6): quantos tutores distintos gerenciaram QUALQUER coisa
+            # nesta ordem — base pro gráfico "tutores gerenciaram por ordem",
+            # atualizando conforme cada ordem acontece (não é % de ofertas, é
+            # contagem de PESSOAS, seguindo a mesma regra já validada de
+            # "geriu alguma coisa = gerenciou" — não precisa bater a capacidade.
+            'tutores_gerenciaram': int(grp[grp['gerenciado']]['tutor'].dropna().nunique()),
+        })
+    ger_contratacao = []
+    for (polo, cat), grp in df_r.groupby(['polo','categoria']):
+        tuts = list(grp[grp['tem_tutor']]['tutor'].dropna().unique())
+        ger_contratacao.append({
+            'polo': str(polo), 'categoria': str(cat), 'total_ofertas': len(grp),
+            'tem_tutor': len(tuts)>0, 'tutores': [str(t) for t in tuts],
+            'status': 'Contratado' if len(tuts)>0 else 'Sem tutor',
+        })
+    ger_agendas = []
+    for polo, grp in df_r.groupby('polo'):
+        total_p = len(grp); com_ag = int(grp['tem_agenda'].sum()); sem_ag = total_p - com_ag
+        datas_por_cat = {}; datas_por_tutor = {}
+        for _, row in grp[grp['tem_agenda']].iterrows():
+            d = row['dt_agenda_iso']; c = row['categoria']; t = row['tutor'] or ''
+            if d:
+                if d not in datas_por_cat: datas_por_cat[d] = {'cats': [], 'tutores': []}
+                if c and c not in datas_por_cat[d]['cats']: datas_por_cat[d]['cats'].append(c)
+                if t and t not in datas_por_cat[d]['tutores']: datas_por_cat[d]['tutores'].append(t)
+        # PATCH 7: estrutura completa de datas_por_tutor
+        for d, v in datas_por_cat.items():
+            datas_por_tutor[d] = v['tutores']
+        ger_agendas.append({
+            'polo': str(polo), 'total': total_p, 'com_agenda': com_ag, 'sem_agenda': sem_ag,
+            'pct_agendado': round(com_ag/total_p*100, 1) if total_p else 0,
+            'datas_agenda': sorted(datas_por_cat.keys()),
+            'datas_por_cat': {d: v['cats'] for d, v in datas_por_cat.items()},
+            'datas_por_tutor': datas_por_tutor,  # PATCH 7
+        })
+    ger_agendas.sort(key=lambda x: -x['sem_agenda'])
+    ger_ofertas_detalhe = []
+    for _, row in df_r.iterrows():
+        ger_ofertas_detalhe.append({
+            'polo': row['polo'], 'categoria': row['categoria'],
+            'ordem': row['ordem'], 'pratica': row['pratica'],
+            'tutor': row['tutor'], 'tem_tutor': row['tem_tutor'],
+            'tem_agenda': row['tem_agenda'], 'gerenciado': row['gerenciado'],
+            'alunos_mat': row['alunos_mat'], 'alunos_agend': row['alunos_agend'],
+            'dt_agenda': row['dt_agenda_iso'], 'hr_agenda': row['hr_agenda'],
+        })
     return {
-      'Polo': t.polo, 'Tutor': t.tutor, 'Curso/Categoria': t.categoria,
-      'Status': t.totalGer>0 ? 'Gerenciou' : 'Não Gerenciou',
-      'Ofertas Gerenciadas': t.totalGer, 'Total de Ofertas': t.totalOfertas,
-      'Data de Admissão': (dbT && dbT.inicio) ? dbT.inicio : '',
-    };
-  }).sort(function(a,b){ return a['Status'].localeCompare(b['Status']) || a.Polo.localeCompare(b.Polo,'pt'); });
-  var sufixo = cat ? cat.replace(/[^a-z0-9]/gi,'_') : 'todas_categorias';
-  exportCSV(rows, 'relatorio_por_curso_'+sufixo+'_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-function _openDetTutorModal(t,allTutores){
-  var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
-  var normM=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};var dbTM=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normM(x.n)===normM(t.tutor);});var chSemM=dbTM&&dbTM.ch_semanal?dbTM.ch_semanal:null;var padCHM=[4,8,12,20,24];var chContM=!chSemM?null:padCHM.reduce(function(a,b){return Math.abs(b-chSemM)<Math.abs(a-chSemM)?b:a;});var pracSemM=chContM?Math.floor((chContM-_horasAdminPorCH(chContM))/1.5):null;var capOrdM=pracSemM?pracSemM*4:null;var nOrdM=Object.keys(t.ordens).length||1;var capTotM=capOrdM?capOrdM*nOrdM:null;var chGer=t.totalGer*1.5;var pracRestM=capTotM!==null?Math.max(0,capTotM-t.totalGer):null;var chRest=pracRestM!==null?pracRestM*1.5:null;
-  document.getElementById('m-title').textContent=t.tutor||'Sem tutor';document.getElementById('m-sub').textContent=t.polo+' · '+catParaCurso(t.categoria);
-  var kpiHtml='<div class="kpi-row"><div class="kpi kpi-green"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">'+t.totalGer+'</div><div class="kpi-detail">'+chGer.toFixed(1)+'h realizadas</div></div>'+(chContM?'<div class="kpi kpi-teal"><div class="kpi-label">CH Contratada</div><div class="kpi-value">'+chContM+'h</div><div class="kpi-detail">'+pracSemM+' práticas/sem · '+capOrdM+'/ordem</div></div>':'')+(chRest!==null?'<div class="kpi kpi-'+(chRest>0?'red':'ok')+'"><div class="kpi-label">CH Restante</div><div class="kpi-value">'+chRest.toFixed(1)+'h</div></div>':'')+'<div class="kpi kpi-yellow"><div class="kpi-label">Al. Matriculados</div><div class="kpi-value">'+fmtNum(t.totalMat)+'</div></div>'+(dbTM&&dbTM.inicio?'<div class="kpi kpi-teal"><div class="kpi-label">Admissão</div><div class="kpi-value" style="font-size:16px">'+dbTM.inicio+'</div></div>':'')+'</div>';
-  var ordensHtml='';
-  var _chavesOrdens=Object.keys(t.ordens);
-  // PATCH 73: quando o tutor tem ativa mas NENHUMA oferta real no GIOCONDA, o
-  // processar.py injeta uma linha sintética única (ordem='', prática="Sem
-  // oferta cadastrada no GIOCONDA") só pra ele não sumir da base. Mas mostrar
-  // isso como "Ordem [vazia]: 0/1" no modal é enganoso — parece que a
-  // capacidade dele é 1, quando na verdade é a capacidade normal da CH dele
-  // (ex: 8 pra 4h) e ele simplesmente não tem nenhum dado real ainda. Mostra
-  // as 5 ordens do semestre como 0/capacidade cada, igual a tabela principal
-  // já faz nas colunas O.1-O.5.
-  var _somenteSintetico = _chavesOrdens.length===1 && _chavesOrdens[0]==='' &&
-    t.ordens[''].praticas.every(function(r){return r._sintetico || r.pratica==='Sem oferta cadastrada no GIOCONDA';});
-  if(_somenteSintetico){
-    ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'].forEach(function(o){
-      var denomM = capOrdM || '—';
-      ordensHtml+='<div style="margin-bottom:14px;padding:10px;border:1px solid var(--border);border-radius:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong>'+o+'</strong><span style="font-size:11px;color:var(--muted)">0/'+denomM+' · 0.0h</span></div>'+progCell(0)+'<div style="margin-top:6px;font-size:11px;color:var(--muted)">Nenhuma oferta registrada no GIOCONDA ainda para esta ordem.</div></div>';
-    });
-  }else{
-    Object.keys(t.ordens).sort(function(a,b){return (ordemOrder[a]||9)-(ordemOrder[b]||9);}).forEach(function(o){var od=t.ordens[o];var pct=od.total?Math.round(od.ger/od.total*100):0;var gerPracs=od.praticas.filter(function(r){return r.gerenciado;});var pendPracs=od.praticas.filter(function(r){return !r.gerenciado;});ordensHtml+='<div style="margin-bottom:14px;padding:10px;border:1px solid var(--border);border-radius:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong>'+o+'</strong><span style="font-size:11px;color:var(--muted)">'+od.ger+'/'+od.total+' · '+(od.ger*1.5).toFixed(1)+'h</span></div>'+progCell(pct);if(gerPracs.length){ordensHtml+='<div style="margin-top:6px;font-size:10px;font-weight:700;color:var(--ok)">✓ Gerenciadas ('+gerPracs.length+')</div>';ordensHtml+=gerPracs.map(function(r){return '<div style="font-size:11px;padding:2px 0;border-bottom:1px solid var(--border)">'+r.pratica+'</div>';}).join('');}if(pendPracs.length){ordensHtml+='<div style="margin-top:6px;font-size:10px;font-weight:700;color:var(--red)">✗ Pendentes ('+pendPracs.length+')</div>';ordensHtml+=pendPracs.slice(0,5).map(function(r){return '<div style="font-size:11px;padding:2px 0;color:var(--muted)">'+r.pratica+'</div>';}).join('');if(pendPracs.length>5)ordensHtml+='<div style="font-size:10px;color:var(--dim)">+ '+(pendPracs.length-5)+' mais...</div>';}ordensHtml+='</div>';});
-  }
-  document.getElementById('m-body').innerHTML=kpiHtml+ordensHtml;document.getElementById('modal-overlay').classList.add('show');
-}
-function toggleDetGrp(hdr,gid){hdr.classList.toggle('open');document.querySelectorAll('[data-dg="'+gid+'"]').forEach(function(r){r.classList.toggle('vis');});}
-
-// ── ESTADOS ───────────────────────────────────────────────────────────────────
-var UF_NOMES={'AC':'Acre','AL':'Alagoas','AP':'Amapá','AM':'Amazonas','BA':'Bahia','CE':'Ceará','DF':'Distrito Federal','ES':'Espírito Santo','GO':'Goiás','MA':'Maranhão','MT':'Mato Grosso','MS':'Mato Grosso do Sul','MG':'Minas Gerais','PA':'Pará','PB':'Paraíba','PR':'Paraná','PE':'Pernambuco','PI':'Piauí','RJ':'Rio de Janeiro','RN':'Rio Grande do Norte','RS':'Rio Grande do Sul','RO':'Rondônia','RR':'Roraima','SC':'Santa Catarina','SP':'São Paulo','SE':'Sergipe','TO':'Tocantins'};
-function extrairUF(polo){var m=polo.match(/\/([A-Z]{2})(?:\s*-|$)/);return m?m[1]:'??';}
-function agruparPorEstado(poloData){var estados={};poloData.forEach(function(p){var uf=extrairUF(p.polo||p.n||'');if(!uf||uf==='??'||!UF_NOMES[uf])return;// ignorar polos sem UF válido
-if(!estados[uf])estados[uf]={uf:uf,nome:UF_NOMES[uf],polos:0,ofertas:0,gerenciadas:0,sem_tutor:0,mat:0,agend:0};var e=estados[uf];e.polos++;e.ofertas+=p.total_ofertas||0;e.gerenciadas+=p.gerenciadas||0;e.sem_tutor+=p.sem_tutor||0;e.mat+=p.alunos_matriculados||0;e.agend+=p.alunos_agendados||0;});return Object.values(estados).sort(function(a,b){return b.ofertas-a.ofertas;});}
-function renderEstadosInline(estadoData){
-  var el=document.getElementById('gv-estados-tbody');if(!el)return;
-  el.innerHTML=estadoData.map(function(e){var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;return '<tr class="sort-row" style="cursor:pointer" data-estado-uf="'+e.uf+'" data-vuf="'+e.uf+'" data-vpolos="'+e.polos+'" data-vofertas="'+e.ofertas+'" data-vger="'+e.gerenciadas+'" data-vpct="'+pct+'" data-vst="'+e.sem_tutor+'" data-vmat="'+e.mat+'"><td><strong>'+e.uf+'</strong> <span style="color:var(--muted);font-size:11px">'+e.nome+'</span></td><td style="text-align:right">'+e.polos+'</td><td style="text-align:right">'+fmtNum(e.ofertas)+'</td><td style="text-align:right">'+fmtNum(e.gerenciadas)+'</td><td>'+progCell(pct)+'</td><td style="text-align:right;color:var(--red)">'+fmtNum(e.sem_tutor)+'</td><td style="text-align:right">'+fmtNum(e.mat)+'</td></tr>';}).join('');
-  var cnt=document.getElementById('gv-estados-count');if(cnt)cnt.textContent=estadoData.length+' estados';
-  el.onclick=function(e){var row=e.target.closest('[data-estado-uf]');if(row)openEstadoModal(row.dataset.estadoUf);};
-}
-function filterGerEstadosInline(q){q=q.toLowerCase();var d=window._estadosData||[];if(q)d=d.filter(function(e){return (e.uf+e.nome).toLowerCase().includes(q);});renderEstadosInline(d);}
-function openEstadoModal(uf){
-  var polos=gerPoloData.filter(function(p){return extrairUF(p.polo||'')===uf;}).sort(function(a,b){return b.sem_tutor-a.sem_tutor;});var nome=UF_NOMES[uf]||uf;
-  document.getElementById('m-title').textContent=uf+' — '+nome;document.getElementById('m-sub').textContent=polos.length+' polos · clique para detalhar';
-  var html='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg)"><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:left">Polo</th><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Ofertas</th><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Ger.</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">% Ger.</th><th style="padding:6px 8px;border-bottom:2px solid var(--border);text-align:right">Sem Tutor</th></tr></thead><tbody>';
-  polos.forEach(function(p){var pct=p.total_ofertas?Math.round(p.gerenciadas/p.total_ofertas*100):0;html+='<tr style="border-bottom:1px solid var(--border);cursor:pointer" data-polo-est="'+esc(p.polo)+'"><td style="padding:5px 8px;font-weight:600">'+p.polo+'</td><td style="padding:5px 8px;text-align:right">'+fmtNum(p.total_ofertas)+'</td><td style="padding:5px 8px;text-align:right;color:var(--ok)">'+fmtNum(p.gerenciadas)+'</td><td style="padding:5px 8px">'+progCell(pct)+'</td><td style="padding:5px 8px;text-align:right;color:'+(p.sem_tutor>0?'var(--red)':'var(--ok)')+'">'+fmtNum(p.sem_tutor)+'</td></tr>';});
-  html+='</tbody></table>';document.getElementById('m-body').innerHTML=html;
-  document.getElementById('m-body').onclick=function(e){var row=e.target.closest('[data-polo-est]');if(row){closeModal();setTimeout(function(){openGerPoloModal(row.dataset.poloEst);},100);}};
-  document.getElementById('modal-overlay').classList.add('show');
-}
-
-// ── MAPA BRASIL — Natural Earth via Highcharts map-collection ────────────────
-var BRAZIL_GEO_PATHS={
-  'AC':'M132.9,276.3 L128.5,279.7 L125.8,282.8 L123.4,284.2 L121.0,284.3 L118.4,287.0 L116.7,287.7 L114.5,291.6 L111.9,290.8 L107.8,291.7 L104.6,297.1 L99.0,299.8 L96.0,300.2 L96.4,298.1 L85.1,297.2 L79.4,298.1 L75.2,297.4 L69.5,300.4 L66.8,300.1 L65.0,298.3 L63.2,299.8 L62.1,278.2 L63.7,275.8 L62.1,272.9 L63.8,270.3 L57.8,274.9 L55.4,277.9 L52.9,279.1 L52.3,280.4 L48.9,281.8 L34.7,282.5 L35.2,280.3 L33.2,278.1 L32.3,273.9 L30.0,273.0 L23.2,272.0 L16.0,272.3 L20.2,266.0 L19.9,264.1 L16.1,259.3 L12.8,257.2 L12.6,254.9 L9.5,253.1 L6.7,246.4 L4.6,245.4 L4.3,243.9 L5.7,242.2 L3.4,241.0 L0.0,237.8 L1.9,234.5 L5.2,233.0 L3.4,229.6 L24.2,237.6 L65.5,246.5 L75.7,251.6 L129.6,275.0 Z',
-  'AL':'M692.2,262.7 L689.2,267.8 L686.3,270.5 L681.8,276.4 L680.0,274.7 L679.8,277.4 L675.4,283.4 L671.4,286.7 L668.4,291.2 L667.5,289.4 L665.6,289.4 L664.8,286.4 L663.6,286.7 L661.3,285.5 L659.4,283.3 L659.4,281.6 L654.7,279.2 L653.3,277.4 L648.6,275.7 L641.1,271.7 L640.9,270.7 L637.7,269.4 L637.1,267.8 L639.8,265.2 L642.0,264.5 L644.8,261.6 L646.1,259.5 L647.2,261.7 L650.1,261.2 L655.8,267.0 L660.1,269.4 L662.0,267.7 L666.5,268.5 L670.7,267.0 L674.9,263.7 L676.9,261.5 L680.7,261.3 L682.1,262.3 L686.6,260.9 L687.9,261.9 Z',
-  'AM':'M188.3,54.2 L189.8,55.5 L192.6,55.3 L195.1,58.2 L197.9,58.2 L200.5,59.5 L200.3,63.3 L199.0,65.7 L202.0,69.1 L205.1,80.2 L203.5,81.5 L204.4,85.0 L203.6,87.0 L202.9,91.6 L203.6,93.0 L202.7,94.4 L204.5,98.8 L206.4,100.9 L206.5,103.2 L207.5,106.3 L206.3,107.7 L204.5,107.3 L204.0,108.7 L205.6,109.7 L209.4,113.6 L212.6,115.4 L215.3,119.5 L217.5,119.3 L220.3,120.3 L220.0,117.7 L221.0,113.2 L220.7,111.8 L221.5,107.9 L222.9,106.2 L229.2,103.6 L232.4,104.7 L234.5,107.1 L235.9,110.0 L239.9,109.7 L240.7,108.1 L243.0,107.4 L243.4,105.9 L242.1,104.1 L243.5,99.0 L246.8,92.4 L248.7,90.7 L253.3,90.6 L269.4,90.7 L269.8,101.1 L271.8,102.5 L271.6,105.9 L273.8,108.5 L277.2,110.2 L278.1,113.5 L282.2,116.9 L288.2,120.6 L291.3,123.2 L297.1,125.7 L301.6,127.2 L303.1,129.4 L307.8,131.5 L307.7,133.7 L309.7,134.5 L312.2,133.4 L314.0,135.4 L314.1,137.5 L307.6,151.8 L280.3,211.2 L277.3,214.9 L278.6,219.5 L281.8,222.2 L283.3,226.3 L282.0,227.7 L282.0,230.8 L279.0,234.9 L280.3,240.3 L279.8,242.8 L278.1,245.6 L278.5,247.9 L276.3,251.7 L221.7,252.9 L219.8,251.5 L217.7,252.5 L217.0,254.6 L212.4,253.1 L211.7,250.3 L209.3,249.6 L208.0,246.2 L205.0,245.9 L201.6,240.6 L198.4,239.7 L187.1,239.8 L186.2,242.8 L183.8,243.3 L183.4,245.0 L180.5,246.0 L179.2,247.9 L180.5,249.6 L179.2,252.3 L176.9,252.5 L177.2,257.0 L170.9,257.5 L168.7,258.9 L165.5,258.2 L163.0,260.8 L163.4,262.5 L160.2,266.6 L157.7,263.4 L154.3,265.9 L150.6,267.1 L148.3,269.4 L145.3,266.7 L137.0,266.8 L137.0,269.0 L135.2,271.1 L131.1,273.3 L129.6,275.0 L75.7,251.6 L65.5,246.5 L24.2,237.6 L3.4,229.6 L4.0,225.5 L5.4,223.7 L10.8,219.2 L13.8,218.3 L15.0,216.2 L12.9,209.5 L14.5,205.7 L16.8,202.4 L17.2,197.8 L18.5,194.1 L18.0,191.5 L23.1,189.3 L29.8,184.2 L32.9,181.2 L38.2,178.7 L40.1,179.2 L43.0,178.0 L45.5,178.1 L46.8,176.6 L52.6,176.6 L55.0,172.7 L58.5,171.5 L59.4,172.9 L62.2,171.7 L64.3,172.3 L64.4,174.0 L66.3,175.5 L67.1,174.1 L70.1,174.9 L70.8,172.8 L80.0,116.7 L79.1,113.2 L77.4,111.8 L75.8,108.3 L76.6,106.7 L75.7,104.1 L70.1,100.4 L67.8,97.1 L68.2,83.8 L76.0,82.7 L78.1,81.2 L80.6,82.9 L84.7,82.7 L83.7,81.5 L84.4,78.7 L82.0,75.5 L80.5,75.0 L71.8,75.1 L71.8,63.0 L76.8,61.9 L80.9,62.9 L102.3,63.0 L100.2,61.0 L101.7,57.7 L103.4,59.3 L105.3,62.5 L109.0,61.4 L112.6,57.0 L115.4,55.4 L117.1,56.3 L121.1,63.4 L121.9,66.5 L121.4,71.7 L122.0,73.2 L125.4,72.3 L133.8,80.1 L138.3,81.3 L141.6,80.0 L145.7,76.9 L148.7,76.9 L149.8,79.0 L148.6,81.2 L149.0,82.8 L151.0,82.1 L153.3,78.1 L155.5,77.9 L156.7,74.2 L158.7,74.0 L162.1,71.6 L164.0,72.0 L167.3,68.9 L169.8,67.3 L170.1,69.4 L174.8,66.1 L175.7,64.8 L176.2,60.4 L177.3,59.2 L181.5,58.7 L184.1,56.6 L187.8,55.8 Z',
-  'AP':'M427.8,78.0 L427.3,77.5 L430.4,75.6 L427.3,81.2 L424.2,81.4 L425.1,79.3 Z M420.8,56.7 L420.7,55.6 L423.5,59.8 L420.8,61.0 L419.7,58.9 Z M394.8,115.4 L392.1,116.4 L386.7,113.9 L385.9,110.3 L383.8,110.4 L383.6,106.3 L381.7,104.7 L381.8,101.8 L378.2,98.0 L376.6,98.2 L374.8,93.7 L374.4,90.3 L372.8,87.8 L373.1,81.9 L370.4,80.8 L367.6,77.9 L366.7,74.1 L367.2,72.2 L365.4,72.5 L365.1,70.3 L363.2,69.4 L359.1,69.6 L357.0,67.5 L355.7,67.8 L354.0,65.1 L350.5,63.2 L343.9,63.0 L342.8,58.8 L344.2,54.2 L343.2,50.8 L344.5,51.0 L344.5,53.2 L347.0,53.3 L348.5,55.1 L354.7,57.0 L360.2,53.4 L365.5,54.6 L368.9,52.7 L370.9,54.5 L375.8,55.8 L377.3,54.3 L380.4,52.5 L383.1,48.7 L382.8,47.5 L386.7,40.0 L386.6,38.7 L389.0,36.4 L392.8,30.0 L393.3,28.5 L396.0,25.5 L396.9,23.5 L399.6,21.9 L400.3,19.3 L402.0,21.3 L400.9,16.8 L401.7,15.3 L404.0,16.7 L406.9,20.2 L407.8,22.7 L407.8,29.4 L408.9,24.8 L409.6,25.2 L409.4,34.3 L412.1,44.2 L412.8,44.7 L415.7,52.1 L416.9,55.8 L420.7,62.2 L425.8,62.1 L429.0,63.3 L430.7,64.9 L431.4,70.4 L430.7,71.9 L426.6,73.3 L430.5,72.9 L431.1,73.8 L426.0,78.3 L423.5,80.1 L420.7,83.2 L418.2,88.0 L414.9,91.7 L412.4,92.0 L409.9,95.1 L405.4,96.4 L406.6,97.0 L405.3,98.6 L403.1,103.2 L398.6,108.1 L398.1,113.3 Z',
-  'BA':'M621.3,342.2 L620.3,347.1 L620.1,344.2 L619.1,342.2 Z M593.1,425.1 L593.4,421.2 L589.0,417.0 L589.2,415.3 L587.0,413.8 L588.0,411.5 L587.9,409.2 L589.0,405.5 L590.1,404.4 L593.1,404.8 L594.2,399.1 L596.2,398.9 L597.8,396.2 L599.9,394.9 L601.4,391.2 L595.4,385.4 L591.3,384.4 L590.2,384.7 L588.0,383.1 L586.4,383.4 L583.3,382.0 L579.5,383.8 L576.6,382.4 L576.3,378.3 L569.0,370.8 L566.6,371.8 L564.0,371.9 L555.7,366.9 L554.8,367.0 L549.4,362.0 L544.7,361.0 L540.0,363.5 L536.3,362.4 L533.6,360.9 L533.4,359.1 L535.1,355.2 L534.3,354.6 L526.0,353.0 L521.7,354.6 L516.8,357.6 L515.9,359.0 L512.0,361.0 L509.9,361.3 L508.1,363.3 L505.6,364.8 L504.0,364.6 L501.1,367.9 L497.4,367.8 L494.8,369.9 L496.6,365.2 L495.9,363.1 L497.9,360.0 L497.1,357.1 L498.0,353.8 L494.5,350.7 L492.4,344.9 L492.3,341.1 L493.9,336.6 L495.5,335.7 L495.8,333.9 L494.2,333.2 L494.8,329.8 L496.0,327.9 L493.4,325.6 L494.8,322.2 L494.9,320.4 L492.2,318.9 L491.9,313.5 L494.2,311.3 L496.7,310.0 L495.3,308.3 L493.7,308.4 L493.8,306.3 L496.3,305.3 L496.7,304.1 L494.8,303.1 L490.7,302.1 L488.3,298.8 L490.2,296.3 L492.0,292.6 L494.4,291.1 L493.2,288.8 L497.1,285.8 L501.2,283.8 L503.1,281.4 L505.8,281.4 L508.1,284.3 L508.6,286.7 L510.7,289.7 L515.4,291.9 L520.0,291.3 L520.6,290.0 L524.5,287.4 L526.6,286.7 L530.2,287.5 L531.9,286.9 L534.3,284.5 L535.7,284.1 L539.6,277.1 L540.1,272.8 L539.4,271.8 L538.0,266.0 L540.1,266.3 L541.7,264.4 L544.5,263.9 L545.7,265.9 L549.2,266.1 L550.2,265.3 L553.7,267.1 L555.0,268.7 L556.8,268.2 L559.2,269.1 L559.9,267.7 L561.5,268.0 L564.8,264.6 L567.6,264.5 L569.6,262.9 L573.0,263.9 L575.1,261.8 L575.2,259.0 L579.4,258.3 L581.8,254.3 L585.6,254.3 L590.3,257.2 L590.1,260.5 L590.7,262.6 L593.3,263.9 L593.5,266.3 L592.2,268.2 L594.6,268.9 L598.5,266.7 L599.9,266.7 L601.1,262.2 L603.9,262.2 L607.8,260.0 L607.9,257.4 L611.6,256.6 L611.7,254.3 L616.9,252.2 L618.9,252.8 L620.1,255.0 L623.4,256.2 L624.5,257.3 L626.5,257.0 L629.1,258.4 L629.9,260.8 L632.3,258.1 L632.5,260.5 L634.2,262.2 L635.8,261.4 L637.1,267.8 L637.7,269.4 L640.9,270.7 L641.1,271.7 L640.2,273.1 L641.4,278.1 L644.5,282.1 L644.2,286.3 L643.2,288.4 L643.9,292.3 L640.5,294.4 L636.6,293.5 L635.7,296.9 L637.8,299.4 L638.5,302.0 L639.8,303.4 L639.3,305.6 L642.0,307.3 L642.8,308.9 L645.2,309.7 L648.3,309.1 L650.4,308.4 L649.1,310.1 L644.7,318.8 L637.1,329.3 L632.1,334.5 L628.7,335.9 L629.3,334.0 L629.0,330.4 L627.0,329.9 L625.4,328.3 L624.2,331.6 L622.7,332.3 L625.8,332.9 L627.3,335.1 L620.6,339.9 L620.5,341.9 L619.0,341.7 L619.9,347.4 L619.5,350.4 L617.3,348.2 L619.0,351.2 L617.9,352.1 L619.1,353.4 L620.3,351.6 L620.3,353.6 L618.9,357.3 L618.9,359.2 L617.0,365.8 L617.6,368.4 L617.5,376.1 L618.2,385.1 L619.1,387.5 L615.0,398.2 L613.1,404.8 L613.2,406.6 L611.3,411.4 L611.2,419.5 L611.8,421.0 L609.2,424.2 L605.2,426.5 L602.8,429.8 L601.8,432.1 L593.5,425.7 Z',
-  'CE':'M633.9,213.0 L631.5,218.7 L632.0,219.9 L630.0,222.3 L630.8,227.3 L633.3,229.9 L630.1,235.8 L627.9,236.6 L625.1,239.9 L623.2,239.9 L622.7,238.0 L620.3,236.6 L618.5,234.1 L615.2,232.6 L613.2,230.7 L609.7,230.1 L605.9,231.1 L597.4,230.5 L596.7,226.9 L599.9,219.9 L598.8,218.5 L594.7,217.0 L593.7,213.9 L593.2,209.5 L591.8,205.0 L591.0,194.1 L588.9,192.0 L589.1,189.5 L586.9,184.8 L586.2,177.9 L589.1,174.1 L588.3,171.3 L586.4,168.8 L585.5,164.5 L584.3,162.7 L582.6,157.7 L583.1,155.5 L586.2,151.1 L586.3,149.9 L585.9,147.5 L588.3,147.6 L598.4,146.7 L599.8,145.9 L609.1,147.2 L614.1,150.8 L615.6,150.8 L618.0,152.8 L620.3,153.5 L625.2,157.2 L626.9,157.5 L628.1,159.6 L630.1,160.4 L632.7,162.8 L635.9,163.3 L637.7,166.5 L639.9,168.3 L642.4,171.9 L646.9,176.1 L648.4,176.5 L649.4,178.7 L651.2,180.5 L656.3,182.3 L657.8,184.8 L652.3,186.5 L649.0,188.9 L645.3,196.3 L642.9,199.0 L641.3,203.9 L638.1,207.4 L636.0,207.1 L633.0,210.7 L632.5,213.2 Z',
-  'DF':'M473.0,383.5 L473.0,383.5 L473.0,383.5 L457.8,383.0 L456.2,379.4 L457.6,377.5 L457.0,376.7 L458.1,373.1 L471.2,373.7 L473.2,375.4 L472.1,382.4 L473.0,383.5 L473.0,383.5 Z',
-  'ES':'M561.3,474.1 L562.3,471.8 L562.9,467.8 L562.0,466.6 L564.5,463.9 L569.7,464.4 L570.4,463.9 L571.8,459.8 L573.9,458.3 L574.7,454.6 L578.3,451.4 L579.1,448.2 L579.0,445.5 L577.3,443.3 L576.6,440.6 L574.4,439.8 L579.7,439.3 L579.9,437.2 L578.2,436.1 L578.9,432.7 L576.7,429.7 L578.3,427.7 L580.9,426.5 L583.2,426.5 L581.1,424.1 L585.3,424.1 L589.5,423.2 L593.1,425.1 L593.5,425.7 L601.8,432.1 L600.0,438.6 L599.8,442.6 L600.0,448.9 L599.5,452.1 L597.1,456.3 L593.6,458.0 L590.7,462.9 L589.2,467.1 L587.2,466.1 L587.1,467.8 L588.9,467.9 L587.1,471.0 L581.9,476.8 L580.2,476.8 L578.5,480.2 L575.6,484.3 L574.0,483.1 L570.7,483.1 L567.8,482.3 L563.4,480.3 L563.3,475.0 Z',
-  'GO':'M472.0,388.2 L470.1,391.5 L473.2,394.7 L475.0,400.4 L468.8,406.6 L468.2,408.8 L472.3,410.6 L472.6,412.8 L471.1,416.6 L472.2,419.8 L467.4,422.3 L465.6,424.3 L461.3,426.5 L457.4,425.6 L455.9,424.7 L443.4,423.7 L440.3,425.1 L436.3,428.9 L434.1,426.6 L428.8,428.7 L425.5,428.4 L419.8,430.1 L416.7,433.9 L415.9,437.1 L414.0,437.1 L410.8,440.3 L410.3,443.7 L408.7,443.5 L405.8,440.1 L402.8,439.5 L401.2,437.9 L397.2,437.2 L390.2,433.8 L386.6,431.4 L385.4,431.4 L382.8,429.4 L380.7,429.7 L376.4,428.9 L376.0,428.2 L377.9,423.8 L375.8,422.9 L374.4,423.7 L373.2,422.0 L373.3,417.0 L370.1,408.9 L370.8,403.9 L373.5,399.9 L374.0,396.5 L377.7,394.3 L380.7,390.4 L381.0,388.6 L380.1,386.2 L382.4,385.0 L382.4,384.0 L386.0,381.7 L387.4,379.5 L393.8,377.6 L397.4,370.0 L397.8,367.0 L400.3,364.4 L403.7,362.5 L406.2,362.9 L407.6,361.3 L409.9,354.7 L409.5,352.6 L410.8,347.6 L412.0,347.3 L412.0,340.3 L413.2,339.7 L413.9,337.3 L415.6,335.2 L417.2,331.7 L417.0,329.0 L418.6,326.8 L418.8,324.9 L419.5,322.3 L421.2,319.5 L424.8,317.0 L425.0,318.4 L422.5,323.9 L423.1,326.5 L432.8,331.0 L438.0,332.4 L439.6,328.0 L442.5,323.3 L444.6,321.9 L445.0,323.6 L448.0,325.9 L448.9,329.9 L448.7,334.5 L450.2,334.2 L450.8,331.4 L455.9,331.7 L459.8,329.7 L459.3,331.6 L467.8,335.0 L467.2,331.3 L468.6,330.7 L470.3,334.0 L478.2,330.6 L482.9,330.2 L486.1,327.7 L493.4,325.6 L496.0,327.9 L494.8,329.8 L494.2,333.2 L495.8,333.9 L495.5,335.7 L493.9,336.6 L492.3,341.1 L492.4,344.9 L494.5,350.7 L498.0,353.8 L497.1,357.1 L497.9,360.0 L495.9,363.1 L494.9,364.1 L491.1,363.7 L489.6,361.2 L487.4,360.0 L486.2,361.5 L486.7,365.9 L485.1,366.4 L483.4,365.4 L480.7,365.9 L479.9,369.1 L481.2,370.8 L479.7,372.7 L480.8,375.6 L481.3,380.2 L476.9,381.8 L476.1,381.4 L474.3,383.4 L473.0,383.5 L472.1,382.4 L473.2,375.4 L471.2,373.7 L458.1,373.1 L457.0,376.7 L457.6,377.5 L456.2,379.4 L457.8,383.0 L473.0,383.5 L473.0,383.5 L473.0,383.5 Z',
-  'MA':'M527.6,145.9 L527.9,148.2 L526.1,150.2 L527.1,144.5 Z M575.7,145.3 L575.6,150.2 L572.7,153.8 L568.8,157.4 L564.5,158.2 L563.7,157.7 L560.5,162.2 L560.7,163.8 L559.4,166.2 L554.7,172.0 L555.4,174.7 L557.0,176.7 L555.4,179.6 L555.3,181.7 L557.0,184.7 L557.8,188.8 L557.3,191.5 L553.3,196.6 L552.3,197.1 L552.7,205.0 L554.6,207.4 L556.6,208.7 L556.4,212.8 L555.3,216.2 L554.1,217.6 L550.2,217.7 L545.5,219.1 L541.7,216.5 L535.2,217.6 L531.2,221.8 L530.3,223.7 L527.7,224.3 L522.9,228.7 L521.1,228.1 L517.3,230.3 L512.4,231.4 L509.2,233.5 L507.9,237.0 L507.2,242.1 L504.3,247.1 L502.7,251.9 L500.7,253.4 L499.7,256.0 L501.0,260.5 L501.1,263.2 L502.8,265.6 L502.0,266.9 L501.4,275.4 L499.7,278.5 L499.8,281.0 L497.3,279.0 L492.7,278.2 L490.6,275.2 L490.0,272.5 L487.2,270.4 L489.6,267.0 L489.2,266.0 L485.8,264.3 L484.5,262.5 L484.3,259.9 L482.6,258.1 L480.1,257.5 L483.3,253.8 L483.8,249.4 L485.5,246.8 L490.7,246.2 L489.9,244.7 L491.4,240.3 L491.0,238.4 L489.5,237.3 L484.2,238.2 L481.6,239.6 L479.2,236.2 L475.8,232.6 L473.2,228.8 L473.0,225.7 L470.6,226.2 L468.9,224.1 L470.7,223.5 L473.0,220.9 L473.5,215.3 L475.0,211.4 L475.7,206.9 L474.8,204.6 L475.1,200.4 L473.8,198.1 L474.1,195.3 L472.9,193.3 L469.6,191.7 L467.5,191.5 L467.1,189.7 L464.7,188.8 L461.9,189.2 L458.6,187.5 L455.8,187.9 L453.7,190.4 L451.7,190.9 L451.5,190.6 L468.4,177.4 L471.0,177.6 L472.3,176.5 L474.6,172.8 L475.9,171.7 L477.6,168.2 L481.7,163.9 L482.5,159.6 L483.9,156.0 L486.1,154.7 L488.9,150.5 L489.3,146.9 L490.6,146.1 L489.0,144.1 L493.3,140.0 L493.6,135.1 L495.6,134.0 L497.2,129.5 L497.2,127.3 L495.4,126.0 L497.4,125.0 L497.5,121.5 L499.6,116.6 L501.7,113.9 L501.1,116.4 L502.8,115.9 L505.1,117.6 L506.1,115.2 L507.3,117.8 L506.9,119.4 L509.3,117.7 L509.5,120.3 L510.7,119.5 L510.2,121.9 L513.5,118.7 L513.7,120.3 L512.4,121.4 L513.2,126.3 L515.0,125.2 L515.4,122.3 L517.4,121.2 L519.9,121.9 L521.4,120.5 L520.6,122.8 L522.6,125.6 L527.6,128.2 L527.9,131.6 L524.5,135.8 L525.6,135.9 L528.1,133.7 L529.8,134.6 L530.5,136.6 L529.9,138.3 L527.8,137.6 L527.8,139.5 L525.6,143.6 L524.6,149.3 L525.7,150.0 L522.8,152.6 L522.8,153.6 L525.3,152.2 L529.1,148.2 L530.3,141.0 L535.7,138.3 L536.1,141.1 L534.5,143.2 L530.8,145.2 L533.6,144.8 L533.3,146.8 L534.8,144.8 L535.8,145.1 L536.7,142.6 L538.3,141.0 L541.1,140.6 L540.3,139.3 L541.6,138.6 L542.7,135.9 L544.1,135.7 L543.6,137.6 L546.8,141.2 L547.5,139.4 L546.8,137.3 L549.4,137.4 L560.1,141.4 L564.7,144.9 L568.1,145.1 L568.6,146.5 L571.4,145.9 L573.9,146.6 L572.6,144.8 L571.0,145.4 L568.4,144.7 L568.6,143.7 L570.9,145.2 L571.2,143.7 Z',
-  'MG':'M408.0,454.8 L407.5,448.5 L408.7,443.5 L410.3,443.7 L410.8,440.3 L414.0,437.1 L415.9,437.1 L416.7,433.9 L419.8,430.1 L425.5,428.4 L428.8,428.7 L434.1,426.6 L436.3,428.9 L440.3,425.1 L443.4,423.7 L455.9,424.7 L457.4,425.6 L461.3,426.5 L465.6,424.3 L467.4,422.3 L472.2,419.8 L471.1,416.6 L472.6,412.8 L472.3,410.6 L468.2,408.8 L468.8,406.6 L475.0,400.4 L473.2,394.7 L470.1,391.5 L472.0,388.2 L473.0,383.5 L473.0,383.5 L473.0,383.5 L473.0,383.5 L473.0,383.5 L474.3,383.4 L476.1,381.4 L476.9,381.8 L481.3,380.2 L480.8,375.6 L479.7,372.7 L481.2,370.8 L479.9,369.1 L480.7,365.9 L483.4,365.4 L485.1,366.4 L486.7,365.9 L486.2,361.5 L487.4,360.0 L489.6,361.2 L491.1,363.7 L494.9,364.1 L495.9,363.1 L496.6,365.2 L494.8,369.9 L497.4,367.8 L501.1,367.9 L504.0,364.6 L505.6,364.8 L508.1,363.3 L509.9,361.3 L512.0,361.0 L515.9,359.0 L516.8,357.6 L521.7,354.6 L526.0,353.0 L534.3,354.6 L535.1,355.2 L533.4,359.1 L533.6,360.9 L536.3,362.4 L540.0,363.5 L544.7,361.0 L549.4,362.0 L554.8,367.0 L555.7,366.9 L564.0,371.9 L566.6,371.8 L569.0,370.8 L576.3,378.3 L576.6,382.4 L579.5,383.8 L583.3,382.0 L586.4,383.4 L588.0,383.1 L590.2,384.7 L591.3,384.4 L595.4,385.4 L601.4,391.2 L599.9,394.9 L597.8,396.2 L596.2,398.9 L594.2,399.1 L593.1,404.8 L590.1,404.4 L589.0,405.5 L587.9,409.2 L588.0,411.5 L587.0,413.8 L589.2,415.3 L589.0,417.0 L593.4,421.2 L593.1,425.1 L589.5,423.2 L585.3,424.1 L581.1,424.1 L583.2,426.5 L580.9,426.5 L578.3,427.7 L576.7,429.7 L578.9,432.7 L578.2,436.1 L579.9,437.2 L579.7,439.3 L574.4,439.8 L576.6,440.6 L577.3,443.3 L579.0,445.5 L579.1,448.2 L578.3,451.4 L574.7,454.6 L573.9,458.3 L571.8,459.8 L570.4,463.9 L569.7,464.4 L564.5,463.9 L562.0,466.6 L562.9,467.8 L562.3,471.8 L561.3,474.1 L559.4,476.3 L557.2,476.4 L554.5,483.8 L553.2,485.0 L551.6,489.0 L553.0,490.6 L540.0,495.3 L534.9,494.5 L532.9,495.4 L527.0,495.1 L522.2,496.8 L520.1,498.0 L516.3,497.9 L512.5,499.7 L509.7,500.2 L505.9,501.1 L499.8,504.0 L497.8,503.9 L495.9,502.7 L493.2,504.6 L494.1,506.4 L492.2,507.4 L491.4,506.7 L487.4,507.7 L483.9,506.7 L483.8,504.9 L482.2,503.7 L483.7,501.0 L479.6,498.6 L478.7,497.0 L480.5,493.7 L478.9,492.4 L480.3,491.0 L479.7,487.8 L482.8,482.8 L482.6,481.6 L477.6,479.6 L474.4,480.2 L473.7,476.5 L472.6,475.2 L472.3,472.5 L471.1,471.3 L471.4,469.3 L473.2,466.3 L472.6,464.3 L470.3,462.4 L471.4,458.5 L468.1,455.3 L467.6,453.9 L464.5,455.0 L463.5,454.0 L460.7,454.5 L459.8,456.4 L458.8,454.8 L457.3,457.0 L454.8,456.2 L444.3,456.8 L443.5,458.5 L443.7,461.1 L442.0,460.9 L442.1,457.9 L440.9,456.3 L439.0,459.0 L437.9,458.9 L436.7,456.6 L437.1,453.0 L435.2,453.2 L432.5,452.2 L426.8,452.1 L419.1,450.8 L417.7,449.4 L415.4,449.6 L413.7,451.5 L410.1,452.9 Z',
-  'MS':'M355.8,523.2 L353.1,525.0 L350.2,522.6 L346.6,520.6 L341.6,523.6 L337.4,524.5 L334.1,523.8 L333.3,519.5 L331.9,517.1 L332.1,513.1 L331.7,510.4 L330.0,506.4 L329.6,503.1 L330.0,499.7 L328.2,498.1 L327.8,495.5 L325.9,494.2 L320.5,493.6 L318.5,492.3 L316.7,489.9 L315.2,490.3 L312.7,493.3 L311.9,492.5 L309.8,493.9 L303.5,492.2 L300.7,492.7 L296.9,492.2 L296.1,490.9 L293.0,491.7 L290.6,489.8 L291.5,487.4 L291.0,486.5 L291.9,483.5 L291.2,482.4 L291.3,479.3 L292.4,477.1 L292.4,471.8 L292.9,470.3 L291.3,469.5 L292.2,468.5 L290.8,467.5 L292.2,466.5 L290.1,465.7 L289.8,461.0 L288.2,460.1 L286.8,456.3 L291.8,452.9 L287.2,448.5 L292.6,436.3 L293.9,436.0 L292.7,433.7 L296.4,420.6 L293.2,414.6 L293.2,412.6 L295.4,414.0 L298.5,414.8 L303.4,413.3 L306.0,410.9 L306.2,409.5 L308.1,407.8 L309.7,404.8 L317.1,404.1 L318.4,402.9 L321.0,402.3 L326.4,405.2 L329.5,405.9 L330.7,407.9 L336.9,411.1 L341.7,410.4 L345.1,408.1 L348.1,408.0 L349.9,409.2 L350.4,410.8 L354.7,410.0 L358.0,407.0 L360.2,404.3 L362.6,403.4 L361.4,410.3 L359.5,411.1 L357.3,414.9 L361.8,416.8 L369.0,416.7 L373.3,417.0 L373.2,422.0 L374.4,423.7 L375.8,422.9 L377.9,423.8 L376.0,428.2 L376.4,428.9 L380.7,429.7 L382.8,429.4 L385.4,431.4 L386.6,431.4 L390.2,433.8 L397.2,437.2 L401.2,437.9 L402.8,439.5 L405.8,440.1 L408.7,443.5 L407.5,448.5 L408.0,454.8 L405.5,458.2 L402.3,459.3 L397.2,465.3 L397.0,468.5 L392.8,473.7 L392.9,476.8 L388.8,480.4 L389.9,482.5 L388.0,483.8 L385.3,487.4 L384.3,490.2 L381.8,492.4 L379.2,493.6 L376.4,495.9 L374.3,496.6 L370.9,500.9 L365.8,503.2 L363.8,504.8 L363.1,508.1 L361.7,511.5 L358.0,513.8 L356.0,520.8 Z',
-  'MT':'M283.3,226.3 L284.7,227.6 L287.7,232.6 L289.7,238.9 L292.3,242.2 L291.6,245.9 L293.4,251.6 L295.2,252.2 L298.5,255.2 L302.0,256.8 L303.0,260.0 L306.7,260.8 L307.9,263.0 L309.6,262.6 L313.4,264.2 L337.7,265.8 L405.1,270.0 L423.9,271.1 L422.6,274.3 L421.3,275.8 L420.4,280.0 L418.7,283.9 L417.3,285.6 L416.6,290.6 L417.0,292.3 L414.6,300.7 L416.2,302.7 L415.2,304.5 L416.1,307.5 L415.5,309.7 L415.7,313.1 L416.7,317.4 L415.7,321.0 L416.9,324.2 L418.8,324.9 L418.6,326.8 L417.0,329.0 L417.2,331.7 L415.6,335.2 L413.9,337.3 L413.2,339.7 L412.0,340.3 L412.0,347.3 L410.8,347.6 L409.5,352.6 L409.9,354.7 L407.6,361.3 L406.2,362.9 L403.7,362.5 L400.3,364.4 L397.8,367.0 L397.4,370.0 L393.8,377.6 L387.4,379.5 L386.0,381.7 L382.4,384.0 L382.4,385.0 L380.1,386.2 L381.0,388.6 L380.7,390.4 L377.7,394.3 L374.0,396.5 L373.5,399.9 L370.8,403.9 L370.1,408.9 L373.3,417.0 L369.0,416.7 L361.8,416.8 L357.3,414.9 L359.5,411.1 L361.4,410.3 L362.6,403.4 L360.2,404.3 L358.0,407.0 L354.7,410.0 L350.4,410.8 L349.9,409.2 L348.1,408.0 L345.1,408.1 L341.7,410.4 L336.9,411.1 L330.7,407.9 L329.5,405.9 L326.4,405.2 L321.0,402.3 L318.4,402.9 L317.1,404.1 L309.7,404.8 L308.1,407.8 L306.2,409.5 L306.0,410.9 L303.4,413.3 L298.5,414.8 L295.4,414.0 L293.2,412.6 L292.0,409.4 L288.3,408.4 L284.4,405.5 L281.8,404.4 L280.2,397.6 L279.9,394.0 L281.9,390.8 L282.1,386.9 L280.0,387.7 L251.2,387.4 L250.3,386.5 L248.9,373.6 L242.7,366.5 L248.1,366.3 L247.5,357.9 L244.3,351.7 L244.2,348.5 L245.5,346.4 L244.0,343.0 L239.5,340.7 L245.3,336.2 L247.2,329.8 L248.4,328.0 L250.4,327.2 L251.7,323.6 L253.3,321.6 L254.7,317.4 L253.5,314.8 L253.5,312.8 L251.7,309.0 L250.4,308.8 L249.5,303.3 L252.8,299.4 L251.1,295.1 L246.2,294.1 L244.4,294.5 L243.3,292.7 L225.1,293.0 L224.2,292.2 L224.9,282.9 L223.2,279.8 L222.9,276.2 L223.7,272.6 L222.9,270.2 L224.4,268.5 L221.9,262.8 L223.3,261.1 L222.8,259.4 L224.0,255.5 L221.7,252.9 L276.3,251.7 L278.5,247.9 L278.1,245.6 L279.8,242.8 L280.3,240.3 L279.0,234.9 L282.0,230.8 L282.0,227.7 Z',
-  'PA':'M461.1,113.2 L459.5,111.9 L461.6,109.5 L462.2,111.3 Z M414.2,105.2 L413.9,107.6 L409.4,109.5 L409.9,106.8 Z M407.1,104.7 L408.4,106.1 L406.0,113.2 L405.1,112.8 L403.3,116.0 L397.0,120.7 L395.0,121.3 L393.9,120.2 L395.4,117.0 L399.1,113.7 L399.0,109.9 L402.0,105.6 L405.6,104.0 Z M404.4,103.0 L406.4,98.7 L408.1,97.2 L408.4,99.5 L407.5,100.9 Z M413.0,100.2 L410.4,99.0 L412.1,94.9 L415.3,93.9 L417.8,96.3 Z M438.4,93.5 L440.9,94.9 L439.2,96.9 L434.2,97.4 L432.1,96.6 L435.8,93.7 Z M421.2,94.7 L419.0,94.8 L417.7,93.5 L418.1,91.4 L421.1,92.5 Z M425.2,90.0 L427.2,90.8 L428.5,89.4 L430.5,89.5 L435.4,87.8 L437.0,87.8 L437.6,89.3 L434.7,91.1 L432.2,94.5 L429.0,95.7 L427.9,94.4 L422.9,93.9 L422.5,90.9 Z M422.9,85.3 L423.3,88.6 L421.4,91.7 L419.8,91.0 L421.8,87.2 L421.4,84.9 L422.5,83.6 Z M428.6,84.3 L428.3,85.6 L424.1,88.3 L423.7,85.2 L424.8,84.1 L427.9,83.1 Z M437.6,124.9 L435.0,126.5 L432.3,127.3 L429.0,126.0 L428.6,124.5 L426.3,126.6 L425.0,125.9 L424.8,123.8 L423.7,127.0 L421.8,127.5 L418.2,126.3 L418.5,124.9 L414.6,120.3 L414.8,114.2 L419.0,115.9 L414.8,113.0 L415.1,106.6 L417.3,99.5 L418.6,98.2 L421.7,97.7 L422.5,96.6 L427.4,97.1 L435.4,99.1 L438.8,98.7 L443.2,97.3 L449.3,97.7 L449.1,98.6 L453.9,98.7 L457.4,99.4 L458.4,101.4 L456.9,103.5 L455.4,110.8 L453.1,112.7 L453.5,114.2 L449.9,116.5 L450.8,117.7 L450.1,120.2 L448.1,118.0 L447.4,118.7 L450.0,120.6 L445.9,122.2 L444.4,119.9 L443.7,123.6 L441.8,123.8 L440.0,122.2 L440.4,124.3 L438.0,123.2 Z M499.6,116.6 L497.5,121.5 L497.4,125.0 L495.4,126.0 L497.2,127.3 L497.2,129.5 L495.6,134.0 L493.6,135.1 L493.3,140.0 L489.0,144.1 L490.6,146.1 L489.3,146.9 L488.9,150.5 L486.1,154.7 L483.9,156.0 L482.5,159.6 L481.7,163.9 L477.6,168.2 L475.9,171.7 L474.6,172.8 L472.3,176.5 L471.0,177.6 L468.4,177.4 L451.5,190.6 L451.7,190.9 L454.7,192.0 L458.1,191.8 L462.0,196.2 L459.4,197.6 L460.6,201.0 L458.6,202.1 L459.4,204.3 L456.8,205.6 L457.5,209.0 L455.5,208.8 L453.6,210.3 L452.2,214.4 L446.3,216.4 L442.9,218.6 L442.5,219.7 L443.1,224.4 L439.7,229.3 L439.4,231.0 L440.8,233.1 L443.4,234.8 L442.7,239.3 L440.6,245.1 L439.4,246.1 L436.0,252.8 L432.6,254.7 L427.2,261.8 L425.4,268.6 L423.9,271.1 L405.1,270.0 L337.7,265.8 L313.4,264.2 L309.6,262.6 L307.9,263.0 L306.7,260.8 L303.0,260.0 L302.0,256.8 L298.5,255.2 L295.2,252.2 L293.4,251.6 L291.6,245.9 L292.3,242.2 L289.7,238.9 L287.7,232.6 L284.7,227.6 L283.3,226.3 L281.8,222.2 L278.6,219.5 L277.3,214.9 L280.3,211.2 L307.6,151.8 L314.1,137.5 L314.0,135.4 L312.2,133.4 L309.7,134.5 L307.7,133.7 L307.8,131.5 L303.1,129.4 L301.6,127.2 L297.1,125.7 L291.3,123.2 L288.2,120.6 L282.2,116.9 L278.1,113.5 L277.2,110.2 L273.8,108.5 L271.6,105.9 L271.8,102.5 L269.8,101.1 L269.4,90.7 L267.6,71.2 L269.0,72.9 L271.2,73.2 L272.9,71.7 L275.8,72.0 L275.9,68.9 L278.2,68.0 L279.2,66.2 L282.5,67.5 L284.7,67.5 L285.4,65.0 L288.9,64.2 L293.0,64.1 L295.4,60.7 L297.0,59.5 L298.9,59.8 L301.3,58.5 L302.9,60.4 L306.6,61.2 L309.6,60.1 L314.5,60.2 L320.8,61.9 L322.5,61.0 L322.7,58.3 L319.0,53.0 L320.9,51.8 L321.3,49.6 L326.1,51.9 L328.2,51.2 L331.9,51.3 L333.7,49.7 L339.5,49.3 L341.3,51.0 L343.2,50.8 L344.2,54.2 L342.8,58.8 L343.9,63.0 L350.5,63.2 L354.0,65.1 L355.7,67.8 L357.0,67.5 L359.1,69.6 L363.2,69.4 L365.1,70.3 L365.4,72.5 L367.2,72.2 L366.7,74.1 L367.6,77.9 L370.4,80.8 L373.1,81.9 L372.8,87.8 L374.4,90.3 L374.8,93.7 L376.6,98.2 L378.2,98.0 L381.8,101.8 L381.7,104.7 L383.6,106.3 L383.8,110.4 L385.9,110.3 L386.7,113.9 L392.1,116.4 L394.8,115.4 L394.5,118.5 L391.9,119.9 L389.6,118.8 L384.6,121.3 L380.8,122.4 L380.4,123.4 L385.5,122.7 L388.1,121.9 L388.6,125.2 L390.9,123.7 L394.6,122.8 L399.1,119.8 L406.3,116.6 L408.2,114.5 L410.5,113.3 L410.9,111.5 L414.3,111.5 L414.1,113.7 L411.9,114.9 L414.3,116.8 L414.4,120.5 L416.7,123.6 L417.3,125.9 L414.2,129.3 L416.4,128.9 L417.2,127.0 L421.1,129.4 L421.4,131.7 L424.0,128.7 L426.2,129.1 L427.1,127.9 L429.5,127.5 L431.3,128.4 L431.6,131.4 L432.5,128.8 L435.3,129.2 L437.2,126.8 L437.4,128.1 L441.0,125.5 L442.1,126.4 L440.5,128.7 L439.0,133.9 L437.1,138.0 L437.2,139.9 L434.6,142.6 L437.5,141.9 L439.2,139.0 L439.4,137.2 L441.1,134.3 L442.9,129.7 L444.9,126.5 L447.7,123.4 L449.0,123.4 L447.6,126.8 L450.5,123.8 L453.5,119.6 L455.5,123.1 L457.5,124.3 L456.4,121.9 L459.2,121.2 L456.0,120.8 L456.4,117.8 L459.0,118.4 L459.6,116.1 L456.8,115.7 L457.5,114.1 L461.5,113.3 L462.6,110.9 L462.3,108.8 L464.4,106.6 L465.8,108.8 L465.7,106.1 L468.3,106.7 L469.9,104.5 L472.4,106.9 L472.6,105.1 L474.2,108.5 L476.3,108.6 L474.8,105.4 L481.8,106.9 L481.7,109.8 L483.9,107.5 L485.0,108.9 L486.4,107.6 L488.5,110.6 L490.3,110.4 L490.2,112.0 L492.1,110.7 L492.5,113.2 L495.3,113.1 L498.0,111.4 L497.1,115.3 L499.4,114.2 Z',
-  'PB':'M697.5,217.4 L697.3,219.6 L698.3,224.7 L699.1,225.3 L697.9,229.3 L699.4,226.7 L700.0,229.9 L699.4,237.1 L698.0,237.1 L695.0,234.4 L691.4,233.7 L689.5,235.1 L687.3,235.0 L686.1,238.6 L680.7,240.4 L680.4,241.3 L670.5,241.2 L670.0,242.8 L667.8,243.0 L666.1,244.5 L666.6,245.9 L663.8,248.4 L660.5,249.4 L657.7,247.0 L657.4,243.5 L654.0,243.8 L657.3,239.5 L656.9,235.9 L660.2,234.8 L660.2,232.9 L656.1,230.3 L652.8,231.6 L650.6,233.9 L647.8,235.1 L642.8,239.1 L639.7,239.0 L637.8,240.4 L636.2,237.5 L633.1,238.7 L630.1,235.8 L633.3,229.9 L630.8,227.3 L630.0,222.3 L632.0,219.9 L631.5,218.7 L633.9,213.0 L638.2,215.4 L640.9,215.8 L642.3,214.4 L646.1,212.6 L647.7,209.6 L656.7,207.1 L658.2,208.8 L654.1,213.8 L653.4,216.1 L652.0,216.8 L651.8,219.1 L655.0,219.6 L657.0,222.0 L661.2,220.0 L664.7,221.2 L664.9,224.2 L666.0,225.1 L668.4,224.3 L669.8,221.7 L669.3,218.9 L671.0,218.7 L669.8,216.0 L670.3,214.1 L672.3,212.8 L673.9,212.9 L674.5,214.9 L680.4,216.1 L684.9,215.5 L688.6,216.4 L691.4,217.7 L696.0,218.0 Z',
-  'PE':'M692.2,262.7 L687.9,261.9 L686.6,260.9 L682.1,262.3 L680.7,261.3 L676.9,261.5 L674.9,263.7 L670.7,267.0 L666.5,268.5 L662.0,267.7 L660.1,269.4 L655.8,267.0 L650.1,261.2 L647.2,261.7 L646.1,259.5 L644.8,261.6 L642.0,264.5 L639.8,265.2 L637.1,267.8 L635.8,261.4 L634.2,262.2 L632.5,260.5 L632.3,258.1 L629.9,260.8 L629.1,258.4 L626.5,257.0 L624.5,257.3 L623.4,256.2 L620.1,255.0 L618.9,252.8 L616.9,252.2 L611.7,254.3 L611.6,256.6 L607.9,257.4 L607.8,260.0 L603.9,262.2 L601.1,262.2 L599.9,266.7 L598.5,266.7 L594.6,268.9 L592.2,268.2 L593.5,266.3 L593.3,263.9 L590.7,262.6 L590.1,260.5 L590.3,257.2 L585.6,254.3 L581.8,254.3 L584.7,253.0 L588.3,249.1 L589.9,249.4 L593.2,246.1 L596.0,244.0 L596.9,242.2 L597.0,238.6 L595.0,237.2 L595.8,235.0 L594.7,231.2 L597.4,230.5 L605.9,231.1 L609.7,230.1 L613.2,230.7 L615.2,232.6 L618.5,234.1 L620.3,236.6 L622.7,238.0 L623.2,239.9 L625.1,239.9 L627.9,236.6 L630.1,235.8 L633.1,238.7 L636.2,237.5 L637.8,240.4 L639.7,239.0 L642.8,239.1 L647.8,235.1 L650.6,233.9 L652.8,231.6 L656.1,230.3 L660.2,232.9 L660.2,234.8 L656.9,235.9 L657.3,239.5 L654.0,243.8 L657.4,243.5 L657.7,247.0 L660.5,249.4 L663.8,248.4 L666.6,245.9 L666.1,244.5 L667.8,243.0 L670.0,242.8 L670.5,241.2 L680.4,241.3 L680.7,240.4 L686.1,238.6 L687.3,235.0 L689.5,235.1 L691.4,233.7 L695.0,234.4 L698.0,237.1 L699.5,238.6 L698.6,242.4 L699.1,244.0 L696.7,250.2 L696.5,252.3 L692.7,260.7 Z',
-  'PI':'M503.1,281.4 L501.9,281.3 L499.8,281.0 L499.7,278.5 L501.4,275.4 L502.0,266.9 L502.8,265.6 L501.1,263.2 L501.0,260.5 L499.7,256.0 L500.7,253.4 L502.7,251.9 L504.3,247.1 L507.2,242.1 L507.9,237.0 L509.2,233.5 L512.4,231.4 L517.3,230.3 L521.1,228.1 L522.9,228.7 L527.7,224.3 L530.3,223.7 L531.2,221.8 L535.2,217.6 L541.7,216.5 L545.5,219.1 L550.2,217.7 L554.1,217.6 L555.3,216.2 L556.4,212.8 L556.6,208.7 L554.6,207.4 L552.7,205.0 L552.3,197.1 L553.3,196.6 L557.3,191.5 L557.8,188.8 L557.0,184.7 L555.3,181.7 L555.4,179.6 L557.0,176.7 L555.4,174.7 L554.7,172.0 L559.4,166.2 L560.7,163.8 L560.5,162.2 L563.7,157.7 L564.5,158.2 L568.8,157.4 L572.7,153.8 L575.6,150.2 L575.7,145.3 L576.3,144.9 L578.7,147.4 L584.7,148.2 L586.3,149.9 L586.2,151.1 L583.1,155.5 L582.6,157.7 L584.3,162.7 L585.5,164.5 L586.4,168.8 L588.3,171.3 L589.1,174.1 L586.2,177.9 L586.9,184.8 L589.1,189.5 L588.9,192.0 L591.0,194.1 L591.8,205.0 L593.2,209.5 L593.7,213.9 L594.7,217.0 L598.8,218.5 L599.9,219.9 L596.7,226.9 L597.4,230.5 L594.7,231.2 L595.8,235.0 L595.0,237.2 L597.0,238.6 L596.9,242.2 L596.0,244.0 L593.2,246.1 L589.9,249.4 L588.3,249.1 L584.7,253.0 L581.8,254.3 L579.4,258.3 L575.2,259.0 L575.1,261.8 L573.0,263.9 L569.6,262.9 L567.6,264.5 L564.8,264.6 L561.5,268.0 L559.9,267.7 L559.2,269.1 L556.8,268.2 L555.0,268.7 L553.7,267.1 L550.2,265.3 L549.2,266.1 L545.7,265.9 L544.5,263.9 L541.7,264.4 L540.1,266.3 L538.0,266.0 L539.4,271.8 L540.1,272.8 L539.6,277.1 L535.7,284.1 L534.3,284.5 L531.9,286.9 L530.2,287.5 L526.6,286.7 L524.5,287.4 L520.6,290.0 L520.0,291.3 L515.4,291.9 L510.7,289.7 L508.6,286.7 L508.1,284.3 L505.8,281.4 Z',
-  'PR':'M362.6,564.6 L360.9,560.4 L359.9,559.4 L359.8,556.5 L358.6,553.3 L355.1,551.9 L355.4,551.0 L350.6,552.6 L349.6,553.5 L347.4,552.3 L347.2,549.8 L350.4,548.6 L349.7,547.4 L354.4,546.1 L351.0,545.7 L350.9,544.4 L352.5,543.0 L350.6,542.1 L351.0,539.4 L352.5,540.5 L351.8,538.4 L352.6,537.1 L354.7,536.9 L352.8,535.8 L352.5,533.3 L353.4,529.3 L352.3,527.0 L353.1,525.0 L355.8,523.2 L356.0,520.8 L358.0,513.8 L361.7,511.5 L363.1,508.1 L363.8,504.8 L365.8,503.2 L370.9,500.9 L374.6,498.6 L386.8,500.0 L389.3,497.8 L392.4,499.5 L397.9,500.9 L401.1,500.3 L405.1,502.5 L408.9,503.6 L410.4,505.8 L413.1,505.4 L418.6,506.1 L424.0,505.5 L424.9,507.8 L427.8,509.1 L429.3,511.9 L429.6,514.6 L428.9,516.3 L430.4,520.1 L429.5,522.8 L432.6,526.9 L435.4,531.5 L433.9,534.9 L434.1,537.3 L437.5,537.9 L438.5,536.9 L442.5,538.2 L445.3,538.0 L447.3,539.3 L446.3,540.4 L445.8,544.8 L446.6,545.3 L448.3,543.2 L451.3,544.3 L452.4,548.1 L454.3,548.3 L453.4,549.6 L451.3,552.3 L448.6,553.3 L449.6,548.1 L448.8,549.4 L447.4,548.3 L448.0,551.3 L447.2,552.3 L444.3,551.7 L442.7,550.3 L444.6,553.3 L446.1,553.1 L448.7,554.2 L447.5,555.1 L444.8,561.4 L436.3,561.3 L433.2,563.2 L428.3,565.1 L422.7,561.2 L416.7,561.7 L414.4,561.2 L411.4,561.9 L409.9,564.7 L407.2,565.5 L404.4,564.7 L401.5,566.6 L400.9,568.0 L401.6,571.3 L398.6,572.9 L397.3,571.1 L391.4,571.0 L389.2,570.6 L386.2,568.2 L379.0,567.2 L376.2,566.0 L371.3,566.6 L367.5,564.3 L365.8,565.1 Z',
-  'RJ':'M510.3,517.4 L508.3,514.6 L509.3,513.4 L509.6,510.8 L515.1,508.6 L518.5,508.3 L520.4,506.2 L519.7,504.2 L514.3,504.4 L512.7,503.9 L510.7,500.6 L509.7,500.2 L512.5,499.7 L516.3,497.9 L520.1,498.0 L522.2,496.8 L527.0,495.1 L532.9,495.4 L534.9,494.5 L540.0,495.3 L553.0,490.6 L551.6,489.0 L553.2,485.0 L554.5,483.8 L557.2,476.4 L559.4,476.3 L561.3,474.1 L563.3,475.0 L563.4,480.3 L567.8,482.3 L570.7,483.1 L574.0,483.1 L575.6,484.3 L575.5,486.0 L573.5,488.7 L574.6,496.6 L574.0,497.8 L569.7,499.8 L562.4,501.7 L557.1,505.9 L556.4,508.9 L558.0,510.5 L556.3,511.2 L554.9,513.4 L545.6,512.4 L544.4,512.8 L538.8,512.5 L537.3,510.9 L539.0,508.9 L538.5,506.9 L535.2,508.1 L536.8,510.9 L535.7,512.7 L522.6,513.5 L529.3,512.4 L525.1,510.3 L523.4,510.5 L518.9,513.0 L521.2,514.8 L517.2,515.5 L516.5,514.4 L518.8,512.8 L518.8,511.6 L515.6,511.3 L511.1,513.0 L510.8,514.9 L514.0,516.2 L512.7,517.6 Z',
-  'RN':'M633.9,213.0 L632.5,213.2 L633.0,210.7 L636.0,207.1 L638.1,207.4 L641.3,203.9 L642.9,199.0 L645.3,196.3 L649.0,188.9 L652.3,186.5 L657.8,184.8 L659.6,186.7 L663.8,187.0 L665.7,189.1 L669.7,190.6 L672.3,189.9 L677.5,190.3 L679.9,189.4 L688.6,191.5 L690.1,192.8 L692.8,198.0 L694.6,206.3 L695.3,207.8 L695.4,211.4 L696.4,212.3 L697.5,217.4 L696.0,218.0 L691.4,217.7 L688.6,216.4 L684.9,215.5 L680.4,216.1 L674.5,214.9 L673.9,212.9 L672.3,212.8 L670.3,214.1 L669.8,216.0 L671.0,218.7 L669.3,218.9 L669.8,221.7 L668.4,224.3 L666.0,225.1 L664.9,224.2 L664.7,221.2 L661.2,220.0 L657.0,222.0 L655.0,219.6 L651.8,219.1 L652.0,216.8 L653.4,216.1 L654.1,213.8 L658.2,208.8 L656.7,207.1 L647.7,209.6 L646.1,212.6 L642.3,214.4 L640.9,215.8 L638.2,215.4 Z',
-  'RO':'M239.5,340.7 L236.4,338.8 L234.2,338.6 L233.7,337.3 L232.0,338.3 L228.5,338.0 L226.6,338.9 L224.3,338.4 L219.8,338.9 L217.0,335.9 L213.9,331.6 L209.4,331.9 L208.8,331.1 L205.6,330.3 L204.7,329.2 L202.6,329.7 L200.4,327.2 L199.6,327.3 L197.7,323.8 L194.9,324.7 L192.2,324.2 L190.3,322.2 L187.4,320.9 L184.9,320.6 L182.8,322.3 L178.9,322.1 L177.6,321.3 L174.4,321.1 L172.7,319.6 L173.0,317.6 L168.6,315.7 L167.1,313.6 L163.5,313.1 L162.1,308.7 L159.8,308.6 L159.2,304.6 L158.0,304.4 L155.9,298.1 L157.4,295.0 L157.0,292.8 L155.6,291.8 L155.8,289.7 L154.8,288.5 L155.1,285.2 L157.2,280.9 L156.2,275.7 L156.6,273.8 L155.4,271.8 L153.9,271.3 L151.7,274.2 L149.4,272.8 L140.9,273.9 L136.3,275.7 L132.9,276.3 L129.6,275.0 L131.1,273.3 L135.2,271.1 L137.0,269.0 L137.0,266.8 L145.3,266.7 L148.3,269.4 L150.6,267.1 L154.3,265.9 L157.7,263.4 L160.2,266.6 L163.4,262.5 L163.0,260.8 L165.5,258.2 L168.7,258.9 L170.9,257.5 L177.2,257.0 L176.9,252.5 L179.2,252.3 L180.5,249.6 L179.2,247.9 L180.5,246.0 L183.4,245.0 L183.8,243.3 L186.2,242.8 L187.1,239.8 L198.4,239.7 L201.6,240.6 L205.0,245.9 L208.0,246.2 L209.3,249.6 L211.7,250.3 L212.4,253.1 L217.0,254.6 L217.7,252.5 L219.8,251.5 L221.7,252.9 L224.0,255.5 L222.8,259.4 L223.3,261.1 L221.9,262.8 L224.4,268.5 L222.9,270.2 L223.7,272.6 L222.9,276.2 L223.2,279.8 L224.9,282.9 L224.2,292.2 L225.1,293.0 L243.3,292.7 L244.4,294.5 L246.2,294.1 L251.1,295.1 L252.8,299.4 L249.5,303.3 L250.4,308.8 L251.7,309.0 L253.5,312.8 L253.5,314.8 L254.7,317.4 L253.3,321.6 L251.7,323.6 L250.4,327.2 L248.4,328.0 L247.2,329.8 L245.3,336.2 Z',
-  'RR':'M188.3,54.2 L188.3,50.9 L180.3,50.7 L176.4,49.9 L177.4,45.6 L175.4,41.2 L173.4,38.0 L173.0,32.6 L173.8,29.4 L171.7,27.1 L168.0,24.7 L165.7,22.0 L163.0,17.3 L164.2,16.7 L167.0,19.8 L171.0,19.3 L175.3,20.5 L176.4,23.7 L177.6,24.3 L179.8,23.1 L184.3,23.4 L186.3,24.9 L187.9,22.8 L190.4,23.7 L195.5,29.6 L196.7,30.2 L199.1,29.7 L199.9,28.5 L199.3,24.2 L199.7,22.0 L203.4,21.7 L203.8,20.1 L206.6,19.3 L210.0,20.8 L212.9,19.6 L214.7,19.9 L218.6,18.0 L221.3,18.1 L223.3,15.0 L226.2,14.6 L226.2,13.2 L228.8,13.8 L231.3,13.3 L233.3,10.1 L235.8,9.1 L238.5,6.5 L238.8,4.8 L237.5,0.9 L241.4,1.6 L245.7,0.0 L249.8,3.3 L248.9,9.8 L246.8,13.6 L250.5,13.8 L255.1,16.0 L254.3,19.7 L257.8,24.1 L255.1,28.2 L252.2,29.9 L252.5,34.3 L250.0,39.6 L249.2,46.3 L250.9,50.5 L251.0,52.3 L253.8,54.1 L253.7,61.5 L255.5,61.7 L254.9,63.0 L256.9,63.7 L262.8,70.0 L267.6,71.2 L269.4,90.7 L253.3,90.6 L248.7,90.7 L246.8,92.4 L243.5,99.0 L242.1,104.1 L243.4,105.9 L243.0,107.4 L240.7,108.1 L239.9,109.7 L235.9,110.0 L234.5,107.1 L232.4,104.7 L229.2,103.6 L222.9,106.2 L221.5,107.9 L220.7,111.8 L221.0,113.2 L220.0,117.7 L220.3,120.3 L217.5,119.3 L215.3,119.5 L212.6,115.4 L209.4,113.6 L205.6,109.7 L204.0,108.7 L204.5,107.3 L206.3,107.7 L207.5,106.3 L206.5,103.2 L206.4,100.9 L204.5,98.8 L202.7,94.4 L203.6,93.0 L202.9,91.6 L203.6,87.0 L204.4,85.0 L203.5,81.5 L205.1,80.2 L202.0,69.1 L199.0,65.7 L200.3,63.3 L200.5,59.5 L197.9,58.2 L195.1,58.2 L192.6,55.3 L189.8,55.5 Z',
-  'RS':'M424.4,620.7 L422.8,622.8 L418.9,629.3 L414.3,640.8 L407.7,651.1 L400.9,658.7 L394.4,663.9 L389.8,666.6 L386.3,670.4 L387.5,666.9 L386.4,665.2 L387.0,664.3 L388.9,665.4 L392.3,664.1 L396.8,659.3 L399.5,658.4 L400.5,656.5 L401.0,651.3 L403.3,651.4 L404.2,648.8 L407.7,646.5 L408.6,643.9 L408.6,638.7 L409.8,641.1 L411.0,638.2 L410.0,635.9 L408.9,637.5 L405.4,637.8 L405.0,640.1 L403.2,638.9 L403.6,637.2 L400.2,635.3 L399.5,632.2 L398.7,636.1 L400.8,638.6 L399.1,643.3 L397.7,643.9 L397.9,647.8 L396.5,648.0 L396.0,650.2 L396.6,651.4 L393.8,652.3 L393.5,654.5 L389.1,655.3 L387.8,657.5 L387.7,661.4 L387.2,660.0 L386.3,662.2 L384.6,662.8 L384.1,665.5 L385.4,666.1 L384.1,667.1 L384.4,669.2 L386.4,668.3 L386.2,670.7 L383.7,672.7 L381.8,676.6 L380.3,682.0 L377.9,687.4 L374.9,691.3 L368.1,697.6 L366.4,698.7 L364.0,697.0 L365.5,694.8 L365.2,689.6 L367.4,686.5 L368.3,687.1 L369.8,684.7 L370.4,681.8 L372.3,682.3 L374.1,684.1 L376.3,683.0 L378.5,678.0 L378.5,676.4 L376.7,673.5 L377.6,670.8 L376.5,671.1 L375.0,673.8 L375.7,674.5 L372.5,676.4 L372.2,677.9 L369.7,679.3 L366.0,677.6 L362.5,673.5 L362.1,671.5 L360.6,668.3 L356.1,665.3 L355.1,665.8 L350.0,661.6 L349.7,660.0 L348.0,658.0 L344.5,657.4 L341.3,654.4 L340.4,655.5 L337.7,653.7 L336.2,650.7 L332.5,647.0 L328.4,651.1 L326.1,651.3 L326.0,646.2 L322.4,642.1 L320.3,640.7 L316.2,636.5 L313.0,634.0 L309.2,634.1 L307.1,637.5 L302.1,637.4 L300.9,635.8 L302.5,635.0 L305.2,632.0 L305.7,629.0 L308.7,627.8 L315.1,619.8 L315.9,617.0 L319.1,615.0 L319.4,613.2 L320.8,611.9 L321.0,610.1 L322.6,609.4 L325.1,606.5 L325.3,604.9 L327.1,604.2 L327.9,602.2 L330.1,603.3 L330.7,601.8 L329.0,600.1 L331.6,598.0 L334.2,597.3 L336.2,594.3 L338.4,593.2 L340.8,593.0 L339.9,591.9 L342.6,591.1 L342.8,589.1 L348.6,586.6 L351.6,584.9 L352.5,585.5 L354.3,582.2 L355.7,582.9 L357.7,580.6 L359.7,580.8 L362.3,580.6 L365.1,581.3 L365.1,580.1 L367.2,579.2 L368.7,580.0 L368.1,581.4 L372.3,579.7 L373.5,581.8 L375.3,580.8 L377.9,582.9 L382.0,581.9 L383.0,583.2 L385.4,583.8 L386.3,582.9 L388.8,584.0 L390.6,587.0 L392.6,587.5 L394.5,586.8 L396.2,588.5 L397.7,588.5 L401.3,592.1 L403.6,593.1 L404.7,595.2 L406.6,596.8 L406.9,598.7 L408.3,599.2 L410.7,603.2 L417.0,604.8 L417.9,605.4 L422.3,605.0 L424.3,605.4 L425.1,607.6 L423.6,608.1 L421.0,611.1 L421.0,613.9 L420.0,616.6 L419.0,616.4 L417.4,618.2 L417.3,619.7 L419.1,621.1 L418.7,619.1 L420.7,618.2 Z',
-  'SC':'M444.0,594.4 L443.8,593.0 L444.8,589.9 L444.8,587.4 L446.2,586.8 L447.0,588.1 L446.3,590.5 Z M444.5,569.3 L442.6,567.3 L445.2,564.8 L446.1,566.0 Z M444.8,561.4 L444.7,564.6 L442.2,565.7 L441.4,562.7 L441.8,566.9 L444.1,569.6 L443.1,571.7 L442.7,574.6 L444.3,575.7 L443.6,576.8 L443.6,581.6 L445.0,581.9 L445.4,583.6 L443.5,583.7 L444.2,585.9 L442.6,588.3 L443.7,590.4 L442.5,591.3 L443.6,595.2 L441.9,601.4 L439.7,606.3 L439.6,604.2 L438.4,603.7 L438.6,606.0 L439.7,607.0 L439.1,608.5 L437.1,609.0 L430.5,613.8 L427.1,617.3 L424.4,620.7 L420.7,618.2 L418.7,619.1 L419.1,621.1 L417.3,619.7 L417.4,618.2 L419.0,616.4 L420.0,616.6 L421.0,613.9 L421.0,611.1 L423.6,608.1 L425.1,607.6 L424.3,605.4 L422.3,605.0 L417.9,605.4 L417.0,604.8 L410.7,603.2 L408.3,599.2 L406.9,598.7 L406.6,596.8 L404.7,595.2 L403.6,593.1 L401.3,592.1 L397.7,588.5 L396.2,588.5 L394.5,586.8 L392.6,587.5 L390.6,587.0 L388.8,584.0 L386.3,582.9 L385.4,583.8 L383.0,583.2 L382.0,581.9 L377.9,582.9 L375.3,580.8 L373.5,581.8 L372.3,579.7 L368.1,581.4 L368.7,580.0 L367.2,579.2 L365.1,580.1 L365.1,581.3 L362.3,580.6 L359.7,580.8 L361.8,575.6 L361.2,572.4 L361.6,566.7 L362.6,564.6 L365.8,565.1 L367.5,564.3 L371.3,566.6 L376.2,566.0 L379.0,567.2 L386.2,568.2 L389.2,570.6 L391.4,571.0 L397.3,571.1 L398.6,572.9 L401.6,571.3 L400.9,568.0 L401.5,566.6 L404.4,564.7 L407.2,565.5 L409.9,564.7 L411.4,561.9 L414.4,561.2 L416.7,561.7 L422.7,561.2 L428.3,565.1 L433.2,563.2 L436.3,561.3 Z',
-  'SE':'M668.4,291.2 L665.3,292.0 L659.3,295.8 L656.7,299.0 L654.4,303.3 L652.4,304.8 L651.4,307.2 L649.4,307.0 L648.3,309.1 L645.2,309.7 L642.8,308.9 L642.0,307.3 L639.3,305.6 L639.8,303.4 L638.5,302.0 L637.8,299.4 L635.7,296.9 L636.6,293.5 L640.5,294.4 L643.9,292.3 L643.2,288.4 L644.2,286.3 L644.5,282.1 L641.4,278.1 L640.2,273.1 L641.1,271.7 L648.6,275.7 L653.3,277.4 L654.7,279.2 L659.4,281.6 L659.4,283.3 L661.3,285.5 L663.6,286.7 L664.8,286.4 L665.6,289.4 L667.5,289.4 Z',
-  'SP':'M501.6,524.5 L501.0,526.7 L498.8,527.3 L497.9,526.2 L500.1,523.5 Z M370.9,500.9 L374.3,496.6 L376.4,495.9 L379.2,493.6 L381.8,492.4 L384.3,490.2 L385.3,487.4 L388.0,483.8 L389.9,482.5 L388.8,480.4 L392.9,476.8 L392.8,473.7 L397.0,468.5 L397.2,465.3 L402.3,459.3 L405.5,458.2 L408.0,454.8 L410.1,452.9 L413.7,451.5 L415.4,449.6 L417.7,449.4 L419.1,450.8 L426.8,452.1 L432.5,452.2 L435.2,453.2 L437.1,453.0 L436.7,456.6 L437.9,458.9 L439.0,459.0 L440.9,456.3 L442.1,457.9 L442.0,460.9 L443.7,461.1 L443.5,458.5 L444.3,456.8 L454.8,456.2 L457.3,457.0 L458.8,454.8 L459.8,456.4 L460.7,454.5 L463.5,454.0 L464.5,455.0 L467.6,453.9 L468.1,455.3 L471.4,458.5 L470.3,462.4 L472.6,464.3 L473.2,466.3 L471.4,469.3 L471.1,471.3 L472.3,472.5 L472.6,475.2 L473.7,476.5 L474.4,480.2 L477.6,479.6 L482.6,481.6 L482.8,482.8 L479.7,487.8 L480.3,491.0 L478.9,492.4 L480.5,493.7 L478.7,497.0 L479.6,498.6 L483.7,501.0 L482.2,503.7 L483.8,504.9 L483.9,506.7 L487.4,507.7 L491.4,506.7 L492.2,507.4 L494.1,506.4 L493.2,504.6 L495.9,502.7 L497.8,503.9 L499.8,504.0 L505.9,501.1 L509.7,500.2 L510.7,500.6 L512.7,503.9 L514.3,504.4 L519.7,504.2 L520.4,506.2 L518.5,508.3 L515.1,508.6 L509.6,510.8 L509.3,513.4 L508.3,514.6 L510.3,517.4 L507.6,517.0 L504.9,518.4 L504.5,520.0 L503.2,519.4 L502.3,520.9 L500.6,520.8 L498.3,522.3 L498.6,525.2 L491.2,523.6 L486.4,524.9 L486.0,527.3 L483.1,527.0 L478.8,528.9 L472.5,532.4 L471.9,534.3 L468.8,536.4 L462.6,539.9 L458.6,543.0 L456.8,545.0 L458.0,542.4 L456.1,544.8 L456.8,545.3 L455.7,547.8 L453.4,549.6 L454.3,548.3 L452.4,548.1 L451.3,544.3 L448.3,543.2 L446.6,545.3 L445.8,544.8 L446.3,540.4 L447.3,539.3 L445.3,538.0 L442.5,538.2 L438.5,536.9 L437.5,537.9 L434.1,537.3 L433.9,534.9 L435.4,531.5 L432.6,526.9 L429.5,522.8 L430.4,520.1 L428.9,516.3 L429.6,514.6 L429.3,511.9 L427.8,509.1 L424.9,507.8 L424.0,505.5 L418.6,506.1 L413.1,505.4 L410.4,505.8 L408.9,503.6 L405.1,502.5 L401.1,500.3 L397.9,500.9 L392.4,499.5 L389.3,497.8 L386.8,500.0 L374.6,498.6 Z',
-  'TO':'M499.8,281.0 L501.9,281.3 L503.1,281.4 L501.2,283.8 L497.1,285.8 L493.2,288.8 L494.4,291.1 L492.0,292.6 L490.2,296.3 L488.3,298.8 L490.7,302.1 L494.8,303.1 L496.7,304.1 L496.3,305.3 L493.8,306.3 L493.7,308.4 L495.3,308.3 L496.7,310.0 L494.2,311.3 L491.9,313.5 L492.2,318.9 L494.9,320.4 L494.8,322.2 L493.4,325.6 L486.1,327.7 L482.9,330.2 L478.2,330.6 L470.3,334.0 L468.6,330.7 L467.2,331.3 L467.8,335.0 L459.3,331.6 L459.8,329.7 L455.9,331.7 L450.8,331.4 L450.2,334.2 L448.7,334.5 L448.9,329.9 L448.0,325.9 L445.0,323.6 L444.6,321.9 L442.5,323.3 L439.6,328.0 L438.0,332.4 L432.8,331.0 L423.1,326.5 L422.5,323.9 L425.0,318.4 L424.8,317.0 L421.2,319.5 L419.5,322.3 L418.8,324.9 L416.9,324.2 L415.7,321.0 L416.7,317.4 L415.7,313.1 L415.5,309.7 L416.1,307.5 L415.2,304.5 L416.2,302.7 L414.6,300.7 L417.0,292.3 L416.6,290.6 L417.3,285.6 L418.7,283.9 L420.4,280.0 L421.3,275.8 L422.6,274.3 L423.9,271.1 L425.4,268.6 L427.2,261.8 L432.6,254.7 L436.0,252.8 L439.4,246.1 L440.6,245.1 L442.7,239.3 L443.4,234.8 L440.8,233.1 L439.4,231.0 L439.7,229.3 L443.1,224.4 L442.5,219.7 L442.9,218.6 L446.3,216.4 L452.2,214.4 L453.6,210.3 L455.5,208.8 L457.5,209.0 L456.8,205.6 L459.4,204.3 L458.6,202.1 L460.6,201.0 L459.4,197.6 L462.0,196.2 L458.1,191.8 L454.7,192.0 L451.7,190.9 L453.7,190.4 L455.8,187.9 L458.6,187.5 L461.9,189.2 L464.7,188.8 L467.1,189.7 L467.5,191.5 L469.6,191.7 L472.9,193.3 L474.1,195.3 L473.8,198.1 L475.1,200.4 L474.8,204.6 L475.7,206.9 L475.0,211.4 L473.5,215.3 L473.0,220.9 L470.7,223.5 L468.9,224.1 L470.6,226.2 L473.0,225.7 L473.2,228.8 L475.8,232.6 L479.2,236.2 L481.6,239.6 L484.2,238.2 L489.5,237.3 L491.0,238.4 L491.4,240.3 L489.9,244.7 L490.7,246.2 L485.5,246.8 L483.8,249.4 L483.3,253.8 L480.1,257.5 L482.6,258.1 L484.3,259.9 L484.5,262.5 L485.8,264.3 L489.2,266.0 L489.6,267.0 L487.2,270.4 L490.0,272.5 L490.6,275.2 L492.7,278.2 L497.3,279.0 Z'
-};
-
-var BRAZIL_GEO_CENTROIDS={
-  'AC':[65.1,266.4],
-  'AL':[665.0,275.0],
-  'AM':[177.4,177.8],
-  'AP':[427.0,79.0],
-  'BA':[620.3,343.9],
-  'CE':[614.2,186.3],
-  'DF':[465.0,378.0],
-  'ES':[582.0,454.0],
-  'GO':[435.3,385.4],
-  'MA':[527.0,146.9],
-  'MG':[523.8,422.6],
-  'MS':[342.9,460.0],
-  'MT':[320.8,331.2],
-  'PA':[460.6,111.5],
-  'PB':[665.0,228.0],
-  'PE':[641.0,250.0],
-  'PI':[550.8,241.9],
-  'PR':[395.4,535.4],
-  'RJ':[542.0,496.0],
-  'RN':[665.0,205.0],
-  'RO':[203.4,298.3],
-  'RR':[225.8,61.4],
-  'RS':[365.5,622.2],
-  'SC':[446.1,589.3],
-  'SE':[652.0,291.0],
-  'SP':[499.5,524.8],
-  'TO':[456.2,273.1]
-};
-
-function _corEstado(pct){
-  if(pct===null||pct===undefined)return '#94a3b8';
-  if(pct>=75)return '#15803d';
-  if(pct>=50)return '#16a34a';
-  if(pct>=25)return '#ca8a04';
-  if(pct>0)  return '#dc2626';
-  return '#7f1d1d';
-}
-
-function renderMapaBrasil(estadosData){
-  var svgEl=document.getElementById('mapa-brasil');if(!svgEl)return;
-  var mapa={};(estadosData||[]).forEach(function(e){mapa[e.uf]=e;});
-  var tooltip=document.getElementById('mapa-tooltip');
-  svgEl.setAttribute('viewBox','0 0 700 700');
-  svgEl.setAttribute('overflow','hidden');
-  svgEl.style.overflow='hidden';
-  svgEl.setAttribute('width','100%');svgEl.setAttribute('height','auto');
-
-  var defs='<defs>'
-    +'<filter id="sh"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="rgba(0,0,0,.3)"/></filter>'
-    +'</defs>';
-
-  var html='';
-  var smallUFs={AL:1,SE:1,DF:1,RJ:1,PB:1,RN:1,ES:1,PE:1,AP:1};
-  Object.keys(BRAZIL_GEO_PATHS).forEach(function(uf){
-    var e=mapa[uf];
-    var pct=e&&e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var fill=_corEstado(pct);
-    html+='<path data-uf="'+uf+'" d="'+BRAZIL_GEO_PATHS[uf]+'"'
-      +' fill="'+fill+'" stroke="#fff" stroke-width="0.7" stroke-linejoin="round"'
-      +' style="cursor:pointer;transition:opacity .15s" filter="url(#sh)"/>';
-  });
-
-  // Labels NE apontam para DENTRO do Brasil (offsets negativos = label à esquerda)
-  var SMALL_OFFSET={
-    'RN':[-80,0],
-    'PB':[-80,15],
-    'AL':[-75,30],
-    'SE':[-65,40],
-    'PE':[-40,5],
-    'ES':[-55,0],
-    'RJ':[-55,20],
-    'DF':[0,-20],
-    'AP':[-15,-15]
-  };
-  Object.keys(BRAZIL_GEO_CENTROIDS).forEach(function(uf){
-    var c=BRAZIL_GEO_CENTROIDS[uf];
-    var e=mapa[uf];
-    var pct=e&&e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):null;
-    var sm=smallUFs[uf];
-    var off=SMALL_OFFSET[uf]||[0,0];
-    var lx=c[0]+off[0], ly=c[1]+off[1];
-    var fs=sm?8:11, fsp=sm?6.5:8.5;
-    var sh='text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 6px rgba(0,0,0,.85)';
-    if(off[0]||off[1]){
-      html+='<line x1="'+c[0]+'" y1="'+c[1]+'" x2="'+lx+'" y2="'+(ly-2)+'"'
-        +' stroke="rgba(255,255,255,0.8)" stroke-width="1" pointer-events="none"/>';
-      html+='<circle cx="'+c[0]+'" cy="'+c[1]+'" r="2.5"'
-        +' fill="rgba(255,255,255,0.9)" stroke="rgba(0,0,0,.2)" stroke-width="0.5" pointer-events="none"/>';
+        'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
+        'ger_ordem': ger_ordem, 'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas, 'ger_ofertas': ger_ofertas_detalhe,
     }
-    html+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle"'
-      +' font-size="'+fs+'" font-weight="900" font-family="Plus Jakarta Sans,sans-serif"'
-      +' fill="#fff" pointer-events="none" style="'+sh+'">'+uf+'</text>';
-    if(pct!==null){
-      var pc=pct>=50?'#bbf7d0':pct>=25?'#fef08a':'#fca5a5';
-      html+='<text x="'+lx+'" y="'+(ly+fsp+2)+'" text-anchor="middle"'
-        +' font-size="'+fsp+'" font-weight="700" font-family="Plus Jakarta Sans,sans-serif"'
-        +' fill="'+pc+'" pointer-events="none" style="'+sh+'">'+pct+'%</text>';
+
+
+def _processar_gerenciamento_novo(df_g):
+    import re as _re
+    col = {str(c).strip().upper(): c for c in df_g.columns}
+    def gc(name): return col.get(name.upper())
+    c_polo = gc('LABORATORIO'); c_cat = gc('CATEGORIA'); c_exp = gc('NOME_EXPERIMENTO')
+    c_tutor = gc('TUTOR'); c_mat = gc('ALUNOS_MATRICULADOS'); c_agend = gc('ALUNOS_AGENDADOS')
+    c_capa = gc('CAPACIDADE_TOTAL'); c_ofe = gc('OFERTAS_CADASTRADAS'); c_situ = gc('SITU_OFERTA')
+    c_dt_ag = gc('DT_GERENCIADA'); c_hr_ag = gc('HR_GERENCIADA'); c_cursos = gc('CURSOS')
+    def extrair_ordem_exp(val):
+        m = _re.match(r'O\.(\d+):\s*(.*)', str(val or ''))
+        if m: return f'Ordem {m.group(1)}', m.group(2).strip()
+        return '', str(val or '').strip()
+    df = df_g.copy()
+    df['_POLO']  = df[c_polo].astype(str).str.strip() if c_polo else ''
+    # PATCH 19/82: o export do gerenciamento já trocou de rótulo pra essa mesma
+    # categoria (Fisio/T.O./Estética) mais de uma vez — primeiro "FISIO-TO-EST-
+    # BIO", agora "BIO-BIO-FISIO-EST-TO" (prefixo "BIO-" duplicado num export
+    # mais recente). Cada variante nova virava uma "categoria fantasma" separada
+    # nos filtros/agregações em vez de cair na mesma categoria de sempre. Além
+    # da lista de variantes conhecidas, adiciona uma regra geral: se o rótulo
+    # começar com "BIO-" duplicado (ex: "BIO-BIO-..."), colapsa pro rótulo
+    # correto — proteção pra a PRÓXIMA vez que isso acontecer de novo.
+    _CAT_RAW_NORM = {
+        'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'BIO-BIO-FISIO-EST-TO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
     }
-  });
-
-  svgEl.innerHTML=defs+html;
-
-  // Interação
-  var huf=null;
-  svgEl.addEventListener('mouseover',function(ev){
-    var p=ev.target.closest('path[data-uf]');if(!p)return;
-    var uf=p.dataset.uf;if(uf===huf)return;huf=uf;
-    svgEl.querySelectorAll('path[data-uf]').forEach(function(el){
-      el.style.opacity=el.dataset.uf===uf?'1':'0.45';
-      el.style.filter=el.dataset.uf===uf?'url(#sh) brightness(1.25)':'none';
-    });
-  });
-  svgEl.addEventListener('mouseleave',function(){
-    huf=null;
-    svgEl.querySelectorAll('path[data-uf]').forEach(function(el){el.style.opacity='1';el.style.filter='url(#sh)';});
-    if(tooltip)tooltip.style.display='none';
-  });
-  svgEl.onmousemove=function(ev){
-    var p=ev.target.closest('path[data-uf]');if(!p||!tooltip)return;
-    var uf=p.dataset.uf,e=mapa[uf];
-    if(!e){tooltip.style.display='none';return;}
-    var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;
-    var cor=pct>=50?'#16a34a':pct>=25?'#ca8a04':'#dc2626';
-    tooltip.innerHTML='<strong>'+uf+' \u2014 '+e.nome+'</strong>'
-      +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'+e.polos+' polos &middot; '+(e.ofertas||0)+' ofertas</div>'
-      +'<div style="font-size:11px;margin-top:2px">Ger.: <strong style="color:'+cor+'">'+pct+'%</strong>'
-      +' &middot; Sem tutor: <strong style="color:#dc2626">'+(e.sem_tutor||0)+'</strong></div>'
-      +'<div style="height:5px;background:#e5e7eb;border-radius:3px;margin-top:5px">'
-      +'<div style="height:100%;width:'+pct+'%;background:'+cor+';border-radius:3px"></div></div>';
-    tooltip.style.display='block';
-    tooltip.style.left=(ev.clientX+14)+'px';tooltip.style.top=(ev.clientY-14)+'px';
-  };
-  svgEl.onclick=function(ev){var p=ev.target.closest('path[data-uf]');if(p)openEstadoModal(p.dataset.uf);};
-}
-
-function _corEstadoD3(pct) {
-  if (pct === null || pct === undefined) return '#e2e8f0';
-  if (pct >= 90) return '#14532d';
-  if (pct >= 70) return '#166534';
-  if (pct >= 50) return '#16a34a';
-  if (pct >= 30) return '#ca8a04';
-  if (pct >= 10) return '#dc2626';
-  return '#991b1b';
-}
-
-function _renderMapaD3(svgEl, mapa, geo) {
-  // Obter codarea de 2 dígitos do IBGE codarea completo (7 dígitos → 2 primeiros)
-  function getUF(feature) {
-    var cod = (feature.properties && (feature.properties.codarea || feature.properties.CD_GEOCUF || '')) + '';
-    if (cod.length >= 2) {
-      var uf2 = cod.substring(0, 2);
-      return IBGE_TO_UF[uf2] || null;
+    def _corrige_prefixo_bio_duplicado(s):
+        s2 = str(s or '').strip()
+        while s2.upper().startswith('BIO-BIO-'):
+            s2 = s2[4:]  # remove um "BIO-" duplicado da frente, pode acontecer mais de uma vez
+        return s2
+    df['_CAT']   = (df[c_cat].astype(str).str.strip().replace(_CAT_RAW_NORM).apply(_corrige_prefixo_bio_duplicado)) if c_cat  else ''
+    # PATCH 42: curso específico (BFI/BTO/COS-TIP/etc.) — pedido do Leo pra poder
+    # filtrar Multidisciplinar III por especialidade (Fisioterapia/T.O./Estética)
+    # em vez de só pela categoria ampla, que mistura as três no mesmo filtro.
+    _SUBCURSO_LABEL = {
+        'BFI': 'Fisioterapia', 'BTO': 'Terapia Ocupacional',
+        'COS-TIP': 'Estética e Cosmética', 'TIP-COS': 'Estética e Cosmética', 'COS': 'Estética e Cosmética',
+        'BBI': 'Biomedicina', 'BFR': 'Farmácia',
+        'EMF-ISN': 'Enfermagem/Instrumentação', 'NTR': 'Nutrição',
     }
-    return null;
-  }
+    def _extrair_curso(v):
+        s = str(v or '').strip()
+        if not s or s == 'nan': return ''
+        primeiro = s.split('|')[0].strip()
+        return primeiro
+    df['_CURSO'] = df[c_cursos].apply(_extrair_curso) if c_cursos else ''
+    df['_SUBCURSO'] = df['_CURSO'].map(lambda c: _SUBCURSO_LABEL.get(c, c))
+    df['_TUTOR'] = df[c_tutor].fillna('').astype(str).str.strip().replace('nan','') if c_tutor else ''
+    # PATCH 115: a fonte do GIOCONDA passou a trazer o nome do tutor com um
+    # número de chapa colado no final, tipo "Beatriz Henkels (17124304)" --
+    # isso quebrava silenciosamente qualquer comparação com o nome limpo em
+    # DB.tutores (nenhum é igual ao outro), inflando a contagem de "tutores
+    # únicos" na aba Detalhe (365 em vez dos 342/347 certos) e provavelmente
+    # atrapalhando outros cruzamentos por nome também. Remove o sufixo antes
+    # de qualquer outro processamento usar esse nome.
+    df['_TUTOR'] = df['_TUTOR'].str.replace(r'\s*\(\d{4,}\)\s*$', '', regex=True).str.strip()
+    df['_MAT']   = pd.to_numeric(df[c_mat],  errors='coerce').fillna(0).astype(int) if c_mat  else 0
+    df['_AGEND'] = pd.to_numeric(df[c_agend],errors='coerce').fillna(0).astype(int) if c_agend else 0
+    df['_CAPA']  = pd.to_numeric(df[c_capa], errors='coerce').fillna(0).astype(int) if c_capa  else 0
+    df['_OFE']   = pd.to_numeric(df[c_ofe],  errors='coerce').fillna(0).astype(int) if c_ofe   else 0
+    df['_TEM_TUTOR'] = df['_TUTOR'].str.len() > 0
+    _situ_col = df[c_situ].fillna('').astype(str).str.strip() if c_situ else pd.Series([''] * len(df))
+    dt_col = df[c_dt_ag] if c_dt_ag else pd.Series([''] * len(df))
+    def to_iso(v):
+        if v is None: return ''
+        try:
+            import datetime as _dt
+            if isinstance(v, (_dt.datetime, _dt.date)): return v.strftime('%Y-%m-%d')
+        except: pass
+        sv = str(v).strip()
+        if not sv or sv == 'nan': return ''
+        if '/' in sv:
+            try:
+                parts = sv.split('/')
+                if len(parts) == 3: return f'{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}'
+            except: pass
+        if '-' in sv and len(sv) >= 10: return sv[:10]
+        try:
+            n = float(sv)
+            import datetime as _dt
+            base = _dt.date(1899, 12, 30)
+            return (base + _dt.timedelta(days=int(n))).strftime('%Y-%m-%d')
+        except: pass
+        return ''
+    df['_DT_AG_ISO'] = dt_col.apply(to_iso)
+    df['_TEM_AGENDA'] = df['_DT_AG_ISO'].str.len() > 0
+    # PATCH 22: GERENCIADO = tem tutor E tem data de gerenciamento (DT_GERENCIADA
+    # preenchida) — confirmado por Leo: TUTOR preenchido só indica quem está
+    # responsável, não que o gerenciamento foi feito; o sinal real de conclusão
+    # é a data em DT_GERENCIADA. O critério anterior (tutor + ofertas cadastradas)
+    # inflava a contagem de "gerenciadas" pra muito além do que foi feito de fato.
+    df['_GERENCIADO'] = df['_TEM_TUTOR'] & df['_TEM_AGENDA']
+    df['_HR_AG'] = df[c_hr_ag].fillna('').astype(str).str.strip().replace('nan','').replace('NaT','') if c_hr_ag else ''
+    # PATCH 30: dia da semana e turno derivados de DT/HR_GERENCIADA — usados na
+    # nova seção "Análise de Agendas" (horários incomuns + sessões sem aluno).
+    df['_DIA_SEMANA'] = df['_DT_AG_ISO'].apply(_dia_semana_pt)
+    df['_TURNO'] = df['_HR_AG'].apply(_turno_de_horario)
+    df['_HORARIO_INCOMUM'] = df['_TEM_AGENDA'] & ((df['_DIA_SEMANA'] == 'Domingo') | (df['_TURNO'] == 'Madrugada'))
+    df['_SEM_ALUNOS'] = df['_GERENCIADO'] & (df['_AGEND'] == 0)
+    parsed = (df[c_exp] if c_exp else pd.Series([''] * len(df))).apply(extrair_ordem_exp)
+    df['_ORDEM'] = parsed.apply(lambda x: x[0])
+    df['_PRATICA'] = parsed.apply(lambda x: x[1])
+    df = df[df['_POLO'].str.len() > 0].copy()
+    total = len(df); com_tutor = int(df['_TEM_TUTOR'].sum()); gerenciadas = int(df['_GERENCIADO'].sum())
+    com_agenda = int(df['_TEM_AGENDA'].sum())
+    # FIX: Alunos Matriculados — deduplicar por polo×categoria (remove contagem múltipla por ordem)
+    _mat_col = '_MAT'; _agend_col = '_AGEND'; _capa_col = '_CAPA'
+    _raw_mat = int(df[_mat_col].sum()) if _mat_col in df.columns else 0
+    _grp_cols_ok = ['_POLO','_CAT']
+    if all(c in df.columns for c in _grp_cols_ok + [_mat_col, _agend_col, _capa_col]):
+        _dedup = df.groupby(_grp_cols_ok)[[_mat_col, _agend_col, _capa_col]].max()
+        tot_mat   = int(_dedup[_mat_col].sum())
+        tot_agend = int(_dedup[_agend_col].sum())
+        tot_capa  = int(_dedup[_capa_col].sum())
+        print(f"[{ts()}] Alunos DEDUPLICADOS por polo×cat: {tot_mat:,} (bruto era {_raw_mat:,}, redução: {_raw_mat-tot_mat:,})")
+    else:
+        tot_mat   = _raw_mat
+        tot_agend = int(df[_agend_col].sum()) if _agend_col in df.columns else 0
+        tot_capa  = int(df[_capa_col].sum())  if _capa_col  in df.columns else 0
+        print(f"[{ts()}] Alunos sem dedup: {tot_mat:,}")
+    print(f"[{ts()}] Gerenciamento: {total} ofertas, {gerenciadas} ger., {total-com_tutor} sem tutor")
+    print(f"[{ts()}] Agendas: {com_agenda} · datas: {sorted(df[df['_TEM_AGENDA']]['_DT_AG_ISO'].head(3).tolist())}")
+    print(f"[{ts()}] {df['_POLO'].nunique()} polos, {df['_CAT'].nunique()} cats, {df['_ORDEM'].nunique()} ordens")
+    ger_kpis = {
+        'total_ofertas': total, 'ofertas_gerenciadas': gerenciadas,
+        'ofertas_nao_gerenciadas': total - gerenciadas,
+        'pct_gerenciado': round(gerenciadas/total*100,1) if total else 0,
+        'ofertas_com_tutor': com_tutor, 'ofertas_sem_tutor': total-com_tutor,
+        'pct_com_tutor': round(com_tutor/total*100,1) if total else 0,
+        'ofertas_com_agenda': com_agenda, 'total_alunos_matriculados': tot_mat,
+        'total_alunos_agendados': tot_agend, 'total_capacidade': tot_capa,
+        'pct_ocupacao': round(tot_agend/tot_capa*100,1) if tot_capa else 0,
+        'polos_total': df['_POLO'].nunique(),
+        'polos_sem_tutor': int(df[~df['_TEM_TUTOR']].groupby('_POLO').ngroups),
+    }
+    ger_polo = []
+    for polo, grp in df.groupby('_POLO'):
+        tuts = list(grp[grp['_TEM_TUTOR']]['_TUTOR'].dropna().unique())
+        # PATCH 38: dedup por categoria dentro do polo antes de somar alunos —
+        # a mesma linha de ALUNOS_MATRICULADOS se repete em cada prática/ordem
+        # do mesmo polo+categoria no GIOCONDA; somar direto inflava o total em
+        # ~5x (bug reportado pelo Leo: 42 mil vs 8 mil no KPI geral).
+        _dedup_p = grp.groupby('_CAT')[['_MAT','_AGEND','_CAPA']].max()
+        ger_polo.append({
+            'polo': str(polo), 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+            'com_agenda': int(grp['_TEM_AGENDA'].sum()),
+            'alunos_matriculados': int(_dedup_p['_MAT'].sum()), 'alunos_agendados': int(_dedup_p['_AGEND'].sum()),
+            'capacidade': int(_dedup_p['_CAPA'].sum()), 'tutores_unicos': [str(t) for t in tuts],
+        })
+    ger_polo.sort(key=lambda x: -x['sem_tutor'])
+    ger_cat = []
+    for cat, grp in df.groupby('_CAT'):
+        # PATCH 38: mesma correção — dedup por polo dentro da categoria antes de somar
+        _dedup_c = grp.groupby('_POLO')[['_MAT','_AGEND']].max()
+        ger_cat.append({
+            'categoria': str(cat), 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+            'alunos_matriculados': int(_dedup_c['_MAT'].sum()), 'alunos_agendados': int(_dedup_c['_AGEND'].sum()),
+        })
+    ger_cat.sort(key=lambda x: -x['total_ofertas'])
+    ger_ordem = []; ordem_sort = {'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}
+    for ordem in sorted(df['_ORDEM'].unique(), key=lambda x: ordem_sort.get(x,9)):
+        if not ordem: continue
+        grp = df[df['_ORDEM']==ordem]
+        # PATCH 38: mesma correção de dedup — dentro de uma ordem, um polo+categoria
+        # tem várias práticas distintas, todas repetindo o mesmo ALUNOS_MATRICULADOS
+        _dedup_o = grp.groupby(['_POLO','_CAT'])[['_MAT','_AGEND']].max()
+        ger_ordem.append({
+            'ordem': ordem, 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()),
+            'alunos_matriculados': int(_dedup_o['_MAT'].sum()), 'alunos_agendados': int(_dedup_o['_AGEND'].sum()),
+            'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(ordem,''),
+            'tutores_gerenciaram': int(grp[grp['_GERENCIADO']]['_TUTOR'].dropna().nunique()),  # PATCH 86 (P6)
+        })
+    ger_contratacao = []
+    for (polo, cat), grp in df.groupby(['_POLO','_CAT']):
+        tuts = list(grp[grp['_TEM_TUTOR']]['_TUTOR'].dropna().unique())
+        ger_contratacao.append({
+            'polo': str(polo), 'categoria': str(cat), 'total_ofertas': len(grp),
+            'tem_tutor': len(tuts)>0, 'tutores': [str(t) for t in tuts],
+            'status': 'Contratado' if len(tuts)>0 else 'Sem tutor',
+        })
+    ger_agendas = []
+    for polo, grp in df.groupby('_POLO'):
+        total_p = len(grp); com_ag = int(grp['_TEM_AGENDA'].sum())
+        datas_por_cat = {}; datas_por_tutor = {}
+        for _, row in grp[grp['_TEM_AGENDA']].iterrows():
+            d = row['_DT_AG_ISO']; c = row['_CAT']; t = row['_TUTOR']
+            if d:
+                if d not in datas_por_cat: datas_por_cat[d]=[]
+                if c and c not in datas_por_cat[d]: datas_por_cat[d].append(c)
+                if d not in datas_por_tutor: datas_por_tutor[d]=[]
+                if t and t not in datas_por_tutor[d]: datas_por_tutor[d].append(t)
+        ger_agendas.append({
+            'polo': str(polo), 'total': total_p, 'com_agenda': com_ag,
+            'sem_agenda': total_p-com_ag,
+            'pct_agendado': round(com_ag/total_p*100,1) if total_p else 0,
+            'datas_agenda': sorted(datas_por_cat.keys()),
+            'datas_por_cat': datas_por_cat,
+            'datas_por_tutor': datas_por_tutor,  # PATCH 7: preservado
+        })
+    ger_agendas.sort(key=lambda x: -x['sem_agenda'])
+    ger_ofertas = []
+    for _, row in df.iterrows():
+        ger_ofertas.append({
+            'polo': row['_POLO'], 'categoria': row['_CAT'],
+            'ordem': row['_ORDEM'], 'pratica': row['_PRATICA'],
+            'tutor': row['_TUTOR'], 'tem_tutor': bool(row['_TEM_TUTOR']),
+            'tem_agenda': bool(row['_TEM_AGENDA']), 'gerenciado': bool(row['_GERENCIADO']),
+            'alunos_mat': int(row['_MAT']), 'alunos_agend': int(row['_AGEND']),
+            'dt_agenda': row['_DT_AG_ISO'], 'hr_agenda': row['_HR_AG'],
+            'dia_semana': row['_DIA_SEMANA'], 'turno': row['_TURNO'],
+            'horario_incomum': bool(row['_HORARIO_INCOMUM']), 'sem_alunos': bool(row['_SEM_ALUNOS']),
+            'curso': row['_CURSO'], 'subcurso': row['_SUBCURSO'],
+        })
+    return {
+        'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
+        'ger_ordem': ger_ordem, 'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas, 'ger_ofertas': ger_ofertas,
+    }
 
-  var w = svgEl.parentElement ? svgEl.parentElement.clientWidth : 480;
-  var h = Math.round(w * 1.02);
-  svgEl.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
 
-  var projection = d3.geoMercator()
-    .fitSize([w - 20, h - 20], geo)
-    .translate([(w)/2, (h)/2]);
+# PATCH 32: garante que TODO tutor ativo apareça no gerenciamento (Contratação,
+# polo, heatmap, Detalhe), mesmo quando o GIOCONDA ainda não tem NENHUMA oferta
+# cadastrada pro polo+categoria dele (lab novo/não provisionado no sistema deles).
+# Antes só existia o backfill do PATCH 21 (preenche TUTOR em branco numa oferta
+# JÁ existente) — se a oferta nem existisse, o tutor simplesmente não aparecia
+# em lugar nenhum do gerenciamento, mesmo estando ativo em todo o resto do
+# VinciLab (Ficha dos Tutores, Portfólios etc.).
+def _recalcular_agregados_de_ofertas(ofertas):
+    """Recalcula ger_kpis/ger_polo/ger_cat/ger_ordem/ger_contratacao/ger_agendas
+    a partir de uma lista de ofertas (dicts) — usado depois de injetar ofertas
+    sintéticas pra tutores sem nenhuma oferta cadastrada no GIOCONDA ainda."""
+    total = len(ofertas)
+    com_tutor = sum(1 for o in ofertas if o['tem_tutor'])
+    gerenciadas = sum(1 for o in ofertas if o['gerenciado'])
+    com_agenda = sum(1 for o in ofertas if o['tem_agenda'])
+    tot_mat = sum(o.get('alunos_mat', 0) for o in ofertas)
+    tot_agend = sum(o.get('alunos_agend', 0) for o in ofertas)
+    polos_set = set(o['polo'] for o in ofertas)
+    polos_sem_tutor = set(o['polo'] for o in ofertas if not o['tem_tutor'])
 
-  var path = d3.geoPath().projection(projection);
-  var tooltip = document.getElementById('mapa-tooltip');
+    ger_kpis = {
+        'total_ofertas': total, 'ofertas_gerenciadas': gerenciadas,
+        'ofertas_nao_gerenciadas': total - gerenciadas,
+        'pct_gerenciado': round(gerenciadas / total * 100, 1) if total else 0,
+        'ofertas_com_tutor': com_tutor, 'ofertas_sem_tutor': total - com_tutor,
+        'pct_com_tutor': round(com_tutor / total * 100, 1) if total else 0,
+        'ofertas_com_agenda': com_agenda, 'total_alunos_matriculados': tot_mat,
+        'total_alunos_agendados': tot_agend, 'total_capacidade': 0, 'pct_ocupacao': 0,
+        'polos_total': len(polos_set), 'polos_sem_tutor': len(polos_sem_tutor),
+    }
 
-  // Limpar SVG
-  svgEl.innerHTML = '';
+    polo_map = {}; cat_map = {}; ordem_map = {}; contr_map = {}; agenda_map = {}
+    for o in ofertas:
+        p = o['polo'] or '—'
+        if p not in polo_map:
+            polo_map[p] = {'polo': p, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0, 'sem_tutor': 0,
+                           'com_agenda': 0, 'alunos_matriculados': 0, 'alunos_agendados': 0, 'capacidade': 0, 'tutores_unicos': []}
+        pm = polo_map[p]
+        pm['total_ofertas'] += 1
+        if o['gerenciado']: pm['gerenciadas'] += 1
+        if o['tem_tutor']: pm['com_tutor'] += 1
+        else: pm['sem_tutor'] += 1
+        if o['tem_agenda']: pm['com_agenda'] += 1
+        pm['alunos_matriculados'] += o.get('alunos_mat', 0)
+        pm['alunos_agendados'] += o.get('alunos_agend', 0)
+        if o.get('tutor') and o['tutor'] not in pm['tutores_unicos']:
+            pm['tutores_unicos'].append(o['tutor'])
 
-  // Filtro sombra
-  var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  defs.innerHTML = '<filter id="ms" x="-10%" y="-10%" width="120%" height="120%">'
-    + '<feDropShadow dx="1" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,.22)"/></filter>'
-    + '<filter id="ms-h" x="-15%" y="-15%" width="130%" height="130%">'
-    + '<feDropShadow dx="2" dy="4" stdDeviation="5" flood-color="rgba(0,0,0,.35)"/></filter>';
-  svgEl.appendChild(defs);
+        c = o['categoria'] or '—'
+        if c not in cat_map:
+            cat_map[c] = {'categoria': c, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0, 'sem_tutor': 0,
+                          'alunos_matriculados': 0, 'alunos_agendados': 0}
+        cm = cat_map[c]
+        cm['total_ofertas'] += 1
+        if o['gerenciado']: cm['gerenciadas'] += 1
+        if o['tem_tutor']: cm['com_tutor'] += 1
+        else: cm['sem_tutor'] += 1
+        cm['alunos_matriculados'] += o.get('alunos_mat', 0)
+        cm['alunos_agendados'] += o.get('alunos_agend', 0)
 
-  geo.features.forEach(function(feature) {
-    var uf = getUF(feature);
-    var e = uf ? mapa[uf] : null;
-    var pct = e && e.ofertas ? Math.round(e.gerenciadas / e.ofertas * 100) : null;
-    var cor = _corEstadoD3(pct);
+        od = o.get('ordem') or ''
+        if od:
+            if od not in ordem_map:
+                ordem_map[od] = {'ordem': od, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0,
+                                  'alunos_matriculados': 0, 'alunos_agendados': 0, 'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(od, ''),
+                                  '_tutores_ger_set': set()}
+            omp = ordem_map[od]
+            omp['total_ofertas'] += 1
+            if o['gerenciado']: omp['gerenciadas'] += 1
+            if o['tem_tutor']: omp['com_tutor'] += 1
+            omp['alunos_matriculados'] += o.get('alunos_mat', 0)
+            omp['alunos_agendados'] += o.get('alunos_agend', 0)
+            # PATCH 86 (P6): tutores distintos que gerenciaram QUALQUER coisa
+            # nesta ordem específica — usado no gráfico "Tutores Gerenciaram
+            # por Ordem". Essa função roda DEPOIS da injeção de ofertas
+            # sintéticas, então é aqui que o dado realmente chega pro
+            # dashboard ao vivo — faltava justamente aqui.
+            if o['gerenciado'] and o.get('tutor'):
+                omp['_tutores_ger_set'].add(o['tutor'])
 
-    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', path(feature));
-    p.setAttribute('fill', cor);
-    p.setAttribute('stroke', 'rgba(255,255,255,.85)');
-    p.setAttribute('stroke-width', '1.2');
-    p.setAttribute('stroke-linejoin', 'round');
-    p.style.cursor = 'pointer';
-    p.style.filter = 'url(#ms)';
-    p.style.transition = 'all .2s ease';
-    if (uf) p.dataset.uf = uf;
+        trk = (p, c)
+        if trk not in contr_map:
+            contr_map[trk] = {'polo': p, 'categoria': c, 'total_ofertas': 0, 'tutores': []}
+        contr_map[trk]['total_ofertas'] += 1
+        if o.get('tutor') and o['tutor'] not in contr_map[trk]['tutores']:
+            contr_map[trk]['tutores'].append(o['tutor'])
 
-    // Hover
-    p.addEventListener('mouseenter', function() {
-      svgEl.querySelectorAll('path').forEach(function(el){ el.style.opacity = '0.6'; });
-      this.style.opacity = '1';
-      this.style.filter = 'url(#ms-h) brightness(1.2)';
-    });
-    p.addEventListener('mouseleave', function() {
-      svgEl.querySelectorAll('path').forEach(function(el){ el.style.opacity = '1'; el.style.filter = 'url(#ms)'; });
-      if (tooltip) tooltip.style.display = 'none';
-    });
-    p.addEventListener('mousemove', function(ev) {
-      if (!tooltip || !uf || !e) return;
-      var pctTt = e.ofertas ? Math.round(e.gerenciadas/e.ofertas*100) : 0;
-      var corTt = pctTt>=50?'#16a34a':pctTt>=25?'#ca8a04':'#dc2626';
-      tooltip.innerHTML = '<strong style="font-size:12px">'+uf+' — '+e.nome+'</strong>'
-        +'<div style="font-size:11px;color:#6b7280;margin-top:2px">'+e.polos+' polos · '+e.ofertas+' ofertas</div>'
-        +'<div style="font-size:11px;margin-top:2px">Gerenciado: <strong style="color:'+corTt+'">'+pctTt+'%</strong>'
-        +' &nbsp;|&nbsp; Sem tutor: <strong style="color:#dc2626">'+e.sem_tutor+'</strong></div>'
-        +'<div style="height:5px;background:#e5e7eb;border-radius:3px;margin-top:5px">'
-        +'<div style="height:100%;width:'+pctTt+'%;background:'+corTt+';border-radius:3px"></div></div>';
-      tooltip.style.display = 'block';
-      tooltip.style.left = (ev.clientX + 14) + 'px';
-      tooltip.style.top = (ev.clientY - 14) + 'px';
-    });
-    p.addEventListener('click', function() {
-      if (uf) openEstadoModal(uf);
-    });
+        if p not in agenda_map:
+            agenda_map[p] = {'polo': p, 'total': 0, 'com_agenda': 0, 'datas_por_cat': {}, 'datas_por_tutor': {}, 'datas_por_horario': {}}
+        am = agenda_map[p]
+        am['total'] += 1
+        if o['tem_agenda']:
+            am['com_agenda'] += 1
+            d = o.get('dt_agenda')
+            if d:
+                am['datas_por_cat'].setdefault(d, [])
+                if c and c not in am['datas_por_cat'][d]: am['datas_por_cat'][d].append(c)
+                am['datas_por_tutor'].setdefault(d, [])
+                if o.get('tutor') and o['tutor'] not in am['datas_por_tutor'][d]: am['datas_por_tutor'][d].append(o['tutor'])
+                # PATCH 85 (P7): horário do agendamento junto do tutor, pra dar
+                # pra ver não só QUEM agendou naquele dia mas A QUE HORAS.
+                am['datas_por_horario'].setdefault(d, [])
+                _hr_cal = o.get('hr_agenda')
+                if _hr_cal and o.get('tutor'):
+                    _entrada_cal = f"{o['tutor']} · {_hr_cal}"
+                    if _entrada_cal not in am['datas_por_horario'][d]: am['datas_por_horario'][d].append(_entrada_cal)
 
-    svgEl.appendChild(p);
+    for pm in polo_map.values():
+        pm['pct_gerenciado'] = round(pm['gerenciadas'] / pm['total_ofertas'] * 100, 1) if pm['total_ofertas'] else 0
+    for cm in cat_map.values():
+        cm['pct_gerenciado'] = round(cm['gerenciadas'] / cm['total_ofertas'] * 100, 1) if cm['total_ofertas'] else 0
+    for omp in ordem_map.values():
+        omp['pct_gerenciado'] = round(omp['gerenciadas'] / omp['total_ofertas'] * 100, 1) if omp['total_ofertas'] else 0
+        omp['tutores_gerenciaram'] = len(omp.pop('_tutores_ger_set', set()))  # PATCH 86 (P6)
 
-    // Label UF + %
-    if (uf) {
-      var centroid = path.centroid(feature);
-      if (centroid && !isNaN(centroid[0])) {
-        var txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        txt.setAttribute('x', centroid[0]);
-        txt.setAttribute('y', centroid[1] + 1);
-        txt.setAttribute('text-anchor', 'middle');
-        txt.setAttribute('font-size', w > 400 ? '8' : '6');
-        txt.setAttribute('font-weight', '800');
-        txt.setAttribute('font-family', 'Plus Jakarta Sans,sans-serif');
-        txt.setAttribute('fill', '#ffffff');
-        txt.setAttribute('pointer-events', 'none');
-        txt.style.filter = 'drop-shadow(0 1px 2px rgba(0,0,0,.7))';
-        txt.textContent = uf;
-        svgEl.appendChild(txt);
+    ger_polo = sorted(polo_map.values(), key=lambda x: -x['sem_tutor'])
+    ger_cat = sorted(cat_map.values(), key=lambda x: -x['total_ofertas'])
+    _ordem_sort = {'Ordem 1': 1, 'Ordem 2': 2, 'Ordem 3': 3, 'Ordem 4': 4, 'Ordem 5': 5}
+    ger_ordem = sorted(ordem_map.values(), key=lambda x: _ordem_sort.get(x['ordem'], 9))
+    ger_contratacao = []
+    for trk, v in contr_map.items():
+        tem_tutor = len(v['tutores']) > 0
+        ger_contratacao.append({**v, 'tem_tutor': tem_tutor, 'status': 'Contratado' if tem_tutor else 'Sem tutor'})
+    ger_agendas = []
+    for p, am in agenda_map.items():
+        sem_agenda = am['total'] - am['com_agenda']
+        ger_agendas.append({
+            'polo': p, 'total': am['total'], 'com_agenda': am['com_agenda'], 'sem_agenda': sem_agenda,
+            'pct_agendado': round(am['com_agenda'] / am['total'] * 100, 1) if am['total'] else 0,
+            'datas_agenda': sorted(am['datas_por_cat'].keys()),
+            'datas_por_cat': am['datas_por_cat'], 'datas_por_tutor': am['datas_por_tutor'],
+            'datas_por_horario': am['datas_por_horario'],  # PATCH 85 (P7)
+        })
+    ger_agendas.sort(key=lambda x: -x['sem_agenda'])
 
-        if (pct !== null) {
-          var pctLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          pctLabel.setAttribute('x', centroid[0]);
-          pctLabel.setAttribute('y', centroid[1] + (w > 400 ? 10 : 8));
-          pctLabel.setAttribute('text-anchor', 'middle');
-          pctLabel.setAttribute('font-size', w > 400 ? '7' : '5.5');
-          pctLabel.setAttribute('font-weight', '600');
-          pctLabel.setAttribute('font-family', 'Plus Jakarta Sans,sans-serif');
-          pctLabel.setAttribute('fill', pct>=50?'#bbf7d0':pct>=25?'#fef08a':'#fca5a5');
-          pctLabel.setAttribute('pointer-events', 'none');
-          pctLabel.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,.6))';
-          pctLabel.textContent = pct + '%';
-          svgEl.appendChild(pctLabel);
+    return {
+        'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
+        'ger_ordem': ger_ordem, 'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas, 'ger_ofertas': ofertas,
+    }
+
+
+def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
+    """
+    PATCH 97: pra cada oferta gerida com data de gerenciamento conhecida,
+    verifica se essa data cai dentro do período oficial de uma ordem ANTERIOR
+    à ordem da própria prática — sinal de que o tutor gerenciou uma ordem
+    mais avançada antes da hora (agora possível desde que o GIOCONDA parou de
+    travar isso). Marca cada oferta com '_anomalia_ordem' (bool) e, quando
+    True, '_ordem_esperada_na_data' (qual ordem o período correspondia).
+    Não modifica 'gerenciado' nem nenhum outro campo — só sinaliza.
+    """
+    import datetime as _dt_ord
+
+    def _parse_data_br_ou_iso(s):
+        if not s:
+            return None
+        s = str(s).strip()
+        for fmt in ('%d/%m/%Y', '%Y-%m-%d'):
+            try:
+                return _dt_ord.datetime.strptime(s, fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    _ordem_num = {'Ordem 1': 1, 'Ordem 2': 2, 'Ordem 3': 3, 'Ordem 4': 4, 'Ordem 5': 5}
+    _periodos_parsed = []
+    for _ord_nome, _cfg in (periodos or {}).items():
+        _ini = _parse_data_br_ou_iso(_cfg.get('inicio', ''))
+        _fim = _parse_data_br_ou_iso(_cfg.get('fim', ''))
+        if _ini and _fim:
+            _periodos_parsed.append((_ordem_num.get(_ord_nome, 99), _ord_nome, _ini, _fim))
+    _periodos_parsed.sort()
+
+    for o in ofertas:
+        o['_anomalia_ordem'] = False
+        if not o.get('gerenciado'):
+            continue
+        _data_ger = _parse_data_br_ou_iso(o.get('dt_agenda', ''))
+        _ordem_propria_num = _ordem_num.get(o.get('ordem', ''))
+        if not _data_ger or not _ordem_propria_num:
+            continue
+        for _num, _nome, _ini, _fim in _periodos_parsed:
+            if _ini <= _data_ger <= _fim and _num < _ordem_propria_num:
+                o['_anomalia_ordem'] = True
+                o['_ordem_esperada_na_data'] = _nome
+                break
+    return ofertas
+
+def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
+    """PATCH 32: injeta uma oferta-placeholder pra cada tutor ativo cujo
+    polo+categoria não tem NENHUMA linha no GIOCONDA, e recalcula todos os
+    agregados a partir da lista de ofertas resultante."""
+    import re as _re_inj, unicodedata as _ud_inj
+    def _norm_polo_inj(s):
+        # PATCH 45: mesma robustez do PATCH 33 (JS) — sem remover parênteses/
+        # acentos aqui, tutores com dado REAL no GIOCONDA (que costuma usar a
+        # grafia curta do polo, ex: "Blumenau/SC - Salto Do Norte") recebiam uma
+        # linha sintética extra "sem oferta" só porque o CONTROLE usa a grafia
+        # mais completa (ex: "...Salto Do Norte (Centro Universitário Dante)"),
+        # duplicando o tutor na tela (uma linha real + uma fantasma).
+        s = str(s or '').strip()
+        s = _re_inj.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_inj.IGNORECASE)
+        s = _re_inj.sub(r'\([^)]*\)', '', s)  # remove parênteses e conteúdo
+        s = _ud_inj.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_inj.category(c) != 'Mn')  # remove acentos
+        return _re_inj.sub(r'\s+', ' ', s).strip().lower()
+
+    ofertas = list(ger_dados.get('ger_ofertas', []))
+    polo_cat_existentes = set((_norm_polo_inj(o['polo']), o['categoria']) for o in ofertas)
+
+    # PATCH 75: a checagem acima (polo, categoria) deveria ter bastado — mas na
+    # prática, um tutor real (ex: "Cicero Rosendo da Silva Filho" no GIOCONDA)
+    # ainda recebia um placeholder duplicado sob o nome do CONTROLE ("Jose
+    # Cicero Rosendo Da Silva Filho", com um nome a mais na frente), mesmo
+    # sendo a mesma pessoa e o mesmo polo+categoria. Adiciona uma segunda
+    # checagem independente, por NOME (mesma lógica de subsequência do PATCH
+    # 74 no JS), como blindagem extra.
+    def _normaliza_nome_inj(s):
+        s = str(s or '').strip()
+        s = _re_inj.sub(r'\s*\(\d+\)\s*$', '', s)  # remove chapa entre parênteses no final
+        s = _ud_inj.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_inj.category(c) != 'Mn')
+        return _re_inj.sub(r'\s+', ' ', s).strip().lower()
+
+    def _eh_subsequencia_inj(curtos, longos):
+        i = 0
+        for tok in longos:
+            if i < len(curtos) and tok == curtos[i]:
+                i += 1
+        return i == len(curtos)
+
+    def _nomes_batem_inj(nome_a, nome_b):
+        if nome_a == nome_b:
+            return True
+        ta = nome_a.split()
+        tb = nome_b.split()
+        if not ta or not tb:
+            return False
+        # PATCH 76: além da subsequência (nome com parte a mais/a menos), cobre
+        # também o caso de MESMO número de partes com uma palavra do meio
+        # diferente (ex: "Renata Souza da Silva" vs "Renata Souza De Silva") —
+        # a subsequência sozinha não pega isso porque nenhum token "sobra" ou
+        # "falta", só troca; primeiro+último nome bate mesmo assim.
+        if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+            return True
+        curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+        if len(curtos) < 2:
+            return False  # nome de 1 token só é arriscado demais pra casar por subsequência
+        return _eh_subsequencia_inj(curtos, longos)
+
+    # Nomes de tutores que JÁ têm alguma oferta real no GIOCONDA (independente
+    # de polo/categoria) — usado como segunda checagem, complementar à de
+    # (polo, categoria), pra pegar exatamente o caso acima (nome do CONTROLE
+    # com uma parte a mais/a menos do que o nome usado no GIOCONDA).
+    nomes_reais_existentes = set()
+    for o in ofertas:
+        _nm = _normaliza_nome_inj(o.get('tutor', ''))
+        if _nm:
+            nomes_reais_existentes.add(_nm)
+
+    # PATCH 41: categorias reais válidas (as mesmas que aparecem de verdade no
+    # GIOCONDA) — usado pra "abrir" categorias compostas do CONTROLE (ex:
+    # "ENGMAKER+QUÍMICA E FÍSICA", usada pra tutores que cobrem os dois cursos)
+    # em entradas separadas de categoria real, em vez de vazar a string
+    # composta inteira como se fosse uma categoria válida no filtro.
+    _CATEGORIAS_REAIS_GIOCONDA = {
+        'ENF-INS (Multidisciplinar II)', 'BIO-FAR (Multidisciplinar I)',
+        'BIO-FISIO-EST-TO (Multidisciplinar III)', 'QUÍMICA E FÍSICA',
+        'ENGMAKER', 'NUTRI (Multidisciplinar IV)',
+    }
+    def _categorias_validas_para(cat_raw):
+        cat_raw = (cat_raw or '').strip()
+        if cat_raw in _CATEGORIAS_REAIS_GIOCONDA:
+            return [cat_raw]
+        partes = [p.strip() for p in cat_raw.split('+') if p.strip() in _CATEGORIAS_REAIS_GIOCONDA]
+        return partes or ([cat_raw] if cat_raw else [])
+
+    injetadas = 0
+    for t in tutores_ativos:
+        # PATCH 40: pseudo-tutores de "Aviso de Portfólio" (submissões que não
+        # bateram com nenhum tutor real) não têm _anonimo=True, mas também não
+        # são tutores de verdade — sem esse filtro extra, eles vazavam uma
+        # categoria fantasma "Aviso de Portfólio" pro filtro de Gerenciamento.
+        if t.get('_anonimo') or t.get('c') == 'Aviso de Portfólio' or not t.get('n') or not t.get('p'):
+            continue
+        for cat_valida in _categorias_validas_para(t.get('c', '')):
+            chave = (_norm_polo_inj(t['p']), cat_valida)
+            if chave in polo_cat_existentes:
+                continue
+            nome_alvo = _normaliza_nome_inj(t['n'])
+            if any(_nomes_batem_inj(nome_alvo, nm) for nm in nomes_reais_existentes):
+                continue
+            _cursos_t = t.get('cursos', '') or ''
+            _SUBCURSO_LABEL_INJ = {
+                'BFI': 'Fisioterapia', 'BTO': 'Terapia Ocupacional',
+                'COS-TIP': 'Estética e Cosmética', 'TIP-COS': 'Estética e Cosmética', 'COS': 'Estética e Cosmética',
+                'BBI': 'Biomedicina', 'BFR': 'Farmácia',
+                'EMF-ISN': 'Enfermagem/Instrumentação', 'NTR': 'Nutrição',
+            }
+            ofertas.append({
+                'polo': t['p'], 'categoria': cat_valida, 'ordem': '',
+                'pratica': 'Sem oferta cadastrada no GIOCONDA', 'tutor': t['n'],
+                'tem_tutor': True, 'tem_agenda': False, 'gerenciado': False,
+                'alunos_mat': 0, 'alunos_agend': 0, 'dt_agenda': '', 'hr_agenda': '',
+                'dia_semana': '', 'turno': '', 'horario_incomum': False, 'sem_alunos': False,
+                'curso': _cursos_t, 'subcurso': _SUBCURSO_LABEL_INJ.get(_cursos_t, _cursos_t),
+                '_sintetico': True,
+            })
+            polo_cat_existentes.add(chave)
+            injetadas += 1
+    if injetadas:
+        print(f"[{ts()}] Tutores ativos sem nenhuma oferta no GIOCONDA (injetados como placeholder): {injetadas}")
+    return _recalcular_agregados_de_ofertas(ofertas)
+
+
+def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
+    """
+    PATCH 18: lê 1+ arquivos de gerenciamento (cada um com um semestre padrão de
+    fallback) e devolve {semestre: ger_dados_dict}. Quando o arquivo tem coluna
+    SEMESTRE (export novo), usa o valor da própria linha como fonte de verdade —
+    não confia só em "qual arquivo é qual semestre".
+    arquivos: lista de (path, semestre_fallback)
+
+    PATCH 21: controle_tutor_lookup, se fornecido, é um dict {(polo_norm, categoria): nome}
+    usado para preencher o TUTOR quando o próprio GIOCONDA ainda não tem esse campo
+    preenchido pra aquela oferta, mas o CONTROLE já tem alguém contratado ali —
+    sem isso, um tutor recém-contratado fica invisível na tabela de Detalhe até o
+    GIOCONDA "alcançar" o cadastro, mesmo já estando ativo em todas as outras telas.
+    """
+    import re as _re_local, unicodedata as _ud_local
+    def _norm_polo_ger(s):
+        # PATCH 45: consistente com _norm_polo_bf — remove parênteses e acentos também
+        s = str(s or '').strip()
+        s = _re_local.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_local.IGNORECASE)
+        s = _re_local.sub(r'\([^)]*\)', '', s)
+        s = _ud_local.normalize('NFD', s)
+        s = ''.join(c for c in s if _ud_local.category(c) != 'Mn')
+        return _re_local.sub(r'\s+', ' ', s).strip().lower()
+
+    # PATCH 32: nome da prática -> curso específico (BFI/BTO/COS-TIP/BBI/BFR),
+    # usado no backfill de tutor pra distinguir múltiplos tutores no mesmo polo
+    import unicodedata as _ud_bf
+    def _norm_proto_bf(s):
+        s = _ud_bf.normalize('NFKC', str(s or ''))
+        s = s.replace('–', '-').replace('—', '-')
+        return ' '.join(s.split()).strip()
+    _NOME_TO_PERFIL_BF = {}
+    _nomep_path_bf = os.path.join(SCRIPT_DIR, 'nome_to_perfil.json')
+    if os.path.isfile(_nomep_path_bf):
+        with open(_nomep_path_bf, encoding='utf-8') as _f_bf:
+            _ntp_raw_bf = json.load(_f_bf)
+        _NOME_TO_PERFIL_BF = {_norm_proto_bf(k): v for k, v in _ntp_raw_bf.items()}
+    def _pratica_de_experimento_bf(v):
+        m = _re_local.match(r'O\.\d+:\s*(.*)', str(v or ''))
+        return _norm_proto_bf(m.group(1) if m else v)
+
+    frames_novo = []
+    resultado = {}
+    _backfill_count = 0
+    for path, fallback_sem in arquivos:
+        if not path or not os.path.isfile(path):
+            continue
+        try:
+            df = _ler_arquivo_gerenciamento(path)
+        except Exception as e:
+            print(f"[{ts()}] ERRO ao ler {os.path.basename(path)}: {e}")
+            continue
+        cols_upper = [str(c).upper() for c in df.columns]
+        is_novo = 'LABORATORIO' in cols_upper and 'NOME_EXPERIMENTO' in cols_upper
+        if not is_novo:
+            print(f"[{ts()}] {os.path.basename(path)}: formato ANTIGO — todo o arquivo tratado como {fallback_sem}")
+            resultado[fallback_sem] = processar_gerenciamento(path)
+            continue
+        sem_col = next((c for c in df.columns if str(c).upper() == 'SEMESTRE'), None)
+        if sem_col:
+            df['_SEM_ROW'] = df[sem_col].astype(str).str.strip()
+            _fora = ~df['_SEM_ROW'].isin(ALL_SEMESTRES.keys())
+            if _fora.any():
+                print(f"[{ts()}] {os.path.basename(path)}: {int(_fora.sum())} linhas com SEMESTRE não reconhecido — usando fallback {fallback_sem}")
+            df.loc[_fora, '_SEM_ROW'] = fallback_sem
+        else:
+            df['_SEM_ROW'] = fallback_sem
+
+        # PATCH 21 + PATCH 32: backfill de TUTOR a partir do CONTROLE quando o
+        # GIOCONDA está vazio — tenta primeiro pelo curso específico (inferido a
+        # partir do nome da prática via nome_to_perfil.json), caindo pra
+        # categoria ampla só quando isso não é possível (categorias sem
+        # ambiguidade de curso, ou prática não mapeada).
+        if controle_tutor_lookup:
+            c_lab_bf = next((c for c in df.columns if str(c).upper() == 'LABORATORIO'), None)
+            c_cat_bf = next((c for c in df.columns if str(c).upper() == 'CATEGORIA'), None)
+            c_tut_bf = next((c for c in df.columns if str(c).upper() == 'TUTOR'), None)
+            c_exp_bf = next((c for c in df.columns if str(c).upper() == 'NOME_EXPERIMENTO'), None)
+            if c_lab_bf and c_cat_bf and c_tut_bf:
+                _CAT_RAW_NORM_BF = {
+                    'FISIO-TO-EST-BIO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+                    'BIO-BIO-FISIO-EST-TO (Multidisciplinar III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+                }
+                def _corrige_prefixo_bio_duplicado_bf(s):
+                    s2 = str(s or '').strip()
+                    while s2.upper().startswith('BIO-BIO-'):
+                        s2 = s2[4:]
+                    return s2
+                _tutor_vazio = df[c_tut_bf].isna() | (df[c_tut_bf].astype(str).str.strip().isin(['', 'nan']))
+                if _tutor_vazio.any():
+                    _polo_norm = df.loc[_tutor_vazio, c_lab_bf].map(_norm_polo_ger)
+                    _cat_norm  = df.loc[_tutor_vazio, c_cat_bf].astype(str).str.strip().replace(_CAT_RAW_NORM_BF).apply(_corrige_prefixo_bio_duplicado_bf)
+                    if c_exp_bf and _NOME_TO_PERFIL_BF:
+                        _praticas_norm = df.loc[_tutor_vazio, c_exp_bf].map(_pratica_de_experimento_bf)
+                        _cursos_esp = _praticas_norm.map(lambda p: _NOME_TO_PERFIL_BF.get(p))
+                    else:
+                        _cursos_esp = [None] * int(_tutor_vazio.sum())
+                    _preenchido = []
+                    for _pn, _cn, _ce in zip(_polo_norm, _cat_norm, _cursos_esp):
+                        _val = controle_tutor_lookup.get((_pn, _ce), '') if _ce else ''
+                        if not _val:
+                            _val = controle_tutor_lookup.get((_pn, _cn), '')
+                        _preenchido.append(_val)
+                    df.loc[_tutor_vazio, c_tut_bf] = _preenchido
+                    _backfill_count += sum(1 for v in _preenchido if v)
+        frames_novo.append(df)
+    if _backfill_count:
+        print(f"[{ts()}] Backfill de tutor via CONTROLE (GIOCONDA sem tutor preenchido): {_backfill_count} ofertas")
+    if frames_novo:
+        df_all = pd.concat(frames_novo, ignore_index=True)
+        for sem, grp in df_all.groupby('_SEM_ROW'):
+            grp2 = grp.drop(columns=['_SEM_ROW'])
+            print(f"[{ts()}] Gerenciamento {sem}: {len(grp2)} linhas")
+            resultado[sem] = _processar_gerenciamento_novo(grp2)
+    return resultado
+
+
+def processar_gerenciamento(p3):
+    print(f"[{ts()}] Lendo gerenciamento...")
+    df_g = ler_excel(p3)
+    print(f"[{ts()}] Gerenciamento: {len(df_g)} linhas, {len(df_g.columns)} colunas")
+    cols_upper = [str(c).upper() for c in df_g.columns]
+    is_novo = 'LABORATORIO' in cols_upper and 'NOME_EXPERIMENTO' in cols_upper
+    if is_novo:
+        print(f"[{ts()}] Formato: NOVO (relatório detalhado)")
+        return _processar_gerenciamento_novo(df_g)
+    print(f"[{ts()}] Formato: ANTIGO (GIOCONDA)")
+    def gcol(df, *partes):
+        for c in df.columns:
+            cu = str(c).upper()
+            if all(p.upper() in cu for p in partes): return c
+        return None
+    c_polo = gcol(df_g, 'CEEM', 'RSOC') or 'CEEM_RSOC'
+    c_cat  = gcol(df_g, 'CATP', 'NOME') or 'CATP_NOME'
+    c_lab  = gcol(df_g, 'LABE', 'NOME') or 'LABE_NOME'
+    c_curso = gcol(df_g, 'NOME', 'CURS') or 'NOME_CURS'
+    c_situ = gcol(df_g, 'SITU') or 'SITU'
+    c_alunos = gcol(df_g, 'ALUNOS', 'MATRIC') or 'ALUNOS_MATRICULADOS'
+    c_capa_exp = gcol(df_g, 'CAPA', 'EXP') or 'CAPA_EXP'
+    c_ofe_cad = gcol(df_g, 'OFE', 'CAD') or 'OFE_CAD'
+    c_qtd_alun = gcol(df_g, 'QTD', 'ALUN') or 'QTD_ALUN'
+    c_tutor = gcol(df_g, 'TUTOR') or 'TUTOR'
+    c_dt_agenda = gcol(df_g, 'DT', 'GERENCIADA') or 'DT_GERENCIADA'
+    c_hr_agenda = gcol(df_g, 'HR', 'GERENCIADA') or 'HR_GERENCIADA'
+    c_ofex_dtin = gcol(df_g, 'OFEX', 'DTIN') or 'OFEX_DTIN'
+    c_ofex_dtfi = gcol(df_g, 'OFEX', 'DTFI') or 'OFEX_DTFI'
+    if c_situ in df_g.columns:
+        df_g = df_g[df_g[c_situ].astype(str).str.strip().str.upper() == 'ATIVO'].copy()
+    print(f"[{ts()}] Gerenciamento após filtro ativos: {len(df_g)} linhas")
+    df_g['_ORDEM_G'] = ''; df_g['_PRATICA_G'] = ''
+    if c_lab in df_g.columns:
+        import re
+        def extrair_ordem(val):
+            val = str(val or '')
+            m = re.match(r'O\.(\d+):\s*(.*)', val)
+            if m: return f'Ordem {m.group(1)}', m.group(2).strip()
+            return '', val.strip()
+        parsed = df_g[c_lab].apply(extrair_ordem)
+        df_g['_ORDEM_G'] = parsed.apply(lambda x: x[0])
+        df_g['_PRATICA_G'] = parsed.apply(lambda x: x[1])
+    # FIX BUG 1: _TEM_TUTOR deve ser definido ANTES de _GERENCIADO
+    df_g['_TEM_TUTOR'] = df_g[c_tutor].notna() & (df_g[c_tutor].astype(str).str.strip() != '') & (df_g[c_tutor].astype(str).str.strip().str.upper() != 'NAN')
+    df_g['_TEM_AGENDA'] = df_g.get(c_dt_agenda, pd.Series(dtype='object')).notna()
+    # PATCH 22: GERENCIADO = tem tutor E tem data de gerenciamento — mesmo
+    # critério corrigido do formato NOVO (ver comentário lá). OFERTAS_CADASTRADAS
+    # ou status CONCLUÍDO não confirmam que o gerenciamento foi feito de fato.
+    df_g['_GERENCIADO'] = df_g['_TEM_TUTOR'] & df_g['_TEM_AGENDA']
+    df_g['_ALUNOS_MAT'] = pd.to_numeric(df_g.get(c_alunos, 0), errors='coerce').fillna(0).astype(int)
+    df_g['_QTD_ALUN'] = pd.to_numeric(df_g.get(c_qtd_alun, 0), errors='coerce').fillna(0).astype(int)
+    df_g['_CAPA'] = pd.to_numeric(df_g.get(c_capa_exp, 0), errors='coerce').fillna(0).astype(int)
+    total_ofertas = len(df_g); gerenciadas = int(df_g['_GERENCIADO'].sum())
+    com_tutor = int(df_g['_TEM_TUTOR'].sum()); sem_tutor = total_ofertas - com_tutor
+    # FIX: Alunos Matriculados — deduplicar por polo×categoria (soma bruta conta os mesmos alunos por ordem)
+    # Usar apenas colunas que REALMENTE existem (não fallbacks)
+    _c_polo_real = c_polo if (c_polo and c_polo in df_g.columns) else None
+    _c_cat_real  = c_cat  if (c_cat  and c_cat  in df_g.columns) else None
+    # Se nenhuma das buscas primárias funcionou, tentar qualquer coluna polo/cat
+    if not _c_polo_real:
+        _c_polo_real = next((c for c in df_g.columns if 'POLO' in str(c).upper() or 'CEEM' in str(c).upper()), None)
+    if not _c_cat_real:
+        _c_cat_real = next((c for c in df_g.columns if 'CATEG' in str(c).upper() or 'CATP' in str(c).upper()), None)
+    _raw_mat = int(df_g['_ALUNOS_MAT'].sum())
+    if _c_polo_real and _c_cat_real:
+        _dedup_g = df_g.groupby([_c_polo_real, _c_cat_real])[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max()
+        tot_mat   = int(_dedup_g['_ALUNOS_MAT'].sum())
+        tot_agend = int(_dedup_g['_QTD_ALUN'].sum())
+        tot_capa  = int(_dedup_g['_CAPA'].sum())
+        print(f"[{ts()}] Alunos DEDUPLICADOS por polo×cat: {tot_mat:,} (bruto era {_raw_mat:,}, redução: {_raw_mat-tot_mat:,})")
+    else:
+        tot_mat = _raw_mat
+        tot_agend = int(df_g['_QTD_ALUN'].sum())
+        tot_capa  = int(df_g['_CAPA'].sum())
+        print(f"[{ts()}] Alunos sem dedup (colunas polo/cat não encontradas): {tot_mat:,}")
+    polos_total = df_g[c_polo].nunique() if c_polo in df_g.columns else 0
+    polos_sem_tutor_count = int(df_g[~df_g['_TEM_TUTOR']].groupby(c_polo).ngroups) if c_polo in df_g.columns else 0
+    ger_kpis = {
+        'total_ofertas': total_ofertas, 'ofertas_gerenciadas': gerenciadas,
+        'ofertas_nao_gerenciadas': total_ofertas - gerenciadas,
+        'pct_gerenciado': round(gerenciadas/total_ofertas*100,1) if total_ofertas else 0,
+        'ofertas_com_tutor': com_tutor, 'ofertas_sem_tutor': sem_tutor,
+        'pct_com_tutor': round(com_tutor/total_ofertas*100,1) if total_ofertas else 0,
+        'ofertas_com_agenda': int(df_g['_TEM_AGENDA'].sum()),
+        'total_alunos_matriculados': tot_mat, 'total_alunos_agendados': tot_agend,
+        'total_capacidade': tot_capa,
+        'pct_ocupacao': round(tot_agend/tot_capa*100,1) if tot_capa else 0,
+        'polos_total': polos_total, 'polos_sem_tutor': polos_sem_tutor_count,
+    }
+    print(f"[{ts()}] Gerenciamento: {total_ofertas} ofertas, {gerenciadas} ger., {sem_tutor} sem tutor")
+    ger_polo = []
+    if c_polo in df_g.columns:
+        for polo, grp in df_g.groupby(c_polo):
+            # PATCH 38: dedup por categoria dentro do polo antes de somar alunos
+            # (mesma correção aplicada em _processar_gerenciamento_novo)
+            _dedup_p = grp.groupby(c_cat)[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max() if c_cat in grp.columns else grp[['_ALUNOS_MAT','_QTD_ALUN','_CAPA']].max().to_frame().T
+            ger_polo.append({
+                'polo': str(polo), 'total_ofertas': len(grp),
+                'gerenciadas': int(grp['_GERENCIADO'].sum()),
+                'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+                'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+                'com_agenda': int(grp['_TEM_AGENDA'].sum()),
+                'alunos_matriculados': int(_dedup_p['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(_dedup_p['_QTD_ALUN'].sum()),
+                'capacidade': int(_dedup_p['_CAPA'].sum()),
+                'tutores_unicos': list(grp[grp['_TEM_TUTOR']][c_tutor].dropna().unique()),
+            })
+        ger_polo.sort(key=lambda x: -x['sem_tutor'])
+    ger_cat = []
+    if c_cat in df_g.columns:
+        for cat, grp in df_g.groupby(c_cat):
+            # PATCH 38: dedup por polo dentro da categoria antes de somar alunos
+            _dedup_c = grp.groupby(c_polo)[['_ALUNOS_MAT','_QTD_ALUN']].max() if c_polo in grp.columns else grp[['_ALUNOS_MAT','_QTD_ALUN']].max().to_frame().T
+            ger_cat.append({
+                'categoria': str(cat), 'total_ofertas': len(grp),
+                'gerenciadas': int(grp['_GERENCIADO'].sum()),
+                'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+                'com_tutor': int(grp['_TEM_TUTOR'].sum()), 'sem_tutor': int((~grp['_TEM_TUTOR']).sum()),
+                'alunos_matriculados': int(_dedup_c['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(_dedup_c['_QTD_ALUN'].sum()),
+            })
+        ger_cat.sort(key=lambda x: -x['total_ofertas'])
+    ger_ordem = []
+    ordens_validas = [o for o in sorted(df_g['_ORDEM_G'].unique()) if o and 'Ordem' in str(o)]
+    for ordem in ordens_validas:
+        grp = df_g[df_g['_ORDEM_G'] == ordem]
+        datas_inicio = pd.to_datetime(grp.get(c_ofex_dtin, pd.Series(dtype='object')), errors='coerce').dropna()
+        datas_fim = pd.to_datetime(grp.get(c_ofex_dtfi, pd.Series(dtype='object')), errors='coerce').dropna()
+        dt_inicio = datas_inicio.min().strftime('%d/%m/%Y') if len(datas_inicio) > 0 else ''
+        dt_fim = datas_fim.max().strftime('%d/%m/%Y') if len(datas_fim) > 0 else ''
+        # PATCH 38: mesma correção de dedup por polo×categoria dentro da ordem
+        if c_polo in grp.columns and c_cat in grp.columns:
+            _dedup_o = grp.groupby([c_polo, c_cat])[['_ALUNOS_MAT','_QTD_ALUN']].max()
+        else:
+            _dedup_o = grp[['_ALUNOS_MAT','_QTD_ALUN']].max().to_frame().T
+        ger_ordem.append({
+            'ordem': ordem, 'total_ofertas': len(grp),
+            'gerenciadas': int(grp['_GERENCIADO'].sum()),
+            'pct_gerenciado': round(grp['_GERENCIADO'].sum()/len(grp)*100,1) if len(grp) else 0,
+            'com_tutor': int(grp['_TEM_TUTOR'].sum()),
+            'alunos_matriculados': int(_dedup_o['_ALUNOS_MAT'].sum()), 'alunos_agendados': int(_dedup_o['_QTD_ALUN'].sum()),
+            'dt_inicio': dt_inicio, 'dt_fim': dt_fim,
+            'tutores_gerenciaram': int(grp[grp['_GERENCIADO']][c_tutor].dropna().nunique()) if c_tutor in grp.columns else 0,  # PATCH 86 (P6)
+        })
+    ger_contratacao = []
+    if c_polo in df_g.columns and c_cat in df_g.columns:
+        for (polo, cat), grp in df_g.groupby([c_polo, c_cat]):
+            tutores_list = list(grp[grp['_TEM_TUTOR']][c_tutor].dropna().unique())
+            ger_contratacao.append({
+                'polo': str(polo), 'categoria': str(cat), 'total_ofertas': len(grp),
+                'tem_tutor': len(tutores_list)>0, 'tutores': [str(t) for t in tutores_list],
+                'status': 'Contratado' if len(tutores_list)>0 else 'Sem tutor',
+            })
+        ger_contratacao.sort(key=lambda x: (0 if x['tem_tutor'] else 1, x['polo']))
+    ger_agendas = []
+    if c_polo in df_g.columns:
+        for polo, grp in df_g.groupby(c_polo):
+            total = len(grp); com_agenda = int(grp['_TEM_AGENDA'].sum()); sem_agenda = total - com_agenda
+            datas = []; datas_por_cat = {}; datas_por_tutor = {}
+            if c_dt_agenda and c_dt_agenda in grp.columns:
+                for _, ag_row in grp[grp['_TEM_AGENDA']].iterrows():
+                    dt_val = pd.to_datetime(ag_row.get(c_dt_agenda), errors='coerce')
+                    if pd.notna(dt_val):
+                        dt_str = dt_val.strftime('%Y-%m-%d')
+                        cat_val = str(ag_row.get(c_cat, '') or '')
+                        tutor_val = str(ag_row.get(c_tutor, '') or '')
+                        if dt_str not in datas: datas.append(dt_str)
+                        if cat_val:
+                            if dt_str not in datas_por_cat: datas_por_cat[dt_str] = []
+                            if cat_val not in datas_por_cat[dt_str]: datas_por_cat[dt_str].append(cat_val)
+                        if tutor_val and tutor_val != 'nan':
+                            if dt_str not in datas_por_tutor: datas_por_tutor[dt_str] = []
+                            if tutor_val not in datas_por_tutor[dt_str]: datas_por_tutor[dt_str].append(tutor_val)
+                datas = sorted(set(datas))
+            ger_agendas.append({
+                'polo': str(polo), 'total': total, 'com_agenda': com_agenda, 'sem_agenda': sem_agenda,
+                'pct_agendado': round(com_agenda/total*100, 1) if total else 0,
+                'datas_agenda': datas, 'datas_por_cat': datas_por_cat,
+                'datas_por_tutor': datas_por_tutor,  # PATCH 7: preservado
+            })
+        ger_agendas.sort(key=lambda x: -x['sem_agenda'])
+    ger_ofertas_detalhe = []
+    for _, row in df_g.iterrows():
+        ger_ofertas_detalhe.append({
+            'polo': str(row.get(c_polo, '')), 'categoria': str(row.get(c_cat, '')),
+            'ordem': str(row.get('_ORDEM_G', '')), 'pratica': str(row.get('_PRATICA_G', '')),
+            'curso': str(row.get(c_curso, '')),
+            # PATCH 115: mesma limpeza do sufixo de chapa aplicada no formato
+            # NOVO -- protege esse caminho (formato ANTIGO/GIOCONDA) também.
+            'tutor': re.sub(r'\s*\(\d{4,}\)\s*$', '', str(row.get(c_tutor, '')).strip()) if pd.notna(row.get(c_tutor)) else '',
+            'gerenciado': bool(row.get('_GERENCIADO', False)),
+            'tem_agenda': bool(row.get('_TEM_AGENDA', False)),
+            'alunos_mat': int(row.get('_ALUNOS_MAT', 0)), 'alunos_agend': int(row.get('_QTD_ALUN', 0)),
+            'capacidade': int(row.get('_CAPA', 0)),
+        })
+    print(f"[{ts()}] Gerenciamento: {len(ger_polo)} polos, {len(ger_cat)} cats, {len(ger_ordem)} ordens")
+    return {
+        'ger_kpis': ger_kpis, 'ger_polo': ger_polo, 'ger_cat': ger_cat,
+        'ger_ordem': ger_ordem, 'ger_contratacao': ger_contratacao,
+        'ger_agendas': ger_agendas, 'ger_ofertas': ger_ofertas_detalhe,
+    }
+
+
+
+
+
+def carregar_alunos_hub(path_csv):
+    """
+    Lê o relatório de alunos (matrículas) e retorna dict com matrículas distintas
+    por polo e por categoria — substitui a contagem inflacionada do GIOCONDA.
+
+    PATCH 43: detecta automaticamente entre dois esquemas de coluna diferentes
+    que já circularam com esse mesmo nome de arquivo:
+      - Esquema ANTIGO: POLO_HUB, GRUPO_HUB, TUTOR_PRATICA, SITUACAO_SEMESTRE
+        (granularidade: 1 linha por matrícula no semestre)
+      - Esquema NOVO: POLO, CATEGORIA_LABORATORIO, TUTOR, SITUACAO_OFERTA
+        (granularidade: 1 linha por aluno × experimento/prática — o mesmo aluno
+        aparece várias vezes, uma por prática; dedup por MATRICULA continua
+        sendo o jeito certo de contar "alunos distintos")
+    """
+    import unicodedata as _ud, re as _re
+    if not path_csv or not os.path.isfile(path_csv):
+        print(f"[{ts()}] Alunos hub: arquivo não encontrado ({path_csv})")
+        return None
+    print(f"[{ts()}] Lendo alunos por hub: {os.path.basename(path_csv)}")
+    # Verificar se o arquivo é HTML (download falhou) e não CSV real
+    try:
+        with open(path_csv, 'rb') as _f: _head = _f.read(500)
+        if b'<!DOCTYPE' in _head or b'<html' in _head.lower() or b'<HTML' in _head:
+            sz = os.path.getsize(path_csv)
+            print(f"[{ts()}] ERRO: Relatorio_alunos_por_hub.csv é HTML ({sz} bytes) — o download falhou")
+            print(f"[{ts()}] SOLUÇÃO: Atualize o secret URL_ALUNOS_HUB para o formato download.aspx:")
+            print(f"[{ts()}]   https://uniasselvi01-my.sharepoint.com/personal/[USUARIO]/_layouts/15/download.aspx?share=[TOKEN]")
+            return None
+    except: pass
+    for enc in ['latin-1', 'utf-8', 'cp1252']:
+        try:
+            df = pd.read_csv(path_csv, sep=';', encoding=enc, dtype=str)
+            if 'MATRICULA' in df.columns: break
+        except: continue
+    else:
+        print(f"[{ts()}] ERRO: não foi possível ler {path_csv}")
+        return None
+
+    # PATCH 43: detectar esquema de colunas
+    esquema_novo = 'POLO' in df.columns and 'CATEGORIA_LABORATORIO' in df.columns and 'POLO_HUB' not in df.columns
+    if esquema_novo:
+        col_polo, col_grupo, col_tutor_pratica = 'POLO', 'CATEGORIA_LABORATORIO', 'TUTOR'
+        print(f"[{ts()}] Alunos hub: esquema NOVO detectado (POLO/CATEGORIA_LABORATORIO/TUTOR)")
+    else:
+        col_polo, col_grupo, col_tutor_pratica = 'POLO_HUB', 'GRUPO_HUB', 'TUTOR_PRATICA'
+        print(f"[{ts()}] Alunos hub: esquema ANTIGO detectado (POLO_HUB/GRUPO_HUB/TUTOR_PRATICA)")
+
+    # Apenas matrículas confirmadas (só existe no esquema antigo)
+    if 'SITUACAO_SEMESTRE' in df.columns:
+        df = df[df['SITUACAO_SEMESTRE'].str.strip() == 'Matrícula Confirmada'].copy()
+
+    def _norm(s):
+        s = _ud.normalize('NFD', str(s or '').upper().strip())
+        s = ''.join(c for c in s if _ud.category(c) != 'Mn')
+        s = _re.sub(r'^LAP\s*[-–]\s*', '', s).strip()
+        return _re.sub(r'\s+', ' ', s)
+
+    # Mapear categoria bruta (de qualquer um dos dois esquemas) → nossas categorias
+    GRUPO_CAT = {
+        'MULTIDISCIPLINAR II':              'ENF-INS (Multidisciplinar II)',
+        'ENF-INS (MULTIDISCIPLINAR II)':    'ENF-INS (Multidisciplinar II)',
+        'MULTIDISCIPLINAR I':               'BIO-FAR (Multidisciplinar I)',
+        'BIO-FAR (MULTIDISCIPLINAR I)':     'BIO-FAR (Multidisciplinar I)',
+        'MULTIDISCIPLINAR III':             'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'FISIO-TO-EST-BIO (MULTIDISCIPLINAR III)': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'BIO-FISIO-EST-TO (MULTIDISCIPLINAR III)':  'BIO-FISIO-EST-TO (Multidisciplinar III)',
+        'ENGMAKER+QUIMICA E FISICA':         'QUÍMICA E FÍSICA',
+        'QUIMICA E FISICA':                  'QUÍMICA E FÍSICA',
+        'ENGMAKER':                          'ENGMAKER',
+        'MULTIDISCIPLINAR IV':               'NUTRI (Multidisciplinar IV)',
+        'NUTRI (MULTIDISCIPLINAR IV)':       'NUTRI (Multidisciplinar IV)',
+    }
+    def _grupo_para_cat(g):
+        gn = _norm(g)
+        # Match EXATO primeiro (evita 'MULTIDISCIPLINAR I' casar com 'MULTIDISCIPLINAR II')
+        for k, v in GRUPO_CAT.items():
+            if _norm(k) == gn: return v
+        # Fallback: contém (só para casos como 'ENGMAKER+...' vs 'ENGMAKER')
+        for k, v in GRUPO_CAT.items():
+            kn = _norm(k)
+            if kn in gn and len(kn) > 8: return v
+        return g
+
+    df['_POLO_NORM'] = df[col_polo].apply(_norm)
+    df['_CAT']       = df[col_grupo].apply(_grupo_para_cat)
+
+    total_distintos = df['MATRICULA'].nunique()
+    print(f"[{ts()}] Matrículas DISTINTAS (ativos): {total_distintos:,} (de {len(df):,} linhas)")
+
+    # Por polo (chave normalizada)
+    por_polo = (df.groupby('_POLO_NORM')['MATRICULA']
+                  .nunique().to_dict())
+
+    # Por polo × categoria
+    por_polo_cat = {}
+    for (polo, cat), grp in df.groupby(['_POLO_NORM', '_CAT']):
+        por_polo_cat[f"{polo}||{cat}"] = int(grp['MATRICULA'].nunique())
+
+    # Por categoria (totais)
+    por_cat = (df.groupby('_CAT')['MATRICULA']
+                 .nunique().to_dict())
+
+    # ── Mapear TUTOR_PRATICA/TUTOR → subcurso para Multi 3 ──────────────
+    tutor_subcurso = {}  # nome_norm → 'Fisio'/'T.Oc'/'Est'
+    if col_tutor_pratica in df.columns and 'DISCIPLINA' in df.columns and col_grupo in df.columns:
+        import re as _re
+        from collections import Counter as _Counter
+        _FISIO = ['FISIOTERAPIA','CINESIOTERAPIA','ELETROTERM','CARDIORRESPIR',
+                  'PROTESE','ORTESE','RECURSOS TERAPEUTICOS','MOVIMENTO FUNCIONAL',
+                  'AVALIACAO FISICO','REABILITACAO','NEUROFUNC','ORTOPEDIC','RESPIRATORIA']
+        _TO    = ['TERAPIA OCUPACIONAL','PSICOMOTRICIDADE','INTEGRACAO SENSORIAL',
+                  'TRANSTORNOS MENTAIS','COMPORTAMENTO HUMANO','VIDA DIARIA','TRABALHO EM GRUPO']
+        _EST   = ['ESTETICA','COSMETOLOGIA','BIOMEDICINA ESTETICA','PIGMENTAC',
+                  'DEPILAC','FACIAL CORPORAL','MICROAGULH']
+        def _classif_disc(d):
+            d2 = _norm(d) if d else ''
+            if any(k in d2 for k in _FISIO): return 'Fisio'
+            if any(k in d2 for k in _TO):    return 'T.Oc'
+            if any(k in d2 for k in _EST):   return 'Est'
+            return None
+        def _norm_tutor(s):
+            s = _re.sub(r'\s*\(\d+\)\s*$', '', str(s or '')).strip()
+            return _norm(s)
+        df3 = df[df[col_grupo].str.upper().str.contains('MULTIDISCIPLINAR III|MULTI.*3|BIO-FISIO|FISIO-TO-EST', na=False)].copy()
+        df3 = df3[df3[col_tutor_pratica].notna() & (df3[col_tutor_pratica].astype(str).str.strip().str.upper() != 'NAN')]
+        df3['_sub'] = df3['DISCIPLINA'].apply(_classif_disc)
+        df3['_tnorm'] = df3[col_tutor_pratica].apply(_norm_tutor)
+        for tutor, grp in df3[df3['_sub'].notna()].groupby('_tnorm'):
+            subs = list(grp['_sub'])
+            if subs:
+                # Guardar em MINÚSCULAS para o JS (que usa normN = toLowerCase)
+                tutor_lower = tutor.lower()
+                tutor_subcurso[tutor_lower] = _Counter(subs).most_common(1)[0][0]
+                # Também guardar primeiro+último nome (fallback)
+                parts = tutor_lower.split()
+                if len(parts) >= 2:
+                    fl = parts[0] + ' ' + parts[-1]
+                    if fl not in tutor_subcurso:
+                        tutor_subcurso[fl] = tutor_subcurso[tutor_lower]
+        print(f"[{ts()}] Subcursos Multi 3 mapeados: {len(tutor_subcurso)} tutores")
+
+    return {
+        'total_distintos': int(total_distintos),
+        'por_polo': {k: int(v) for k, v in por_polo.items()},
+        'por_polo_cat': por_polo_cat,
+        'por_cat': {k: int(v) for k, v in por_cat.items()},
+        'tutor_subcurso': tutor_subcurso,  # Multi 3: nome_tutor → Fisio/T.Oc/Est
+    }
+
+# Senha de acesso ao dashboard (mesma da tela de login)
+SENHA_DASHBOARD = "uniasselvi2026"
+
+# PATCH 8: cifra o JSON antes de injetar no HTML — sem isso, dava pra ver
+# tudo no Ctrl+U mesmo sem digitar a senha
+def cifrar_dados(dados_json_str, senha):
+    chave = hashlib.sha256(senha.encode('utf-8')).digest()  # 32 bytes → AES-256
+    aesgcm = AESGCM(chave)
+    iv = os.urandom(12)
+    ct = aesgcm.encrypt(iv, dados_json_str.encode('utf-8'), None)
+    iv_b64 = base64.b64encode(iv).decode('ascii')
+    ct_b64 = base64.b64encode(ct).decode('ascii')
+    return f"{iv_b64}:{ct_b64}"
+
+def gerar_html_coordenadores(dados):
+    """
+    PATCH 110: gera coordenadores.html -- segunda página no mesmo GitHub Pages,
+    mesma senha e mesmo dado cifrado do dashboard principal, mas com uma
+    interface separada e simplificada (template_coordenadores.html), travada
+    por curso, focada só em "esse polo teve oferta dessa prática ou não".
+    """
+    saida = os.path.join(SCRIPT_DIR, "saida")
+    os.makedirs(saida, exist_ok=True)
+    output = os.path.join(saida, "coordenadores.html")
+    tmpl   = os.path.join(SCRIPT_DIR, "template_coordenadores.html")
+    if not os.path.isfile(tmpl):
+        print(f"[{ts()}] AVISO: template_coordenadores.html não encontrado -- pulando geração do portal de coordenadores")
+        return
+    with open(tmpl, encoding='utf-8') as f: html = f.read()
+    json_str = json.dumps(dados, ensure_ascii=False)
+    payload_cifrado = cifrar_dados(json_str, SENHA_DASHBOARD)
+    html = html.replace("'DATA_GOES_HERE'", json.dumps(payload_cifrado))
+    with open(output, 'w', encoding='utf-8') as f: f.write(html)
+    print(f"[{ts()}] Salvo: {output} (portal de coordenadores, mesma cifra AES-256-GCM)")
+
+def gerar_html(dados):
+    saida = os.path.join(SCRIPT_DIR, "saida")
+    os.makedirs(saida, exist_ok=True)
+    output = os.path.join(saida, "dashboard.html")
+    tmpl   = os.path.join(SCRIPT_DIR, "template_dashboard.html")
+    with open(tmpl, encoding='utf-8') as f: html = f.read()
+    json_str = json.dumps(dados, ensure_ascii=False)
+    payload_cifrado = cifrar_dados(json_str, SENHA_DASHBOARD)
+    html = html.replace("'DATA_GOES_HERE'", json.dumps(payload_cifrado))
+    html = html.replace("TIMESTAMP_GOES_HERE", dados['gerado_em'])
+    with open(output, 'w', encoding='utf-8') as f: f.write(html)
+    print(f"[{ts()}] Salvo: {output} (JSON cifrado com AES-256-GCM, {len(payload_cifrado)} chars)")
+
+    # PATCH 9: lookup público (não cifrado) só com email/nome/polo/categoria,
+    # pro portfolio_form.html autopreencher sem precisar da senha do dashboard
+    lookup = [
+        {'email': t.get('email',''), 'n': t.get('n',''), 'p': t.get('p',''), 'c': t.get('c','')}
+        for t in dados.get('tutores', [])
+        if t.get('email') and not t.get('_anonimo') and t.get('c') != 'Aviso de Portfólio'
+    ]
+    lookup_path = os.path.join(saida, "lookup.json")
+    with open(lookup_path, 'w', encoding='utf-8') as f:
+        json.dump(lookup, f, ensure_ascii=False)
+    print(f"[{ts()}] Salvo: {lookup_path} ({len(lookup)} tutores, sem cifra)")
+    return output
+
+
+def modo_watch(p1, p2):
+    print(f"[{ts()}] Monitorando a cada 30s — feche a janela para parar")
+    mods = {p1: 0.0, p2: 0.0}
+    def loop():
+        while True:
+            try:
+                mudou = any(os.path.getmtime(a) != mods[a] for a in mods if os.path.isfile(a))
+                if mudou:
+                    for a in mods:
+                        if os.path.isfile(a): mods[a] = os.path.getmtime(a)
+                    print(f"[{ts()}] Mudança detectada, atualizando...")
+                    gerar_html(processar(p1, p2))
+            except Exception as e: print(f"[{ts()}] Erro: {e}")
+            time.sleep(30)
+    threading.Thread(target=loop, daemon=True).start()
+    try:
+        while True: time.sleep(1)
+    except KeyboardInterrupt: print(f"\n[{ts()}] Encerrado.")
+
+
+if __name__ == '__main__':
+    print()
+    print(" Verificando arquivos...")
+    print()
+    p1, p2, tmpl, p3, p3b, p4, p5, p6 = verificar_e_localizar()
+    if not p1 or not p2 or not os.path.isfile(tmpl):
+        print()
+        print(" Coloque as planilhas na pasta planilhas\\")
+        print(" e tente novamente.")
+        print()
+        if '--sem-browser' not in sys.argv:
+            input(" Pressione Enter para sair...")
+        sys.exit(1)
+    print()
+    dados = processar(p1, p2)
+    if p4:
+        try:
+            lotacao = carregar_lotacao(p4)
+            dados = enriquecer_tutores(dados, lotacao)
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar lotação: {e}")
+            dados['alunos_por_curso'] = []
+    # PATCH 88: aplica o acompanhamento de onboarding, se o arquivo já estiver
+    # disponível — cruza por CHAPA (mais confiável) e, se não achar, por
+    # nome+polo. Tutor com as 3 colunas em "Sim" vira apto=True (some da lista
+    # de treinamento no Vinci); do contrário, apto=False com os 3 flags
+    # individuais, pra mostrar os quadradinhos na tela.
+    if p6:
+        try:
+            import pandas as _pd_onb
+            _df_onb = _pd_onb.read_excel(p6, sheet_name='Onboarding Tutores')
+            _onb_por_chapa = {}
+            _onb_por_nomepolo = {}
+            for _, _row in _df_onb.iterrows():
+                _chapa_onb = str(_row.get('Chapa', '') or '').strip()
+                _nome_onb = str(_row.get('Nome do Tutor', '') or '').strip()
+                _polo_onb = str(_row.get('Polo', '') or '').strip()
+                _flags = {
+                    'trilha': str(_row.get('Trilha de Aprendizagem', '') or '').strip().lower() == 'sim',
+                    'checklist': str(_row.get('Checklist Realizado', '') or '').strip().lower() == 'sim',
+                    'um_a_um': str(_row.get('1:1 de Gerenciamento', '') or '').strip().lower() == 'sim',
+                }
+                if _chapa_onb:
+                    _onb_por_chapa[_chapa_onb] = _flags
+                if _nome_onb and _polo_onb:
+                    _onb_por_nomepolo[(_nome_onb.lower(), _polo_onb.lower())] = _flags
+            _n_aplicados = 0
+            for _t in dados.get('tutores', []):
+                _chapa_t = str(_t.get('chapa', '') or '').strip()
+                _flags_t = _onb_por_chapa.get(_chapa_t)
+                if not _flags_t:
+                    _key = ((_t.get('n') or '').lower(), (_t.get('p') or '').lower())
+                    _flags_t = _onb_por_nomepolo.get(_key)
+                if _flags_t:
+                    _t['onboarding_trilha'] = _flags_t['trilha']
+                    _t['onboarding_checklist'] = _flags_t['checklist']
+                    _t['onboarding_1a1'] = _flags_t['um_a_um']
+                    _t['onboarding_apto'] = all(_flags_t.values())
+                    _n_aplicados += 1
+            print(f"[{ts()}] Onboarding: {_n_aplicados} tutores com acompanhamento aplicado")
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar onboarding: {e}")
+    # PATCH 107: processar_vagas(p4) estava aninhado dentro do "if p6:" acima
+    # por engano — vagas depende só da Lotação (p4), não tem NADA a ver com o
+    # arquivo de onboarding (p6). Como o secret do onboarding ainda não foi
+    # configurado (p6 = None), esse bloco inteiro nunca rodava, e a seção RH/
+    # Vagas ficava vazia/escondida no Vinci mesmo com a Lotação lida com
+    # sucesso. Agora roda independente, sempre que p4 existir.
+    if p4:
+        try:
+            dados['vagas'] = processar_vagas(p4)
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar vagas: {e}")
+            dados['vagas'] = {'vagas': [], 'kpis': {}}
+    else:
+        dados['alunos_por_curso'] = []
+        dados['vagas'] = {'vagas': [], 'kpis': {}}
+    # PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding —
+    # roda sempre (mesmo na primeira vez, quando ainda não existe um p6 pra
+    # ler flags antigos) pra garantir que a lista sempre nasce e se mantém
+    # sozinha. Preserva flags de quem já está sendo acompanhado, adiciona
+    # tutor novo automaticamente, remove quem já ficou "apto".
+    try:
+        gerar_onboarding_atualizado(p1, p6, os.path.join(SCRIPT_DIR, 'Acompanhamento_Onboarding.xlsx'))
+    except Exception as e:
+        print(f"[{ts()}] AVISO: Erro ao gerar onboarding atualizado: {e}")
+    # PATCH 2: tem_lotacao baseado em dados reais (CH > 0 em pelo menos 1 tutor)
+    _ch_ok = sum(1 for t in dados.get('tutores', []) if t.get('ch_semanal') and t['ch_semanal'] > 0)
+    dados['tem_lotacao'] = _ch_ok > 0
+    print(f"[{ts()}] tem_lotacao={dados['tem_lotacao']} ({_ch_ok} tutores com CH SEMANAL)")
+    if p3 or p3b:
+        try:
+            # PATCH 21 + PATCH 32: tutor ativo no CONTROLE pra cada (polo, categoria)
+            # E também (polo, curso específico) — usado como backfill quando o
+            # GIOCONDA ainda não tem TUTOR preenchido pra essa oferta, mesmo a
+            # pessoa já estando contratada/ativa de verdade. A chave por curso
+            # específico (ex: COS-TIP) resolve o caso de múltiplos tutores
+            # dividindo o mesmo polo sob a mesma categoria ampla (Multi III:
+            # Fisioterapia/T.O./Estética no mesmo laboratório) — sem ela, o
+            # backfill por (polo,categoria) só conseguia acertar UM dos tutores
+            # do polo, e os outros ficavam sem oferta atribuída e sumiam do
+            # Detalhe (caso real: Suzieli Alves Rumpel, Estética, Novo
+            # Hamburgo/RS, dividindo o polo com uma tutora de Fisio e outra de
+            # T.O., todas sob "BIO-FISIO-EST-TO (Multidisciplinar III)").
+            import re as _re_bf, unicodedata as _ud_bf
+            def _norm_polo_bf(s):
+                # PATCH 45: mesma robustez aplicada em _norm_polo_inj — remove
+                # parênteses e acentos, não só o prefixo "LAP -".
+                s = str(s or '').strip()
+                s = _re_bf.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_bf.IGNORECASE)
+                s = _re_bf.sub(r'\([^)]*\)', '', s)
+                s = _ud_bf.normalize('NFD', s)
+                s = ''.join(c for c in s if _ud_bf.category(c) != 'Mn')
+                return _re_bf.sub(r'\s+', ' ', s).strip().lower()
+            controle_tutor_lookup = {}
+            for _t in dados.get('tutores', []):
+                if _t.get('_anonimo') or not _t.get('n') or not _t.get('p'): continue
+                _polo_bf = _norm_polo_bf(_t['p'])
+                _cursos_t = _t.get('cursos', '') or ''
+                if _cursos_t:
+                    controle_tutor_lookup.setdefault((_polo_bf, _cursos_t), _t['n'])
+                controle_tutor_lookup.setdefault((_polo_bf, _t.get('c', '')), _t['n'])
+            print(f"[{ts()}] Lookup de tutores ativos (CONTROLE) pra backfill: {len(controle_tutor_lookup)} chaves polo+categoria/curso")
+
+            # PATCH 18: cada arquivo tem um semestre de fallback (usado só quando a
+            # linha não tem coluna SEMESTRE reconhecível) — arquivo antigo -> mais
+            # antigo dos semestres carregados; arquivo "_26_02" -> 2026/2 explícito
+            _sem_mais_antigo = sorted(ALL_SEMESTRES.keys())[0]
+            ger_por_semestre = processar_gerenciamento_semestres([
+                (p3,  _sem_mais_antigo),
+                (p3b, '2026/2' if '2026/2' in ALL_SEMESTRES else sorted(ALL_SEMESTRES.keys())[-1]),
+            ], controle_tutor_lookup=controle_tutor_lookup)
+            # PATCH 118 (movido pro backend — antes só existia no JS, duplicado
+            # nos dois templates): remove da ORIGEM as linhas do GIOCONDA de
+            # tutores sem nenhum vínculo ativo hoje (desligados sem nenhuma
+            # correspondência ativa, ou categorizados como "Aviso de
+            # Portfólio") — evita que "órfãos" do GIOCONDA sejam contados como
+            # tutores extras no Detalhe/Pizza de Gerenciamento (bug reportado
+            # pelo Leo: 355 no gráfico vs 348 no Total Tutores). Aplicado ANTES
+            # de _injetar_tutores_sem_oferta, senão um tutor ativo de verdade
+            # pode ficar "escondido" atrás de um órfão com nome parecido
+            # (mesmo efeito colateral encontrado testando a versão em JS).
+            # Cuidado: só exclui quando não existe NENHUM registro ativo
+            # correspondente ao nome — um tutor desligado pode ter voltado ou
+            # trocado de polo e seguir ativo de verdade (casos reais: Aline
+            # Camurça Mesquita, Magno Luis Das Neves Rosa — não excluir).
+            # Confirmado com o Leo em 21/08.
+            import unicodedata as _ud_orf, re as _re_orf
+            def _norm_tutor_key_orf(s):
+                s = str(s or '').strip()
+                s = _re_orf.sub(r'\s*\(\d+\)\s*$', '', s)
+                s = _ud_orf.normalize('NFD', s)
+                s = ''.join(c for c in s if _ud_orf.category(c) != 'Mn')
+                return _re_orf.sub(r'\s+', ' ', s).strip().lower()
+
+            _tutores_ativos_keys_orf = set()
+            for _t in dados.get('tutores', []):
+                if _t.get('_anonimo') or not _t.get('n') or _t.get('n') == 'Tutor desligado':
+                    continue
+                _tutores_ativos_keys_orf.add(_norm_tutor_key_orf(_t['n']))
+
+            _sem_vinculo_ativo_keys_orf = set()
+            for _td in dados.get('tutores_desligados', []):
+                _k_orf = _norm_tutor_key_orf(_td.get('n'))
+                if _k_orf and _k_orf not in _tutores_ativos_keys_orf:
+                    _sem_vinculo_ativo_keys_orf.add(_k_orf)
+            for _t in dados.get('tutores', []):
+                if _t.get('c') == 'Aviso de Portfólio':
+                    _sem_vinculo_ativo_keys_orf.add(_norm_tutor_key_orf(_t.get('n')))
+
+            if _sem_vinculo_ativo_keys_orf:
+                for _sk in list(ger_por_semestre.keys()):
+                    _antes_orf = len(ger_por_semestre[_sk].get('ger_ofertas', []))
+                    ger_por_semestre[_sk]['ger_ofertas'] = [
+                        o for o in ger_por_semestre[_sk].get('ger_ofertas', [])
+                        if not o.get('tutor') or _norm_tutor_key_orf(o['tutor']) not in _sem_vinculo_ativo_keys_orf
+                    ]
+                    _removidos_orf = _antes_orf - len(ger_por_semestre[_sk]['ger_ofertas'])
+                    if _removidos_orf:
+                        print(f"[{ts()}] {_sk}: {_removidos_orf} linha(s) de tutor sem vínculo ativo removida(s) do gerenciamento (desligado sem vínculo, ou Aviso de Portfólio)")
+
+            # PATCH 32: garantir que todo tutor ativo apareça no gerenciamento,
+            # mesmo sem nenhuma oferta cadastrada no GIOCONDA pro polo dele
+            for _sk in list(ger_por_semestre.keys()):
+                ger_por_semestre[_sk] = _injetar_tutores_sem_oferta(ger_por_semestre[_sk], dados.get('tutores', []))
+            # PATCH 97: o GIOCONDA passou a permitir gerenciar qualquer ordem a
+            # qualquer momento (antes travava fora do período vigente). Detecta
+            # e sinaliza quando uma prática de uma ordem MAIS AVANÇADA foi
+            # gerida enquanto a data ainda caía dentro do período de uma ordem
+            # ANTERIOR — ex: gerenciar Ordem 3 enquanto ainda estamos no
+            # período oficial da Ordem 2. Não bloqueia nada, só sinaliza pra
+            # visualização/auditoria.
+            for _sk in list(ger_por_semestre.keys()):
+                _periodos_sk = (ALL_SEMESTRES.get(_sk) or {}).get('periodos', {})
+                ger_por_semestre[_sk]['ger_ofertas'] = _detectar_gerenciamento_fora_ordem(
+                    ger_por_semestre[_sk].get('ger_ofertas', []), _periodos_sk)
+                _anomalias_sk = [o for o in ger_por_semestre[_sk]['ger_ofertas'] if o.get('_anomalia_ordem')]
+                ger_por_semestre[_sk]['ger_anomalias_ordem'] = _anomalias_sk
+                if _anomalias_sk:
+                    print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_sk)} gerenciamento(s) fora do período esperado da ordem")
+            dados['gerenciamento_por_semestre'] = ger_por_semestre
+            for _sk, _sv in ger_por_semestre.items():
+                print(f"[{ts()}] Gerenciamento {_sk}: {_sv['ger_kpis']['total_ofertas']} ofertas, {_sv['ger_kpis']['ofertas_gerenciadas']} ger.")
+            # dados['ger_*'] no nível raiz = semestre ativo do dashboard (compat
+            # com todo o código de enriquecimento abaixo, que sempre operou em
+            # cima de um único conjunto de ofertas)
+            ger_dados = ger_por_semestre.get(SEMESTRE_ATUAL) or next(iter(ger_por_semestre.values()), {})
+            dados.update(ger_dados)
+            dados['tem_gerenciamento'] = True
+            # ── Injetar gerenciamento nos tutores (ger_pct, ger_ok, ger_total) ──────
+            import unicodedata as _ud5, re as _re6
+            def _norm_ger2(s):
+                s = _ud5.normalize('NFD', str(s or '').lower().strip())
+                s = ''.join(ch for ch in s if _ud5.category(ch) != 'Mn')
+                s = _re6.sub(r'\s*\(\d+\)\s*$', '', s).strip()
+                return _re6.sub(r'\s+', ' ', s)
+            def _fl_ger2(s):
+                pts = _norm_ger2(s).split()
+                return f"{pts[0]} {pts[-1]}" if len(pts) >= 2 else _norm_ger2(s)
+            # PATCH 95: mesma lógica de subsequência já usada em outros pontos
+            # (nome com parte a mais/a menos, ou uma palavra do meio diferente)
+            # — usada aqui como ÚLTIMO fallback, só quando nem o nome exato nem
+            # primeiro+último batem. Isso resolve exatamente o padrão dos "32
+            # tutores sem gerenciamento vinculado" reportado — provável causa
+            # em tutores novos, cujo nome ainda pode estar digitado de forma
+            # levemente diferente entre o Controle e o GIOCONDA.
+            def _eh_subsequencia_ger2(curtos, longos):
+                i = 0
+                for tok in longos:
+                    if i < len(curtos) and tok == curtos[i]:
+                        i += 1
+                return i == len(curtos)
+            def _nomes_batem_ger2(nome_a, nome_b):
+                if nome_a == nome_b:
+                    return True
+                ta, tb = nome_a.split(), nome_b.split()
+                if not ta or not tb:
+                    return False
+                if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+                    return True
+                curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+                if len(curtos) < 2:
+                    return False
+                return _eh_subsequencia_ger2(curtos, longos)
+            _ger_idx2 = {}
+            for _g2 in dados.get('ger_ofertas', []):
+                _gn2 = (_g2.get('tutor') or '').strip()
+                if not _gn2: continue
+                for _k2 in [_norm_ger2(_gn2), _fl_ger2(_gn2)]:
+                    if _k2 not in _ger_idx2:
+                        _ger_idx2[_k2] = {'ger': 0, 'total': 0}
+                    _ger_idx2[_k2]['total'] += 1
+                    if _g2.get('gerenciado'): _ger_idx2[_k2]['ger'] += 1
+            _ger_matched2 = 0
+            _ger_matched2_subsequencia = 0
+            for _t2 in dados.get('tutores', []):
+                _tn2 = _t2.get('n', '')
+                _tn2_norm = _norm_ger2(_tn2)
+                _gd2 = _ger_idx2.get(_tn2_norm) or _ger_idx2.get(_fl_ger2(_tn2))
+                if not _gd2:
+                    for _k2n in _ger_idx2:
+                        if _nomes_batem_ger2(_tn2_norm, _k2n):
+                            _gd2 = _ger_idx2[_k2n]
+                            _ger_matched2_subsequencia += 1
+                            break
+                if _gd2 and _gd2['total'] > 0:
+                    _t2['ger_total'] = _gd2['total']
+                    _t2['ger_ok']    = _gd2['ger']
+                    _t2['ger_pct']   = round(_gd2['ger'] / _gd2['total'] * 100)
+                    _ger_matched2 += 1
+                else:
+                    _t2['ger_total'] = 0
+                    _t2['ger_ok']    = 0
+                    _t2['ger_pct']   = None
+            print(f"[{ts()}] Gerenciamento injetado nos tutores: {_ger_matched2}/{len(dados.get('tutores',[]))} matches ({_ger_matched2_subsequencia} via correspondência por subsequência)")
+            # ────────────────────────────────────────────────────────────────────────
+            # Enriquecer ger_ofertas com ch_semanal (join por nome normalizado)
+            def _norm_nome(s):
+                import unicodedata
+                s = str(s or '').lower().split('(')[0].strip()
+                s = unicodedata.normalize('NFD', s)
+                s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+                return ' '.join(s.split())
+            def _nome_fl(s):
+                pts = _norm_nome(s).split()
+                return (pts[0] + ' ' + pts[-1]) if len(pts) >= 2 else _norm_nome(s)
+            # Mapear ch_semanal por nome completo E por primeiro+último nome
+            _ch_map = {}; _ch_map_fl = {}
+            # Fonte 1: portfólio tutores (com CH já enriquecida pela lotação)
+            for t in dados.get('tutores', []):
+                if t.get('ch_semanal') and t.get('n'):
+                    _ch_map[_norm_nome(t['n'])] = t['ch_semanal']
+                    _ch_map_fl[_nome_fl(t['n'])] = t['ch_semanal']
+            # Fonte 2: lotação DIRETAMENTE (589 tutores vs 298 do portfólio)
+            # Fix principal: tutores que estão no GIOCONDA mas não no portfólio
+            _lotacao_safe = lotacao if 'lotacao' in dir() and lotacao else {}
+            if _lotacao_safe:
+                for lot_nome, lot_info in lotacao.items():
+                    lot_ch = lot_info.get('ch_semanal', 0) if isinstance(lot_info, dict) else 0
+                    if lot_ch:
+                        if lot_nome not in _ch_map:
+                            _ch_map[lot_nome] = lot_ch
+                        lot_fl = _nome_fl(lot_nome)
+                        if lot_fl not in _ch_map_fl:
+                            _ch_map_fl[lot_fl] = lot_ch
+            print(f"[{ts()}] CH map Gerenciamento: {len(_ch_map)} entradas")
+            # Injetar ch_semanal em cada oferta
+            enr = 0
+            enr_subsequencia = 0
+            # Pré-computar lista de (nome_normalizado, nome_fl, ch) para lookup rápido
+            _lot_list = [(k, _nome_fl(k), v) for k, v in _ch_map.items()]
+
+            # PATCH 98: as antigas "Match 2"/"Match 3" comparavam por SUBSTRING
+            # de token (ex: "ana" IN "juliana") — isso podia casar CH de uma
+            # pessoa com o nome de outra completamente diferente, só porque um
+            # pedaço curto do nome aparecia dentro do outro (achado: Ana Keila
+            # Everton Araujo, CH real 8h, aparecendo com 4h — provável cruzamento
+            # errado por esse motivo). Troca pra correspondência por
+            # SUBSEQUÊNCIA de palavras inteiras (mesma lógica já validada em
+            # vários outros pontos do sistema) — exige que cada token bata
+            # como PALAVRA COMPLETA, na ordem certa, não como pedaço de outra.
+            def _eh_subsequencia_ch2(curtos, longos):
+                i = 0
+                for tok in longos:
+                    if i < len(curtos) and tok == curtos[i]:
+                        i += 1
+                return i == len(curtos)
+            def _nomes_batem_ch2(nome_a, nome_b):
+                if nome_a == nome_b:
+                    return True
+                ta, tb = nome_a.split(), nome_b.split()
+                if not ta or not tb:
+                    return False
+                if len(ta) >= 2 and len(tb) >= 2 and ta[0] == tb[0] and ta[-1] == tb[-1]:
+                    return True
+                curtos, longos = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+                if len(curtos) < 2:
+                    return False
+                return _eh_subsequencia_ch2(curtos, longos)
+
+            for oferta in dados.get('ger_ofertas', []):
+                tutor = oferta.get('tutor', '')
+                if not tutor or oferta.get('ch_semanal'): continue
+                tn = _norm_nome(tutor); tfl = _nome_fl(tutor)
+
+                # Match 1: exato ou FL
+                ch = _ch_map.get(tn) or _ch_map.get(tfl) or _ch_map_fl.get(tn) or _ch_map_fl.get(tfl)
+
+                # Match 2 (PATCH 98): subsequência de palavras completas — nome
+                # com uma parte a mais/a menos, ou uma palavra do meio diferente.
+                if not ch:
+                    for lot_n, lot_fl, lot_ch in _lot_list:
+                        if _nomes_batem_ch2(tn, lot_n):
+                            ch = lot_ch; enr_subsequencia += 1; break
+
+                if ch:
+                    oferta['ch_semanal'] = ch; enr += 1
+            print(f"[{ts()}] CH enriquecida: {enr}/{len(dados.get('ger_ofertas',[]))} ofertas ({enr_subsequencia} via correspondência por subsequência)")
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar gerenciamento: {e}")
+            import traceback; traceback.print_exc()
+            dados['tem_gerenciamento'] = False
+    else:
+        dados['tem_gerenciamento'] = False
+    # ── ALUNOS HUB: matrículas distintas ──────────────────────────────────────
+    if p5:
+        try:
+            alunos_hub = carregar_alunos_hub(p5)
+            if alunos_hub:
+                dados['alunos_hub'] = alunos_hub
+                # Sobrescrever total_alunos_matriculados nos ger_kpis
+                if 'ger_kpis' in dados:
+                    dados['ger_kpis']['total_alunos_matriculados'] = alunos_hub['total_distintos']
+                    dados['ger_kpis']['alunos_mat_fonte'] = 'hub_csv'
+                    # Atualizar também DB.kpis.total_alunos com o valor correto do hub
+                    if 'kpis' in dados:
+                        dados['kpis']['total_alunos'] = alunos_hub['total_distintos']
+                    print(f"[{ts()}] KPI alunos substituído: {alunos_hub['total_distintos']:,} (matrículas distintas)")
+                # BUG 3 FIX: enriquecer alunos por polo usando hub CSV (por_polo normalizado)
+                # Cobre polos com alunos=0 porque TOTAL_ALUNOS está zerado na lotação 2026_2
+                import unicodedata as _ud3, re as _re4
+                def _norm_polo_hub_main(s):
+                    s = _ud3.normalize('NFD', str(s or '').upper().strip())
+                    s = ''.join(c for c in s if _ud3.category(c) != 'Mn')
+                    s = _re4.sub(r'^LAP\s*[-–]\s*', '', s).strip()
+                    return _re4.sub(r'\s+', ' ', s)
+                _hub_por_polo = alunos_hub.get('por_polo', {})
+                _enr_polo = 0
+                for _ps in dados.get('polo_stats', []):
+                    if _ps.get('a', _ps.get('alunos', 0)) == 0:
+                        _pn = _norm_polo_hub_main(_ps.get('n', _ps.get('polo', _ps.get('POLO', ''))))
+                        _al_hub = _hub_por_polo.get(_pn, 0)
+                        if _al_hub:
+                            _ps['a'] = int(_al_hub)
+                            _ps['alunos'] = int(_al_hub)
+                            _enr_polo += 1
+                print(f"[{ts()}] Polos enriquecidos com alunos (hub CSV): {_enr_polo}")
+        except Exception as e:
+            print(f"[{ts()}] AVISO: erro ao ler alunos hub: {e}")
+    else:
+        print(f"[{ts()}] INFO: Relatorio_alunos_por_hub.csv não encontrado — usando contagem GIOCONDA")
+
+    # Preencher alunos_por_curso com hub CSV se ainda vazio (lotação sem TOTAL ALUNOS)
+    if not dados.get('alunos_por_curso') and 'alunos_hub' in dir():
+        _por_cat = alunos_hub.get('por_cat', {}) if alunos_hub else {}
+        _CAT_NOME = {
+            'ENF-INS (Multidisciplinar II)':          'Enfermagem e Instrumentação Cirúrgica',
+            'BIO-FAR (Multidisciplinar I)':           'Biomedicina e Farmácia',
+            'BIO-FISIO-EST-TO (Multidisciplinar III)':'Fisioterapia, T.Ocupacional e Estética',
+            'NUTRI (Multidisciplinar IV)':            'Nutrição',
+            'ENGMAKER':                               'Engenharias e Licenciaturas',
+            'QUÍMICA E FÍSICA':                       'Química e Física',
         }
-      }
-    }
-  });
-}
-
-// Fallback: fonte alternativa (click_that_hood) com campo "name" diferente
-function _renderMapaD3Alt(svgEl, mapa, geo) {
-  // Mapa nome-estado → UF para fonte alternativa
-  var NOME_TO_UF = {
-    'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA',
-    'Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO',
-    'Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG',
-    'Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI',
-    'Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS',
-    'Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP',
-    'Sergipe':'SE','Tocantins':'TO'
-  };
-  // Mapear nome do feature para UF
-  var modified = { type: geo.type, features: geo.features.map(function(f) {
-    var nome = f.properties.name || f.properties.nome || '';
-    var uf = NOME_TO_UF[nome] || null;
-    var newProps = Object.assign({}, f.properties, { codarea: uf ? Object.keys(IBGE_TO_UF).find(function(k){ return IBGE_TO_UF[k]===uf; }) : '' });
-    return Object.assign({}, f, { properties: newProps });
-  })};
-  _renderMapaD3(svgEl, mapa, modified);
-}
-
-// Fallback geométrico (polígonos simples) caso D3/IBGE falhem
-function _renderMapaFallback(svgEl, mapa) {
-  svgEl.innerHTML = '<rect x="10" y="10" width="490" height="490" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>'
-    + '<text x="260" y="255" text-anchor="middle" fill="#94a3b8" font-size="14" font-family="Plus Jakarta Sans,sans-serif">'
-    + '🗺️ Mapa indisponível</text>'
-    + '<text x="260" y="275" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="Plus Jakarta Sans,sans-serif">'
-    + 'Verifique a conexão com a internet</text>';
-}
-
-
-function _corLight(pct){
-  if(pct===null||pct===undefined)return '#e2e8f0';
-  if(pct>=90)return '#bbf7d0';
-  if(pct>=70)return '#86efac';
-  if(pct>=50)return '#4ade80';
-  if(pct>=30)return '#fde047';
-  if(pct>=10)return '#fca5a5';
-  return '#fca5a5';
-}
-function _gradId(uf){return 'grad_'+uf;}
-
-function populateFilters(){
-  // Normalizar categorias: usar apenas o nome curto padronizado (ex: "BIO-FAR (Multidisciplinar I)")
-  window._CAT_NORM_MAP = window._CAT_NORM_MAP || {}; const _CAT_NORM_MAP = window._CAT_NORM_MAP = {
-    'Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
-    'Multidisciplinar I - Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
-    'Multidisciplinar I – Biomedicina e Farmácia':'BIO-FAR (Multidisciplinar I)',
-    'Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
-    'Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
-    'Multidisciplinar II – Enfermagem e Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
-    'Fisioterapia, T.Ocupacional e Estética':'BIO-FISIO-EST-TO (Multidisciplinar III)',
-    'Multidisciplinar III':'BIO-FISIO-EST-TO (Multidisciplinar III)',
-    'Nutrição':'NUTRI (Multidisciplinar IV)',
-    'Multidisciplinar IV - Nutrição':'NUTRI (Multidisciplinar IV)',
-    'Multidisciplinar IV – Nutrição':'NUTRI (Multidisciplinar IV)',
-    'Engenharias e Licenciaturas':'ENGMAKER',
-    'ENGMAKER+QUÍMICA E FÍSICA':'QUÍMICA E FÍSICA',
-    'EngeMaker | Química e Física - Engenharias e Licenciaturas':'ENGMAKER',
-    'Química e Física - Agronomia':'QUÍMICA E FÍSICA',
-  };
-  function _normCat(c){return _CAT_NORM_MAP[c]||c;}
-  const tutorCats=[...new Set((DB.tutores||[]).map(t=>_normCat(t.c||'')).filter(Boolean))].sort();
-  const tSel=document.getElementById('tutor-cat-sel');if(tSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tSel.appendChild(o)});
-  const pracCats=[...new Set(getPraticas().map(p=>_normCat(p.c||'')).filter(Boolean))].sort();
-  const pSel=document.getElementById('prac-cat-sel');if(pSel)pracCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pSel.appendChild(o)});
-  // PATCH 109: popula o filtro de curso específico (Biomedicina, Farmácia,
-  // Enfermagem, etc.) usando o campo "cursos" que cada prática agora carrega.
-  const pracCursos=[...new Set(getPraticas().flatMap(p=>p.cursos||[]).filter(Boolean))].sort();
-  const pcSel=document.getElementById('prac-curso-sel');if(pcSel)pracCursos.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pcSel.appendChild(o)});
-  const ocSel=document.getElementById('ordem-cat-sel');if(ocSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;ocSel.appendChild(o)});
-}
-function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');}
-function initDark(){if(localStorage.getItem('dark')==='1')document.body.classList.add('dark')}
-function toggleSidebar(){
-  document.body.classList.toggle('sidebar-collapsed');
-  const collapsed=document.body.classList.contains('sidebar-collapsed');
-  localStorage.setItem('sidebar-collapsed',collapsed?'1':'0');
-  const btn=document.getElementById('sidebar-collapse-btn'); if(btn) btn.textContent=collapsed?'›':'‹';
-}
-function initSidebar(){if(localStorage.getItem('sidebar-collapsed')==='1'){document.body.classList.add('sidebar-collapsed');const btn=document.getElementById('sidebar-collapse-btn');if(btn)btn.textContent='›';}}
-
-// ── EXPORTAR CSV ──────────────────────────────────────────────────────────────
-function exportCSV(rows,filename){if(!rows||!rows.length){alert('Sem dados para exportar');return;}const headers=Object.keys(rows[0]);const escape=v=>{v=String(v===null||v===undefined?'':v);if(v.includes(';')||v.includes('"')||v.includes('\n'))v='"'+v.replace(/"/g,'""')+'"';return v;};const sep=';';const csv=[headers.map(escape).join(sep),...rows.map(r=>headers.map(h=>escape(r[h])).join(sep))].join('\n');const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);}
-function exportPraticas(modo){var all=getPraticas();var rows;if(modo==='menos'){rows=[...all].filter(p=>p.env_n>0).sort((a,b)=>a.env_n-b.env_n).slice(0,50);}else if(modo==='env'){rows=[...all].sort((a,b)=>b.env_n-a.env_n).slice(0,50);}else{rows=[...all].filter(p=>p.pend_n>0).sort((a,b)=>b.pend_n-a.pend_n).slice(0,50);}exportCSV(rows.map(p=>({'Prática':p.n,'Categoria':p.c||'','Enviadas':p.env_n,'Pendentes':p.pend_n,'% Envio':p.pct||0})),'praticas_'+modo+'_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportPendentes(){const ord=document.getElementById('ordem-sel').value;const cat=(document.getElementById('ordem-cat-sel')||{}).value||'';let tutores=DB.tutores||[];if(cat)tutores=tutores.filter(t=>t.c===cat);const rows=[];tutores.forEach(t=>{Object.entries(t.por_ordem||t.porOrdem||{}).forEach(([o,qt])=>{if(ord&&o!==ord)return;if(qt===0||(t.pend||[]).length>0)rows.push({'Nome':t.n,'Polo':t.p,'Categoria':t.c||'','Ordem':o,'Envios':qt,'Status':gTS(t)||''});});});exportCSV(rows,'pendentes_'+(ord||'todas')+'_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportEnviados(){const rows=[];(DB.tutores||[]).forEach(t=>{(t.hist||[]).forEach(h=>{rows.push({'Tutor':t.n,'Polo':t.p,'Categoria':t.c||'','Prática':h.p||'','Ordem':h.o||'','Data':h.d||'','Alunos':h.a||0});});});exportCSV(rows,'portfolios_enviados_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportSemTutor(){const rows=((GER_DB||DB).ger_contratacao||[]).filter(c=>!c.tem_tutor).map(c=>({'Polo':c.polo,'Categoria':c.categoria,'Status':c.status,'Total Ofertas':c.total_ofertas,'Tutores':(c.tutores||[]).join('; ')||'—'}));exportCSV(rows,'polos_sem_tutor_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportTutores(){var d=tutoresFiltrados||DB.tutores||[];exportCSV(d.map(t=>({'Nome':t.n,'Polo':t.p,'Categoria':t.c||'','Portfólios Enviados':t.te||0,'Total Práticas':t.tp||'?','% Conclusão':t.pct||0,'Status':gTS(t)||''})),'tutores_'+new Date().toISOString().slice(0,10)+'.csv');}
-function exportPolosSemGerenc(){
-  // PATCH 104: pedido específico pra Enfermagem (mas funciona pra qualquer
-  // grupo selecionado) — em vez de listar TUTORES sem oferta, agrega por
-  // POLO: um polo entra na lista se NENHUM tutor dele geriu nada na ordem
-  // selecionada. Exige uma ordem específica escolhida (não faz sentido
-  // "todas ordens" aqui, já que o pedido foi "seleciona ordem 2 e só vem os
-  // polos sem gerenciamento em ordem 2").
-  var ordSel=(document.getElementById('ger-det-ordem')||{}).value||'';
-  if(!ordSel){ alert('Selecione uma ordem específica (Ordem 1 a 5) antes de exportar — esse relatório é por ordem.'); return; }
-  var grupoId=(document.getElementById('ger-det-cat')||{}).value||'';var grupo=_grupoById(grupoId);
-  var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
-  function normPoloExp2(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}
-
-  var dOrdem=(gerDetData||[]).filter(function(r){return r.ordem===ordSel;});
-  if(grupo) dOrdem=dOrdem.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
-
-  // Polos com QUALQUER gerenciamento nesta ordem (pra excluir da lista)
-  var polosComGerencia=new Set();
-  dOrdem.forEach(function(r){ if(r.gerenciado && r.polo) polosComGerencia.add(normPoloExp2(r.polo)); });
-
-  // Universo de polos pra este grupo, a partir dos tutores ativos cadastrados
-  var tutoresAtivos=(DB.tutores||[]).filter(function(t){return !t._anonimo && t.n!=='Tutor desligado' && t.c!=='Aviso de Portfólio';});
-  if(grupo) tutoresAtivos=tutoresAtivos.filter(function(t){return _tutorMatchesGrupo(t,grupo,subfiltroId);});
-  var poloInfo={};
-  tutoresAtivos.forEach(function(t){
-    var pk=normPoloExp2(t.p);
-    if(!poloInfo[pk]) poloInfo[pk]={polo:t.p, qtdTutores:0};
-    poloInfo[pk].qtdTutores++;
-  });
-
-  var linhas=Object.keys(poloInfo).filter(function(pk){ return !polosComGerencia.has(pk); }).map(function(pk){
-    return {'Polo': poloInfo[pk].polo, 'Ordem': ordSel, 'Qtd. Tutores no Polo': poloInfo[pk].qtdTutores};
-  }).sort(function(a,b){ return a.Polo.localeCompare(b.Polo,'pt'); });
-
-  if(!linhas.length){ alert('Todos os polos têm algum gerenciamento nesta ordem, pra este filtro!'); return; }
-  var sufixoGrupo=grupo?grupo.label.replace(/[^a-z0-9]/gi,'_'):'todos_grupos';
-  exportCSV(linhas,'polos_sem_gerenciamento_'+ordSel.replace(' ','_')+'_'+sufixoGrupo+'_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-function exportDetalhe(){
-  var grupoId=(document.getElementById('ger-det-cat')||{}).value||'';var grupo=_grupoById(grupoId);
-  var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
-  var ordSel=(document.getElementById('ger-det-ordem')||{}).value||'';
-  function normNomeExp(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
-  function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}
-  var tutoresAtivos=(DB.tutores||[]).filter(t=>!t._anonimo);
-  if(grupo)tutoresAtivos=tutoresAtivos.filter(t=>_tutorMatchesGrupo(t,grupo,subfiltroId));
-  // PATCH 92: quando NENHUMA ordem específica está selecionada ("Todas
-  // ordens"), repete a checagem "sem oferta atribuída" pra CADA uma das 5
-  // ordens separadamente — antes, todas as linhas saíam com "Ordem: —",
-  // misturando tudo junto e sem dar pra saber em qual ordem específica
-  // faltava. Com uma ordem específica selecionada, comporta-se como antes
-  // (só aquela ordem).
-  var ordensParaChecar = ordSel ? [ordSel] : ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];
-  var linhas=[];
-  ordensParaChecar.forEach(function(ordAtual){
-    var dFiltrado=(gerDetData||[]).filter(r=>r.ordem===ordAtual);
-    if(grupo)dFiltrado=dFiltrado.filter(r=>_rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId));
-    var poloTutorMapExp={};
-    dFiltrado.forEach(r=>{if(r.tutor&&r.polo){var pk=normPoloExp(r.polo);if(!poloTutorMapExp[pk])poloTutorMapExp[pk]=new Set();poloTutorMapExp[pk].add(normNomeExp(r.tutor));}});
-    tutoresAtivos.filter(t=>{
-      var pk=normPoloExp(t.p);var poloSet=poloTutorMapExp[pk];
-      if(poloSet)return !poloSet.has(normNomeExp(t.n));
-      return true;
-    }).forEach(t=>{
-      linhas.push({'Tutor':t.n,'Polo':t.p,'Curso / Lab':catParaCurso(t.c_exibicao||t.c||'—'),'Categoria':t.c_exibicao||t.c||'','Ordem':ordAtual});
-    });
-  });
-  if(!linhas.length){alert('Todos os tutores têm oferta atribuída para esta seleção!');return;}
-  var rows=linhas.sort((a,b)=>a['Ordem'].localeCompare(b['Ordem'])||a['Polo'].localeCompare(b['Polo'])||a['Tutor'].localeCompare(b['Tutor']));
-  var sufixoGrupo=grupo?grupo.label.replace(/[^a-z0-9]/gi,'_'):'todos_grupos';
-  exportCSV(rows,'sem_gerenciamento_'+(ordSel||'todas_ordens_separadas')+'_'+sufixoGrupo+'_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-function abrirSemGerenciamento(){
-  // PATCH 47: o modal "Ver Sem Gerenc." tem um seletor de categoria PRÓPRIO,
-  // com as categorias cruas (não os 5 grupos do filtro principal), porque 2 dos
-  // grupos novos somam mais de uma categoria/subcurso — não dá pra herdar um
-  // valor único de categoria a partir do grupo sem esconder parte dele. Herda
-  // só a ordem; a categoria começa em "Todos os laboratórios" dentro do modal.
-  var ord=(document.getElementById('ger-det-ordem')||{}).value||'';
-  _renderSemGer(ord,'');
-}
-function _renderSemGer(ord,cat){
-  function normPolo(p){return (p||'').replace(/^LAP\s*[-–]\s*/i,'').trim().toLowerCase();}
-  var d=gerDetData||[];
-  if(ord) d=d.filter(r=>r.ordem===ord);
-  if(cat) d=d.filter(r=>r.categoria===cat);
-  var tutorMap={};
-  d.forEach(r=>{
-    if(!r.tutor||!r.polo) return;
-    var k=normPolo(r.polo)+'||'+r.tutor;
-    if(!tutorMap[k]) tutorMap[k]={polo:r.polo,tutor:r.tutor,categoria:r.categoria,totalGer:0,totalOferta:0};
-    tutorMap[k].totalOferta++;
-    if(r.gerenciado) tutorMap[k].totalGer++;
-  });
-  var semGerOferta=Object.values(tutorMap).filter(x=>x.totalGer===0&&x.tutor);
-  var ofertaPolos=new Set(d.map(r=>normPolo(r.polo)));
-  var tutoresAtivos=(DB.tutores||[]).filter(t=>!t._anonimo);
-  if(cat) tutoresAtivos=tutoresAtivos.filter(t=>t.c&&t.c.indexOf(cat.split('(')[0].trim())>=0);
-  tutoresAtivos.forEach(t=>{
-    var pk=normPolo(t.p);
-    if(!ofertaPolos.has(pk)) semGerOferta.push({polo:t.p,tutor:t.n,categoria:t.c,_tutorObj:t,totalGer:0,totalOferta:0});
-  });
-  var seen=new Set();
-  semGerOferta=semGerOferta.filter(x=>{var k=normPolo(x.polo)+'||'+(x.tutor||'');if(seen.has(k))return false;seen.add(k);return true;})
-    .sort((a,b)=>a.polo.localeCompare(b.polo,'pt')||a.tutor.localeCompare(b.tutor,'pt'));
-  var tutorByNome={};(DB.tutores||[]).filter(t=>!t._anonimo).forEach(t=>{tutorByNome[(t.n||'').toLowerCase()]=t;});
-  semGerOferta.forEach(x=>{if(!x._tutorObj) x._tutorObj=tutorByNome[(x.tutor||'').toLowerCase()]||null;});
-  var ordens=[...new Set((gerDetData||[]).map(r=>r.ordem).filter(Boolean))].sort();
-  var cats=['ENF-INS (Multidisciplinar II)','BIO-FAR (Multidisciplinar I)','BIO-FISIO-EST-TO (Multidisciplinar III)','QUÍMICA E FÍSICA','ENGMAKER','NUTRI (Multidisciplinar IV)'];
-  var filtroLabel=(ord||'Todas ordens')+(cat?' · '+catParaCurso(cat):'');
-  document.getElementById('m-title').textContent='Tutores sem Gerenciamento';
-  document.getElementById('m-sub').textContent=semGerOferta.length+' tutores · '+filtroLabel;
-  var hd='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)"><select id="sgm-ord" style="flex:1;min-width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--bg);color:var(--text)"><option value="">Todas as ordens</option>';
-  ordens.forEach(o=>{hd+='<option value="'+o+'"'+(o===ord?' selected':'')+'>'+o+'</option>';});
-  hd+='</select><select id="sgm-cat" style="flex:2;min-width:180px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--bg);color:var(--text)"><option value="">Todos os laboratórios</option>';
-  cats.forEach(c=>{hd+='<option value="'+c+'"'+(c===cat?' selected':'')+'>'+catParaCurso(c)+'</option>';});
-  hd+='</select><button class="btn-export" onclick="exportarSemGer()" style="white-space:nowrap">⬇ Exportar</button></div>';
-  var tb='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--border)">Tutor</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Polo</th><th style="padding:6px 8px;border-bottom:2px solid var(--border)">Curso / Laboratório</th></tr></thead><tbody>';
-  semGerOferta.forEach(x=>{
-    var cs=x._tutorObj?cursoLabel(x._tutorObj):catParaCurso(x.categoria||'—');
-    tb+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 8px;font-weight:600">'+esc(x.tutor||'—')+'</td><td style="padding:5px 8px;font-size:11px">'+esc(x.polo)+'</td><td style="padding:5px 8px;font-size:11px">'+esc(cs)+'</td></tr>';
-  });
-  if(!semGerOferta.length) tb+='<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--ok)">✅ Todos os tutores gerenciaram!</td></tr>';
-  tb+='</tbody></table><div style="font-size:10px;color:var(--muted);margin-top:6px">* Selecione uma ordem específica para resultado mais preciso.</div>';
-  window._semGerData=semGerOferta; window._semGerFiltro=filtroLabel;
-  document.getElementById('m-body').innerHTML=hd+tb;
-  var sgOrd=document.getElementById('sgm-ord');var sgCat=document.getElementById('sgm-cat');
-  if(sgOrd) sgOrd.addEventListener('change',function(){_renderSemGer(this.value,(sgCat||{}).value||'');});
-  if(sgCat) sgCat.addEventListener('change',function(){_renderSemGer((sgOrd||{}).value||'',this.value);});
-  document.getElementById('modal-overlay').classList.add('show');
-}
-function exportarSemGer(){
-  var tutorByNome={};(DB.tutores||[]).filter(t=>!t._anonimo).forEach(t=>{tutorByNome[(t.n||'').toLowerCase()]=t;});
-  var rows=(window._semGerData||[]).map(x=>{
-    var tObj=x._tutorObj||tutorByNome[(x.tutor||'').toLowerCase()]||null;
-    return {'Tutor':x.tutor||'—','Polo':x.polo,'Curso / Lab':tObj?cursoLabel(tObj):catParaCurso(x.categoria||'—'),'Categoria':x.categoria||''};
-  });
-  exportCSV(rows,'sem_gerenciamento_'+(window._semGerFiltro||'').replace(/[^a-z0-9]/gi,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-function openAlunosCursoModal(){
-  // Calcular alunos das práticas enviadas por categoria (não da lotação)
-  const _nc=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;
-  const catMap={};
-  (DB.tutores||[]).forEach(t=>{
-    if(t._anonimo)return;
-    const cat=_nc(t.c||'Outro');
-    if(!catMap[cat])catMap[cat]=0;
-    (t.hist||[]).forEach(h=>{ catMap[cat]+=(h.a||0); });
-  });
-  const cursos=Object.entries(catMap)
-    .map(([cat,alunos])=>({cat,alunos}))
-    .sort((a,b)=>b.alunos-a.alunos);
-  const total=cursos.reduce((s,c)=>s+c.alunos,0);
-
-  document.getElementById('m-title').textContent='Alunos por Categoria (Práticas)';
-  document.getElementById('m-sub').textContent=fmtNum(total)+' alunos nas práticas enviadas';
-  if(!cursos.length){
-    document.getElementById('m-body').innerHTML='<div style="color:var(--muted);text-align:center;padding:20px">Sem dados de práticas</div>';
-    document.getElementById('modal-overlay').classList.add('show');return;
-  }
-  const max=cursos[0].alunos||1;
-  document.getElementById('m-body').innerHTML=`
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr>
-        <th style="padding:8px 12px;text-align:left;font-weight:700;border-bottom:2px solid var(--border)">Categoria</th>
-        <th style="padding:8px 12px;text-align:left;font-weight:700;border-bottom:2px solid var(--border)">Distribuição</th>
-        <th style="padding:8px 12px;text-align:right;font-weight:700;border-bottom:2px solid var(--border)">Alunos</th>
-      </tr></thead>
-      <tbody>
-        ${cursos.map((c,i)=>`
-          <tr style="background:${i%2?'var(--bg)':'var(--surface)'}">
-            <td style="padding:10px 12px;font-weight:600">${c.cat}</td>
-            <td style="padding:10px 12px">
-              <div style="background:var(--border);border-radius:4px;height:8px;width:180px">
-                <div style="background:var(--teal);border-radius:4px;height:8px;width:${Math.round(c.alunos/max*180)}px"></div>
-              </div>
-            </td>
-            <td style="padding:10px 12px;text-align:right;font-weight:700">${fmtNum(c.alunos)}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
-  document.getElementById('modal-overlay').classList.add('show');
-}
-function sortTable(tbodyId,col,tipo){var key=tbodyId+col;var asc=_sortState[key]!==true;_sortState[key]=asc;document.querySelectorAll('[data-sort-table="'+tbodyId+'"] .sort-ind').forEach(function(el){el.textContent='';});var thAtivo=document.querySelector('[data-sort-table="'+tbodyId+'"][data-sort-col="'+col+'"] .sort-ind');if(thAtivo)thAtivo.textContent=asc?' ▲':' ▼';var tbody=document.getElementById(tbodyId);if(!tbody)return;var dataAttr='data-v'+col;var rows=Array.from(tbody.querySelectorAll('tr['+dataAttr+']'));if(!rows.length)rows=Array.from(tbody.querySelectorAll('tr.sort-row'));if(!rows.length)return;rows.sort(function(a,b){var va=a.getAttribute(dataAttr)||'';var vb=b.getAttribute(dataAttr)||'';if(tipo==='num')return asc?parseFloat(va||0)-parseFloat(vb||0):parseFloat(vb||0)-parseFloat(va||0);return asc?va.localeCompare(vb,'pt'):vb.localeCompare(va,'pt');});rows.forEach(function(r){tbody.appendChild(r);});}
-document.addEventListener('click',function(e){var btn=e.target.closest('.btn-expand');if(!btn)return;var grp=btn.dataset.grp;if(!grp)return;var row=btn.closest('tr');if(!row)return;if(grp.startsWith('cg'))toggleContrGrp(row,grp);else if(grp.startsWith('dg'))toggleDetGrp(row,grp);});
-
-// ── MAPEAMENTOS ───────────────────────────────────────────────────────────────
-// PATCH 28: apenas ENGMAKER e Química e Física / Agronomia têm Ordem 5 — todas
-// as outras categorias (ENF-INS, BIO-FAR, Multi III, NUTRI) vão só até Ordem 4.
-// Usado pra restringir quais ordens aparecem no detalhamento de pendências do
-// tutor (ver bug: prática de Instrumentação Cirúrgica "pendente em Ordem 5"
-// pra tutora de Enfermagem, que nem tem Ordem 5 — a causa era o corte
-// aritmético de openTutorModal() considerar sempre as 5 ordens pra qualquer
-// categoria, mesmo pra quem só tem 4).
-var _CAT_COM_O5 = ['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];
-function _ordensParaCategoria(cat){
-  var temO5 = _CAT_COM_O5.some(function(c){ return (cat||'').toUpperCase().includes(c); });
-  return temO5 ? ['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'] : ['Ordem 1','Ordem 2','Ordem 3','Ordem 4'];
-}
-var CAT_CURSO={'ENF-INS (Multidisciplinar II)':'Enfermagem e Instrumentação Cirúrgica','BIO-FAR (Multidisciplinar I)':'Biomedicina e Farmácia','BIO-FISIO-EST-TO (Multidisciplinar III)':'Fisioterapia, T.Ocupacional e Estética','QUÍMICA E FÍSICA':'Química e Física / Agronomia','ENGMAKER':'Engenharias e Licenciaturas','NUTRI (Multidisciplinar IV)':'Nutrição'};
-function catParaCurso(cat){if(!cat)return cat;for(var k in CAT_CURSO){if(cat.toUpperCase().includes(k.split('(')[0].trim().toUpperCase()))return CAT_CURSO[k];}return cat;}
-// PATCH 19: exibe o curso específico (código do CONTROLE) em vez da categoria ampla
-// nos contextos onde um polo tem múltiplos cursos compartilhando o mesmo laboratório
-const _CURSOS_LABEL = {
-  'BFI':'Fisioterapia','BTO':'Terapia Ocupacional','COS-TIP':'Estética e Cosmética',
-  'TIP-COS':'Estética e Cosmética','BFR':'Biomedicina e Farmácia','NTR':'Nutrição',
-  'EMF-ISN':'Enfermagem e Instrumentação','ENF':'Enfermagem',
-  'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI':'Engenharias e Licenciaturas',
-};
-function cursoLabel(t){
-  var cod = (t.cursos||'').trim();
-  if(!cod) return catParaCurso(t.c||'—');
-  // Múltiplos cursos (ex: "ENGMAKER+QUÍMICA E FÍSICA") — mostra ambos
-  if(cod.includes('+')) return cod.split('+').map(c=>_CURSOS_LABEL[c.trim()]||c.trim()).join(' + ');
-  return _CURSOS_LABEL[cod] || catParaCurso(t.c||cod);
-}
-var CAT_COLORS={'ENF-INS (Multidisciplinar II)':'#2196F3','BIO-FAR (Multidisciplinar I)':'#4CAF50','BIO-FISIO-EST-TO (Multidisciplinar III)':'#FF9800','QUÍMICA E FÍSICA':'#9C27B0','ENGMAKER':'#F44336','NUTRI (Multidisciplinar IV)':'#00BCD4'};
-function getCatColor(cat){if(!cat)return 'var(--green)';for(var k in CAT_COLORS){if(cat.toLowerCase().includes(k.toLowerCase().split('(')[0].trim().toLowerCase()))return CAT_COLORS[k];}return 'var(--teal)';}
-
-
-// ── ANÁLISE DE AGENDAS (seção própria) ─────────────────────────────────────────
-function openCategoriaHorariosModal(categoria){
-  const ofertas=_getOfertasAgenda().filter(o=>o.categoria===categoria);
-  const porHorario={};
-  ofertas.forEach(o=>{
-    const h=o.hr_agenda||'(sem horário registrado)';
-    const turno=o.turno||'—';
-    const key=turno+'|||'+h;
-    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,mat:0,agend:0};
-    const p=porHorario[key];
-    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
-  });
-  // Ordena por turno (ordem cronológica do dia) e depois por horário dentro do turno
-  const _turnoOrdem={'Manhã':0,'Tarde':1,'Noite':2,'Madrugada':3};
-  const rows=Object.values(porHorario).sort((a,b)=>{
-    const ta=_turnoOrdem[a.turno]??9, tb=_turnoOrdem[b.turno]??9;
-    if(ta!==tb) return ta-tb;
-    return a.horario.localeCompare(b.horario,'pt-BR',{numeric:true});
-  });
-  const max=Math.max(...rows.map(r=>r.qtd),1);
-  document.getElementById('m-title').textContent='Horários — '+catParaCurso(categoria);
-  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste lab/curso · horários agrupados por turno`;
-  let html='';
-  if(rows.length){
-    let turnoAtual=null;
-    rows.forEach(r=>{
-      if(r.turno!==turnoAtual){
-        turnoAtual=r.turno;
-        const corTurno=(turnoAtual==='Madrugada')?'var(--red)':'var(--teal)';
-        html+=`<div class="sec-label" style="color:${corTurno}">${esc(turnoAtual)}</div>`;
-      }
-      const eng=r.mat?Math.round(r.agend/r.mat*100):0;
-      const w=Math.round(r.qtd/max*100);
-      const cor=pctColor(eng);
-      html+=`<div style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px">
-          <strong>${esc(r.horario)}</strong>
-          <span style="color:var(--muted)">${fmtNum(r.qtd)} gerenciamento${r.qtd!==1?'s':''}</span>
-        </div>
-        <div style="height:14px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px">
-          <div style="height:100%;width:${w}%;background:var(--teal);border-radius:4px"></div>
-        </div>
-        <div style="font-size:11px;color:var(--muted)">${fmtNum(r.agend)} agendados de ${fmtNum(r.mat)} matriculados — <span style="color:${cor};font-weight:700">${eng}% de engajamento</span></div>
-      </div>`;
-    });
-  }else{
-    html='<div style="color:var(--muted);text-align:center;padding:24px">Sem ofertas registradas para este lab/curso.</div>';
-  }
-  document.getElementById('m-body').innerHTML=html;
-  document.getElementById('modal-overlay').classList.add('show');
-}
-function openDiaSemanaModal(dia){
-  // PATCH 80: usa o recorte FILTRADO atual (polo/tutor do "Ver 1 por 1"), não
-  // todos os dados de novo — antes, clicar num dia sempre mostrava TODOS os
-  // agendamentos, mesmo com um polo/tutor específico selecionado na tela.
-  const ofertas=(window._aeOfertasFiltradas||_getOfertasAgenda()).filter(o=>o.dia_semana===dia);
-  const porHorario={};
-  ofertas.forEach(o=>{
-    const h=o.hr_agenda||'(sem horário registrado)';
-    const turno=o.turno||'—';
-    const key=turno+'|||'+h;
-    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,mat:0,agend:0};
-    const p=porHorario[key];
-    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
-  });
-  const _turnoOrdem={'Manhã':0,'Tarde':1,'Noite':2,'Madrugada':3};
-  const rows=Object.values(porHorario).sort((a,b)=>{
-    const ta=_turnoOrdem[a.turno]??9, tb=_turnoOrdem[b.turno]??9;
-    if(ta!==tb) return ta-tb;
-    return a.horario.localeCompare(b.horario,'pt-BR',{numeric:true});
-  });
-  document.getElementById('m-title').textContent=dia;
-  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} gerenciamentos neste dia — comparativo entre horários dentro do mesmo turno`;
-  let html='';
-  if(rows.length){
-    // Agrupar por turno pra comparar 1º x 2º horário lado a lado dentro do mesmo turno
-    const porTurno={};
-    rows.forEach(r=>{ (porTurno[r.turno]=porTurno[r.turno]||[]).push(r); });
-    Object.keys(porTurno).sort((a,b)=>(_turnoOrdem[a]??9)-(_turnoOrdem[b]??9)).forEach(turno=>{
-      const slots=porTurno[turno];
-      const corTurno=(turno==='Madrugada')?'var(--red)':'var(--teal)';
-      html+=`<div class="sec-label" style="color:${corTurno}">${esc(turno)}</div>`;
-      const maxQtd=Math.max(...slots.map(s=>s.qtd),1);
-      // Alerta de gap entre 1º e 2º horário do mesmo turno (o que o Anderson quer ver)
-      if(slots.length>=2){
-        const maiorQtd=Math.max(...slots.map(s=>s.qtd));
-        const menorQtd=Math.min(...slots.map(s=>s.qtd));
-        if(maiorQtd>0 && (maiorQtd-menorQtd)/maiorQtd>=0.3){
-          const gapPct=Math.round((maiorQtd-menorQtd)/maiorQtd*100);
-          html+=`<div style="background:var(--yellow-dim);border-left:3px solid var(--yellow-d);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px">
-            ⚠ Gap de ${gapPct}% entre o horário mais e o menos gerenciado deste turno — vale investigar se o tutor está deixando de gerenciar um dos dois horários.
-          </div>`;
-        }
-      }
-      slots.forEach((r,i)=>{
-        const eng=r.mat?Math.round(r.agend/r.mat*100):0;
-        const w=Math.round(r.qtd/maxQtd*100);
-        const cor=pctColor(eng);
-        const ordinal=slots.length>1?`${i+1}º horário — `:'';
-        html+=`<div style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px">
-            <strong>${ordinal}${esc(r.horario)}</strong>
-            <span style="color:var(--muted)">${fmtNum(r.qtd)} gerenciamento${r.qtd!==1?'s':''}</span>
-          </div>
-          <div style="height:14px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px">
-            <div style="height:100%;width:${w}%;background:var(--teal);border-radius:4px"></div>
-          </div>
-          <div style="font-size:11px;color:var(--muted)">${fmtNum(r.agend)} agendados de ${fmtNum(r.mat)} matriculados — <span style="color:${cor};font-weight:700">${eng}% de engajamento</span></div>
-        </div>`;
-      });
-    });
-  }else{
-    html='<div style="color:var(--muted);text-align:center;padding:24px">Sem gerenciamentos registrados para este dia.</div>';
-  }
-  document.getElementById('m-body').innerHTML=html;
-  document.getElementById('modal-overlay').classList.add('show');
-}
-function openTurnoModal(turno){
-  // PATCH 80: mesma correção do openDiaSemanaModal — respeita o filtro de
-  // polo/tutor ativo em vez de sempre buscar tudo de novo.
-  const ofertas=(window._aeOfertasFiltradas||_getOfertasAgenda()).filter(o=>o.turno===turno);
-  const porHorario={};
-  ofertas.forEach(o=>{
-    const h=o.hr_agenda||'(sem horário registrado)';
-    if(!porHorario[h]) porHorario[h]={horario:h,qtd:0,mat:0,agend:0};
-    const p=porHorario[h];
-    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
-  });
-  // Ordena cronologicamente pelo horário de início — "1º horário", "2º horário" etc.
-  const rows=Object.values(porHorario).sort((a,b)=>a.horario.localeCompare(b.horario,'pt-BR',{numeric:true}));
-  const max=Math.max(...rows.map(r=>r.qtd),1);
-  document.getElementById('m-title').textContent='Turno: '+turno;
-  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste turno · horários ordenados cronologicamente`;
-  let html='';
-  if(rows.length){
-    html+='<div class="sec-label">Distribuição por horário específico</div>';
-    rows.forEach((r,i)=>{
-      const eng=r.mat?Math.round(r.agend/r.mat*100):0;
-      const w=Math.round(r.qtd/max*100);
-      const cor=pctColor(eng);
-      const label=rows.length>1?`${i+1}º horário — ${esc(r.horario)}`:esc(r.horario);
-      html+=`<div style="margin-bottom:14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px">
-          <strong>${label}</strong>
-          <span style="color:var(--muted)">${fmtNum(r.qtd)} gerenciamento${r.qtd!==1?'s':''}</span>
-        </div>
-        <div style="height:14px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:6px">
-          <div style="height:100%;width:${w}%;background:var(--teal);border-radius:4px"></div>
-        </div>
-        <div style="font-size:11px;color:var(--muted)">${fmtNum(r.agend)} agendados de ${fmtNum(r.mat)} matriculados — <span style="color:${cor};font-weight:700">${eng}% de engajamento</span></div>
-      </div>`;
-    });
-  }else{
-    html='<div style="color:var(--muted);text-align:center;padding:24px">Sem ofertas registradas para este turno.</div>';
-  }
-  document.getElementById('m-body').innerHTML=html;
-  document.getElementById('modal-overlay').classList.add('show');
-}
-function _getOfertasAgenda(){
-  const src = (typeof GER_DB!=='undefined' && GER_DB) ? GER_DB : DB;
-  return (src.ger_ofertas||[]).filter(o=>o.tem_agenda);
-}
-const _DIAS_SEMANA_ORDEM=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-const _TURNOS_ORDEM=['Manhã','Tarde','Noite','Madrugada'];
-function _dedupAlunos(ofertas, campo){
-  // PATCH 48: mesma regra do PATCH 38 (backend) — cada prática de um mesmo
-  // polo+categoria repete o valor de ALUNOS_MATRICULADOS/ALUNOS_AGENDADOS da
-  // origem, então somar linha a linha infla o total (o card "Alunos
-  // Matriculados" desta página mostrava 42.288 — o mesmo número inflado que já
-  // tinha sido corrigido em outros lugares do dashboard — enquanto a "Taxa de
-  // Engajamento" logo abaixo, calculada só sobre o subconjunto com agenda,
-  // mostrava 13.169: dois números MUITO diferentes na mesma tela porque nenhum
-  // dos dois deduplicava, e cada um somava um subconjunto de linhas distinto).
-  // Inclui o._semOrigem na chave quando presente (visão "Ambos") — sem isso,
-  // uma mesma combinação polo+categoria em 2026/1 E 2026/2 (matrículas
-  // DIFERENTES e legítimas em cada semestre) colapsaria pro maior dos dois
-  // valores em vez de somar os dois.
-  var porGrupo={};
-  ofertas.forEach(function(o){
-    var k=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
-    var v=o[campo]||0;
-    if(!(k in porGrupo) || v>porGrupo[k]) porGrupo[k]=v;
-  });
-  return Object.values(porGrupo).reduce(function(s,v){return s+v;},0);
-}
-function _renderAgendasKpisDiasTurnos(ofertas){
-  // PATCH 78: extraído de renderAgendasEstudo() pra poder ser chamado de novo
-  // com um subconjunto filtrado (1 polo ou 1 tutor por vez), sem duplicar a
-  // lógica nem perder o comportamento agregado de sempre (que continua sendo
-  // o padrão — só muda quando alguém escolhe um filtro específico).
-  // PATCH 80: guarda o recorte que está sendo mostrado AGORA — os modais de
-  // detalhe por dia/turno (openDiaSemanaModal/openTurnoModal) leem daqui, pra
-  // não ignorar o filtro de polo/tutor quando alguém clica pra ver o detalhe.
-  window._aeOfertasFiltradas=ofertas;
-  const total=ofertas.length;
-  const incomuns=ofertas.filter(o=>o.horario_incomum);
-  const semAluno=ofertas.filter(o=>o.sem_alunos);
-  const totMat=_dedupAlunos(ofertas,'alunos_mat');
-  const totAgend=_dedupAlunos(ofertas,'alunos_agend');
-  const engajamento=totMat?Math.round(totAgend/totMat*1000)/10:0;
-
-  document.getElementById('ae-kpis').innerHTML=`
-    <div class="kpi kpi-green"><div class="kpi-label">Ofertas com Agenda</div><div class="kpi-value">${fmtNum(total)}</div></div>
-    <div class="kpi kpi-yellow" title="Domingo ou madrugada (00h-06h)"><div class="kpi-label">Horários Incomuns</div><div class="kpi-value">${fmtNum(incomuns.length)}</div><div class="kpi-detail">${total?Math.round(incomuns.length/total*100):0}% do total</div></div>
-    <div class="kpi kpi-red" title="Gerenciado mas 0 alunos agendados"><div class="kpi-label">Sem Aluno Agendado</div><div class="kpi-value">${fmtNum(semAluno.length)}</div><div class="kpi-detail">${total?Math.round(semAluno.length/total*100):0}% do total</div></div>
-    <div class="kpi kpi-teal" title="Diferente do card 'Agendamentos' lá em cima: ali é sobre TODAS as ofertas com tutor (tenham agenda ou não); aqui é só dentro das ofertas que JÁ têm uma agenda registrada — mede quantos dos matriculados dessas ofertas específicas conseguiram um horário individual."><div class="kpi-label">Taxa de Preenchimento ⓘ<br><span style="font-size:9px;font-weight:400;color:var(--muted)">dentro das ofertas com agenda</span></div><div class="kpi-value">${engajamento}%</div><div class="kpi-detail">${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados (só ofertas com agenda)</div></div>`;
-
-  // Distribuição por dia da semana
-  const porDia={}; ofertas.forEach(o=>{if(o.dia_semana){porDia[o.dia_semana]=(porDia[o.dia_semana]||0)+1;}});
-  const maxDia=Math.max(...Object.values(porDia),1);
-  document.getElementById('ae-dias').innerHTML=_DIAS_SEMANA_ORDEM.map(d=>{
-    const v=porDia[d]||0; const w=Math.round(v/maxDia*100);
-    const cor=(d==='Domingo')?'var(--red)':'var(--teal)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openDiaSemanaModal('${d}')" title="Clique para ver o comparativo 1º x 2º horário desse dia">
-      <span style="font-size:11px;min-width:56px;font-weight:600">${d}</span>
-      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
-      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
-      <span style="font-size:11px;color:var(--muted)">↗</span>
-    </div>`;
-  }).join('');
-
-  // Distribuição por turno
-  const porTurno={}; ofertas.forEach(o=>{if(o.turno){porTurno[o.turno]=(porTurno[o.turno]||0)+1;}});
-  const maxTurno=Math.max(...Object.values(porTurno),1);
-  document.getElementById('ae-turnos').innerHTML=_TURNOS_ORDEM.map(t=>{
-    const v=porTurno[t]||0; const w=Math.round(v/maxTurno*100);
-    const cor=(t==='Madrugada')?'var(--red)':'var(--teal)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer" onclick="openTurnoModal('${t}')" title="Clique para ver os horários específicos deste turno">
-      <span style="font-size:11px;min-width:70px;font-weight:600">${t}</span>
-      <div style="flex:1;background:var(--bg);border-radius:4px;height:16px;overflow:hidden"><div style="height:100%;width:${w}%;background:${cor};border-radius:4px"></div></div>
-      <span style="font-size:11px;font-weight:700;min-width:34px;text-align:right">${v}</span>
-      <span style="font-size:11px;color:var(--muted)">↗</span>
-    </div>`;
-  }).join('');
-}
-function _popularFiltroTutor(){
-  // PATCH 79: lista de tutores do seletor "ver 1 por 1" passa a depender do
-  // polo escolhido — só mostra quem realmente atua naquele polo. Se o tutor
-  // que estava selecionado não existir mais nessa lista (porque o polo mudou
-  // pra um onde ele não atua), volta pra "Todos os tutores" em vez de manter
-  // uma seleção que não faz mais sentido.
-  const selPolo=document.getElementById('ae-filtro-polo');
-  const selTutor=document.getElementById('ae-filtro-tutor');
-  if(!selTutor) return;
-  const poloAtual=(selPolo||{}).value||'';
-  const prevTutor=selTutor.value;
-  const base=window._aeOfertasCompletas||[];
-  const escopo=poloAtual?base.filter(o=>o.polo===poloAtual):base;
-  const tutores=[...new Set(escopo.map(o=>o.tutor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
-  while(selTutor.options.length>1) selTutor.remove(1);
-  tutores.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selTutor.appendChild(o);});
-  selTutor.value=[...selTutor.options].some(o=>o.value===prevTutor)?prevTutor:'';
-}
-function filterAgendasPoloTutor(){
-  // PATCH 78/79: "ver 1 por 1" — filtra os KPIs + os dois gráficos por polo
-  // e/ou tutor escolhidos, sem mexer no resto da página (categoria, incomuns).
-  // Com os dois seletores em "Todos", volta a ser exatamente o agregado de
-  // sempre — nada muda pra quem não usa o filtro. Repopula o seletor de tutor
-  // ANTES de ler o valor dele, pra já refletir o polo recém-escolhido.
-  _popularFiltroTutor();
-  const polo=(document.getElementById('ae-filtro-polo')||{}).value||'';
-  const tutor=(document.getElementById('ae-filtro-tutor')||{}).value||'';
-  let ofertas=window._aeOfertasCompletas||[];
-  if(polo) ofertas=ofertas.filter(o=>o.polo===polo);
-  if(tutor) ofertas=ofertas.filter(o=>o.tutor===tutor);
-  _renderAgendasKpisDiasTurnos(ofertas);
-}
-function renderAgendasEstudo(){
-  // PATCH 34: resumo "Gerenciamento de Ofertas" pedido pelo Anderson/Leo — usa
-  // TODAS as ofertas do semestre selecionado (com e sem agenda, com e sem tutor),
-  // não só as que já têm data de gerenciamento registrada.
-  const todasOfertas = (typeof GER_DB!=='undefined' && GER_DB ? GER_DB : DB).ger_ofertas || [];
-  const totalDistintas = todasOfertas.length;
-  const comTutor = todasOfertas.filter(o=>o.tem_tutor);
-  const semTutor = todasOfertas.filter(o=>!o.tem_tutor);
-  const geridas = todasOfertas.filter(o=>o.gerenciado);
-  const matTotal = _dedupAlunos(todasOfertas,'alunos_mat');
-  // PATCH 48: "com tutor"/"sem tutor" são conjuntos de PRÁTICAS, mas alunos
-  // matriculados é uma métrica por polo+categoria (não por prática) — um mesmo
-  // polo+categoria pode ter práticas com e sem tutor ao mesmo tempo. Por isso
-  // matComTutor + matSemTutor pode não bater exatamente com matTotal quando
-  // isso acontece; é esperado, não é um novo bug de soma.
-  const matComTutor = _dedupAlunos(comTutor,'alunos_mat');
-  const matSemTutor = _dedupAlunos(semTutor,'alunos_mat');
-  const agendComTutor = _dedupAlunos(comTutor,'alunos_agend');
-
-  const pctGeridas = totalDistintas?Math.round(geridas.length/totalDistintas*1000)/10:0;
-  const pctAgend = matComTutor?Math.round(agendComTutor/matComTutor*1000)/10:0;
-
-  document.getElementById('ae-ofertas-resumo').innerHTML = `
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--muted)">Total de Ofertas Distintas</div>
-      <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(totalDistintas)}</div>
-    </div>
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--muted)">Ofertas Disponíveis (com e sem tutor)</div>
-      <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(totalDistintas)}</div>
-      <div style="font-size:10px;color:var(--muted)">${fmtNum(comTutor.length)} com tutor · ${fmtNum(semTutor.length)} sem tutor</div>
-    </div>
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--muted)">Ofertas Gerenciadas</div>
-      <div style="font-size:22px;font-weight:800;color:var(--ok)">${fmtNum(geridas.length)} <span style="font-size:13px;font-weight:700">(${pctGeridas}%)</span></div>
-      <div style="font-size:10px;color:var(--muted)">do total disponível</div>
-    </div>
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--muted)">Alunos Matriculados (com e sem tutor)</div>
-      <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(matTotal)}</div>
-      <div style="font-size:10px;color:var(--muted)">${fmtNum(matComTutor)} com tutor · ${fmtNum(matSemTutor)} sem tutor</div>
-    </div>
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px" title="Todas as ofertas com tutor, tenham agenda registrada ou não — visão mais ampla que a 'Taxa de Preenchimento' mais abaixo, que olha só dentro das que já têm agenda">
-      <div style="font-size:11px;color:var(--muted)">Agendamentos ⓘ</div>
-      <div style="font-size:22px;font-weight:800;color:var(--teal)">${fmtNum(agendComTutor)} <span style="font-size:13px;font-weight:700">(${pctAgend}%)</span></div>
-      <div style="font-size:10px;color:var(--muted)">do total matriculado com tutor (todas as ofertas)</div>
-    </div>`;
-  // PATCH 49: removido o card "Presença Lançada" — não é só uma proxy imprecisa,
-  // é uma cópia GARANTIDA de "Agendamentos": alunos_agend só é >0 quando a oferta
-  // tem agenda, e "gerenciado" = tem_tutor & tem_agenda, então o valor máximo por
-  // polo+categoria dentro de "com tutor" é sempre o mesmo valor máximo dentro de
-  // "geridas" — as duas contas SEMPRE batem exatamente, com qualquer dado. Mostrar
-  // isso como um segundo número (com um ⚠ do lado, sugerindo que é outra coisa)
-  // é o que estava causando a confusão do Leo. Quando existir um campo de presença
-  // de verdade na origem (confirmar com o Anderson), dá pra trazer o card de volta
-  // com uma conta que realmente meça algo diferente de Agendamentos.
-
-  const ofertas=_getOfertasAgenda();
-  const total=ofertas.length;
-  const incomuns=ofertas.filter(o=>o.horario_incomum);
-  const semAluno=ofertas.filter(o=>o.sem_alunos);
-
-  document.getElementById('ae-sub').textContent=`${fmtNum(total)} ofertas com agenda registrada · ${fmtNum(incomuns.length)} em horário incomum · ${fmtNum(semAluno.length)} sem nenhum aluno agendado`;
-
-  // PATCH 78/79: popula os seletores de "ver 1 por 1". O de TUTOR agora depende
-  // do polo escolhido — se um polo estiver selecionado, só lista os tutores
-  // daquele polo (bem mais fácil de achar o tutor certo do que rolar a lista
-  // inteira). Com "Todos os polos", volta a listar todo mundo, como antes.
-  window._aeOfertasCompletas=ofertas;
-  (function(){
-    const selPolo=document.getElementById('ae-filtro-polo');
-    if(!selPolo) return;
-    const prevPolo=selPolo.value;
-    const polos=[...new Set(ofertas.map(o=>o.polo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
-    while(selPolo.options.length>1) selPolo.remove(1);
-    polos.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;selPolo.appendChild(o);});
-    if([...selPolo.options].some(o=>o.value===prevPolo)) selPolo.value=prevPolo;
-  })();
-  _popularFiltroTutor();
-  _renderAgendasKpisDiasTurnos(ofertas);
-
-  window._aeIncomunsData=incomuns;
-  filterAgendasIncomuns(document.getElementById('ae-incomuns-search')?.value||'');
-
-  // Quebra por Laboratório/Curso (categoria)
-  const porCat={};
-  ofertas.forEach(o=>{
-    const cat=o.categoria||'—';
-    if(!porCat[cat]) porCat[cat]={cat, tot:0, inc:0, sa:0, mat:0, agend:0};
-    const c=porCat[cat];
-    c.tot++; if(o.horario_incomum) c.inc++; if(o.sem_alunos) c.sa++;
-    c.mat+=(o.alunos_mat||0); c.agend+=(o.alunos_agend||0);
-  });
-  const catRows=Object.values(porCat).sort((a,b)=>b.tot-a.tot);
-  document.getElementById('ae-cat-tbody').innerHTML=catRows.map(c=>{
-    const eng=c.mat?Math.round(c.agend/c.mat*100):0;
-    return `<tr data-vcat="${esc(catParaCurso(c.cat))}" data-vtot="${c.tot}" data-vinc="${c.inc}" data-vsa="${c.sa}" data-veng="${eng}" style="cursor:pointer" onclick="openCategoriaHorariosModal('${esc(c.cat).replace(/'/g,"\\'")}')" title="Clique para ver os principais horários deste lab/curso">
-      <td style="font-size:12px;font-weight:600">${esc(catParaCurso(c.cat))}</td>
-      <td style="text-align:right">${fmtNum(c.tot)}</td>
-      <td style="text-align:right;color:${c.inc>0?'var(--yellow-d)':'var(--muted)'}">${fmtNum(c.inc)}</td>
-      <td style="text-align:right;color:${c.sa>0?'var(--red)':'var(--muted)'}">${fmtNum(c.sa)}</td>
-      <td>${progCell(eng)} <span style="font-size:11px;color:var(--muted)">↗</span></td>
-    </tr>`;
-  }).join('');
-  if(!catRows.length) document.getElementById('ae-cat-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
-
-  // PATCH 119 (replicado do Vinci principal): "Matriculados × Agendados por
-  // Prática". IMPORTANTE: alunos_mat/alunos_agend vêm por TURMA (Polo+Categoria)
-  // no GIOCONDA, não por prática — cada prática da mesma turma repete o mesmo
-  // valor. Ver comentário completo no template_dashboard.html.
-  window._aePraticaData = ofertas.map(o=>({
-    pratica: o.pratica||'—', polo: o.polo||'—', categoria: catParaCurso(o.categoria||''),
-    mat: o.alunos_mat||0, agend: o.alunos_agend||0
-  }));
-  filterAgendasPratica(document.getElementById('ae-pratica-search')?.value||'');
-
-  // Agrupar "sem aluno" por tutor+polo, achando o dia/turno mais comum de cada um
-  const grpMap={};
-  semAluno.forEach(o=>{
-    const tutorKey=(typeof _normTutorKey==='function')?_normTutorKey(o.tutor):(o.tutor||'').toLowerCase();
-    const key=tutorKey+'|||'+(o.polo||'');
-    if(!grpMap[key]) grpMap[key]={tutor:o.tutor||'—',polo:o.polo||'—',categoria:o.categoria||'',qtd:0,diasTurnos:{}};
-    grpMap[key].qtd++;
-    const dt=(o.dia_semana||'?')+' '+(o.turno||'?');
-    grpMap[key].diasTurnos[dt]=(grpMap[key].diasTurnos[dt]||0)+1;
-  });
-  window._aeSemAlunoData=Object.values(grpMap).map(g=>{
-    const top=Object.entries(g.diasTurnos).sort((a,b)=>b[1]-a[1])[0];
-    g.dias_turnos_top=top?`${top[0]} (${top[1]}x)`:'—';
-    return g;
-  });
-  filterAgendasSemAluno(document.getElementById('ae-semaluno-search')?.value||'');
-}
-function filterAgendasIncomuns(q){
-  q=(q||'').toLowerCase().trim();
-  let d=window._aeIncomunsData||[];
-  if(q) d=d.filter(o=>(o.polo+(o.tutor||'')).toLowerCase().includes(q));
-  const tbody=document.getElementById('ae-incomuns-tbody');
-  tbody.innerHTML=d.map(o=>{
-    const cor=o.dia_semana==='Domingo'?'var(--red)':'var(--yellow-d)';
-    return `<tr>
-      <td style="font-size:11px">${esc(o.polo)}</td>
-      <td style="font-size:11px">${o.tutor?esc(formatTutorShort(o.tutor)):'<span style="color:var(--muted)">Sem tutor</span>'}</td>
-      <td style="font-size:11px;color:var(--muted)">${esc(catParaCurso(o.categoria))}</td>
-      <td><span class="badge" style="background:${cor}20;color:${cor}">${esc(o.dia_semana)}</span></td>
-      <td style="font-size:11px">${esc(o.turno)}</td>
-      <td style="font-size:11px">${o.dt_agenda?o.dt_agenda.split('-').reverse().join('/'):'—'}</td>
-      <td style="font-size:11px">${esc(o.hr_agenda||'—')}</td>
-    </tr>`;
-  }).join('');
-  document.getElementById('ae-incomuns-tbl-count').textContent=d.length+' ocorrência'+(d.length!==1?'s':'');
-  document.getElementById('ae-incomuns-count').textContent=(window._aeIncomunsData||[]).length+' no total';
-  if(!d.length) tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ok)">✓ Nenhum horário incomum encontrado.</td></tr>';
-}
-function filterAgendasSemAluno(q){
-  q=(q||'').toLowerCase().trim();
-  let d=window._aeSemAlunoData||[];
-  if(q) d=d.filter(g=>(g.polo+g.tutor).toLowerCase().includes(q));
-  d=[...d].sort((a,b)=>b.qtd-a.qtd);
-  const tbody=document.getElementById('ae-semaluno-tbody');
-  tbody.innerHTML=d.map(g=>`<tr data-vpolo="${esc(g.polo)}" data-vtutor="${esc(g.tutor)}" data-vqtd="${g.qtd}">
-    <td style="font-size:11px">${esc(g.polo)}</td>
-    <td style="font-size:11px">${esc(formatTutorShort(g.tutor))}</td>
-    <td style="text-align:right;font-weight:700;color:var(--red)">${g.qtd}</td>
-    <td style="font-size:11px;color:var(--muted)">${esc(g.dias_turnos_top)}</td>
-  </tr>`).join('');
-  document.getElementById('ae-semaluno-tbl-count').textContent=d.length+' tutor'+(d.length!==1?'es':'');
-  document.getElementById('ae-semaluno-count').textContent=(window._aeSemAlunoData||[]).reduce((s,g)=>s+g.qtd,0)+' sessões no total';
-  if(!d.length) tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ok)">✓ Nenhum gerenciamento sem aluno encontrado.</td></tr>';
-}
-function filterAgendasPratica(q){
-  q=(q||'').toLowerCase().trim();
-  let d=window._aePraticaData||[];
-  if(q) d=d.filter(p=>(p.pratica+p.polo+p.categoria).toLowerCase().includes(q));
-  const tbody=document.getElementById('ae-pratica-tbody');
-  if(!tbody) return;
-  tbody.innerHTML=d.map(p=>{
-    const eng=p.mat?Math.round(p.agend/p.mat*100):0;
-    return `<tr data-vpratica="${esc(p.pratica)}" data-vpolo="${esc(p.polo)}" data-vcat="${esc(p.categoria)}" data-vmat="${p.mat}" data-vagend="${p.agend}" data-vpct="${eng}">
-      <td style="font-size:11px;max-width:280px">${esc(p.pratica)}</td>
-      <td style="font-size:11px">${esc(p.polo)}</td>
-      <td style="font-size:11px;color:var(--muted)">${esc(p.categoria)}</td>
-      <td style="text-align:right;font-weight:700">${fmtNum(p.mat)}</td>
-      <td style="text-align:right;font-weight:700;color:var(--teal)">${fmtNum(p.agend)}</td>
-      <td>${progCell(eng)}</td>
-    </tr>`;
-  }).join('');
-  document.getElementById('ae-pratica-tbl-count').textContent=d.length+' prática'+(d.length!==1?'s':'');
-  document.getElementById('ae-pratica-count').textContent=(window._aePraticaData||[]).length+' no total';
-  if(!d.length) tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhum resultado encontrado.</td></tr>';
-}
-function exportAgendasPratica(){
-  exportCSV((window._aePraticaData||[]).map(p=>({'Prática':p.pratica,'Polo':p.polo,'Categoria':p.categoria,'Matriculados (turma)':p.mat,'Agendados (turma)':p.agend})), 'matriculados_agendados_por_pratica_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-function exportAgendasIncomuns(){
-  exportCSV((window._aeIncomunsData||[]).map(o=>({'Polo':o.polo,'Tutor':o.tutor||'—','Curso/Lab':catParaCurso(o.categoria),'Dia':o.dia_semana,'Turno':o.turno,'Data':o.dt_agenda||'—','Horário':o.hr_agenda||'—'})), 'horarios_incomuns_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-function exportAgendasSemAluno(){
-  exportCSV((window._aeSemAlunoData||[]).map(g=>({'Polo':g.polo,'Tutor':g.tutor,'Sessões sem aluno':g.qtd,'Dia/Turno mais usado':g.dias_turnos_top})), 'gerenciamentos_sem_aluno_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-
-// ── VAGAS (RH) ────────────────────────────────────────────────────────────────
-let vagasSortK='prioridade', vagasSortA=true, vagasData=[];
-const _PRIORIDADE_ORDEM = {'Alta':0,'Média':1,'Baixa':2,'Sem Prioridade':3};
-function _getVagas(){ return (DB.vagas||{}).vagas || []; }
-function populateVagasFilters(){
-  const vagas=_getVagas();
-  const contrSel=document.getElementById('vagas-contr-sel');
-  if(contrSel && contrSel.options.length<=1){
-    [...new Set(vagas.map(v=>v.contratacao).filter(Boolean))].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;contrSel.appendChild(o);});
-  }
-  const priorSel=document.getElementById('vagas-prior-sel');
-  if(priorSel && priorSel.options.length<=1){
-    [...new Set(vagas.map(v=>v.prioridade).filter(Boolean))].sort((a,b)=>(_PRIORIDADE_ORDEM[a]??9)-(_PRIORIDADE_ORDEM[b]??9)).forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;priorSel.appendChild(o);});
-  }
-}
-function renderVagasKPIs(){
-  // PATCH 111: versão simplificada -- só os KPIs que fazem sentido pro
-  // coordenador ver (quantos polos sem tutor, com/sem previsão), sem os
-  // indicadores operacionais de RH (prioridade, chamado SYDLE, autorizações).
-  const k=(DB.vagas||{}).kpis||{};
-  document.getElementById('vagas-kpis').innerHTML=`
-    <div class="kpi kpi-red"><div class="kpi-label">Polos sem Tutor</div><div class="kpi-value">${fmtNum(k.total_vagas||0)}</div></div>
-    <div class="kpi kpi-ok"><div class="kpi-label">Já com Previsão de Contratação</div><div class="kpi-value">${fmtNum(k.com_previsao||0)}</div></div>
-    <div class="kpi kpi-yellow"><div class="kpi-label">Ainda sem Previsão</div><div class="kpi-value">${fmtNum(k.sem_previsao||0)}</div></div>`;
-}
-function _renderVagasKPIs_ORIGINAL_NAO_USAR(){
-  const k=(DB.vagas||{}).kpis||{};
-  document.getElementById('vagas-kpis').innerHTML=`
-    <div class="kpi kpi-red"><div class="kpi-label">Total de Vagas</div><div class="kpi-value">${fmtNum(k.total_vagas||0)}</div></div>
-    <div class="kpi kpi-yellow"><div class="kpi-label">Aumento de Quadro</div><div class="kpi-value">${fmtNum(k.aumento_quadro||0)}</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Substituição</div><div class="kpi-value">${fmtNum(k.substituicao||0)}</div></div>
-    <div class="kpi kpi-ok"><div class="kpi-label">Com Previsão</div><div class="kpi-value">${fmtNum(k.com_previsao||0)}</div></div>
-    <div class="kpi kpi-red"><div class="kpi-label">Sem Previsão</div><div class="kpi-value">${fmtNum(k.sem_previsao||0)}</div></div>
-    <div class="kpi kpi-green"><div class="kpi-label">Autorizadas</div><div class="kpi-value">${fmtNum(k.autorizadas||0)}</div><div class="kpi-detail">de ${fmtNum(k.total_vagas||0)}</div></div>
-    <div class="kpi kpi-red"><div class="kpi-label">Prioridade Alta</div><div class="kpi-value">${fmtNum(k.prioridade_alta||0)}</div></div>
-    <div class="kpi kpi-teal"><div class="kpi-label">Com Chamado SYDLE</div><div class="kpi-value">${fmtNum(k.com_chamado_aberto||0)}</div></div>`;
-
-  // Quebra por Laboratório/Curso
-  const vagas=_getVagas();
-  const porCurso={};
-  vagas.forEach(v=>{
-    const curso=v.cursos||'—';
-    if(!porCurso[curso]) porCurso[curso]={curso, tot:0, aum:0, sub:0, cp:0};
-    const c=porCurso[curso];
-    c.tot++;
-    if(v.status==='Aumento de Quadro') c.aum++; else c.sub++;
-    if(v.contratacao.includes('Com previsão')) c.cp++;
-  });
-  const cursoRows=Object.values(porCurso).sort((a,b)=>b.tot-a.tot);
-  const cursoTbody=document.getElementById('vagas-cat-tbody');
-  if(cursoTbody){
-    cursoTbody.innerHTML=cursoRows.map(c=>`<tr data-vcurso="${esc(c.curso)}" data-vtot="${c.tot}" data-vaum="${c.aum}" data-vsub="${c.sub}" data-vcp="${c.cp}">
-      <td style="font-size:12px;font-weight:600">${esc(c.curso)}</td>
-      <td style="text-align:right">${fmtNum(c.tot)}</td>
-      <td style="text-align:right;color:var(--yellow-d)">${fmtNum(c.aum)}</td>
-      <td style="text-align:right;color:var(--teal)">${fmtNum(c.sub)}</td>
-      <td style="text-align:right;color:var(--ok)">${fmtNum(c.cp)}</td>
-    </tr>`).join('');
-    if(!cursoRows.length) cursoTbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
-  }
-}
-function filterVagas(q){
-  q=(q||'').toLowerCase().trim();
-  populateVagasFilters();
-  const st=document.getElementById('vagas-status-sel')?.value||'';
-  const ct=document.getElementById('vagas-contr-sel')?.value||'';
-  const pr=document.getElementById('vagas-prior-sel')?.value||'';
-  let d=_getVagas();
-  if(q) d=d.filter(v=>(v.polo+v.cursos+v.perfil+v.tutor_atual).toLowerCase().includes(q));
-  if(st) d=d.filter(v=>v.status===st);
-  if(ct) d=d.filter(v=>v.contratacao===ct);
-  if(pr) d=d.filter(v=>v.prioridade===pr);
-  vagasData=d;
-  renderVagasTbl(d);
-  renderVagasKPIs();
-}
-function sortVagas(k){ if(vagasSortK===k) vagasSortA=!vagasSortA; else { vagasSortK=k; vagasSortA=true; } filterVagas(document.getElementById('vagas-search')?.value||''); }
-function renderVagasTbl(data){
-  // PATCH 111: versão simplificada pro coordenador -- só "tem tutor ou não" e
-  // a previsão de contratação, sem os detalhes operacionais de chamado/
-  // prioridade que são assunto do RH, não do coordenador.
-  const sorted=[...data].sort((a,b)=>{
-    const va=(a[vagasSortK]||''), vb=(b[vagasSortK]||'');
-    return vagasSortA?String(va).localeCompare(String(vb),'pt-BR'):String(vb).localeCompare(String(va),'pt-BR');
-  });
-  const corContr = c => (c||'').includes('Com previsão') ? 'var(--ok)' : (c||'').includes('Sem previsão') ? 'var(--red)' : 'var(--muted)';
-  document.getElementById('vagas-tbody').innerHTML = sorted.map(v=>`<tr>
-    <td><strong>${esc(v.polo)}</strong></td>
-    <td>${v.status==='Aumento de Quadro' ? '<span class="badge" style="background:var(--red-dim);color:var(--red)">✕ Sem tutor no polo</span>' : '<span class="badge" style="background:var(--yellow-dim);color:var(--yellow-d)">↻ Precisa substituir</span>'}</td>
-    <td style="font-size:12px;font-weight:600;color:${corContr(v.contratacao)}">${esc(v.contratacao||'—')}</td>
-  </tr>`).join('');
-  document.getElementById('vagas-count').textContent = sorted.length+' vaga'+(sorted.length!==1?'s':'');
-  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro — todos os polos do seu curso têm tutor.</td></tr>';
-}
-function _renderVagasTbl_ORIGINAL_NAO_USAR(data){
-  const sorted=[...data].sort((a,b)=>{
-    if(vagasSortK==='prioridade'){ const va=_PRIORIDADE_ORDEM[a.prioridade]??9, vb=_PRIORIDADE_ORDEM[b.prioridade]??9; return vagasSortA?va-vb:vb-va; }
-    const va=(a[vagasSortK]||''), vb=(b[vagasSortK]||'');
-    return vagasSortA?String(va).localeCompare(String(vb),'pt-BR'):String(vb).localeCompare(String(va),'pt-BR');
-  });
-  const corStatus = s => s==='Substituição' ? 'var(--teal)' : 'var(--yellow-d)';
-  const corContr = c => c.includes('Com previsão') ? 'var(--ok)' : c.includes('Sem previsão') ? 'var(--red)' : 'var(--muted)';
-  const corPrior = p => p==='Alta' ? 'var(--red)' : p==='Média' ? 'var(--yellow-d)' : p==='Baixa' ? 'var(--teal)' : 'var(--muted)';
-  document.getElementById('vagas-tbody').innerHTML = sorted.map(v=>`<tr>
-    <td><strong>${esc(v.polo)}</strong></td>
-    <td style="font-size:11px">${esc(v.cursos)}</td>
-    <td style="font-size:11px">${esc(v.perfil)}</td>
-    <td><span class="badge" style="background:${corStatus(v.status)}20;color:${corStatus(v.status)}">${esc(v.status)}</span></td>
-    <td style="font-size:11px;color:${corContr(v.contratacao)}">${esc(v.contratacao)}</td>
-    <td><span class="badge" style="background:${corPrior(v.prioridade)}20;color:${corPrior(v.prioridade)}">${esc(v.prioridade)}</span></td>
-    <td style="font-size:11px">${v.tutor_atual?esc(v.tutor_atual):'<span style="color:var(--muted)">—</span>'}</td>
-    <td style="font-size:11px;color:var(--muted)">${v.chamado_sydle?esc(v.chamado_sydle):'—'}</td>
-  </tr>`).join('');
-  document.getElementById('vagas-count').textContent = sorted.length+' vaga'+(sorted.length!==1?'s':'');
-  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro.</td></tr>';
-}
-function exportVagas(){
-  exportCSV(vagasData.map(v=>({'Polo':v.polo,'Curso':v.cursos,'Perfil':v.perfil,'Status':v.status,'Contratação':v.contratacao,'Prioridade':v.prioridade,'Tutor Atual':v.tutor_atual||'—','CH Semanal':v.ch_semanal||'—','CH Ideal':v.ch_ideal||'—','Chamado SYDLE':v.chamado_sydle||'—','Status Chamado':v.status_chamado||'—'})), 'vagas_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-
-// ── HELPERS AGENDA ────────────────────────────────────────────────────────────
-// PATCH 26: normalização canônica de nome de tutor — usada em TODO agrupamento
-// por tutor no front-end. Sem isso, a mesma pessoa aparece como duas linhas
-// sempre que uma oferta chega do GIOCONDA com o nome nativo (com chapa, ex:
-// "Tatiane da Silva Rodrigues (14288219)") e outra foi preenchida pelo backfill
-// do CONTROLE (sem chapa, capitalização diferente, ex: "Tatiane Da Silva
-// Rodrigues") — casos confirmados com dados reais (Tatiane Rodrigues/Taguatinga
-// e Tatiana Moura/São José dos Campos, ambas com ofertas GIOCONDA em branco
-// backfilladas pelo PATCH 21 do processar.py).
-// PATCH 27: horas administrativas por faixa de CH — CORREÇÃO do PATCH 26.
-// A tabela anterior tinha 20h->4h (20%) baseada numa mensagem de texto do Leo
-// que continha um erro de digitação. A imagem oficial ("Distribuição da CH
-// semanal do Tutor") confirma que TODOS os tiers são exatamente 25%
-// administrativo: 4h->1h, 8h->2h, 12h->3h, 20h->5h (não 4h). Ou seja, o
-// percentual fixo de 25% que já existia no código ANTES do PATCH 26 estava
-// certo o tempo todo — esta tabela só o deixa explícito/auto-documentado.
-var _HORAS_ADMIN_POR_CH = {4:1, 8:2, 12:3, 20:5};
-function _horasAdminPorCH(ch){
-  if(_HORAS_ADMIN_POR_CH.hasOwnProperty(ch)) return _HORAS_ADMIN_POR_CH[ch];
-  return Math.round(ch*0.25*10)/10;
-}
-// PATCH 68: mesma lógica de busca de CH (por nome, com fallback fuzzy) já usada
-// na renderização das células — extraída aqui pra ser reaproveitada também no
-// filtro de status (que precisa saber a capacidade ANTES de decidir quem
-// aparece em Gerenciadas/Não gerenciadas, não só na hora de desenhar a célula).
-function _capOrdemPorNomeTutor(tutorNome){
-  var normT=function(s){var n=(s||'').toLowerCase().split('(')[0].trim();n=n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();return n;};
-  var normFL=function(s){var pts=normT(s).split(' ').filter(Boolean);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:normT(s);};
-  var _tn=normT(tutorNome||'');var _tnFL=normFL(tutorNome||'');
-  // PATCH 99: mesma correção de duas passadas (ver comentário na tabela de
-  // Detalhe) — exato/primeiro+último primeiro, substring só como último recurso.
-  // PATCH 100: mesmas 3 passadas (ver comentário na tabela de Detalhe) —
-  // nome completo exato primeiro, depois primeiro+último, substring por último.
-  var dbTutor=(DB.tutores||[]).find(function(x){
-    return x.n&&tutorNome&&normT(x.n)===_tn;
-  });
-  if(!dbTutor){
-    dbTutor=(DB.tutores||[]).find(function(x){
-      if(!x.n||!tutorNome)return false;
-      var xFL=normFL(x.n);
-      return xFL===_tnFL||xFL===_tn||normT(x.n)===_tnFL;
-    });
-  }
-  if(!dbTutor){
-    dbTutor=(DB.tutores||[]).find(function(x){
-      if(!x.n||!tutorNome)return false;
-      var longNorm=normT(x.n);
-      var shortTokens=_tnFL.split(' ').filter(Boolean);
-      return shortTokens.length>=2&&shortTokens.every(function(tok){return longNorm.indexOf(tok)>=0;});
-    });
-  }
-  var chSemanal=dbTutor&&dbTutor.ch_semanal?dbTutor.ch_semanal:null;
-  var padraoCH=[4,8,12,20,24];
-  var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});
-  var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;
-  return praticasSemana?praticasSemana*4:null;
-}
-function _normTutorKey(nome){
-  if(!nome) return '__SEM_TUTOR__';
-  var s = String(nome).replace(/\s*\(\d+\)\s*$/,'').trim();
-  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  return s.toLowerCase().replace(/\s+/g,' ').trim();
-}
-function formatTutorShort(nome) {
-  var clean = (nome||'').replace(/\s*\(\d+\)\s*$/, '').trim();
-  var p = clean.split(/\s+/).filter(Boolean);
-  if (p.length <= 2) return clean;
-  return p[0] + ' ' + p[p.length - 1];
-}
-var _CAT_ABREV = {
-  // ENF-INS (Multidisciplinar II)
-  'ENF':'ENF', 'INSTRUMENTA':'ENF', 'ENFERMAGEM':'ENF',
-  // BIO-FAR (Multidisciplinar I)
-  'BIO-FAR':'Bio-Far', 'BIOMEDICINA':'Bio-Far', 'FARMÁCIA':'Bio-Far', 'FARMACIA':'Bio-Far',
-  // BIO-FISIO-EST-TO (Multidisciplinar III) — keyword que aparece na categoria do GIOCONDA
-  'MULTIDISCIPLINAR III':'Multi 3', 'BIO-FISIO':'Multi 3',
-  'FISIOTERAPIA':'Fisio',
-  'OCUPACIONAL':'T.Oc',   // Terapia Ocupacional
-  'ESTÉTICA':'Est', 'ESTETICA':'Est',
-  // NUTRI (Multidisciplinar IV)
-  'NUTRIÇÃO':'Nutri', 'NUTRICAO':'Nutri', 'NUTRI':'Nutri',
-  // ENGMAKER
-  'ENGENHARIA':'Eng', 'ENGMAKER':'Eng', 'LICENCIAT':'Eng',
-  // QUÍMICA E FÍSICA
-  'QUÍMICA':'Quím', 'QUIMICA':'Quím', 'FÍSICA':'Quím', 'FISICA':'Quím', 'AGRONOMIA':'Agro',
-};
-function getTutorCatAbrev(tutorNome, polo) {
-  var normN = function(s){
-    return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-      .replace(/\s*\(\d+\)\s*$/,'').replace(/\s+/g,' ').trim();
-  };
-  // ── Estratégia 0: DB.alunos_hub.tutor_subcurso (fonte mais confiável)
-  // Mapeamento construído direto do CSV de alunos — TUTOR_PRATICA × DISCIPLINA
-  if(DB.alunos_hub && DB.alunos_hub.tutor_subcurso){
-    var _tn0=normN(tutorNome);
-    var _sub0=DB.alunos_hub.tutor_subcurso[_tn0];
-    if(_sub0) return _sub0;
-    // Tentar primeiro+último
-    var _parts0=_tn0.split(' ').filter(Boolean);
-    if(_parts0.length>=2){
-      var _nfl0=_parts0[0]+' '+_parts0[_parts0.length-1];
-      var _sub0fl=DB.alunos_hub.tutor_subcurso[_nfl0];
-      if(_sub0fl) return _sub0fl;
-    }
-  }
-  var normFL = function(s){
-    var p=normN(s).split(' ').filter(Boolean);
-    return p.length>=2?p[0]+' '+p[p.length-1]:normN(s);
-  };
-  var tNorm=normN(tutorNome); var tFL=normFL(tutorNome);
-  function catToAbrev(cat){
-    var c=(cat||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    for(var kw in _CAT_ABREV){ if(c.includes(kw)) return _CAT_ABREV[kw]; }
-    return '';
-  }
-  // Estratégia 1: ger_contratacao com polo
-  var contr=(DB.ger_contratacao||[]).find(function(c){
-    return normN(c.polo)===normN(polo)&&
-      (c.tutores||[]).some(function(t){return normN(t)===tNorm||normFL(t)===tFL;});
-  });
-  if(contr) return catToAbrev(contr.categoria);
-  // Estratégia 2: ger_contratacao sem polo (qualquer polo)
-  contr=(DB.ger_contratacao||[]).find(function(c){
-    return (c.tutores||[]).some(function(t){return normN(t)===tNorm||normFL(t)===tFL;});
-  });
-  if(contr) return catToAbrev(contr.categoria);
-  // Estratégia 3: gerDetData por polo+nome
-  var det=(gerDetData||[]).find(function(r){
-    return normN(r.polo)===normN(polo)&&(normN(r.tutor||'')===tNorm||normFL(r.tutor||'')===tFL);
-  });
-  if(det) return catToAbrev(det.categoria||'');
-  // Estratégia 4: gerDetData só por nome
-  det=(gerDetData||[]).find(function(r){
-    return normN(r.tutor||'')===tNorm||normFL(r.tutor||'')===tFL;
-  });
-  if(det){
-    var cat3=det.categoria||'';
-    if(cat3.toUpperCase().indexOf('FISIO')>=0||cat3.toUpperCase().indexOf('MULTI')>=0){
-      // Fonte 1: DB.tutores.lab vem da planilha de lotação (campo cursos)
-      var tutLot=(DB.tutores||[]).find(function(x){
-        if(!x.n)return false;
-        return normFL(x.n)===tFL||normN(x.n)===tNorm;
-      });
-      if(tutLot&&tutLot.lab){
-        var labN=tutLot.lab.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        // Checar tanto nome completo quanto código abreviado da planilha de lotação
-        var isFisio=labN.indexOf('FISIOTERAPIA')>=0||labN==='BFI'||labN.indexOf('BFI')===0;
-        var isTO=labN.indexOf('OCUPACIONAL')>=0||labN==='BTO'||labN.indexOf('BTO')===0||labN.indexOf('T.OC')>=0;
-        var isEst=labN.indexOf('ESTETICA')>=0||labN.indexOf('COSMET')>=0||labN==='COS'||labN.indexOf('COS-TIP')>=0;
-        if(isFisio&&!isTO&&!isEst) return 'Fisio';
-        if(isTO&&!isFisio&&!isEst) return 'T.Oc';
-        if(isEst&&!isFisio&&!isTO) return 'Est';
-        if(isFisio) return 'Fisio';
-        if(isTO) return 'T.Oc';
-        if(isEst) return 'Est';
-      }
-      // Fonte 2: curso no gerDetData
-      var allCursos=(gerDetData||[]).filter(function(r){
-        return normFL(r.tutor||'')===tFL||normN(r.tutor||'')===tNorm;
-      }).map(function(r){return(r.curso||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}).join(' ');
-      if(allCursos.indexOf('FISIOTERAPIA')>=0&&allCursos.indexOf('OCUPACIONAL')<0) return 'Fisio';
-      if(allCursos.indexOf('OCUPACIONAL')>=0&&allCursos.indexOf('FISIOTERAPIA')<0) return 'T.Oc';
-      if(allCursos.indexOf('ESTETICA')>=0&&allCursos.indexOf('FISIOTERAPIA')<0) return 'Est';
-    }
-    return catToAbrev(cat3);
-  }
-  return '';
-}
-
-// ── INIT ──────────────────────────────────────────────────────────────────────
-function renderAvisosPortfolio(){
-  var avisos = DB.avisos_portfolio || [];
-  var wrap = document.getElementById('pf-avisos-wrap');
-  var tbody = document.getElementById('pf-avisos-tbody');
-  var count = document.getElementById('pf-avisos-count');
-  if(!wrap || !tbody) return;
-  if(!avisos.length){wrap.style.display='none';return;}
-  wrap.style.display='';
-  if(count) count.textContent = avisos.length + ' aviso(s) · ' + avisos.reduce(function(s,a){return s+a.count;},0) + ' envio(s) afetado(s)';
-  var tipoLabel = {
-    'email_incorreto':       '📧 E-mail incorreto',
-    'preenchimento_incorreto': '✏️ Preench. incorreto',
-    'chave_invalida':        '🔑 Polo não encontrado',
-    'regente_de_polo':       '🏫 Regente de Polo'
-  };
-  var rows = '';
-  avisos.forEach(function(av){
-    var tipo = tipoLabel[av.tipo] || av.tipo;
-    var bgColor = av.tipo==='email_incorreto'?'#fff7ed':av.tipo==='preenchimento_incorreto'?'#fef9c3':'#f0f9ff';
-    rows += '<tr style="background:'+bgColor+';font-size:12px">'
-      + '<td style="white-space:nowrap;padding:4px 8px"><strong>'+tipo+'</strong></td>'
-      + '<td style="padding:4px 8px;font-family:monospace;font-size:11px">'+av.email+'</td>'
-      + '<td style="padding:4px 8px">'+av.nome+'</td>'
-      + '<td style="text-align:right;padding:4px 8px;font-weight:700">'+av.count+'</td>'
-      + '<td style="padding:4px 8px;color:#64748b;font-size:11px">'+av.msg+'</td>'
-      + '</tr>';
-  });
-  tbody.innerHTML = rows;
-}
-
-// ── CONTROLE DE SEMESTRE — GERENCIAMENTO ────────────────────────────────────
-// PATCH 18: gerenciamento agora vem separado por semestre (DB.gerenciamento_por_semestre).
-// GER_DB aponta para o "pacote" do semestre ativo (mesmo shape de chaves ger_*
-// que o restante do código já espera no nível raiz de DB).
-let GER_DB = null;
-
-function _gerSelecionarSemestre(sem) {
-  const porSem = DB.gerenciamento_por_semestre || null;
-  if (!porSem || !Object.keys(porSem).length) { GER_DB = DB; return; }
-  if (sem === 'Ambos') {
-    GER_DB = _gerMergeAllSemestres(porSem);
-  } else {
-    GER_DB = porSem[sem] || DB;
-  }
-}
-
-function _gerMergeAllSemestres(porSem) {
-  const todasOfertas = [];
-  Object.keys(porSem).forEach(semKey => {
-    (porSem[semKey].ger_ofertas || []).forEach(o => {
-      todasOfertas.push(o._semOrigem ? o : Object.assign({}, o, {_semOrigem: semKey}));
-    });
-  });
-  const agg = _gerAggregateFromOfertas(todasOfertas);
-  agg.ger_ofertas = todasOfertas;
-  return agg;
-}
-
-function _gerAggregateFromOfertas(ofertas) {
-  // Replica em JS a agregação que o processar.py faz a partir de ger_ofertas —
-  // usado só para a visão "Ambos" (soma os 2 semestres).
-  const total = ofertas.length;
-  const comTutor = ofertas.filter(o => o.tem_tutor).length;
-  const gerenciadas = ofertas.filter(o => o.gerenciado).length;
-  const comAgenda = ofertas.filter(o => o.tem_agenda).length;
-  const totMat = _dedupAlunos(ofertas,'alunos_mat');
-  const totAgend = _dedupAlunos(ofertas,'alunos_agend');
-  const ger_kpis = {
-    total_ofertas: total, ofertas_gerenciadas: gerenciadas,
-    ofertas_nao_gerenciadas: total - gerenciadas,
-    pct_gerenciado: total ? Math.round(gerenciadas/total*1000)/10 : 0,
-    ofertas_com_tutor: comTutor, ofertas_sem_tutor: total - comTutor,
-    pct_com_tutor: total ? Math.round(comTutor/total*1000)/10 : 0,
-    ofertas_com_agenda: comAgenda,
-    total_alunos_matriculados: totMat, total_alunos_agendados: totAgend,
-    total_capacidade: 0, pct_ocupacao: 0,
-    polos_total: new Set(ofertas.map(o=>o.polo)).size,
-    polos_sem_tutor: new Set(ofertas.filter(o=>!o.tem_tutor).map(o=>o.polo)).size,
-  };
-  // PATCH 48: mesmo dedup do PATCH 38 (backend) — polo soma o MAIOR valor visto
-  // por categoria (não a soma bruta de todas as práticas daquele polo+categoria);
-  // categoria soma o maior valor visto por polo; ordem soma o maior valor visto
-  // por polo+categoria dentro dela. Sem isso, esta função (usada só na visão
-  // "Ambos") reintroduzia exatamente o bug de inflação que o PATCH 38 já tinha
-  // corrigido no backend pros outros semestres.
-  const poloMap = {}, catMap = {}, ordemMap = {}, contrMap = {};
-  ofertas.forEach(o => {
-    const pk = o.polo || '—';
-    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, _matPorCat:{}, _agendPorCat:{}, capacidade:0, tutores_unicos:[] };
-    const p = poloMap[pk];
-    p.total_ofertas++; if(o.gerenciado) p.gerenciadas++; if(o.tem_tutor) p.com_tutor++; else p.sem_tutor++;
-    if(o.tem_agenda) p.com_agenda++;
-    const pCatKey=(o._semOrigem||'')+'|||'+(o.categoria||'—');
-    if(!(pCatKey in p._matPorCat) || (o.alunos_mat||0)>p._matPorCat[pCatKey]) p._matPorCat[pCatKey]=o.alunos_mat||0;
-    if(!(pCatKey in p._agendPorCat) || (o.alunos_agend||0)>p._agendPorCat[pCatKey]) p._agendPorCat[pCatKey]=o.alunos_agend||0;
-    if(o.tutor && !p.tutores_unicos.includes(o.tutor)) p.tutores_unicos.push(o.tutor);
-
-    const ck = o.categoria || '—';
-    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, _matPorPolo:{}, _agendPorPolo:{} };
-    const c = catMap[ck];
-    c.total_ofertas++; if(o.gerenciado) c.gerenciadas++; if(o.tem_tutor) c.com_tutor++; else c.sem_tutor++;
-    const cPoloKey=(o._semOrigem||'')+'|||'+(o.polo||'—');
-    if(!(cPoloKey in c._matPorPolo) || (o.alunos_mat||0)>c._matPorPolo[cPoloKey]) c._matPorPolo[cPoloKey]=o.alunos_mat||0;
-    if(!(cPoloKey in c._agendPorPolo) || (o.alunos_agend||0)>c._agendPorPolo[cPoloKey]) c._agendPorPolo[cPoloKey]=o.alunos_agend||0;
-
-    const ok = o.ordem || '—';
-    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, _matPorPoloCat:{}, _agendPorPoloCat:{}, dt_inicio:'', dt_fim:'' };
-    const od = ordemMap[ok];
-    od.total_ofertas++; if(o.gerenciado) od.gerenciadas++; if(o.tem_tutor) od.com_tutor++;
-    const oPoloCatKey=(o._semOrigem||'')+'|||'+(o.polo||'—')+'|||'+(o.categoria||'—');
-    if(!(oPoloCatKey in od._matPorPoloCat) || (o.alunos_mat||0)>od._matPorPoloCat[oPoloCatKey]) od._matPorPoloCat[oPoloCatKey]=o.alunos_mat||0;
-    if(!(oPoloCatKey in od._agendPorPoloCat) || (o.alunos_agend||0)>od._agendPorPoloCat[oPoloCatKey]) od._agendPorPoloCat[oPoloCatKey]=o.alunos_agend||0;
-
-    const trk = (o.polo||'')+'|'+(o.categoria||'');
-    if (!contrMap[trk]) contrMap[trk] = { polo:o.polo, categoria:o.categoria, total_ofertas:0, tutores:[] };
-    contrMap[trk].total_ofertas++;
-    if (o.tutor && !contrMap[trk].tutores.includes(o.tutor)) contrMap[trk].tutores.push(o.tutor);
-  });
-  Object.values(poloMap).forEach(p => {
-    p.alunos_matriculados = Object.values(p._matPorCat).reduce((s,v)=>s+v,0);
-    p.alunos_agendados = Object.values(p._agendPorCat).reduce((s,v)=>s+v,0);
-    delete p._matPorCat; delete p._agendPorCat;
-  });
-  Object.values(catMap).forEach(c => {
-    c.alunos_matriculados = Object.values(c._matPorPolo).reduce((s,v)=>s+v,0);
-    c.alunos_agendados = Object.values(c._agendPorPolo).reduce((s,v)=>s+v,0);
-    delete c._matPorPolo; delete c._agendPorPolo;
-  });
-  Object.values(ordemMap).forEach(od => {
-    od.alunos_matriculados = Object.values(od._matPorPoloCat).reduce((s,v)=>s+v,0);
-    od.alunos_agendados = Object.values(od._agendPorPoloCat).reduce((s,v)=>s+v,0);
-    delete od._matPorPoloCat; delete od._agendPorPoloCat;
-  });
-  Object.values(poloMap).forEach(p => p.pct_gerenciado = p.total_ofertas ? Math.round(p.gerenciadas/p.total_ofertas*1000)/10 : 0);
-  Object.values(catMap).forEach(c => c.pct_gerenciado = c.total_ofertas ? Math.round(c.gerenciadas/c.total_ofertas*1000)/10 : 0);
-  Object.values(ordemMap).forEach(o => o.pct_gerenciado = o.total_ofertas ? Math.round(o.gerenciadas/o.total_ofertas*1000)/10 : 0);
-  const ger_contratacao = Object.values(contrMap).map(c => ({ ...c, tem_tutor: c.tutores.length>0, status: c.tutores.length>0?'Contratado':'Sem tutor' }));
-
-  const agendaPoloMap = {};
-  ofertas.forEach(o => {
-    const pk = o.polo || '—';
-    if (!agendaPoloMap[pk]) agendaPoloMap[pk] = { polo: pk, total:0, com_agenda:0, datas_por_cat:{}, datas_por_tutor:{} };
-    const a = agendaPoloMap[pk];
-    a.total++;
-    if (o.tem_agenda) {
-      a.com_agenda++;
-      const d = o.dt_agenda;
-      if (d) {
-        if (!a.datas_por_cat[d]) a.datas_por_cat[d] = [];
-        if (o.categoria && !a.datas_por_cat[d].includes(o.categoria)) a.datas_por_cat[d].push(o.categoria);
-        if (!a.datas_por_tutor[d]) a.datas_por_tutor[d] = [];
-        if (o.tutor && !a.datas_por_tutor[d].includes(o.tutor)) a.datas_por_tutor[d].push(o.tutor);
-      }
-    }
-  });
-  const ger_agendas = Object.values(agendaPoloMap).map(a => ({
-    ...a, sem_agenda: a.total - a.com_agenda,
-    pct_agendado: a.total ? Math.round(a.com_agenda/a.total*1000)/10 : 0,
-    datas_agenda: Object.keys(a.datas_por_cat).sort(),
-  })).sort((a,b) => b.sem_agenda - a.sem_agenda);
-
-  const ordemSortKey = o => { const m = (o.ordem||'').match(/\d+/); return m ? parseInt(m[0]) : 99; };
-  return {
-    ger_kpis,
-    ger_polo: Object.values(poloMap).sort((a,b)=>b.sem_tutor-a.sem_tutor),
-    ger_cat: Object.values(catMap).sort((a,b)=>b.total_ofertas-a.total_ofertas),
-    ger_ordem: Object.values(ordemMap).sort((a,b)=>ordemSortKey(a)-ordemSortKey(b)),
-    ger_contratacao, ger_agendas,
-  };
-}
-// ── FIM CONTROLE DE SEMESTRE — GERENCIAMENTO ────────────────────────────────
-
-
-// ── CONTROLE DE SEMESTRE ────────────────────────────────────────────────────
-let _SEM_ATUAL = null;  // semestre selecionado no seletor
-let _SEM_DB    = null;  // dados do semestre selecionado
-
-function initSemestres() {
-  const sems = DB.todos_semestres || [];
-  if (!sems.length || sems.length < 2) return;  // só 1 semestre: não exibe seletor
-
-  // Exibir seletor
-  document.getElementById('sem-selector').style.display = '';
-  document.getElementById('sem-badge').style.display = '';
-
-  const tabs = document.getElementById('sem-tabs');
-  tabs.innerHTML = '';  // PATCH 11: evita duplicar botões se initSemestres rodar mais de uma vez
-  // Botão "Ambos" + um botão por semestre
-  const opcoes = ['Ambos', ...sems];
-  // PATCH 35: semestre padrão = SEMPRE o semestre atual/ativo configurado no
-  // processar.py (DB.semestre), não o que tem mais envios históricos. A lógica
-  // anterior escolhia por "mais envios de portfólio", o que fazia o dashboard
-  // abrir sozinho no semestre ANTERIOR sempre que o atual ainda não tinha
-  // portfólio (situação normal logo no início de um semestre novo) — isso
-  // causava exibições confusas em várias telas (ex: Detalhe mostrando dado de
-  // 2026/1 com a aba "2026/2" sem deixar claro que o semestre efetivamente
-  // carregado era outro).
-  _SEM_ATUAL = (DB.semestre && sems.includes(DB.semestre)) ? DB.semestre : sems[sems.length - 1];
-
-  opcoes.forEach(sem => {
-    const btn = document.createElement('button');
-    btn.textContent = sem;
-    btn.dataset.sem = sem;
-    btn.style.cssText = 'flex:1;padding:5px 4px;border:none;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s';
-    btn.onclick = () => selecionarSemestre(sem);
-    tabs.appendChild(btn);
-  });
-
-  selecionarSemestre(_SEM_ATUAL);
-}
-
-function selecionarSemestre(sem) {
-  _SEM_ATUAL = sem;
-  const badge = document.getElementById('sem-badge');
-  if (badge) badge.textContent = sem === 'Ambos' ? '2026/1 + 2026/2' : sem;
-
-  // Estilo dos botões
-  document.querySelectorAll('#sem-tabs button').forEach(b => {
-    const ativo = b.dataset.sem === sem;
-    b.style.background = ativo ? 'var(--yellow)' : 'rgba(255,255,255,.12)';
-    b.style.color = ativo ? '#1a1d23' : 'rgba(255,255,255,.8)';
-  });
-
-  // Atualizar label da sidebar
-  const lbl = document.getElementById('sidebar-port-label');
-  if (lbl) lbl.textContent = sem === 'Ambos' ? 'Portfólios (Todos)' : `Portfólios ${sem}`;
-
-  // Montar _SEM_DB — dados do semestre (ou merged se Ambos)
-  if (sem === 'Ambos') {
-    _SEM_DB = _mergeAllSemestres();
-  } else {
-    _SEM_DB = (DB.dados_por_semestre || {})[sem] || null;
-  }
-  _gerSelecionarSemestre(sem);  // PATCH 18: gerenciamento também segue o semestre selecionado
-
-  // Re-renderizar tudo
-  _renderComSemestre();
-}
-
-function _mergeAllSemestres() {
-  // Merge: soma KPIs de todos os semestres
-  const sems = Object.values(DB.dados_por_semestre || {});
-  if (!sems.length) return null;
-  const merged = {
-    semestre: 'Ambos',
-    kpis: { total:0, enviaram:0, pendentes:0, urgentes:0, atrasados:0, total_polos:0, polos_ok:0 },
-    polo_stats: [], por_ordem: {}, alunos_por_ordem: {}, status_ordem: {},
-    prazos: {}, periodos: {}, cat_stats: [],
-  };
-  const poloMap = {};
-  sems.forEach(s => {
-    const k = s.kpis || {};
-    merged.kpis.total     = Math.max(merged.kpis.total, k.total || 0);
-    merged.kpis.enviaram += (k.enviaram || 0);
-    merged.kpis.urgentes  = Math.max(merged.kpis.urgentes, k.urgentes || 0);
-    Object.entries(s.por_ordem || {}).forEach(([o,n]) => {
-      merged.por_ordem[`${s.semestre}·${o}`] = n;
-    });
-    Object.entries(s.alunos_por_ordem || {}).forEach(([o,n]) => {
-      merged.alunos_por_ordem[`${s.semestre}·${o}`] = n;
-    });
-    (s.polo_stats || []).forEach(p => {
-      const key = p.n || p.polo || '';
-      if (!poloMap[key]) poloMap[key] = { ...p, enviaram: 0, e: 0 };
-      poloMap[key].enviaram += (p.enviaram || p.e || 0);
-      poloMap[key].e = poloMap[key].enviaram;
-    });
-    // Status = mais crítico
-    Object.entries(s.status_ordem || {}).forEach(([o,st]) => {
-      merged.status_ordem[`${s.semestre}·${o}`] = st;
-    });
-  });
-  merged.kpis.pendentes = merged.kpis.total - merged.kpis.enviaram;
-  merged.polo_stats = Object.values(poloMap).sort((a,b) => (b.pend||0)-(a.pend||0));
-  merged.kpis.total_polos = merged.polo_stats.length;
-  merged.kpis.polos_ok = merged.polo_stats.filter(p => (p.pend||0)===0).length;
-  return merged;
-}
-
-function _getSemKpis() {
-  // Retorna kpis do semestre selecionado, com fallback para DB.kpis em campos ausentes
-  if (_SEM_DB && _SEM_DB.kpis) {
-    // Campos exclusivos do DB.kpis global (calculados no processar.py principal)
-    return Object.assign({}, DB.kpis, _SEM_DB.kpis);
-  }
-  return DB.kpis;
-}
-
-function _getSemPoloStats() {
-  // Para polo_stats: usar o global (DB.polo_stats) porque tem alunos enriquecidos pelo hub CSV
-  // O _SEM_DB.polo_stats calculado em _stats_semestre não tem dados de alunos
-  if (_SEM_DB && _SEM_DB.polo_stats && _SEM_DB.polo_stats.length) {
-    // Merge: usar envios/pendentes do semestre mas alunos do global
-    const globalMap = {};
-    (DB.polo_stats||[]).forEach(p => { globalMap[p.n||p.polo||''] = p; });
-    return _SEM_DB.polo_stats.map(p => {
-      const g = globalMap[p.n||p.polo||''] || {};
-      return { ...p, a: g.a||g.alunos||p.a||0, alunos: g.a||g.alunos||p.alunos||0 };
-    });
-  }
-  return DB.polo_stats;
-}
-
-function _getSemPorOrdem() {
-  if (_SEM_DB) return _SEM_DB.por_ordem || DB.por_ordem;
-  return DB.por_ordem;
-}
-
-function _getSemPrazos() {
-  if (_SEM_DB && _SEM_DB.prazos && Object.keys(_SEM_DB.prazos).length) return _SEM_DB.prazos;
-  return DB.prazos;
-}
-
-function _getSemStatusOrdem() {
-  if (_SEM_DB) return _SEM_DB.status_ordem || DB.status_ordem;
-  return DB.status_ordem;
-}
-
-function _getSemTutores() {
-  // Filtra tutores pelo semestre selecionado — usa campo 's' nos envios
-  if (!_SEM_ATUAL || _SEM_ATUAL === 'Ambos') return DB.tutores;
-  const sem = _SEM_ATUAL;
-  return (DB.tutores || []).map(t => {
-    const histSem = (t.hist || []).filter(h => (h.s || (DB.todos_semestres||[])[0] || DB.semestre || '') === sem);
-    const reais   = [...new Set(histSem.map(h => h.p))];
-    const te      = reais.length;
-    const tp      = t.tp || 0;
-    const pct     = tp ? Math.round(te/tp*100*10)/10 : 0;
-    // Situação do tutor neste semestre
-    const statusOrd = _getSemStatusOrdem();
-    const porOrdem  = {};
-    histSem.forEach(h => { porOrdem[h.o] = (porOrdem[h.o]||0)+1; });
-    const ordsVenc  = Object.keys(statusOrd).filter(o => statusOrd[o]==='VENCIDO');
-    let sit = 'urgente';
-    if (!ordsVenc.length) sit = te > 0 ? 'ok' : 'atrasado';
-    else if (ordsVenc.every(o => (porOrdem[o]||0)>0)) sit = 'ok';
-    else if (ordsVenc.some(o => (porOrdem[o]||0)>0)) sit = 'atrasado';
-
-    return { ...t, hist: histSem, real: reais, te, pct, sit, situacao: sit,
-             al: histSem.reduce((s,h)=>s+(h.a||0),0), por_ordem: porOrdem, porOrdem: porOrdem,
-             pend: (t.pend||[]).filter(p => !reais.includes(p)) };
-  });
-}
-
-function _renderComSemestre() {
-  // Re-renderiza as páginas que estão atualmente visíveis + atualiza KPIs
-  renderKPIs();
-  renderOfensores();
-  renderMes();
-  renderCatOverview();
-  renderOrdens();
-  filterOrdemTbl(document.getElementById('ordem-search')?.value||'');
-  renderPracKPIs();
-  renderCatPracBars();
-  renderTopPrac();
-  filterPrac(document.getElementById('prac-search')?.value||'');
-  filterPolos(document.getElementById('polo-search')?.value||'');
-  filterTutores(document.getElementById('tutor-search')?.value||'');
-  try{ renderGerenciamento(); }catch(e){ console.error('renderGerenciamento (semestre)', e); }  // PATCH 18
-  try{ renderAgendasEstudo(); }catch(e){ console.error('renderAgendasEstudo (semestre)', e); }
-}
-// ── FIM CONTROLE DE SEMESTRE ─────────────────────────────────────────────────
-
-
-// ══════════════════════════════════════════════════════════════════════════
-// PÁGINA TUTORES MEC — Gestão completa de tutores com MEC + portfólio + gerenciamento
-// ══════════════════════════════════════════════════════════════════════════
-function _construirIndiceGerPorOrdem(){
-  // PATCH 51/59: agrupa as ofertas do semestre atual por tutor+polo (base pro
-  // cálculo consolidado abaixo). Duas pessoas reais diferentes com o mesmo nome
-  // em polos DIFERENTES não se confundem mais (chave inclui o polo); o índice
-  // por nome sozinho continua existindo só como fallback pra quando o polo do
-  // GIOCONDA e do CONTROLE não baterem exatamente (grafia diferente etc.).
-  function _poloKeySimples(p){
-    return String(p||'').replace(/^LAP\s*[-–]\s*/i,'').replace(/\([^)]*\)/g,'')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
-  }
-  var porNomePolo={}, porNome={};
-  ((typeof GER_DB!=='undefined' && GER_DB ? GER_DB : DB).ger_ofertas||[]).forEach(function(r){
-    if(!r.tutor) return;
-    var nk=_normTutorKey(r.tutor);
-    var ord=r.ordem||'—';
-    var pk=nk+'|||'+_poloKeySimples(r.polo);
-    if(!porNomePolo[pk]) porNomePolo[pk]={};
-    if(!porNomePolo[pk][ord]) porNomePolo[pk][ord]={ger:0,total:0};
-    porNomePolo[pk][ord].total++; if(r.gerenciado) porNomePolo[pk][ord].ger++;
-    if(!porNome[nk]) porNome[nk]={};
-    if(!porNome[nk][ord]) porNome[nk][ord]={ger:0,total:0};
-    porNome[nk][ord].total++; if(r.gerenciado) porNome[nk][ord].ger++;
-  });
-  return {porNomePolo:porNomePolo, porNome:porNome, _poloKeySimples:_poloKeySimples};
-}
-function _gerConsolidadoDoTutor(t, idx){
-  // PATCH 51/54/59: o backend calculava ger_pct como (registros geridos ÷
-  // registros BRUTOS do GIOCONDA pro tutor) — um tutor com só 1 registro
-  // (gerido) mostrava "1/1 100%" igual a um tutor com 15/15. Agora o denominador
-  // é a capacidade REAL esperada (CH → práticas/semana → capacidade por ordem)
-  // multiplicada pelas 5 ordens do semestre (O.1 a O.5) — não só as ordens em
-  // que o tutor já tem dado — e a busca do histórico do tutor prioriza nome+polo
-  // (evita conflito entre duas pessoas reais de mesmo nome em polos diferentes).
-  var NUM_ORDENS_SEMESTRE = 5;
-  var nk=_normTutorKey(t.n);
-  var pk=nk+'|||'+idx._poloKeySimples(t.p);
-  var porOrdem = idx.porNomePolo[pk] || idx.porNome[nk];
-  if(!porOrdem) return {ok:0,total:0,pct:null};
-  var chSemanal=t.ch_semanal||null;
-  var padraoCH=[4,8,12,20,24];
-  var chCont=!chSemanal?null:padraoCH.reduce(function(a,b){return Math.abs(b-chSemanal)<Math.abs(a-chSemanal)?b:a;});
-  var praticasSemana=chCont?Math.floor((chCont-_horasAdminPorCH(chCont))/1.5):null;
-  var capOrdem=praticasSemana?praticasSemana*4:null;
-  var totalGer=0, totalCap=0;
-  Object.keys(porOrdem).forEach(function(ord){
-    totalGer+=porOrdem[ord].ger;
-  });
-  if(capOrdem){
-    totalCap = capOrdem * NUM_ORDENS_SEMESTRE;
-  }else{
-    Object.keys(porOrdem).forEach(function(ord){ totalCap+=porOrdem[ord].total; });
-  }
-  return {ok:totalGer, total:totalCap, pct:totalCap?Math.round(totalGer/totalCap*100):null};
-}
-function renderTutoresMec() {
-  // PATCH 19: clear-and-rebuild (não só "popula uma vez") — mais robusto a
-  // chamadas repetidas de renderTutoresMec(), mesmo padrão usado em ger-det-cat
-  {
-    const _catSel = document.getElementById('tutmec-cat-sel');
-    if (_catSel) {
-      const _prev = _catSel.value;
-      while(_catSel.options.length>1) _catSel.remove(1);
-      // BUGFIX: normalizar via _CAT_NORM_MAP antes de deduplicar — sem isso,
-      // variações de formato da mesma categoria vindas do CONTROLE (ex: "BIO-FAR
-      // (Multidisciplinar I)" vs "Biomedicina e Farmácia") viravam entradas
-      // "duplicadas" na lista. As outras telas (tutor-cat-sel, prac-cat-sel,
-      // ordem-cat-sel) já normalizavam; esta ficou de fora.
-      const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
-      const _cats = [...new Set((DB.tutores||[]).filter(t=>!t._anonimo && t.c!=='Aviso de Portfólio').map(t=>_normC(t.c||'')).filter(Boolean))].sort();
-      // PATCH 91: adiciona os grupos combinados (os mesmos 5 do Detalhe, tipo
-      // "Biomedicina, Farmácia e Estética/Cosmética") ANTES das categorias
-      // brutas individuais — sem isso, não tinha como filtrar/exportar Bio-Far
-      // e Estética juntos aqui, só categoria por categoria separada.
-      if(typeof GRUPOS_GER!=='undefined' && GRUPOS_GER && GRUPOS_GER.length){
-        const _optGroup=document.createElement('optgroup');_optGroup.label='Grupos combinados';
-        GRUPOS_GER.forEach(g=>{const o=document.createElement('option');o.value='grupo:'+g.id;o.textContent=g.label;_optGroup.appendChild(o);});
-        _catSel.appendChild(_optGroup);
-        const _optGroup2=document.createElement('optgroup');_optGroup2.label='Categoria específica';
-        _catSel.appendChild(_optGroup2);
-        _cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; _optGroup2.appendChild(o); });
-      }else{
-        _cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; _catSel.appendChild(o); });
-      }
-      if([...(_catSel.options)].some(o=>o.value===_prev)) _catSel.value=_prev;
-    }
-  }
-  // ── KPIs da ficha ─────────────────────────────────────────────
-  // PATCH 51: recalcula ger_ok/ger_total/ger_pct de TODOS os tutores usando a
-  // capacidade consolidada (ver _gerConsolidadoDoTutor) antes de qualquer KPI,
-  // filtro, ordenação ou célula usar esses campos — substitui de vez o valor
-  // que vinha do processar.py (baseado em contagem bruta de registros).
-  (function(){
-    var _idxGerOrdem=_construirIndiceGerPorOrdem();
-    (DB.tutores||[]).forEach(function(t){
-      var c=_gerConsolidadoDoTutor(t, _idxGerOrdem);
-      t.ger_ok=c.ok; t.ger_total=c.total; t.ger_pct=c.pct;
-    });
-  })();
-  const _tAll=(DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio');
-  const _tit=t=>t.titulacao||'';
-  const kpiEl=document.getElementById('tutmec-kpis');
-  if(kpiEl){
-    const _nLat=_tAll.filter(t=>t.lattes_id).length;
-    const _nSemLat=_tAll.filter(t=>!t.lattes_id).length;
-    const _nDou=_tAll.filter(t=>_tit(t)==='Doutor').length;
-    const _nMes=_tAll.filter(t=>_tit(t)==='Mestre').length;
-    const _nEsp=_tAll.filter(t=>_tit(t)==='Especialista').length;
-    const _nGra=_tAll.filter(t=>_tit(t)==='Graduado').length;
-    const _nGer100=_tAll.filter(t=>t.ger_pct===100).length;
-    const _nGerPar=_tAll.filter(t=>t.ger_pct!==null&&t.ger_pct!==undefined&&t.ger_pct>0&&t.ger_pct<100).length;
-    const _chVals=_tAll.filter(t=>t.ch_semanal).map(t=>t.ch_semanal);
-    const _chMed=_chVals.length?(_chVals.reduce((a,b)=>a+b,0)/_chVals.length).toFixed(1):0;
-    kpiEl.innerHTML=
-      // ── Linha 1: KPIs numéricos ─────────────────────────────────────────
-      `<div class="kpi kpi-teal"><div class="kpi-label">Total Tutores</div><div class="kpi-value">${_tAll.length}</div></div>`+
-      `<div class="kpi kpi-ok"><div class="kpi-label">Com Lattes</div><div class="kpi-value">${_nLat}</div><div class="kpi-sub" style="font-size:10px;color:var(--muted)">${_nSemLat} sem Lattes</div></div>`+
-      `<div class="kpi kpi-green"><div class="kpi-label">Gerenc. 100%</div><div class="kpi-value">${_nGer100}</div><div class="kpi-sub" style="font-size:10px;color:var(--muted)">${_nGerPar} parcial</div></div>`+
-      `<div class="kpi kpi-teal"><div class="kpi-label">CH Média</div><div class="kpi-value">${_chMed}h</div></div>`+
-      // ── Donut chart de titulação ─────────────────────────────────────────
-      `<div class="kpi" style="min-width:300px;flex:2;padding:14px 16px">
-        <div style="display:flex;align-items:center;gap:20px">
-          <svg id="tutmec-donut" viewBox="0 0 80 80" width="80" height="80" style="flex-shrink:0;cursor:pointer">
-            ${(()=>{
-              const vals  =[_nDou,_nMes,_nEsp,_nGra];
-              const labels=['Doutor','Mestre','Especialista','Graduado'];
-              const colors=['#7c3aed','#1d4ed8','#0369a1','#374151'];
-              const nSem  =_tAll.length-_nDou-_nMes-_nEsp-_nGra;
-              const allV  =[...vals,nSem];
-              const allC  =[...colors,'#d1d5db'];
-              const allL  =[...labels,'Sem dados'];
-              const total =_tAll.length||1;
-              let cum=0;
-              const paths=allV.map((v,i)=>{
-                if(!v)return '';
-                const pct=v/total;
-                const a1=cum*2*Math.PI-Math.PI/2;
-                const a2=(cum+pct)*2*Math.PI-Math.PI/2;
-                cum+=pct;
-                const r=32,cx=40,cy=40;
-                const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1);
-                const x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
-                const lg=pct>0.5?1:0;
-                return '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+lg+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+allC[i]+'" opacity="0.9" title="'+allL[i]+': '+v+'" style="cursor:pointer;transition:opacity .2s" onmouseover="this.setAttribute(\'opacity\',\'1\')" onmouseout="this.setAttribute(\'opacity\',\'0.9\')"><title>'+allL[i]+': '+v+'</title></path>';
-              }).join('');
-              const titulados=_nDou+_nMes+_nEsp+_nGra;
-              return paths+'<circle cx="40" cy="40" r="20" fill="var(--surface)"/><text x="40" y="37" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--font)">c/ tit.</text><text x="40" y="51" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" font-family="var(--font)">'+titulados+'</text>';
-            })()}
-          </svg>
-          <div style="flex:1">
-            <div class="kpi-label" style="font-weight:700;margin-bottom:6px">TITULAÇÃO</div>
-            ${[['Doutor',_nDou,'#7c3aed'],['Mestre',_nMes,'#1d4ed8'],['Especialista',_nEsp,'#0369a1'],['Graduado',_nGra,'#374151'],['Sem dados',_tAll.length-_nDou-_nMes-_nEsp-_nGra,'#d1d5db']].map(([l,n,c])=>`
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer"
-                   onclick="document.getElementById('tutmec-tit-sel').value='${l==='Sem dados'?'':l}';filterTutoresMec(document.getElementById('tutmec-search').value)">
-                <div style="width:10px;height:10px;border-radius:2px;background:${c};flex-shrink:0"></div>
-                <span style="font-size:11px;color:var(--text);flex:1">${l}</span>
-                <span style="font-size:11px;font-weight:700;color:${c};min-width:24px;text-align:right">${n}</span>
-              </div>`).join('')}
-          </div>
-        </div>
-      </div>`; }
-  filterTutoresMec('');
-}
-
-function _filtraTutoresPorCategoriaSel(d, cat){
-  // PATCH 91: trata tanto grupo combinado ("grupo:bio-far-est", casando com
-  // _tutorMatchesGrupo, a mesma lógica já usada no Detalhe) quanto categoria
-  // bruta específica (comparação exata, normalizada). Sem isso, um grupo como
-  // "Biomedicina, Farmácia e Estética/Cosmética" não tinha como ser filtrado
-  // nem exportado junto — só categoria por categoria isolada.
-  if (!cat) return d;
-  if (cat.startsWith('grupo:')) {
-    const gid = cat.slice(6);
-    const grupo = (typeof _grupoById === 'function') ? _grupoById(gid) : (GRUPOS_GER||[]).find(g=>g.id===gid);
-    if (!grupo) return d;
-    return d.filter(t => _tutorMatchesGrupo(t, grupo, ''));
-  }
-  const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
-  return d.filter(t => _normC(t.c||'') === cat);
-}
-function filterTutoresMec(q) {
-  const tutores = (DB.tutores||[]).filter(t => !t._anonimo && t.n !== 'Tutor desligado' && t.c !== 'Aviso de Portfólio');
-  q = (q||'').toLowerCase().trim();
-  const cat  = document.getElementById('tutmec-cat-sel')?.value || '';
-  const tit  = document.getElementById('tutmec-tit-sel')?.value || '';
-  const port = document.getElementById('tutmec-port-sel')?.value || '';
-  const ger  = document.getElementById('tutmec-ger-sel')?.value || '';
-  const lat  = document.getElementById('tutmec-lattes-sel')?.value || '';
-
-  let d = tutores;
-  if (q) d = d.filter(t => (t.n+t.p+(t.c||'')).toLowerCase().includes(q));
-  // PATCH 91: agora "cat" pode ser um grupo combinado ("grupo:bio-far-est")
-  // ou uma categoria específica — usa _filtraTutoresPorCategoriaSel pra tratar
-  // os dois casos igual em qualquer lugar que precise desse filtro.
-  d = _filtraTutoresPorCategoriaSel(d, cat);
-  if (tit) d = d.filter(t => t.titulacao === tit);
-  if (lat === 'com') d = d.filter(t => !!t.lattes_id);
-  else if (lat === 'sem') d = d.filter(t => !t.lattes_id);
-  if (port === 'ok')   d = d.filter(t => (t.te||0) > 0);
-  else if (port === 'pend') d = d.filter(t => (t.te||0) === 0);
-  if (ger === 'ok')        d = d.filter(t => t.ger_pct === 100);
-  else if (ger === 'parcial')  d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct > 0 && t.ger_pct < 100);
-  else if (ger === 'nao')      d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct === 0);
-  else if (ger === 'sem_dados') d = d.filter(t => t.ger_pct === null || t.ger_pct === undefined);
-
-  // Ordenação
-  const sk = window._tutMecSortK || 'n';
-  const sa = window._tutMecSortA !== false;
-  d.sort((a,b) => {
-    let va, vb;
-    if (sk==='n')      { va=a.n||''; vb=b.n||''; return sa?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR'); }
-    if (sk==='p')      { va=a.p||''; vb=b.p||''; return sa?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR'); }
-    if (sk==='c')      { va=a.c||''; vb=b.c||''; return sa?va.localeCompare(vb,'pt-BR'):vb.localeCompare(va,'pt-BR'); }
-    if (sk==='tit')    { va=a.titulacao||'zzz'; vb=b.titulacao||'zzz'; return sa?va.localeCompare(vb):vb.localeCompare(va); }
-    if (sk==='port')   { va=a.pct||0; vb=b.pct||0; return sa?va-vb:vb-va; }
-    if (sk==='ger')    { va=a.ger_pct??-1; vb=b.ger_pct??-1; return sa?va-vb:vb-va; }
-    if (sk==='admis')  { va=a.inicio||''; vb=b.inicio||''; return sa?va.localeCompare(vb):vb.localeCompare(va); }
-    if (sk==='lattes') { va=a.lattes_id?1:0; vb=b.lattes_id?1:0; return sa?va-vb:vb-va; }
-    if (sk==='ch')     { va=a.ch_semanal||0; vb=b.ch_semanal||0; return sa?va-vb:vb-va; }
-    return 0;
-  });
-
-  const sub = document.getElementById('tutmec-sub');
-  if (sub) sub.textContent = `${d.length} tutor${d.length!==1?'es':''}`;
-
-  const wrap = document.getElementById('tutmec-table-wrap');
-  if (!wrap) return;
-  if (!d.length) { wrap.innerHTML='<div class="empty">Nenhum tutor encontrado</div>'; return; }
-
-  const titColors = {'Doutor':'#7c3aed','Mestre':'#1d4ed8','Especialista':'#0369a1','Graduado':'#374151'};
-  const arrow = (col) => {
-    if (col !== (window._tutMecSortK||'n')) return '<span style="color:var(--muted);font-size:9px">↕</span>';
-    return window._tutMecSortA !== false ? '↑' : '↓';
-  };
-  const thStyle = 'padding:9px 10px;text-align:left;font-weight:700;border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none';
-  const thC = 'padding:9px 8px;text-align:center;font-weight:700;border-bottom:2px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none';
-
-  let html = `<div class="card" style="padding:0;overflow:hidden">
-  <table style="width:100%;border-collapse:collapse;font-size:12px">
-    <thead style="background:var(--bg);position:sticky;top:0;z-index:1">
-      <tr>
-        <th style="${thStyle}" onclick="_tutMecSort('n')">Nome ${arrow('n')}</th>
-        <th style="${thStyle}" onclick="_tutMecSort('p')">Polo ${arrow('p')}</th>
-        <th style="${thStyle}" onclick="_tutMecSort('c')">Categoria ${arrow('c')}</th>
-        <th style="${thC}" onclick="_tutMecSort('tit')">Titulação ${arrow('tit')}</th>
-        <th style="${thC}" onclick="_tutMecSort('ch')">CH ${arrow('ch')}</th>
-        <th style="${thC}" onclick="_tutMecSort('admis')">Admissão ${arrow('admis')}</th>
-        <th style="${thC}" onclick="_tutMecSort('port')">Portfólio ${arrow('port')}</th>
-        <th style="${thC}" onclick="_tutMecSort('ger')" title="% sobre a capacidade esperada (CH contratada → práticas/semana → capacidade por ordem × 5 ordens do semestre) — não é sobre a quantidade bruta de registros nem só as ordens que o tutor já tem dado">Gerenc. ⓘ ${arrow('ger')}</th>
-        <th style="${thC}" onclick="_tutMecSort('lattes')" style="cursor:pointer">Lattes ${arrow('lattes')}</th>
-        <th style="${thC}" title="Só aparece pra tutores com menos de 2 meses de casa. 3 quadrados: Trilha de Aprendizagem, Checklist, 1:1 de Gerenciamento. Quando os 3 ficam verdes, o tutor vira Apto e some daqui.">Onboarding ⓘ</th>
-        <th style="${thC}">Ver</th>
-      </tr>
-    </thead>
-    <tbody>`;
-
-  d.forEach((t, i) => {
-    const bg = i%2===0 ? 'var(--surface)' : 'var(--bg)';
-
-    // Portfólio
-    const te=t.te||0, tp=t.tp||0;
-    const pct=tp?Math.round(te/tp*100):0;
-    const portColor=pct===100?'var(--green)':pct>0?'var(--yellow)':'var(--red)';
-    const portCell=`<span style="font-size:11px;font-weight:700;color:${portColor}">${te}/${tp}</span>
-      <div style="height:3px;background:var(--border);border-radius:2px;margin-top:3px;width:50px">
-        <div style="height:3px;background:${portColor};border-radius:2px;width:${pct}%"></div>
-      </div>`;
-
-    // Gerenciamento
-    let gerCell;
-    if (t.ger_pct===null||t.ger_pct===undefined) {
-      gerCell = '<span style="color:var(--muted);font-size:10px">—</span>';
-    } else {
-      const gc=t.ger_pct===100?'var(--green)':t.ger_pct>0?'var(--yellow)':'var(--red)';
-      gerCell = `<span style="font-size:11px;font-weight:700;color:${gc}">${t.ger_ok||0}/${t.ger_total||0}</span>
-        <div style="font-size:9px;color:var(--muted)">${t.ger_pct}%</div>`;
-    }
-
-    // Titulação
-    const titBadge=t.titulacao
-      ?`<span style="background:${titColors[t.titulacao]||'#374151'};color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${t.titulacao}</span>`
-      :'<span style="color:var(--muted);font-size:10px">—</span>';
-
-    // Admissão
-    let admStr='—', expStr='';
-    if(t.inicio){
-      const meses=Math.round((new Date()-new Date(t.inicio))/(1000*60*60*24*30.5));
-      admStr=t.inicio.split('-').reverse().join('/');
-      expStr=`<div style="font-size:10px;color:var(--muted)">${(meses/12).toFixed(1)}a</div>`;
-    }
-
-    // Lattes
-    const lattesBadge=t.lattes_id
-      ?`<a href="https://lattes.cnpq.br/${t.lattes_id}" target="_blank"
-           style="display:inline-block;background:#1a3a5c;color:#fff;padding:2px 9px;border-radius:4px;font-size:10px;font-weight:700;text-decoration:none">Lattes</a>`
-      :'<span style="color:var(--red);font-size:10px;font-weight:600">Sem</span>';
-
-    const nomeEsc=t.n.replace(/'/g,"\\'");
-
-    // PATCH 88: onboarding — só mostra os quadrados pra quem tem menos de 2
-    // meses de casa (calculado sozinho a partir do INÍCIO, sem precisar
-    // marcar nada manualmente pra isso). Uma vez "apto" (os 3 em Sim), some
-    // da visualização — o tutor já é considerado formado.
-    var onboardingCell='<span style="color:var(--dim);font-size:10px">—</span>';
-    if(t.inicio){
-      var _inicioD=new Date(t.inicio);
-      var _doisMesesAtras=new Date(); _doisMesesAtras.setMonth(_doisMesesAtras.getMonth()-2);
-      if(!isNaN(_inicioD) && _inicioD>=_doisMesesAtras && t.onboarding_apto!==true){
-        var _sq=function(ok,label){return '<span title="'+label+(ok?': OK':': pendente')+'" style="display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:2px;background:'+(ok?'var(--ok)':'var(--red)')+'"></span>';};
-        onboardingCell=_sq(t.onboarding_trilha,'Trilha de Aprendizagem')+_sq(t.onboarding_checklist,'Checklist')+_sq(t.onboarding_1a1,'1:1 de Gerenciamento');
-      }else if(t.onboarding_apto===true){
-        onboardingCell='<span style="color:var(--ok);font-size:10px;font-weight:700">✓ Apto</span>';
-      }
-    }
-
-    html+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
-      <td style="padding:8px 10px;font-weight:600;font-size:12px;max-width:180px">${t.n}${t.comunicacao?` <span title="${esc(t.comunicacao.resumo||'')}" style="font-size:11px">${t.comunicacao.atencao?'🚨':'📞'}</span>`:''}</td>
-      <td style="padding:8px 10px;font-size:11px;color:var(--muted);max-width:140px">${t.p}</td>
-      <td style="padding:8px 10px;font-size:11px;max-width:140px">${t.c_exibicao||t.c||'—'}</td>
-      <td style="padding:8px 8px;text-align:center">${titBadge}</td>
-      <td style="padding:8px 8px;text-align:center;font-size:11px">${t.ch_semanal?t.ch_semanal.toFixed(0)+'h':'—'}</td>
-      <td style="padding:8px 8px;text-align:center;font-size:11px">${admStr}${expStr}</td>
-      <td style="padding:8px 8px;text-align:center">${portCell}</td>
-      <td style="padding:8px 8px;text-align:center">${gerCell}</td>
-      <td style="padding:8px 8px;text-align:center">${lattesBadge}</td>
-      <td style="padding:8px 8px;text-align:center">${onboardingCell}</td>
-      <td style="padding:8px 8px;text-align:center">
-        <button onclick="openTutorModal('${nomeEsc}')"
-          style="background:var(--teal);color:#fff;border:none;padding:4px 10px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">
-          Ver
-        </button>
-      </td>
-    </tr>`;
-  });
-
-  html += '</tbody></table></div>';
-  wrap.innerHTML = html;
-}
-function exportTutoresAtivosPorCurso(){
-  // PATCH 87: exporta os tutores ativos ATUALMENTE exibidos na tela (respeita
-  // busca/categoria/titulação/lattes/portfólio/gerenc. já selecionados) — se
-  // nada estiver filtrado, exporta todo mundo. Sempre inclui a data de
-  // contratação (campo INÍCIO do Controle de Tutoria).
-  const tutores = (DB.tutores||[]).filter(t => !t._anonimo && t.n !== 'Tutor desligado' && t.c !== 'Aviso de Portfólio');
-  const q = (document.getElementById('tutmec-search')?.value || '').toLowerCase().trim();
-  const cat  = document.getElementById('tutmec-cat-sel')?.value || '';
-  const tit  = document.getElementById('tutmec-tit-sel')?.value || '';
-  const port = document.getElementById('tutmec-port-sel')?.value || '';
-  const ger  = document.getElementById('tutmec-ger-sel')?.value || '';
-  const lat  = document.getElementById('tutmec-lattes-sel')?.value || '';
-  let d = tutores;
-  if (q) d = d.filter(t => (t.n+t.p+(t.c||'')).toLowerCase().includes(q));
-  d = _filtraTutoresPorCategoriaSel(d, cat);
-  if (tit) d = d.filter(t => t.titulacao === tit);
-  if (lat === 'com') d = d.filter(t => !!t.lattes_id);
-  else if (lat === 'sem') d = d.filter(t => !t.lattes_id);
-  if (port === 'ok')   d = d.filter(t => (t.te||0) > 0);
-  else if (port === 'pend') d = d.filter(t => (t.te||0) === 0);
-  if (ger === 'ok')        d = d.filter(t => t.ger_pct === 100);
-  else if (ger === 'parcial')  d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct > 0 && t.ger_pct < 100);
-  else if (ger === 'nao')      d = d.filter(t => t.ger_pct !== null && t.ger_pct !== undefined && t.ger_pct === 0);
-  else if (ger === 'sem_dados') d = d.filter(t => t.ger_pct === null || t.ger_pct === undefined);
-
-  if (!d.length){ alert('Nenhum tutor no filtro atual para exportar.'); return; }
-  const rows = d.slice().sort((a,b)=>(a.n||'').localeCompare(b.n||'','pt-BR')).map(t => ({
-    'Tutor': t.n || '',
-    'Polo': t.p || '',
-    'Categoria/Curso': t.c_exibicao || t.c || '',
-    'Data de Contratação': t.inicio || '',
-    'CH Semanal': t.ch_semanal ? t.ch_semanal+'h' : '',
-    'Titulação': t.titulacao || '',
-    '% Gerenciamento': (t.ger_pct===null||t.ger_pct===undefined) ? '' : t.ger_pct+'%',
-  }));
-  exportCSV(rows, 'tutores_ativos_por_curso_'+new Date().toISOString().slice(0,10)+'.csv');
-}
-function exportTutoresDesligados(){
-  // PATCH 105: relatório de desligados, filtrado pelo mês selecionado (padrão:
-  // mês atual). Data de desligamento vem em formato DD/MM/AAAA (mesmo padrão
-  // das outras datas do Controle).
-  var inputMes=document.getElementById('tutmec-desl-mes');
-  var mesRef=inputMes && inputMes.value ? inputMes.value : new Date().toISOString().slice(0,7); // 'YYYY-MM'
-  if(inputMes && !inputMes.value) inputMes.value=mesRef; // preenche com o mês atual na primeira vez
-  var desligados=(DB.tutores_desligados||[]);
-  if(!desligados.length){ alert('Nenhum tutor desligado nos dados atuais.'); return; }
-  function parseDataBR(s){
-    var m=String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if(!m) return null;
-    return m[3]+'-'+m[2].padStart(2,'0'); // 'YYYY-MM'
-  }
-  var filtrados=desligados.filter(function(t){
-    var mesDesl=parseDataBR(t.data_desligamento);
-    return mesDesl===mesRef;
-  });
-  if(!filtrados.length){ alert('Nenhum tutor desligado no mês selecionado ('+mesRef+').'); return; }
-  var rows=filtrados.map(function(t){
-    return {'Nome': t.n, 'Polo': t.p, 'Categoria': t.c, 'Situação': t.situacao, 'Data de Desligamento': t.data_desligamento};
-  }).sort(function(a,b){ return a['Data de Desligamento'].localeCompare(b['Data de Desligamento']); });
-  exportCSV(rows, 'tutores_desligados_'+mesRef+'.csv');
-}
-function _tutMecSort(col){
-  if(window._tutMecSortK===col){ window._tutMecSortA=!window._tutMecSortA; }
-  else { window._tutMecSortK=col; window._tutMecSortA=true; }
-  filterTutoresMec(document.getElementById('tutmec-search')?.value||'');
-}
-
-// ── PORTAL DO COORDENADOR: trava por curso ─────────────────────────────────────
-// PATCH 111 (correção definitiva): tutores usam a categoria no formato CURTO
-// ("BIO-FAR (Multidisciplinar I)"), mas práticas usam o formato LONGO/
-// descritivo do CAT_MAP ("Multidisciplinar I - Biomedicina e Farmácia") --
-// são dados inconsistentes entre si. window._CAT_NORM_MAP também não existe
-// globalmente (é local de outra função) -- por isso a filtragem de Práticas
-// nunca batia com nada e vazava tudo. Agora comparamos contra os DOIS
-// formatos possíveis, sem depender de nenhuma função externa.
-const CURSO_PARA_CATEGORIA = {
-  'Biomedicina':'BIO-FAR (Multidisciplinar I)','Farmácia':'BIO-FAR (Multidisciplinar I)',
-  'Enfermagem':'ENF-INS (Multidisciplinar II)','Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
-  'Fisioterapia':'BIO-FISIO-EST-TO (Multidisciplinar III)','Terapia Ocupacional':'BIO-FISIO-EST-TO (Multidisciplinar III)','Estética e Imagem Pessoal':'BIO-FISIO-EST-TO (Multidisciplinar III)',
-  'Nutrição':'NUTRI (Multidisciplinar IV)',
-  'Agronomia':'QUÍMICA E FÍSICA','Licenciatura em Física':'QUÍMICA E FÍSICA','Licenciatura em Química':'QUÍMICA E FÍSICA','Segunda Licenciatura em Física':'QUÍMICA E FÍSICA',
-  'Arquitetura e Urbanismo':'ENGMAKER','Construção de Edifícios':'ENGMAKER','Controle de Obras':'ENGMAKER','Energias Renováveis':'ENGMAKER','Engenharia Ambiental e Sanitária':'ENGMAKER','Engenharia Civil':'ENGMAKER','Engenharia Elétrica':'ENGMAKER','Engenharia Mecânica':'ENGMAKER','Engenharia de Produção':'ENGMAKER','Gestão da Produção Industrial':'ENGMAKER','Saneamento Ambiental':'ENGMAKER',
-};
-// formato longo/descritivo (CAT_MAP), pra bater com o campo .categoria/.c das práticas
-const CATEGORIA_CURTA_PARA_LONGA = {
-  'ENF-INS (Multidisciplinar II)': 'Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica',
-  'BIO-FISIO-EST-TO (Multidisciplinar III)': 'Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética',
-  'BIO-FAR (Multidisciplinar I)': 'Multidisciplinar I - Biomedicina e Farmácia',
-  'NUTRI (Multidisciplinar IV)': 'Multidisciplinar IV - Nutrição',
-  'QUÍMICA E FÍSICA': 'Química e Física - Agronomia',
-  'ENGMAKER': 'EngeMaker | Química e Física - Engenharias e Licenciaturas',
-};
-function _categoriaBate(valorNoDado, categoriaCurta){
-  if (!valorNoDado) return false;
-  const v = valorNoDado.trim();
-  if (v === categoriaCurta) return true;
-  const longa = CATEGORIA_CURTA_PARA_LONGA[categoriaCurta];
-  if (longa && v === longa) return true;
-  return false;
-}
-// código curto usado em Lotação/Vagas pra cada curso (pra filtrar 'cursos' das vagas)
-const CURSO_PARA_CODIGO = {
-  'Biomedicina':'BBI','Farmácia':'BFR','Enfermagem':'EMF-ISN','Instrumentação Cirúrgica':'EMF-ISN',
-  'Fisioterapia':'BFI','Terapia Ocupacional':'BTO','Estética e Imagem Pessoal':'COS-TIP','Nutrição':'NTR',
-};
-// PATCH 116: agrupamento por laboratório pra organizar o painel de seleção
-// (mesmo critério usado no filtro de curso de Horários e Engajamento).
-const _LABS_ORDENADOS = ['BIO-FAR (Multidisciplinar I)','ENF-INS (Multidisciplinar II)','BIO-FISIO-EST-TO (Multidisciplinar III)','NUTRI (Multidisciplinar IV)','QUÍMICA E FÍSICA','ENGMAKER'];
-
-function _iniciarPortalCoordenador(){
-  // PATCH 116: não bloqueia mais a entrada com uma tela cheia — guarda uma
-  // cópia intocada do DB (pra poder re-filtrar do zero sempre que a seleção
-  // de curso mudar, sem acumular filtro em cima de filtro), monta o painel
-  // de seleção (fechado por padrão) e já abre o dashboard. Se já tinha uma
-  // seleção salva desta sessão, aplica ela; senão entra sem filtro nenhum,
-  // com um botão convidando a escolher o(s) curso(s).
-  window._DB_ORIGINAL = DB;
-  _montarPainelCurso();
-  let cursosSalvos = [];
-  try{ cursosSalvos = JSON.parse(sessionStorage.getItem('coord_cursos_selecionados')||'[]'); }catch(e){}
-  if (cursosSalvos.length){
-    DB = _clonarDB(window._DB_ORIGINAL);
-    _filtrarDBPorCursos(cursosSalvos);
-    _iniciarDashboard();
-    _aplicarMarcaCursos(cursosSalvos);
-  } else {
-    _iniciarDashboard();
-    _aplicarMarcaCursos([]);
-  }
-}
-function _clonarDB(original){
-  return JSON.parse(JSON.stringify(original));
-}
-function _montarPainelCurso(){
-  const lista = document.getElementById('curso-painel-lista');
-  if (!lista || lista.children.length) return; // só monta 1 vez
-  const porLab = {};
-  Object.keys(CURSO_PARA_CATEGORIA).forEach(c=>{
-    const lab = CURSO_PARA_CATEGORIA[c];
-    if(!porLab[lab]) porLab[lab]=[];
-    porLab[lab].push(c);
-  });
-  const labs = _LABS_ORDENADOS.filter(l=>porLab[l]);
-  let html='';
-  labs.forEach(lab=>{
-    html += `<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:12px 0 6px">${lab}</div>`;
-    porLab[lab].sort((a,b)=>a.localeCompare(b,'pt')).forEach(c=>{
-      html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;font-size:13px">
-        <input type="checkbox" value="${c}" class="curso-check" style="cursor:pointer">${c}</label>`;
-    });
-  });
-  lista.innerHTML = html;
-}
-function abrirPainelCurso(){
-  let cursosSalvos = [];
-  try{ cursosSalvos = JSON.parse(sessionStorage.getItem('coord_cursos_selecionados')||'[]'); }catch(e){}
-  document.querySelectorAll('.curso-check').forEach(chk=>{ chk.checked = cursosSalvos.includes(chk.value); });
-  document.getElementById('curso-painel-backdrop').style.display='block';
-}
-function _fecharPainelCurso(){
-  document.getElementById('curso-painel-backdrop').style.display='none';
-}
-function _aplicarCursosSelecionados(){
-  const cursos = [...document.querySelectorAll('.curso-check:checked')].map(c=>c.value);
-  sessionStorage.setItem('coord_cursos_selecionados', JSON.stringify(cursos));
-  _fecharPainelCurso();
-  DB = _clonarDB(window._DB_ORIGINAL);
-  if (cursos.length) _filtrarDBPorCursos(cursos);
-  _iniciarDashboard();
-  _aplicarMarcaCursos(cursos);
-}
-function _aplicarMarcaCursos(cursos){
-  // Mostra quais cursos estão selecionados no topo, com um botão pra abrir o
-  // painel e trocar a qualquer momento (sem recarregar a página).
-  document.querySelectorAll('.topbar > div:not(.topbar-logo):not(.topbar-title-wrap)').forEach(el=>{
-    if(el.dataset && el.dataset.cursoMarca) el.remove();
-  });
-  const wrap = document.createElement('div');
-  wrap.dataset.cursoMarca = '1';
-  wrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-left:auto';
-  const badge = document.createElement('button');
-  badge.style.cssText = 'background:var(--yellow);color:#1a1d23;font-weight:800;font-size:11px;padding:6px 12px;border-radius:6px;border:none;cursor:pointer';
-  badge.textContent = cursos.length ? ('🎓 ' + (cursos.length===1?cursos[0]:cursos.length+' cursos selecionados')) : '🎓 Selecionar curso(s)';
-  badge.onclick = abrirPainelCurso;
-  wrap.appendChild(badge);
-  const topbar = document.querySelector('.topbar');
-  if(topbar) topbar.appendChild(wrap);
-}
-
-// PATCH 111/116: filtra TODAS as coleções relevantes de DB pra só os cursos
-// escolhidos (um ou mais — lógica de "OU": um registro entra se bater com
-// QUALQUER um dos cursos marcados), ANTES de _iniciarDashboard() rodar --
-// assim todas as telas já existentes (Visão Geral, Práticas, Polos, Detalhe,
-// Agendas, Horários e Engajamento) mostram só o dado certo, sem precisar
-// reescrever cada uma. Sempre roda sobre uma cópia fresca de _DB_ORIGINAL
-// (ver _aplicarCursosSelecionados), então trocar a seleção nunca acumula
-// filtro em cima de filtro.
-function _filtrarDBPorCursos(cursos){
-  const categorias = [...new Set(cursos.map(c=>CURSO_PARA_CATEGORIA[c]).filter(Boolean))];
-  const codigos = [...new Set(cursos.map(c=>CURSO_PARA_CODIGO[c]).filter(Boolean))];
-  const bateQualquerCategoria = valor => categorias.some(cat=>_categoriaBate(valor||'', cat));
-
-  // 1. Tutores
-  if (Array.isArray(DB.tutores)) {
-    DB.tutores = DB.tutores.filter(t => bateQualquerCategoria(t.c));
-  }
-
-  // 2. Práticas (raiz + cada semestre)
-  function _filtraPraticasArr(arr){
-    if (!Array.isArray(arr)) return arr;
-    return arr.filter(p => (p.cursos && p.cursos.length) ? p.cursos.some(c=>cursos.includes(c)) : bateQualquerCategoria(p.c||p.categoria));
-  }
-  if (DB.praticas) DB.praticas = _filtraPraticasArr(DB.praticas);
-  if (DB.pratica_stats) DB.pratica_stats = _filtraPraticasArr(DB.pratica_stats);
-
-  // 3. Gerenciamento por semestre -- ger_ofertas tem 'categoria' e às vezes
-  // 'subcurso' (Multi III) ou 'curso' (código Lotação) pra filtro mais fino
-  if (DB.gerenciamento_por_semestre) {
-    Object.keys(DB.gerenciamento_por_semestre).forEach(sem=>{
-      const s = DB.gerenciamento_por_semestre[sem];
-      if (Array.isArray(s.ger_ofertas)) {
-        s.ger_ofertas = s.ger_ofertas.filter(o=>{
-          if (!bateQualquerCategoria(o.categoria)) return false;
-          if (o.subcurso) return cursos.some(c=>_normTxtCoord(o.subcurso)===_normTxtCoord(c));
-          if (o.curso && codigos.length) return codigos.includes(o.curso);
-          return true; // categoria já bate e não tem info mais fina -- mantém
-        });
-      }
-      if (Array.isArray(s.polo_stats)) s.polo_stats = _recalcularPoloStatsDeTutores();
-      if (Array.isArray(s.praticas)) s.praticas = _filtraPraticasArr(s.praticas);
-      if (Array.isArray(s.pratica_stats)) s.pratica_stats = _filtraPraticasArr(s.pratica_stats);
-    });
-  }
-
-  // 3b. dados_por_semestre é uma estrutura SEPARADA (lado Portfólios:
-  // Práticas/Polos/Visão Geral usam ela via _SEM_DB), diferente de
-  // gerenciamento_por_semestre (lado Gerenciamento, via GER_DB).
-  if (DB.dados_por_semestre) {
-    Object.keys(DB.dados_por_semestre).forEach(sem=>{
-      const s = DB.dados_por_semestre[sem];
-      if (Array.isArray(s.praticas)) s.praticas = _filtraPraticasArr(s.praticas);
-      if (Array.isArray(s.pratica_stats)) s.pratica_stats = _filtraPraticasArr(s.pratica_stats);
-      if (Array.isArray(s.polo_stats)) s.polo_stats = _recalcularPoloStatsDeTutores();
-    });
-  }
-
-  // 4. Polo stats (raiz) -- recalcula a partir dos tutores já filtrados
-  DB.polo_stats = _recalcularPoloStatsDeTutores();
-
-  // 5. Vagas -- filtra pelo código de qualquer um dos cursos selecionados
-  if (DB.vagas && Array.isArray(DB.vagas.vagas)) {
-    DB.vagas.vagas = DB.vagas.vagas.filter(v => codigos.length && codigos.some(cod=>(v.cursos||'').includes(cod)));
-    const vs = DB.vagas.vagas;
-    DB.vagas.kpis = {
-      total_vagas: vs.length,
-      aumento_quadro: vs.filter(v=>v.status==='Aumento de Quadro').length,
-      substituicao: vs.filter(v=>v.status==='Substituição').length,
-      com_previsao: vs.filter(v=>(v.contratacao||'').includes('Com previsão')).length,
-      sem_previsao: vs.filter(v=>(v.contratacao||'').includes('Sem previsão')).length,
-    };
-  }
-
-  DB._cursosTravados = cursos;
-}
-function _normTxtCoord(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
-function _recalcularPoloStatsDeTutores(){
-  const mapa = {};
-  (DB.tutores||[]).forEach(t=>{
-    const p = t.p||'—';
-    if(!mapa[p]) mapa[p] = {n:p, polo:p, POLO:p, total:0, enviaram:0, pend:0, pct:0, t:0, e:0, a:0, alunos:0};
-    mapa[p].total++; mapa[p].t++;
-    if((t.te||0)>0){ mapa[p].enviaram++; mapa[p].e++; }
-    mapa[p].alunos += (t.al||0); mapa[p].a = mapa[p].alunos;
-  });
-  return Object.values(mapa).map(p=>{ p.pend = p.total - p.enviaram; p.pct = p.total ? Math.round(p.enviaram/p.total*100) : 0; return p; });
-}
-
-function _iniciarDashboard(){
-  const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
-  document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
-  const _tsEl=document.getElementById('topbar-ts');if(_tsEl)_tsEl.textContent='Atualizado: '+DB.gerado_em;
-  try{renderKPIs();}catch(e){console.error('renderKPIs',e);}
-  try{renderOfensores();}catch(e){console.error('renderOfensores',e);}
-  try{renderMes();}catch(e){console.error('renderMes',e);}
-  try{renderCatOverview();}catch(e){console.error('renderCatOverview',e);}
-  try{renderAvisosPortfolio();}catch(e){console.error('renderAvisosPortfolio',e);}
-  try{renderOrdens();filterOrdemTbl('');}catch(e){console.error('renderOrdens',e);}
-  try{renderPracKPIs();renderCatPracBars();renderTopPrac();filterPrac('');}catch(e){console.error('renderPrac',e);}
-  try{filterPolos('');filterTutores('');}catch(e){console.error('filterPolos/Tutores',e);}
-  try{renderGerenciamento();populateFilters();}catch(e){console.error('renderGer',e);}
-  try{
-    const _vg=(DB.vagas||{}).vagas||[];
-    if(_vg.length){
-      document.getElementById('sidebar-vagas').style.display='';
-      populateVagasFilters();
-      renderVagasKPIs();
-    }
-  }catch(e){console.error('vagas init',e);}
-  initSemestres();
-}
-
-document.addEventListener('DOMContentLoaded',()=>{
-  initDark();
-  initSidebar();
-  initSenha();
-});
-
-</script>
-</div><!-- /main -->
-</body>
-</html>
+        if _por_cat:
+            dados['alunos_por_curso'] = [
+                {'sigla': k, 'curso': _CAT_NOME.get(k, k), 'alunos': int(v)}
+                for k, v in sorted(_por_cat.items(), key=lambda x: -x[1])
+                if v > 0
+            ]
+            _tot = sum(x['alunos'] for x in dados['alunos_por_curso'])
+            print(f"[{ts()}] Alunos por curso (hub CSV): {len(dados['alunos_por_curso'])} categorias, total {_tot:,}")
+
+    html = gerar_html(dados)
+    try:
+        gerar_html_coordenadores(dados)
+    except Exception as e:
+        print(f"[{ts()}] AVISO: Erro ao gerar portal de coordenadores: {e}")
+    if '--sem-browser' not in sys.argv:
+        print(f"[{ts()}] Abrindo navegador...")
+        webbrowser.open(Path(html).as_uri())
+    if WATCH_MODE: modo_watch(p1, p2)
+    else: print(f"[{ts()}] Concluído!")
