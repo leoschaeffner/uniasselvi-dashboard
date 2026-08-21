@@ -1235,35 +1235,11 @@ function renderGerenciamento(){
   renderEstadosInline(estadosData);renderMapaBrasil(estadosData);
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
-  // PATCH 118: linhas do GIOCONDA de tutores SEM nenhum vínculo ativo hoje
-  // (desligados sem registro ativo correspondente, ou categorizados como
-  // "Aviso de Portfólio") infiltravam o Detalhe/Pizza como tutores "extras",
-  // fazendo o total (355) não bater com o Total Tutores (348) das outras
-  // telas. Aplicado aqui na FONTE (não numa cópia local) porque tanto a
-  // tabela quanto os dois gráficos de pizza e a exportação reconstroem a
-  // lista direto de gerDetData de novo em vários pontos — filtrar só uma
-  // cópia local não bastava. Cuidado: um nome pode aparecer em
-  // tutores_desligados e AINDA ter um registro ativo de verdade (reingresso
-  // ou troca de polo) — só exclui quando não existe NENHUM registro ativo
-  // correspondente pro nome; nunca exclui por nome sozinho sem checar isso
-  // primeiro. Confirmado com o Leo em 21/08 (casos reais: Aline Camurça
-  // Mesquita e Magno Luis Das Neves Rosa aparecem como desligados mas seguem
-  // ativos noutro polo — não excluir).
-  var _tutoresAtivosKeysGD=(function(){
-    var s=new Set();
-    (DB.tutores||[]).filter(function(t){return !t._anonimo&&t.n&&t.n!=='Tutor desligado';}).forEach(function(t){s.add(_normTutorKey(t.n));});
-    return s;
-  })();
-  var _semVinculoAtivoKeysGD=(function(){
-    var s=new Set();
-    (DB.tutores_desligados||[]).forEach(function(t){
-      var k=_normTutorKey(t.n);
-      if(!_tutoresAtivosKeysGD.has(k)) s.add(k);
-    });
-    (DB.tutores||[]).filter(function(t){return t.c==='Aviso de Portfólio';}).forEach(function(t){s.add(_normTutorKey(t.n));});
-    return s;
-  })();
-  gerDetData=(GER_DB.ger_ofertas||[]).filter(function(r){ if(!r.tutor) return true; return !_semVinculoAtivoKeysGD.has(_normTutorKey(r.tutor)); });
+  // PATCH 118: exclusão de tutores sem vínculo ativo (desligados sem
+  // contrapartida ativa, ou "Aviso de Portfólio") movida pro processar.py —
+  // gerDetData já chega limpo do backend, não precisa mais filtrar aqui.
+  // Ver PATCH 118 no processar.py pro histórico completo.
+  gerDetData=GER_DB.ger_ofertas||[];
   // PATCH 77: o Leo reportou a MESMA pessoa (Renata Souza da/De Silva) ainda
   // duplicada mesmo depois do PATCH 75/76 bloquearem a re-injeção de "sem
   // oferta" — a causa real nesse caso é outra: um mecanismo ANTERIOR no
