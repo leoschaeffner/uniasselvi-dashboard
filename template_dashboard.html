@@ -484,6 +484,23 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th onclick="sortTable('ae-cat-tbody','eng','num')">Engajamento<span class="sort-ind"></span></th>
     </tr></thead><tbody id="ae-cat-tbody"></tbody></table></div>
   </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">🎓 Matriculados × Agendados por Prática</div><div class="card-badge" id="ae-pratica-count">—</div></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar prática, polo, categoria…" oninput="filterAgendasPratica(this.value)" id="ae-pratica-search"/>
+      <span class="tbl-count" id="ae-pratica-tbl-count">—</span>
+      <button class="btn-export" onclick="exportAgendasPratica()">⬇ Exportar</button>
+    </div>
+    <div style="padding:8px 16px 0;font-size:11px;color:var(--muted)">ℹ️ Matriculados/Agendados vêm por turma (Polo+Categoria) no GIOCONDA, não por prática individual — práticas da mesma turma repetem o mesmo valor. Não somar esta coluna entre práticas da mesma turma (infla o total).</div>
+    <div class="tbl-wrap" style="max-height:420px"><table><thead><tr>
+      <th onclick="sortTable('ae-pratica-tbody','pratica','str')">Prática<span class="sort-ind"></span></th>
+      <th onclick="sortTable('ae-pratica-tbody','polo','str')">Polo<span class="sort-ind"></span></th>
+      <th onclick="sortTable('ae-pratica-tbody','cat','str')">Categoria<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('ae-pratica-tbody','mat','num')">Matriculados (turma)<span class="sort-ind"></span></th>
+      <th style="text-align:right" onclick="sortTable('ae-pratica-tbody','agend','num')">Agendados (turma)<span class="sort-ind"></span></th>
+      <th onclick="sortTable('ae-pratica-tbody','pct','num')">Engajamento<span class="sort-ind"></span></th>
+    </tr></thead><tbody id="ae-pratica-tbody"></tbody></table></div>
+  </div>
   <div class="card">
     <div class="card-hdr"><div class="card-title">⚠️ Horários Incomuns — Domingo ou Madrugada (00h–06h)</div><div class="card-badge" id="ae-incomuns-count">—</div></div>
     <div class="toolbar">
@@ -1218,7 +1235,35 @@ function renderGerenciamento(){
   renderEstadosInline(estadosData);renderMapaBrasil(estadosData);
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
-  gerDetData=GER_DB.ger_ofertas||[];
+  // PATCH 118: linhas do GIOCONDA de tutores SEM nenhum vínculo ativo hoje
+  // (desligados sem registro ativo correspondente, ou categorizados como
+  // "Aviso de Portfólio") infiltravam o Detalhe/Pizza como tutores "extras",
+  // fazendo o total (355) não bater com o Total Tutores (348) das outras
+  // telas. Aplicado aqui na FONTE (não numa cópia local) porque tanto a
+  // tabela quanto os dois gráficos de pizza e a exportação reconstroem a
+  // lista direto de gerDetData de novo em vários pontos — filtrar só uma
+  // cópia local não bastava. Cuidado: um nome pode aparecer em
+  // tutores_desligados e AINDA ter um registro ativo de verdade (reingresso
+  // ou troca de polo) — só exclui quando não existe NENHUM registro ativo
+  // correspondente pro nome; nunca exclui por nome sozinho sem checar isso
+  // primeiro. Confirmado com o Leo em 21/08 (casos reais: Aline Camurça
+  // Mesquita e Magno Luis Das Neves Rosa aparecem como desligados mas seguem
+  // ativos noutro polo — não excluir).
+  var _tutoresAtivosKeysGD=(function(){
+    var s=new Set();
+    (DB.tutores||[]).filter(function(t){return !t._anonimo&&t.n&&t.n!=='Tutor desligado';}).forEach(function(t){s.add(_normTutorKey(t.n));});
+    return s;
+  })();
+  var _semVinculoAtivoKeysGD=(function(){
+    var s=new Set();
+    (DB.tutores_desligados||[]).forEach(function(t){
+      var k=_normTutorKey(t.n);
+      if(!_tutoresAtivosKeysGD.has(k)) s.add(k);
+    });
+    (DB.tutores||[]).filter(function(t){return t.c==='Aviso de Portfólio';}).forEach(function(t){s.add(_normTutorKey(t.n));});
+    return s;
+  })();
+  gerDetData=(GER_DB.ger_ofertas||[]).filter(function(r){ if(!r.tutor) return true; return !_semVinculoAtivoKeysGD.has(_normTutorKey(r.tutor)); });
   // PATCH 77: o Leo reportou a MESMA pessoa (Renata Souza da/De Silva) ainda
   // duplicada mesmo depois do PATCH 75/76 bloquearem a re-injeção de "sem
   // oferta" — a causa real nesse caso é outra: um mecanismo ANTERIOR no
@@ -3223,6 +3268,20 @@ function renderAgendasEstudo(){
   }).join('');
   if(!catRows.length) document.getElementById('ae-cat-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
 
+  // PATCH 119: visão "Matriculados × Agendados por Prática", pedida pelo Leo.
+  // IMPORTANTE: alunos_mat/alunos_agend vêm por TURMA (Polo+Categoria) no
+  // GIOCONDA, não por prática — cada prática da mesma turma repete o mesmo
+  // valor (mesma regra do _dedupAlunos, ver PATCH 48 mais acima). Confirmado
+  // com o Leo em 21/08 que ele quer ver assim mesmo (uma linha por prática,
+  // repetindo o valor da turma), não agregado por turma — mas o aviso na tela
+  // deixa claro que não dá pra somar essa coluna entre práticas da mesma
+  // turma sem inflar o total.
+  window._aePraticaData = ofertas.map(o=>({
+    pratica: o.pratica||'—', polo: o.polo||'—', categoria: catParaCurso(o.categoria||''),
+    mat: o.alunos_mat||0, agend: o.alunos_agend||0
+  }));
+  filterAgendasPratica(document.getElementById('ae-pratica-search')?.value||'');
+
   // Agrupar "sem aluno" por tutor+polo, achando o dia/turno mais comum de cada um
   const grpMap={};
   semAluno.forEach(o=>{
@@ -3276,6 +3335,30 @@ function filterAgendasSemAluno(q){
   document.getElementById('ae-semaluno-tbl-count').textContent=d.length+' tutor'+(d.length!==1?'es':'');
   document.getElementById('ae-semaluno-count').textContent=(window._aeSemAlunoData||[]).reduce((s,g)=>s+g.qtd,0)+' sessões no total';
   if(!d.length) tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--ok)">✓ Nenhum gerenciamento sem aluno encontrado.</td></tr>';
+}
+function filterAgendasPratica(q){
+  q=(q||'').toLowerCase().trim();
+  let d=window._aePraticaData||[];
+  if(q) d=d.filter(p=>(p.pratica+p.polo+p.categoria).toLowerCase().includes(q));
+  const tbody=document.getElementById('ae-pratica-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=d.map(p=>{
+    const eng=p.mat?Math.round(p.agend/p.mat*100):0;
+    return `<tr data-vpratica="${esc(p.pratica)}" data-vpolo="${esc(p.polo)}" data-vcat="${esc(p.categoria)}" data-vmat="${p.mat}" data-vagend="${p.agend}" data-vpct="${eng}">
+      <td style="font-size:11px;max-width:280px">${esc(p.pratica)}</td>
+      <td style="font-size:11px">${esc(p.polo)}</td>
+      <td style="font-size:11px;color:var(--muted)">${esc(p.categoria)}</td>
+      <td style="text-align:right;font-weight:700">${fmtNum(p.mat)}</td>
+      <td style="text-align:right;font-weight:700;color:var(--teal)">${fmtNum(p.agend)}</td>
+      <td>${progCell(eng)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ae-pratica-tbl-count').textContent=d.length+' prática'+(d.length!==1?'s':'');
+  document.getElementById('ae-pratica-count').textContent=(window._aePraticaData||[]).length+' no total';
+  if(!d.length) tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhum resultado encontrado.</td></tr>';
+}
+function exportAgendasPratica(){
+  exportCSV((window._aePraticaData||[]).map(p=>({'Prática':p.pratica,'Polo':p.polo,'Categoria':p.categoria,'Matriculados (turma)':p.mat,'Agendados (turma)':p.agend})), 'matriculados_agendados_por_pratica_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 function exportAgendasIncomuns(){
   exportCSV((window._aeIncomunsData||[]).map(o=>({'Polo':o.polo,'Tutor':o.tutor||'—','Curso/Lab':catParaCurso(o.categoria),'Dia':o.dia_semana,'Turno':o.turno,'Data':o.dt_agenda||'—','Horário':o.hr_agenda||'—'})), 'horarios_incomuns_'+new Date().toISOString().slice(0,10)+'.csv');
