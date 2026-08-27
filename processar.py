@@ -654,6 +654,7 @@ def processar(p1, p2):
     print(f"[{ts()}] CONTROLE chaves (amostra): {_sample_chaves}")
     print(f"[{ts()}] Lendo portfolios...")
     df_p = ler_excel(p2, sheet_name='Sheet1')
+    df_p['_SEMESTRE_ORIGEM'] = '2026/1'  # PATCH 127: origem do arquivo, não a data — ver nota mais abaixo
 
 
     def col(df, *partes):
@@ -849,6 +850,7 @@ def processar(p1, p2):
                 df_novo['_ALUNOS'] = _aluno_soma_n.fillna(0).astype(int) if _aluno_soma_n is not None else 0
                 df_novo['_CAT']    = _cat_norm_n
                 df_novo['_ORDEM']  = df_novo[_c_ordem_n].astype(str).str.strip() if _c_ordem_n else 'Ordem 1'
+                df_novo['_SEMESTRE_ORIGEM'] = '2026/2'  # PATCH 127
                 df_p = pd.concat([df_p, df_novo], ignore_index=True)
                 print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2), {len(df_novo)-_sem_cod} com chave completa")
         else:
@@ -856,27 +858,55 @@ def processar(p1, p2):
     else:
         print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2.xlsx não encontrada — só 2026/1 nesta rodada")
 
-    # PATCH 123: "Alunos registrados no Portfólio" — pedido pelo Leo pra
-    # complementar o "Alunos Agendados" (que já existe no lado do
-    # gerenciamento/GIOCONDA) na Visão Geral de Portfólios. MESMO PROBLEMA que
-    # já foi corrigido do lado do GIOCONDA (PATCH 38): o número de alunos
-    # presentes se repete a cada prática enviada da mesma turma (polo+
-    # categoria) — somar direto infla o total várias vezes. Dedupliado do
+    # PATCH 123 (revisado): "Alunos registrados no Portfólio" — pedido pelo
+    # Leo pra complementar o "Alunos Agendados" (GIOCONDA) na Visão Geral.
+    # MESMO PROBLEMA que já foi corrigido do lado do GIOCONDA (PATCH 38): o
+    # número de alunos presentes se repete a cada prática enviada da mesma
+    # turma (polo+categoria) — somar direto infla o total. Deduplicado do
     # mesmo jeito (groupby polo+categoria, pega o MAIOR valor, não soma).
-    _port_alunos_geral = 0
-    _port_alunos_por_polo = {}
-    _port_alunos_por_cat = {}
-    if '_ALUNOS' in df_p.columns and '_POLO' in df_p.columns and '_CAT' in df_p.columns:
-        _dfp_dedup_base = df_p[(df_p['_POLO'].astype(str).str.len() > 0) & (df_p['_CAT'].astype(str).str.len() > 0)]
-        if len(_dfp_dedup_base):
-            _raw_port = int(pd.to_numeric(_dfp_dedup_base['_ALUNOS'], errors='coerce').fillna(0).sum())
-            _dedup_port = _dfp_dedup_base.groupby(['_POLO', '_CAT'])['_ALUNOS'].max()
-            _port_alunos_geral = int(_dedup_port.sum())
-            print(f"[{ts()}] Alunos registrados no Portfólio DEDUPLICADOS por polo×cat: {_port_alunos_geral:,} (bruto era {_raw_port:,}, redução: {_raw_port-_port_alunos_geral:,})")
-            for polo, s in _dedup_port.groupby(level=0).sum().items():
-                _port_alunos_por_polo[str(polo)] = int(s)
-            for cat, s in _dedup_port.groupby(level=1).sum().items():
-                _port_alunos_por_cat[str(cat)] = int(s)
+    #
+    # BUG REAL encontrado depois de publicado (Leo reportou "647% Agendado
+    # sobre Registrado", matematicamente impossível): esse número saía SEMPRE
+    # somando TODO o histórico de portfólio (2026/1 + 2026/2 juntos, sem
+    # filtro), enquanto "Alunos Agendados" (GIOCONDA) é por semestre
+    # selecionado — comparação de coisas de escopo diferente. Corrigido
+    # calculando por semestre de verdade (mesmo classificador de data que o
+    # resto do pipeline usa, _data_para_semestre), guardando os 3 recortes
+    # (2026/1, 2026/2, Ambos) — o front escolhe o certo conforme a aba de
+    # semestre selecionada, do mesmo jeito que já faz pros outros KPIs.
+    def _calc_portfolio_dedup(df_sub):
+        _geral, _por_polo, _por_cat = 0, {}, {}
+        if '_ALUNOS' in df_sub.columns and '_POLO' in df_sub.columns and '_CAT' in df_sub.columns:
+            _base = df_sub[(df_sub['_POLO'].astype(str).str.len() > 0) & (df_sub['_CAT'].astype(str).str.len() > 0)]
+            if len(_base):
+                _dedup = _base.groupby(['_POLO', '_CAT'])['_ALUNOS'].max()
+                _geral = int(_dedup.sum())
+                for polo, s in _dedup.groupby(level=0).sum().items(): _por_polo[str(polo)] = int(s)
+                for cat, s in _dedup.groupby(level=1).sum().items(): _por_cat[str(cat)] = int(s)
+        return {'geral': _geral, 'por_polo': _por_polo, 'por_categoria': _por_cat}
+
+    # PATCH 127: classificação por semestre usa a ORIGEM DO ARQUIVO
+    # (_SEMESTRE_ORIGEM, marcado na hora de ler cada planilha), não a data de
+    # aplicação. Tentei usar _data_para_semestre() primeiro (mesmo
+    # classificador do resto do pipeline) mas ele só reconhece datas dentro
+    # das janelas estreitas de cada Ordem (~4 semanas) — 93% das datas de
+    # submissão de portfólio caem FORA dessas janelas (o tutor preenche
+    # atrasado, ou fora do período oficial), então quase tudo virava "sem
+    # semestre". Como cada semestre já vem de um arquivo Excel separado, usar
+    # a origem do arquivo é mais simples e muito mais confiável.
+    _sems_disponiveis = sorted(set(s for s in df_p['_SEMESTRE_ORIGEM'].dropna().unique()) | {SEMESTRE_ATUAL})
+    portfolio_alunos_dedup_por_semestre = {}
+    for _sem in _sems_disponiveis:
+        portfolio_alunos_dedup_por_semestre[_sem] = _calc_portfolio_dedup(df_p[df_p['_SEMESTRE_ORIGEM'] == _sem])
+    portfolio_alunos_dedup_por_semestre['Ambos'] = _calc_portfolio_dedup(df_p)
+    # compat: 'portfolio_alunos_dedup' no nível raiz = semestre ativo (mesmo
+    # padrão do dados.update(ger_dados) mais abaixo pro gerenciamento)
+    _port_dedup_atual = portfolio_alunos_dedup_por_semestre.get(SEMESTRE_ATUAL, {'geral': 0, 'por_polo': {}, 'por_categoria': {}})
+    _port_alunos_geral = _port_dedup_atual['geral']
+    _port_alunos_por_polo = _port_dedup_atual['por_polo']
+    _port_alunos_por_cat = _port_dedup_atual['por_categoria']
+    for _sem, _d in portfolio_alunos_dedup_por_semestre.items():
+        print(f"[{ts()}] Alunos registrados no Portfólio DEDUPLICADOS ({_sem}): {_d['geral']:,}")
     # (guardado em variável local — entra no dict final via return limpar({...})
     # lá embaixo, não existe "dados" incremental dentro desta função)
 
@@ -1805,6 +1835,7 @@ def processar(p1, p2):
             'por_polo': _port_alunos_por_polo,
             'por_categoria': _port_alunos_por_cat,
         },
+        'portfolio_alunos_dedup_por_semestre': portfolio_alunos_dedup_por_semestre,  # PATCH 127
         'por_ordem': por_ordem_dict, 'por_ordem_lista': por_ordem,
         'alunos_por_ordem': alunos_por_ordem, 'status_ordem': status_ordem,
         'cat_stats': [{'categoria': k, **v} for k, v in cs.items()],
@@ -2011,6 +2042,7 @@ def processar_vagas(p4):
             'chamado_sydle': chamado_sydle, 'status_chamado': status_chamado,
             'ch_semanal': ch_semanal, 'ch_ideal': ch_ideal,
             'prioridade': prioridade, 'autorizado': autorizado,
+            'alunos_polo': 0,  # PATCH 126: preenchido depois com o hub CSV, se disponível
         })
 
     total = len(vagas)
@@ -3853,7 +3885,7 @@ if __name__ == '__main__':
             dados.update(ger_dados)
             dados['tem_gerenciamento'] = True
 
-            # PATCH 123: cruzamento "Registrado no Portfólio × Agendado" —
+            # PATCH 123/127: cruzamento "Registrado no Portfólio × Agendado" —
             # pedido pelo Leo, nos 3 níveis (geral, por polo, por categoria).
             # Duas fontes com vocabulário de categoria DIFERENTE: o Portfólio
             # guarda o texto bruto do formulário ("Multidisciplinar III -
@@ -3861,6 +3893,14 @@ if __name__ == '__main__':
             # ("BIO-FISIO-EST-TO (Multidisciplinar III)"). Reconciliado via
             # categoria_para_curso.json (texto do formulário -> código fino,
             # ex: BFI) + um mapa código fino -> rótulo amplo do CAT_MAP.
+            #
+            # BUG CORRIGIDO (Leo reportou "647% Agendado sobre Registrado",
+            # matematicamente impossível): antes comparava TODO o histórico de
+            # portfólio (2026/1+2026/2 somados) contra agendados de UM
+            # semestre só. Agora calcula o cruzamento PRA CADA semestre
+            # separadamente (mesma fonte por_semestre dos dois lados), e o
+            # front troca de recorte junto com a aba de semestre — do mesmo
+            # jeito que já faz pra gerenciamento_por_semestre.
             _FINO_PARA_AMPLO = {
                 'EMF-ISN': 'ENF-INS (Multidisciplinar II)', 'BFR': 'BIO-FAR (Multidisciplinar I)',
                 'NTR': 'NUTRI (Multidisciplinar IV)', 'BFI': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
@@ -3870,40 +3910,45 @@ if __name__ == '__main__':
             }
             _cpc_file2 = os.path.join(SCRIPT_DIR, 'categoria_para_curso.json')
             _cat_para_curso2 = json.load(open(_cpc_file2, encoding='utf-8')) if os.path.isfile(_cpc_file2) else {}
-            _port_dedup = dados.get('portfolio_alunos_dedup', {'geral': 0, 'por_polo': {}, 'por_categoria': {}})
-
-            _port_por_cat_amplo = {}
-            for _cat_bruta, _val in _port_dedup.get('por_categoria', {}).items():
-                _cod_fino = _cat_para_curso2.get(_cat_bruta)
-                _amplo = _FINO_PARA_AMPLO.get(_cod_fino) if _cod_fino else None
-                if _amplo:
-                    _port_por_cat_amplo[_amplo] = _port_por_cat_amplo.get(_amplo, 0) + _val
-
-            _agend_geral = int(dados.get('ger_kpis', {}).get('total_alunos_agendados', 0))
-            _agend_por_polo = {p['polo']: p.get('alunos_agendados', 0) for p in dados.get('ger_polo', [])}
-            _agend_por_cat = {c['categoria']: c.get('alunos_agendados', 0) for c in dados.get('ger_cat', [])}
 
             def _cruza(port, agend):
                 return {'registrado_portfolio': port, 'agendado': agend,
                         'diferenca': port - agend,
                         'pct_agendado_sobre_portfolio': round(agend / port * 100, 1) if port else None}
 
-            _por_polo_cruz = []
-            for _p in sorted(set(_port_dedup.get('por_polo', {}).keys()) | set(_agend_por_polo.keys())):
-                _por_polo_cruz.append({'polo': _p, **_cruza(_port_dedup.get('por_polo', {}).get(_p, 0), _agend_por_polo.get(_p, 0))})
-            _por_polo_cruz.sort(key=lambda x: -x['registrado_portfolio'])
+            def _monta_cruzamento(_port_dedup_sem, _ger_dados_sem):
+                _port_por_cat_amplo = {}
+                for _cat_bruta, _val in _port_dedup_sem.get('por_categoria', {}).items():
+                    _cod_fino = _cat_para_curso2.get(_cat_bruta)
+                    _amplo = _FINO_PARA_AMPLO.get(_cod_fino) if _cod_fino else None
+                    if _amplo:
+                        _port_por_cat_amplo[_amplo] = _port_por_cat_amplo.get(_amplo, 0) + _val
+                _agend_geral_sem = int((_ger_dados_sem.get('ger_kpis') or {}).get('total_alunos_agendados', 0))
+                _agend_por_polo_sem = {p['polo']: p.get('alunos_agendados', 0) for p in _ger_dados_sem.get('ger_polo', [])}
+                _agend_por_cat_sem = {c['categoria']: c.get('alunos_agendados', 0) for c in _ger_dados_sem.get('ger_cat', [])}
+                _por_polo_c = sorted(
+                    [{'polo': _p, **_cruza(_port_dedup_sem.get('por_polo', {}).get(_p, 0), _agend_por_polo_sem.get(_p, 0))}
+                     for _p in set(_port_dedup_sem.get('por_polo', {}).keys()) | set(_agend_por_polo_sem.keys())],
+                    key=lambda x: -x['registrado_portfolio'])
+                _por_cat_c = sorted(
+                    [{'categoria': _c, **_cruza(_port_por_cat_amplo.get(_c, 0), _agend_por_cat_sem.get(_c, 0))}
+                     for _c in set(_port_por_cat_amplo.keys()) | set(_agend_por_cat_sem.keys())],
+                    key=lambda x: -x['registrado_portfolio'])
+                return {'geral': _cruza(_port_dedup_sem.get('geral', 0), _agend_geral_sem),
+                        'por_polo': _por_polo_c, 'por_categoria': _por_cat_c}
 
-            _por_cat_cruz = []
-            for _c in sorted(set(_port_por_cat_amplo.keys()) | set(_agend_por_cat.keys())):
-                _por_cat_cruz.append({'categoria': _c, **_cruza(_port_por_cat_amplo.get(_c, 0), _agend_por_cat.get(_c, 0))})
-            _por_cat_cruz.sort(key=lambda x: -x['registrado_portfolio'])
-
-            dados['cruzamento_portfolio_agendado'] = {
-                'geral': _cruza(_port_dedup.get('geral', 0), _agend_geral),
-                'por_polo': _por_polo_cruz,
-                'por_categoria': _por_cat_cruz,
-            }
-            print(f"[{ts()}] Cruzamento Portfólio×Agendado: {_port_dedup.get('geral',0):,} registrados, {_agend_geral:,} agendados")
+            cruzamento_por_semestre = {}
+            for _sk in ger_por_semestre.keys():
+                _port_sem = portfolio_alunos_dedup_por_semestre.get(_sk, {'geral': 0, 'por_polo': {}, 'por_categoria': {}})
+                cruzamento_por_semestre[_sk] = _monta_cruzamento(_port_sem, ger_por_semestre[_sk])
+            # "Ambos": soma geral dos dois lados através de todos os semestres
+            cruzamento_por_semestre['Ambos'] = _monta_cruzamento(
+                portfolio_alunos_dedup_por_semestre.get('Ambos', {'geral': 0, 'por_polo': {}, 'por_categoria': {}}),
+                {'ger_kpis': {'total_alunos_agendados': sum((ger_por_semestre[s].get('ger_kpis') or {}).get('total_alunos_agendados', 0) for s in ger_por_semestre)},
+                 'ger_polo': [], 'ger_cat': []})
+            dados['cruzamento_portfolio_agendado_por_semestre'] = cruzamento_por_semestre
+            dados['cruzamento_portfolio_agendado'] = cruzamento_por_semestre.get(SEMESTRE_ATUAL, {'geral': _cruza(0,0), 'por_polo': [], 'por_categoria': []})
+            print(f"[{ts()}] Cruzamento Portfólio×Agendado ({SEMESTRE_ATUAL}): {dados['cruzamento_portfolio_agendado']['geral']}")
             # ── Injetar gerenciamento nos tutores (ger_pct, ger_ok, ger_total) ──────
             import unicodedata as _ud5, re as _re6
             def _norm_ger2(s):
@@ -4092,6 +4137,19 @@ if __name__ == '__main__':
                             _ps['alunos'] = int(_al_hub)
                             _enr_polo += 1
                 print(f"[{ts()}] Polos enriquecidos com alunos (hub CSV): {_enr_polo}")
+
+                # PATCH 126: base de alunos do polo em cada vaga — pedido pelo
+                # Leo pra dar contexto de prioridade (vaga aberta num polo com
+                # muitos alunos pesa mais que num polo pequeno). Mesma fonte
+                # autoritativa (matrículas distintas do hub), mesma normalização
+                # de nome de polo já usada acima.
+                _enr_vaga = 0
+                for _v in dados.get('vagas', {}).get('vagas', []):
+                    _pn_v = _norm_polo_hub_main(_v.get('polo', ''))
+                    _al_v = _hub_por_polo.get(_pn_v, 0)
+                    _v['alunos_polo'] = int(_al_v) if _al_v else 0
+                    if _al_v: _enr_vaga += 1
+                print(f"[{ts()}] Vagas enriquecidas com base de alunos do polo: {_enr_vaga}/{len(dados.get('vagas', {}).get('vagas', []))}")
         except Exception as e:
             print(f"[{ts()}] AVISO: erro ao ler alunos hub: {e}")
     else:
