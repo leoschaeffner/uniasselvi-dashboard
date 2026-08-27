@@ -3937,15 +3937,27 @@ if __name__ == '__main__':
                 return {'geral': _cruza(_port_dedup_sem.get('geral', 0), _agend_geral_sem),
                         'por_polo': _por_polo_c, 'por_categoria': _por_cat_c}
 
+            _portfolio_dedup_sem_dict = dados.get('portfolio_alunos_dedup_por_semestre', {})
             cruzamento_por_semestre = {}
             for _sk in ger_por_semestre.keys():
-                _port_sem = portfolio_alunos_dedup_por_semestre.get(_sk, {'geral': 0, 'por_polo': {}, 'por_categoria': {}})
+                _port_sem = _portfolio_dedup_sem_dict.get(_sk, {'geral': 0, 'por_polo': {}, 'por_categoria': {}})
                 cruzamento_por_semestre[_sk] = _monta_cruzamento(_port_sem, ger_por_semestre[_sk])
-            # "Ambos": soma geral dos dois lados através de todos os semestres
+            # "Ambos": soma geral dos dois lados através de todos os semestres,
+            # inclusive por polo e por categoria (não deixar como lista vazia,
+            # senão a tabela mostra "Agendado: 0" que parece dado real mas é
+            # só ausência de soma)
+            _agend_por_polo_todos = {}
+            _agend_por_cat_todos = {}
+            for _sk2 in ger_por_semestre.keys():
+                for _p in ger_por_semestre[_sk2].get('ger_polo', []):
+                    _agend_por_polo_todos[_p['polo']] = _agend_por_polo_todos.get(_p['polo'], 0) + _p.get('alunos_agendados', 0)
+                for _c in ger_por_semestre[_sk2].get('ger_cat', []):
+                    _agend_por_cat_todos[_c['categoria']] = _agend_por_cat_todos.get(_c['categoria'], 0) + _c.get('alunos_agendados', 0)
             cruzamento_por_semestre['Ambos'] = _monta_cruzamento(
-                portfolio_alunos_dedup_por_semestre.get('Ambos', {'geral': 0, 'por_polo': {}, 'por_categoria': {}}),
+                _portfolio_dedup_sem_dict.get('Ambos', {'geral': 0, 'por_polo': {}, 'por_categoria': {}}),
                 {'ger_kpis': {'total_alunos_agendados': sum((ger_por_semestre[s].get('ger_kpis') or {}).get('total_alunos_agendados', 0) for s in ger_por_semestre)},
-                 'ger_polo': [], 'ger_cat': []})
+                 'ger_polo': [{'polo': k, 'alunos_agendados': v} for k, v in _agend_por_polo_todos.items()],
+                 'ger_cat': [{'categoria': k, 'alunos_agendados': v} for k, v in _agend_por_cat_todos.items()]})
             dados['cruzamento_portfolio_agendado_por_semestre'] = cruzamento_por_semestre
             dados['cruzamento_portfolio_agendado'] = cruzamento_por_semestre.get(SEMESTRE_ATUAL, {'geral': _cruza(0,0), 'por_polo': [], 'por_categoria': []})
             print(f"[{ts()}] Cruzamento Portfólio×Agendado ({SEMESTRE_ATUAL}): {dados['cruzamento_portfolio_agendado']['geral']}")
