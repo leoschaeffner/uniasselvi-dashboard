@@ -188,6 +188,17 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="page active" id="page-port-visao"><div class="container">
   <div class="ph"><div class="ph-title">Portfólios — Visão Geral</div><div class="ph-sub" id="pv-sub">—</div></div>
   <div class="kpi-row" id="pv-kpis"></div>
+  <div class="card" id="pv-cruzamento" style="display:none;margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">🔀 Registrado no Portfólio × Agendado</div></div>
+    <div class="card-body" id="cruz-geral" style="padding-bottom:8px"></div>
+    <div class="rtabs" style="margin:0 16px 8px"><button class="rtab active" id="cruz-tab-polo" onclick="switchCruzamentoTab('polo')">Por Polo</button><button class="rtab" id="cruz-tab-cat" onclick="switchCruzamentoTab('cat')">Por Categoria</button></div>
+    <div id="cruz-view-polo">
+      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr><th>Polo</th><th style="text-align:right">Registrado</th><th style="text-align:right">Agendado</th><th>% Agendado</th></tr></thead><tbody id="cruz-polo-tbody"></tbody></table></div>
+    </div>
+    <div id="cruz-view-cat" style="display:none">
+      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr><th>Categoria</th><th style="text-align:right">Registrado</th><th style="text-align:right">Agendado</th><th>% Agendado</th></tr></thead><tbody id="cruz-cat-tbody"></tbody></table></div>
+    </div>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div class="card"><div class="card-hdr"><div class="card-title">Situação dos Tutores</div></div><div class="stat-bar" id="pv-stat-bar"></div><div class="card-body" id="pv-ofensores"></div></div>
     <div class="card"><div class="card-hdr"><div class="card-title">Envios por Mês</div></div><div class="card-body" id="pv-mes"></div></div>
@@ -437,6 +448,29 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <select class="sel" id="ae-filtro-polo" onchange="filterAgendasPoloTutor()"><option value="">Todos os polos</option></select>
       <select class="sel" id="ae-filtro-tutor" onchange="filterAgendasPoloTutor()"><option value="">Todos os tutores</option></select>
       <span style="font-size:11px;color:var(--muted)">Deixa em "Todos" pra ver o agregado de sempre — escolhe um polo ou tutor pra ver só os horários dele.</span>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">📈 Engajamento por Ordem (comparação)</div></div>
+    <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding-bottom:0">
+      <select class="sel" id="ae-ordem-cat-sel" onchange="renderEngajamentoPorOrdem()"><option value="">Todas as categorias juntas</option></select>
+      <span style="font-size:11px;color:var(--muted)">Compara o % de engajamento (práticas gerenciadas / total) entre as ordens, pra ver se está subindo ou caindo.</span>
+    </div>
+    <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
+      <th>Categoria</th><th>Ordem</th><th style="text-align:right">Práticas Gerenciadas</th><th>% Engajamento</th><th>Variação vs Ordem Anterior</th>
+    </tr></thead><tbody id="ae-ordem-tbody"></tbody></table></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">📤 Exportar Análise de Engajamento (por Turno, Polo, Curso e Ordem)</div></div>
+    <div class="card-body">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Escolhe quais dimensões quebrar na exportação — o restante fica agregado.</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="ae-exp-polo" checked/> Polo</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="ae-exp-curso" checked/> Curso/Categoria</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="ae-exp-ordem" checked/> Ordem</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="ae-exp-turno"/> Turno</label>
+      </div>
+      <button class="btn-export" onclick="exportAnaliseEngajamento()">⬇ Exportar Análise (CSV)</button>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
@@ -806,7 +840,41 @@ function renderKPIs(){
     <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos nas Práticas</div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
+    <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum((DB.portfolio_alunos_dedup||{}).geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
+    <div class="kpi kpi-teal" title="Alunos agendados no GIOCONDA (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(((typeof GER_DB!=='undefined'&&GER_DB?GER_DB:DB).ger_kpis||{}).total_alunos_agendados||0)}</div><div class="kpi-detail" style="color:var(--muted)">via GIOCONDA</div></div>
     <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div><div class="kpi-hint">clique para ver lista</div></div>`;
+  renderCruzamentoPortfolioAgendado();
+}
+function renderCruzamentoPortfolioAgendado(){
+  const el = document.getElementById('pv-cruzamento');
+  if(!el) return;
+  const cruz = DB.cruzamento_portfolio_agendado;
+  if(!cruz || (!cruz.geral.registrado_portfolio && !cruz.geral.agendado)){
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  const g = cruz.geral;
+  const pctTxt = g.pct_agendado_sobre_portfolio!==null ? g.pct_agendado_sobre_portfolio+'%' : '—';
+  document.getElementById('cruz-geral').innerHTML = `
+    <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+      <div><div style="font-size:11px;color:var(--muted)">Registrados no Portfólio</div><div style="font-size:26px;font-weight:800">${fmtNum(g.registrado_portfolio)}</div></div>
+      <div style="font-size:20px;color:var(--muted)">→</div>
+      <div><div style="font-size:11px;color:var(--muted)">Agendados</div><div style="font-size:26px;font-weight:800;color:var(--teal)">${fmtNum(g.agendado)}</div></div>
+      <div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:var(--muted)">Agendado sobre Registrado</div><div style="font-size:22px;font-weight:700;color:${g.pct_agendado_sobre_portfolio>=70?'var(--ok)':g.pct_agendado_sobre_portfolio>=40?'var(--yellow)':'var(--red)'}">${pctTxt}</div></div>
+    </div>`;
+  const montaLinhas = (lista, campoNome) => lista.map(x => {
+    const pct = x.pct_agendado_sobre_portfolio;
+    return `<tr><td>${esc(x[campoNome])}</td><td style="text-align:right">${fmtNum(x.registrado_portfolio)}</td><td style="text-align:right;color:var(--teal)">${fmtNum(x.agendado)}</td><td>${pct!==null?progCell(pct):'<span style="color:var(--muted)">—</span>'}</td></tr>`;
+  }).join('');
+  document.getElementById('cruz-polo-tbody').innerHTML = montaLinhas(cruz.por_polo||[], 'polo') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted)">Sem dados.</td></tr>';
+  document.getElementById('cruz-cat-tbody').innerHTML = montaLinhas(cruz.por_categoria||[], 'categoria') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted)">Sem dados.</td></tr>';
+}
+function switchCruzamentoTab(tab){
+  ['polo','cat'].forEach(t=>{
+    document.getElementById('cruz-tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('cruz-view-'+t).style.display = (t===tab)?'':'none';
+  });
 }
 function renderOfensores(){
   const el=document.getElementById('pv-ofensores');const sb=document.getElementById('pv-stat-bar');
@@ -941,7 +1009,10 @@ function renderPoloTbl(data){
   const sorted=[...data].sort((a,b)=>{const va=a[poloSortK],vb=b[poloSortK];if(typeof va==='string')return poloSortA?va.localeCompare(vb):vb.localeCompare(va);return poloSortA?va-vb:vb-va});
   const sb=document.getElementById('polo-stat-bar');const ok=sorted.filter(p=>(p.pend||0)===0).length,pend=sorted.length-ok;
   sb.innerHTML=`<div style="width:${ok/sorted.length*100}%;background:var(--ok)"></div><div style="width:${pend/sorted.length*100}%;background:var(--red)"></div>`;
-  document.getElementById('polo-tbody').innerHTML=sorted.map(p=>`<tr class="${p.pend?'tr-pend':'tr-ok'}" style="cursor:pointer" onclick="openPoloModal('${esc(gPN(p))}')"><td><strong>${gPN(p)}</strong></td><td style="text-align:right">${gPT(p)}</td><td style="text-align:right">${gPE(p)}</td><td style="text-align:right;color:var(--red)">${p.pend}</td><td style="text-align:right">${fmtNum(gPA(p))}</td><td>${progCell(p.pct)}</td></tr>`).join('');
+  document.getElementById('polo-tbody').innerHTML=sorted.map(p=>{
+    const _temContato=(p.contatos||[]).length>0;
+    return `<tr class="${p.pend?'tr-pend':'tr-ok'}" style="cursor:pointer" onclick="openPoloModal('${esc(gPN(p))}')"><td><strong>${gPN(p)}</strong>${_temContato?' <span title="Tem contato cadastrado" style="font-size:11px">📞</span>':''}</td><td style="text-align:right">${gPT(p)}</td><td style="text-align:right">${gPE(p)}</td><td style="text-align:right;color:var(--red)">${p.pend}</td><td style="text-align:right">${fmtNum(gPA(p))}</td><td>${progCell(p.pct)}</td></tr>`;
+  }).join('');
   document.getElementById('polo-count').textContent=sorted.length+' polo'+(sorted.length!==1?'s':'');if(!sorted.length)document.getElementById('polo-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhum polo encontrado com este filtro.</td></tr>';
   document.getElementById('polo-sub').textContent=`${sorted.length} polos · ${ok} sem pendências · ${pend} com pendências`;
 }
@@ -1040,7 +1111,17 @@ function openPoloModal(nome){
   const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,pend:tutores.filter(t=>t.te===0).length,
     alunos:poloStats.a||poloStats.alunos||tutores.reduce((s,t)=>s+(t.al||0),0)};
   document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
-  let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div><div class="sec-label">Tutores</div>`;
+  let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div>`;
+  const contatos = poloStats.contatos || [];
+  if(contatos.length){
+    html += `<div class="sec-label">📞 Contatos do Polo</div><div style="display:grid;gap:8px;margin-bottom:16px">`;
+    html += contatos.map(c => `<div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div><div style="font-size:13px;font-weight:600">${esc(c.nome)}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(c.cargo||'—')}</div></div>
+      <div style="text-align:right;font-size:11px;color:var(--muted)">${c.telefone?esc(c.telefone)+'<br>':''}${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--teal)">${esc(c.email)}</a>`:''}</div>
+    </div>`).join('');
+    html += `</div>`;
+  }
+  html += `<div class="sec-label">Tutores</div>`;
   html+=tutores.map(t=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeModal();setTimeout(()=>openTutorModal('${esc(t.n)}'),100)"><div style="flex:1"><div style="font-size:13px;font-weight:600">${t.n}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${t.c_exibicao||t.c||'—'}</div></div><div style="font-size:11px;font-family:var(--mono);color:var(--green)">${t.te}/${t.tp||'?'}</div>${pctBadge(t.pct)}</div>`).join('');
   document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');
 }
@@ -3123,6 +3204,84 @@ function renderAgendasEstudo(){
     return g;
   });
   filterAgendasSemAluno(document.getElementById('ae-semaluno-search')?.value||'');
+
+  window._aeTodasOfertas = todasOfertas;
+  _popularFiltroEngajamentoOrdem(todasOfertas);
+  renderEngajamentoPorOrdem();
+}
+// ── PATCH 125: Engajamento por Ordem (comparação) + exportação flexível ────
+function _popularFiltroEngajamentoOrdem(ofertas){
+  const sel = document.getElementById('ae-ordem-cat-sel');
+  if(!sel) return;
+  const atual = sel.value;
+  const cats = [...new Set(ofertas.map(o=>o.categoria).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todas as categorias juntas</option>' + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if(cats.includes(atual)) sel.value = atual;
+}
+function _ordemNumOrd(o){const m={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};return m[o]||99;}
+function renderEngajamentoPorOrdem(){
+  const ofertas = window._aeTodasOfertas || [];
+  const catFiltro = document.getElementById('ae-ordem-cat-sel')?.value || '';
+  const base = catFiltro ? ofertas.filter(o=>o.categoria===catFiltro) : ofertas;
+
+  const grupos = {};
+  base.forEach(o=>{
+    const cat = catFiltro || 'Todas as categorias';
+    const ord = o.ordem || 'Ordem 1';
+    const key = cat+'|||'+ord;
+    if(!grupos[key]) grupos[key] = {categoria:cat, ordem:ord, total:0, gerenciadas:0};
+    grupos[key].total++;
+    if(o.gerenciado) grupos[key].gerenciadas++;
+  });
+  const linhas = Object.values(grupos).map(g=>({...g, pct: g.total?Math.round(g.gerenciadas/g.total*1000)/10:0}));
+  linhas.sort((a,b)=> a.categoria.localeCompare(b.categoria) || _ordemNumOrd(a.ordem)-_ordemNumOrd(b.ordem));
+
+  const porCategoria = {};
+  linhas.forEach(l=>{ (porCategoria[l.categoria]=porCategoria[l.categoria]||[]).push(l); });
+
+  const tbody = document.getElementById('ae-ordem-tbody');
+  if(!tbody) return;
+  let html = '';
+  Object.values(porCategoria).forEach(grupo=>{
+    grupo.sort((a,b)=>_ordemNumOrd(a.ordem)-_ordemNumOrd(b.ordem));
+    grupo.forEach((l,i)=>{
+      let variacaoHtml = '<span style="color:var(--muted)">—</span>';
+      if(i>0){
+        const delta = Math.round((l.pct - grupo[i-1].pct)*10)/10;
+        const cor = delta>0?'var(--ok)':delta<0?'var(--red)':'var(--muted)';
+        const seta = delta>0?'▲':delta<0?'▼':'—';
+        variacaoHtml = `<span style="color:${cor};font-weight:700">${seta} ${delta>0?'+':''}${delta}pp</span>`;
+      }
+      html += `<tr><td>${esc(l.categoria)}</td><td>${esc(l.ordem)}</td><td style="text-align:right">${fmtNum(l.gerenciadas)} / ${fmtNum(l.total)}</td><td>${progCell(l.pct)}</td><td>${variacaoHtml}</td></tr>`;
+    });
+  });
+  tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
+}
+function exportAnaliseEngajamento(){
+  const ofertas = window._aeTodasOfertas || [];
+  const usaPolo = document.getElementById('ae-exp-polo')?.checked;
+  const usaCurso = document.getElementById('ae-exp-curso')?.checked;
+  const usaOrdem = document.getElementById('ae-exp-ordem')?.checked;
+  const usaTurno = document.getElementById('ae-exp-turno')?.checked;
+  if(!usaPolo && !usaCurso && !usaOrdem && !usaTurno){
+    alert('Escolhe pelo menos uma dimensão (Polo, Curso, Ordem ou Turno) pra exportar.');
+    return;
+  }
+  const grupos = {};
+  ofertas.forEach(o=>{
+    const chavePartes = {};
+    if(usaPolo) chavePartes['Polo'] = o.polo || '—';
+    if(usaCurso) chavePartes['Curso/Categoria'] = o.categoria || '—';
+    if(usaOrdem) chavePartes['Ordem'] = o.ordem || '—';
+    if(usaTurno) chavePartes['Turno'] = o.turno || '—';
+    const key = JSON.stringify(chavePartes);
+    if(!grupos[key]) grupos[key] = {...chavePartes, 'Total de Práticas':0, 'Gerenciadas':0};
+    grupos[key]['Total de Práticas']++;
+    if(o.gerenciado) grupos[key]['Gerenciadas']++;
+  });
+  const linhas = Object.values(grupos).map(g=>({...g, '% Engajamento': g['Total de Práticas']?Math.round(g['Gerenciadas']/g['Total de Práticas']*1000)/10+'%':'0%'}));
+  if(!linhas.length){ alert('Nenhum dado pra exportar com essa combinação de filtros.'); return; }
+  exportCSV(linhas, 'analise_engajamento_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 function filterAgendasIncomuns(q){
   q=(q||'').toLowerCase().trim();
