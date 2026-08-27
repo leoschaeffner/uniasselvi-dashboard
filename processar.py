@@ -804,7 +804,20 @@ def processar(p1, p2):
         df_novo.columns = [str(c).strip().upper() for c in df_novo.columns]
         if len(df_novo):
             def _g(coluna): return df_novo[coluna] if coluna in df_novo.columns else pd.Series([''] * len(df_novo))
-            _protoid = _g('PROTOCOLO_ID').astype(str).str.strip()
+            # PATCH 129: se a coluna PROTOCOLO_ID tiver QUALQUER célula vazia
+            # (comum em planilha real), o pandas promove a coluna inteira pra
+            # float64 — "55" vira "55.0" — e isso nunca bate com as chaves do
+            # id_to_perfil.json (strings limpas tipo "55"). Corrigido
+            # convertendo via float->int quando possível, só caindo pro texto
+            # cru se não for numérico de jeito nenhum.
+            def _limpar_id(v):
+                s = str(v).strip()
+                if s in ('', 'nan', 'None'): return ''
+                try:
+                    return str(int(float(s)))
+                except (ValueError, TypeError):
+                    return s
+            _protoid = _g('PROTOCOLO_ID').map(_limpar_id)
             _perfil_mapeado = _protoid.map(id_to_perfil)
             _sem_perfil = int(_perfil_mapeado.isna().sum())
             if _sem_perfil:
