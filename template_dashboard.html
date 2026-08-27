@@ -928,7 +928,7 @@ function renderKPIs(){
     <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos nas Práticas</div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
-    <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria — não soma a mesma turma repetida em várias práticas)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum((DB.portfolio_alunos_dedup||{}).geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
+    <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria — não soma a mesma turma repetida em várias práticas)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum(_getSemPortfolioAlunos().geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
     <div class="kpi kpi-teal" title="Alunos agendados no GIOCONDA (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(((typeof GER_DB!=='undefined'&&GER_DB?GER_DB:DB).ger_kpis||{}).total_alunos_agendados||0)}</div><div class="kpi-detail" style="color:var(--muted)">via GIOCONDA</div></div>
     <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div><div class="kpi-hint">clique para ver lista</div></div>`;
   renderCruzamentoPortfolioAgendado();
@@ -936,7 +936,7 @@ function renderKPIs(){
 function renderCruzamentoPortfolioAgendado(){
   const el = document.getElementById('pv-cruzamento');
   if(!el) return;
-  const cruz = DB.cruzamento_portfolio_agendado;
+  const cruz = _getSemCruzamento();
   if(!cruz || (!cruz.geral.registrado_portfolio && !cruz.geral.agendado)){
     el.style.display = 'none';
     return;
@@ -4110,6 +4110,21 @@ function _getSemKpis() {
     return Object.assign({}, DB.kpis, _SEM_DB.kpis);
   }
   return DB.kpis;
+}
+function _getSemPortfolioAlunos() {
+  // PATCH 127: "Alunos Registrados no Portfólio" por semestre selecionado —
+  // antes era um número fixo (histórico todo somado), agora troca junto com
+  // a aba 2026/1 / 2026/2 / Ambos, igual o resto do dashboard.
+  const porSem = DB.portfolio_alunos_dedup_por_semestre;
+  if (porSem && _SEM_ATUAL && porSem[_SEM_ATUAL]) return porSem[_SEM_ATUAL];
+  if (porSem && porSem['Ambos']) return porSem['Ambos'];
+  return DB.portfolio_alunos_dedup || {geral:0, por_polo:{}, por_categoria:{}};
+}
+function _getSemCruzamento() {
+  const porSem = DB.cruzamento_portfolio_agendado_por_semestre;
+  if (porSem && _SEM_ATUAL && porSem[_SEM_ATUAL]) return porSem[_SEM_ATUAL];
+  if (porSem && porSem['Ambos']) return porSem['Ambos'];
+  return DB.cruzamento_portfolio_agendado;
 }
 
 function _getSemPoloStats() {
