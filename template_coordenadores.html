@@ -635,6 +635,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th onclick="sortVagas('polo')">Polo</th>
       <th onclick="sortVagas('status')">Situação</th>
       <th onclick="sortVagas('contratacao')">Previsão de Contratação</th>
+      <th onclick="sortVagas('alunos_polo')" style="text-align:right">Alunos no Polo</th>
     </tr></thead><tbody id="vagas-tbody"></tbody></table></div>
   </div>
 </div></div>
@@ -840,7 +841,7 @@ function renderKPIs(){
     <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos nas Práticas</div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
-    <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum((DB.portfolio_alunos_dedup||{}).geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
+    <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum(_getSemPortfolioAlunos().geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
     <div class="kpi kpi-teal" title="Alunos agendados no GIOCONDA (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(((typeof GER_DB!=='undefined'&&GER_DB?GER_DB:DB).ger_kpis||{}).total_alunos_agendados||0)}</div><div class="kpi-detail" style="color:var(--muted)">via GIOCONDA</div></div>
     <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div><div class="kpi-hint">clique para ver lista</div></div>`;
   renderCruzamentoPortfolioAgendado();
@@ -848,7 +849,7 @@ function renderKPIs(){
 function renderCruzamentoPortfolioAgendado(){
   const el = document.getElementById('pv-cruzamento');
   if(!el) return;
-  const cruz = DB.cruzamento_portfolio_agendado;
+  const cruz = _getSemCruzamento();
   if(!cruz || (!cruz.geral.registrado_portfolio && !cruz.geral.agendado)){
     el.style.display = 'none';
     return;
@@ -3374,7 +3375,7 @@ function renderVagasKPIs(){
   document.getElementById('vagas-kpis').innerHTML=`
     <div class="kpi kpi-red"><div class="kpi-label">Polos sem Tutor</div><div class="kpi-value">${fmtNum(k.total_vagas||0)}</div></div>
     <div class="kpi kpi-ok"><div class="kpi-label">Já com Previsão de Contratação</div><div class="kpi-value">${fmtNum(k.com_previsao||0)}</div></div>
-    <div class="kpi kpi-yellow"><div class="kpi-label">Ainda sem Previsão</div><div class="kpi-value">${fmtNum(k.sem_previsao||0)}</div></div>`;
+    <div class="kpi kpi-yellow"><div class="kpi-label">Sem Previsão</div><div class="kpi-value">${fmtNum(k.sem_previsao||0)}</div></div>`;
 }
 function _renderVagasKPIs_ORIGINAL_NAO_USAR(){
   const k=(DB.vagas||{}).kpis||{};
@@ -3437,13 +3438,22 @@ function renderVagasTbl(data){
     return vagasSortA?String(va).localeCompare(String(vb),'pt-BR'):String(vb).localeCompare(String(va),'pt-BR');
   });
   const corContr = c => (c||'').includes('Com previsão') ? 'var(--ok)' : (c||'').includes('Sem previsão') ? 'var(--red)' : 'var(--muted)';
-  document.getElementById('vagas-tbody').innerHTML = sorted.map(v=>`<tr>
+  document.getElementById('vagas-tbody').innerHTML = sorted.map(v=>{
+    const temPrevisao = (v.contratacao||'').includes('Com previsão');
+    const contrCell = temPrevisao && v.chamado_sydle
+      ? `${esc(v.contratacao||'—')}<br><span style="font-size:10px;color:var(--muted)">Chamado Sydle: ${esc(v.chamado_sydle)}</span>`
+      : esc(v.contratacao||'—');
+    const alunosPolo = v.alunos_polo||0;
+    const temChamadoAberto = !!v.chamado_sydle;
+    return `<tr>
     <td><strong>${esc(v.polo)}</strong></td>
     <td>${v.status==='Aumento de Quadro' ? '<span class="badge" style="background:var(--red-dim);color:var(--red)">✕ Sem tutor no polo</span>' : '<span class="badge" style="background:var(--yellow-dim);color:var(--yellow-d)">↻ Precisa substituir</span>'}</td>
-    <td style="font-size:12px;font-weight:600;color:${corContr(v.contratacao)}">${esc(v.contratacao||'—')}</td>
-  </tr>`).join('');
+    <td style="font-size:12px;font-weight:600;color:${corContr(v.contratacao)}">${contrCell}</td>
+    <td style="text-align:right;font-weight:${temChamadoAberto?'700':'400'}">${fmtNum(alunosPolo)}</td>
+  </tr>`;
+  }).join('');
   document.getElementById('vagas-count').textContent = sorted.length+' vaga'+(sorted.length!==1?'s':'');
-  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro — todos os polos do seu curso têm tutor.</td></tr>';
+  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro — todos os polos do seu curso têm tutor.</td></tr>';
 }
 function _renderVagasTbl_ORIGINAL_NAO_USAR(data){
   const sorted=[...data].sort((a,b)=>{
@@ -3927,6 +3937,18 @@ function _getSemKpis() {
     return Object.assign({}, DB.kpis, _SEM_DB.kpis);
   }
   return DB.kpis;
+}
+function _getSemPortfolioAlunos() {
+  const porSem = DB.portfolio_alunos_dedup_por_semestre;
+  if (porSem && _SEM_ATUAL && porSem[_SEM_ATUAL]) return porSem[_SEM_ATUAL];
+  if (porSem && porSem['Ambos']) return porSem['Ambos'];
+  return DB.portfolio_alunos_dedup || {geral:0, por_polo:{}, por_categoria:{}};
+}
+function _getSemCruzamento() {
+  const porSem = DB.cruzamento_portfolio_agendado_por_semestre;
+  if (porSem && _SEM_ATUAL && porSem[_SEM_ATUAL]) return porSem[_SEM_ATUAL];
+  if (porSem && porSem['Ambos']) return porSem['Ambos'];
+  return DB.cruzamento_portfolio_agendado;
 }
 
 function _getSemPoloStats() {
