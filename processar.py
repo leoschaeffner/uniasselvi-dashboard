@@ -662,6 +662,7 @@ def processar(p1, p2):
             if all(p.upper() in cu for p in partes): return c
         return None
     c_chave = col(df_p, 'CHAVE', 'LINK')
+    c_polo_p = col(df_p, 'POLO')
     c_proto = col(df_p, 'PROTOCOLOS', 'ATIVIDADES')
     for sfx in (':7', ':8', ':6', ':9'):
         proto_sfx = [c for c in df_p.columns if 'PROTOCOLOS' in str(c).upper() and str(c).endswith(sfx)]
@@ -673,24 +674,28 @@ def processar(p1, p2):
     if not data_cols: data_cols = [c for c in df_p.columns if 'DATA DA APLICA' in str(c).upper()]
     if not data_cols: data_cols = [c for c in df_p.columns if 'DATA' in str(c).upper() and 'APLICA' in str(c).upper()]
     c_data = data_cols[0] if data_cols else None
-    def find_aluno_col(df):
-        cols = df.columns.tolist()
-        for suffix_end in ('72', '73', '74', '70', '71', '75'):
-            for c in cols:
-                if 'ESTUDANTES' in str(c).upper() and str(c).endswith(suffix_end): return c
-        for c in cols:
-            if 'ESTUDANTES' in str(c).upper() and 'PONTOS' not in str(c).upper(): return c
-        for c in cols:
-            cu = str(c).upper()
-            if ('ALUNO' in cu or 'ALUNOS' in cu) and 'PONTOS' not in cu and 'COMENT' not in cu: return c
-        for c in cols:
-            cu = str(c).upper()
-            if 'QUANTIDADE' in cu or 'QTD' in cu: return c
-        return None
-    c_aluno = find_aluno_col(df_p)
+    def soma_estudantes(df):
+        # PATCH 122: a lógica antiga ("acha UMA coluna, a de maior sufixo")
+        # só funcionava por acaso pro PORTIFOLIO_TUTOR.xlsx de 2026/1 porque
+        # tinha uma coluna extra adicionada à mão ("...Experimento?72") com
+        # fórmula =SOMA(base, ?1, ?2, ?3, ?4, ?5, ?6) — ou seja, o "aluno_col"
+        # nunca foi "a repetição mais completa", era literalmente a SOMA de
+        # todas as repetições daquela linha (confirmado reproduzindo a fórmula
+        # em Python: bate 100% com a coluna original). O de 2026/2 não tem
+        # essa coluna auxiliar, então a busca antiga caía no fallback errado
+        # e os alunos saíam todos vazios. Substituído por somar de verdade
+        # todas as colunas de "Estudantes" (exceto a "?72" auxiliar, se
+        # existir, pra não contar em dobro) — funciona igual nos dois
+        # arquivos, sem depender de coluna extra adicionada à mão.
+        cols = [c for c in df.columns
+                if 'ESTUDANTES' in str(c).upper() and 'PONTOS' not in str(c).upper()
+                and 'COMENT' not in str(c).upper() and not str(c).endswith('72')]
+        if not cols: return None
+        return df[cols].apply(pd.to_numeric, errors='coerce').fillna(0).sum(axis=1)
+    aluno_soma = soma_estudantes(df_p)
     cat_cols = [c for c in df_p.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
     c_cat = cat_cols[0] if cat_cols else None
-    print(f"[{ts()}] Colunas: chave={c_chave}, proto={c_proto}, data={c_data}, alunos={c_aluno}, cat={c_cat}")
+    print(f"[{ts()}] Colunas: chave={c_chave}, proto={c_proto}, data={c_data}, alunos=soma de {sum(1 for c in df_p.columns if 'ESTUDANTES' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper() and not str(c).endswith('72'))} colunas, cat={c_cat}")
     # PATCH 25a: mesma validação crítica, agora pro PORTIFOLIO_TUTOR — sem chave e
     # sem protocolo não há como casar nenhuma submissão a nenhum tutor; melhor
     # parar aqui com um erro explícito do que gerar um dashboard sem portfólios.
@@ -705,9 +710,10 @@ def processar(p1, p2):
     c_ordem = c_ordem_cols[0] if c_ordem_cols else None
     print(f"[{ts()}] Coluna ordem: {c_ordem}")
     df_p['_CHAVE']  = df_p[c_chave].astype(str).str.strip() if c_chave else ''
+    df_p['_POLO']   = df_p[c_polo_p].astype(str).str.strip() if c_polo_p else ''
     df_p['_PROTO']  = df_p[c_proto].astype(str).str.strip() if c_proto else ''
     df_p['_DATA']   = pd.to_datetime(df_p[c_data], errors='coerce') if c_data else pd.NaT
-    df_p['_ALUNOS'] = pd.to_numeric(df_p[c_aluno], errors='coerce').fillna(0).astype(int) if c_aluno else 0
+    df_p['_ALUNOS'] = aluno_soma.fillna(0).astype(int) if aluno_soma is not None else 0
     df_p['_CAT']    = df_p[c_cat].astype(str).str.strip() if c_cat else ''
     df_p['_ORDEM']  = df_p[c_ordem].astype(str).str.strip() if c_ordem else 'Ordem 1'
     # ── MEC Cache ────────────────────────────────────────────────────────────
@@ -774,33 +780,105 @@ def processar(p1, p2):
                     print(f"[{ts()}] Catalogo oficial (Excel): {len(catalogo_oficial)} categorias, {sum(len(v) for v in catalogo_oficial.values())} práticas")
             except Exception as e: print(f"[{ts()}] AVISO: Erro ao ler catálogo Excel: {e}")
 
-    # PATCH 10: ler e mesclar PORTIFOLIO_TUTOR_2026_2.xlsx (formulário novo, schema próprio)
+    # PATCH 122: PORTIFOLIO_TUTOR_2026_2.xlsx tem a MESMA estrutura de colunas
+    # repetidas do formulário antigo (Sheet1, perguntas "Selecione...",
+    # "Quantos Estudantes presentes neste Experimento?" etc.) — NÃO o schema
+    # simplificado (aba "PORTIFOLIOS", colunas PROTOCOLO_ID/QTD_ESTUDANTES)
+    # que o PATCH 10 original esperava. Aquele schema nunca existiu de
+    # verdade nos arquivos reais enviados; o PATCH 10 mesclava silenciosamente
+    # ~361 linhas vazias (todo _g() caía no fallback '') sem travar nem
+    # avisar. Corrigido reaproveitando a MESMA detecção de coluna por nome
+    # (col(), soma_estudantes()) já usada pro PORTIFOLIO_TUTOR.xlsx original.
+    #
+    # DIFERENÇA REAL entre os dois arquivos (confirmada com o Leo comparando
+    # os dois na fonte): o de 2026/1 tem duas colunas AUXILIARES adicionadas
+    # manualmente no Excel — "CHAVE CONVERSÃO" (=XLOOKUP da categoria numa
+    # tabela numa aba separada "Planilha1") e "CHAVE LINK POLO"
+    # (=CONCATENATE(Polo, CHAVE CONVERSÃO)) — que o de 2026/2 nunca teve, por
+    # não ser gerado à mão da mesma forma. Reconstruído aqui em Python: a
+    # tabela "Planilha1" virou categoria_para_curso.json (mesmo vocabulário de
+    # códigos de curso que o CONTROLE_TUTORIA usa na coluna "CURSOS"), e a
+    # chave é remontada como POLO + código, replicando a fórmula original.
     p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
     if p2b:
         try:
-            df_novo = ler_excel(p2b, sheet_name='PORTIFOLIOS')
+            df_novo = ler_excel(p2b, sheet_name='Sheet1')
         except Exception:
             df_novo = ler_excel(p2b, sheet_name=0)
-        df_novo.columns = [str(c).strip().upper() for c in df_novo.columns]
         if len(df_novo):
-            def _g(col): return df_novo[col] if col in df_novo.columns else ''
-            _protoid = _g('PROTOCOLO_ID').astype(str).str.strip()
-            df_novo['_CHAVE']  = _g('POLO').astype(str).str.strip() + _protoid.map(id_to_perfil).fillna('')
-            df_novo['_PROTO']  = _g('PROTOCOLO_NOME').astype(str).str.strip()
-            df_novo['_DATA']   = pd.to_datetime(_g('DATA_APLICACAO'), errors='coerce')
-            df_novo['_ALUNOS'] = pd.to_numeric(_g('QTD_ESTUDANTES'), errors='coerce').fillna(0).astype(int)
-            df_novo['_CAT']    = _g('CATEGORIA_LAB').astype(str).str.strip()
-            df_novo['_ORDEM']  = _g('ORDEM_DISCIPLINA').astype(str).str.strip().replace('', 'Ordem 1')
-            df_novo['EMAIL']      = _g('EMAIL_TUTOR').astype(str).str.strip()  # nome exato p/ busca col_email_p
-            df_novo['NOME_TUTOR'] = _g('NOME_TUTOR').astype(str).str.strip()   # contém NOME+TUTOR p/ busca col_nome_tutor_p
-            _sem_perfil = int(_protoid.map(id_to_perfil).isna().sum())
-            if _sem_perfil: print(f"[{ts()}] AVISO: {_sem_perfil} envios em PORTIFOLIO_TUTOR_2026_2 sem PROTOCOLO_ID mapeado em id_to_perfil")
-            df_p = pd.concat([df_p, df_novo], ignore_index=True)
-            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2)")
+            _c_polo_n = col(df_novo, 'POLO')
+            _c_cat_raw_n = [c for c in df_novo.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
+            _c_cat_raw_n = _c_cat_raw_n[0] if _c_cat_raw_n else None
+            _c_proto_n = col(df_novo, 'PROTOCOLOS', 'ATIVIDADES')
+            for sfx in (':7', ':8', ':6', ':9'):
+                _proto_sfx_n = [c for c in df_novo.columns if 'PROTOCOLOS' in str(c).upper() and str(c).endswith(sfx)]
+                if _proto_sfx_n: _c_proto_n = _proto_sfx_n[0]; break
+            else:
+                _proto_any_n = [c for c in df_novo.columns if 'PROTOCOLOS' in str(c).upper() or 'ATIVIDADE' in str(c).upper()]
+                if _proto_any_n: _c_proto_n = _proto_any_n[0]
+            _data_cols_n = [c for c in df_novo.columns if 'DATA DA APLICA' in str(c).upper() and str(c).endswith(':7')]
+            if not _data_cols_n: _data_cols_n = [c for c in df_novo.columns if 'DATA DA APLICA' in str(c).upper()]
+            if not _data_cols_n: _data_cols_n = [c for c in df_novo.columns if 'DATA' in str(c).upper() and 'APLICA' in str(c).upper()]
+            _c_data_n = _data_cols_n[0] if _data_cols_n else None
+            _aluno_soma_n = soma_estudantes(df_novo)
+            _c_ordem_cols_n = [c for c in df_novo.columns if 'ORDEM' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
+            _c_ordem_n = _c_ordem_cols_n[0] if _c_ordem_cols_n else None
+            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2 colunas: polo={_c_polo_n}, categoria={_c_cat_raw_n}, proto={_c_proto_n}, data={_c_data_n}, ordem={_c_ordem_n}")
+
+            cat_para_curso = {}
+            _cpc_file = os.path.join(SCRIPT_DIR, 'categoria_para_curso.json')
+            if os.path.isfile(_cpc_file):
+                with open(_cpc_file, encoding='utf-8') as f: cat_para_curso = json.load(f)
+
+            def _norm_espacos(s):
+                return ' '.join(str(s or '').replace('\xa0', ' ').split()).strip()
+
+            if not _c_polo_n or not _c_cat_raw_n or not _c_proto_n:
+                print(f"[{ts()}] AVISO: PORTIFOLIO_TUTOR_2026_2 sem coluna de Polo/Categoria/Protocolos — pulando merge (colunas disponíveis: {list(df_novo.columns)})")
+            else:
+                _cat_norm_n = df_novo[_c_cat_raw_n].map(_norm_espacos)
+                _curso_cod_n = _cat_norm_n.map(cat_para_curso)
+                _sem_cod = int(_curso_cod_n.isna().sum())
+                if _sem_cod:
+                    _exemplos = sorted(set(_cat_norm_n[_curso_cod_n.isna()].tolist()))[:5]
+                    print(f"[{ts()}] AVISO: {_sem_cod} envios em PORTIFOLIO_TUTOR_2026_2 com categoria não mapeada em categoria_para_curso.json. Exemplos: {_exemplos}")
+                df_novo['_CHAVE']  = df_novo[_c_polo_n].astype(str).str.strip() + _curso_cod_n.fillna('')
+                df_novo['_POLO']   = df_novo[_c_polo_n].astype(str).str.strip()
+                df_novo['_PROTO']  = df_novo[_c_proto_n].astype(str).str.strip()
+                df_novo['_DATA']   = pd.to_datetime(df_novo[_c_data_n], errors='coerce') if _c_data_n else pd.NaT
+                df_novo['_ALUNOS'] = _aluno_soma_n.fillna(0).astype(int) if _aluno_soma_n is not None else 0
+                df_novo['_CAT']    = _cat_norm_n
+                df_novo['_ORDEM']  = df_novo[_c_ordem_n].astype(str).str.strip() if _c_ordem_n else 'Ordem 1'
+                df_p = pd.concat([df_p, df_novo], ignore_index=True)
+                print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2), {len(df_novo)-_sem_cod} com chave completa")
         else:
             print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: 0 envios ainda")
     else:
         print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2.xlsx não encontrada — só 2026/1 nesta rodada")
+
+    # PATCH 123: "Alunos registrados no Portfólio" — pedido pelo Leo pra
+    # complementar o "Alunos Agendados" (que já existe no lado do
+    # gerenciamento/GIOCONDA) na Visão Geral de Portfólios. MESMO PROBLEMA que
+    # já foi corrigido do lado do GIOCONDA (PATCH 38): o número de alunos
+    # presentes se repete a cada prática enviada da mesma turma (polo+
+    # categoria) — somar direto infla o total várias vezes. Dedupliado do
+    # mesmo jeito (groupby polo+categoria, pega o MAIOR valor, não soma).
+    _port_alunos_geral = 0
+    _port_alunos_por_polo = {}
+    _port_alunos_por_cat = {}
+    if '_ALUNOS' in df_p.columns and '_POLO' in df_p.columns and '_CAT' in df_p.columns:
+        _dfp_dedup_base = df_p[(df_p['_POLO'].astype(str).str.len() > 0) & (df_p['_CAT'].astype(str).str.len() > 0)]
+        if len(_dfp_dedup_base):
+            _raw_port = int(pd.to_numeric(_dfp_dedup_base['_ALUNOS'], errors='coerce').fillna(0).sum())
+            _dedup_port = _dfp_dedup_base.groupby(['_POLO', '_CAT'])['_ALUNOS'].max()
+            _port_alunos_geral = int(_dedup_port.sum())
+            print(f"[{ts()}] Alunos registrados no Portfólio DEDUPLICADOS por polo×cat: {_port_alunos_geral:,} (bruto era {_raw_port:,}, redução: {_raw_port-_port_alunos_geral:,})")
+            for polo, s in _dedup_port.groupby(level=0).sum().items():
+                _port_alunos_por_polo[str(polo)] = int(s)
+            for cat, s in _dedup_port.groupby(level=1).sum().items():
+                _port_alunos_por_cat[str(cat)] = int(s)
+    # (guardado em variável local — entra no dict final via return limpar({...})
+    # lá embaixo, não existe "dados" incremental dentro desta função)
 
     chave_to_cat_raw = {}; chave_to_cf = {}; chave_alias = {}
     polo_biofar_cursos = {}
@@ -1486,6 +1564,29 @@ def processar(p1, p2):
         p['pend'] = p['total'] - p['enviaram']
         p['pct'] = round(p['enviaram'] / p['total'] * 100) if p['total'] else 0
         p['envios'] = polo_envios.get(p['POLO'], 0)
+
+    # PATCH 124: contatos por polo (Lista Oficial de Contatos), pedido pelo
+    # Leo pra aparecer na aba Polos. Match por nome normalizado (maiúsc/
+    # minúsc e acento não importam) — os dois lados usam "Cidade/UF" ou
+    # "Cidade/UF - Bairro", mas a grafia exata (acento, maiúscula) pode variar
+    # entre a planilha de contatos e o CONTROLE_TUTORIA.
+    import unicodedata as _ud6
+    def _norm_polo_contato(s):
+        s = _ud6.normalize('NFD', str(s or '').strip().lower())
+        s = ''.join(c for c in s if _ud6.category(c) != 'Mn')
+        return s
+    _contatos_file = os.path.join(SCRIPT_DIR, 'contatos_por_polo.json')
+    _contatos_raw = {}
+    if os.path.isfile(_contatos_file):
+        with open(_contatos_file, encoding='utf-8') as f: _contatos_raw = json.load(f)
+    _contatos_norm = {_norm_polo_contato(k): v for k, v in _contatos_raw.items()}
+    _polos_com_contato = 0
+    for p in polo_stats:
+        _c = _contatos_norm.get(_norm_polo_contato(p['n']))
+        p['contatos'] = _c or []
+        if _c: _polos_com_contato += 1
+    print(f"[{ts()}] Contatos por polo: {_polos_com_contato}/{len(polo_stats)} polos do CONTROLE com contato encontrado (de {len(_contatos_raw)} polos na lista oficial)")
+
     ordem_map = {o: {'envios': 0, 'alunos': 0} for o in prazos}
     for t in tutores_out:
         for h in t['hist']:
@@ -1681,7 +1782,7 @@ def processar(p1, p2):
             'CONTROLE.NOME_TUTOR': col_nome, 'CONTROLE.EMAIL': col_email,
             'CONTROLE.CATEGORIA': col_cat,
             'PORTFOLIO.CHAVE': c_chave, 'PORTFOLIO.PROTOCOLOS': c_proto,
-            'PORTFOLIO.DATA': c_data, 'PORTFOLIO.ALUNOS': c_aluno,
+            'PORTFOLIO.DATA': c_data, 'PORTFOLIO.ALUNOS': 'soma_estudantes()',
         },
         contagens={
             'total_tutores': total, 'enviaram': enviaram,
@@ -1699,6 +1800,11 @@ def processar(p1, p2):
         },
         'tutores': tutores_out, 'polo_stats': polo_stats,
         'tutores_desligados': tutores_desligados,  # PATCH 105
+        'portfolio_alunos_dedup': {  # PATCH 123
+            'geral': _port_alunos_geral,
+            'por_polo': _port_alunos_por_polo,
+            'por_categoria': _port_alunos_por_cat,
+        },
         'por_ordem': por_ordem_dict, 'por_ordem_lista': por_ordem,
         'alunos_por_ordem': alunos_por_ordem, 'status_ordem': status_ordem,
         'cat_stats': [{'categoria': k, **v} for k, v in cs.items()],
@@ -3613,6 +3719,20 @@ if __name__ == '__main__':
     _ch_ok = sum(1 for t in dados.get('tutores', []) if t.get('ch_semanal') and t['ch_semanal'] > 0)
     dados['tem_lotacao'] = _ch_ok > 0
     print(f"[{ts()}] tem_lotacao={dados['tem_lotacao']} ({_ch_ok} tutores com CH SEMANAL)")
+    # PATCH 121: estudo do Racional de Insumos por Experimento (aba Insumos).
+    # ESTÁTICO por decisão do Leo (21/08) — não é uma fonte que atualiza a
+    # cada ciclo de 2h, é um estudo pontual (v10_FINAL) embutido uma vez. Se
+    # um dia vier uma versão nova do estudo, é só substituir o
+    # insumos_estudo.json no repo (mesmo padrão do catalogo_oficial.json) e
+    # rodar o pipeline — não precisa mexer em código.
+    _insumos_file = os.path.join(SCRIPT_DIR, 'insumos_estudo.json')
+    if os.path.isfile(_insumos_file):
+        with open(_insumos_file, encoding='utf-8') as f:
+            dados['insumos'] = json.load(f)
+        print(f"[{ts()}] Insumos (estudo estático v10_FINAL): {len(dados['insumos'].get('base', []))} linhas na base unificada")
+    else:
+        dados['insumos'] = None
+        print(f"[{ts()}] AVISO: insumos_estudo.json não encontrado — aba Insumos ficará vazia")
     if p3 or p3b:
         try:
             # PATCH 21 + PATCH 32: tutor ativo no CONTROLE pra cada (polo, categoria)
@@ -3732,6 +3852,58 @@ if __name__ == '__main__':
             ger_dados = ger_por_semestre.get(SEMESTRE_ATUAL) or next(iter(ger_por_semestre.values()), {})
             dados.update(ger_dados)
             dados['tem_gerenciamento'] = True
+
+            # PATCH 123: cruzamento "Registrado no Portfólio × Agendado" —
+            # pedido pelo Leo, nos 3 níveis (geral, por polo, por categoria).
+            # Duas fontes com vocabulário de categoria DIFERENTE: o Portfólio
+            # guarda o texto bruto do formulário ("Multidisciplinar III -
+            # Fisioterapia"), o GIOCONDA guarda o rótulo amplo do CAT_MAP
+            # ("BIO-FISIO-EST-TO (Multidisciplinar III)"). Reconciliado via
+            # categoria_para_curso.json (texto do formulário -> código fino,
+            # ex: BFI) + um mapa código fino -> rótulo amplo do CAT_MAP.
+            _FINO_PARA_AMPLO = {
+                'EMF-ISN': 'ENF-INS (Multidisciplinar II)', 'BFR': 'BIO-FAR (Multidisciplinar I)',
+                'NTR': 'NUTRI (Multidisciplinar IV)', 'BFI': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+                'BTO': 'BIO-FISIO-EST-TO (Multidisciplinar III)', 'COS-TIP': 'BIO-FISIO-EST-TO (Multidisciplinar III)',
+                'BBI': 'BIO-FISIO-EST-TO (Multidisciplinar III)', 'AGM': 'QUÍMICA E FÍSICA', 'BAU': 'ENGMAKER',
+                'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI': 'ENGMAKER+QUÍMICA E FÍSICA',
+            }
+            _cpc_file2 = os.path.join(SCRIPT_DIR, 'categoria_para_curso.json')
+            _cat_para_curso2 = json.load(open(_cpc_file2, encoding='utf-8')) if os.path.isfile(_cpc_file2) else {}
+            _port_dedup = dados.get('portfolio_alunos_dedup', {'geral': 0, 'por_polo': {}, 'por_categoria': {}})
+
+            _port_por_cat_amplo = {}
+            for _cat_bruta, _val in _port_dedup.get('por_categoria', {}).items():
+                _cod_fino = _cat_para_curso2.get(_cat_bruta)
+                _amplo = _FINO_PARA_AMPLO.get(_cod_fino) if _cod_fino else None
+                if _amplo:
+                    _port_por_cat_amplo[_amplo] = _port_por_cat_amplo.get(_amplo, 0) + _val
+
+            _agend_geral = int(dados.get('ger_kpis', {}).get('total_alunos_agendados', 0))
+            _agend_por_polo = {p['polo']: p.get('alunos_agendados', 0) for p in dados.get('ger_polo', [])}
+            _agend_por_cat = {c['categoria']: c.get('alunos_agendados', 0) for c in dados.get('ger_cat', [])}
+
+            def _cruza(port, agend):
+                return {'registrado_portfolio': port, 'agendado': agend,
+                        'diferenca': port - agend,
+                        'pct_agendado_sobre_portfolio': round(agend / port * 100, 1) if port else None}
+
+            _por_polo_cruz = []
+            for _p in sorted(set(_port_dedup.get('por_polo', {}).keys()) | set(_agend_por_polo.keys())):
+                _por_polo_cruz.append({'polo': _p, **_cruza(_port_dedup.get('por_polo', {}).get(_p, 0), _agend_por_polo.get(_p, 0))})
+            _por_polo_cruz.sort(key=lambda x: -x['registrado_portfolio'])
+
+            _por_cat_cruz = []
+            for _c in sorted(set(_port_por_cat_amplo.keys()) | set(_agend_por_cat.keys())):
+                _por_cat_cruz.append({'categoria': _c, **_cruza(_port_por_cat_amplo.get(_c, 0), _agend_por_cat.get(_c, 0))})
+            _por_cat_cruz.sort(key=lambda x: -x['registrado_portfolio'])
+
+            dados['cruzamento_portfolio_agendado'] = {
+                'geral': _cruza(_port_dedup.get('geral', 0), _agend_geral),
+                'por_polo': _por_polo_cruz,
+                'por_categoria': _por_cat_cruz,
+            }
+            print(f"[{ts()}] Cruzamento Portfólio×Agendado: {_port_dedup.get('geral',0):,} registrados, {_agend_geral:,} agendados")
             # ── Injetar gerenciamento nos tutores (ger_pct, ger_ok, ger_total) ──────
             import unicodedata as _ud5, re as _re6
             def _norm_ger2(s):
