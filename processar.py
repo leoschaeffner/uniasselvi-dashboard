@@ -2926,6 +2926,15 @@ def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
     travar isso). Marca cada oferta com '_anomalia_ordem' (bool) e, quando
     True, '_ordem_esperada_na_data' (qual ordem o período correspondia).
     Não modifica 'gerenciado' nem nenhum outro campo — só sinaliza.
+
+    PATCH 130: segunda checagem, DIFERENTE da de cima — o Leo reportou dado
+    de "Ordem 3" aparecendo no Engajamento por Ordem quando a Ordem 3 daquele
+    semestre nem começou ainda (hoje ainda está na janela da Ordem 1/2). A
+    checagem original só compara a data de gerenciamento contra períodos
+    ANTERIORES à própria ordem — não cobre "o período da própria ordem
+    começa no futuro, em relação a hoje". Marca '_anomalia_ordem_futura'
+    (bool) nesses casos — normalmente indica ordem mal preenchida na origem
+    (GIOCONDA/CONTROLE), não gerenciamento real adiantado.
     """
     import datetime as _dt_ord
 
@@ -2948,13 +2957,23 @@ def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
         if _ini and _fim:
             _periodos_parsed.append((_ordem_num.get(_ord_nome, 99), _ord_nome, _ini, _fim))
     _periodos_parsed.sort()
+    _inicio_por_ordem = {_nome: _ini for _num, _nome, _ini, _fim in _periodos_parsed}
+    _hoje = _dt_ord.date.today()
 
     for o in ofertas:
         o['_anomalia_ordem'] = False
+        o['_anomalia_ordem_futura'] = False
         if not o.get('gerenciado'):
             continue
+        _ordem_propria = o.get('ordem', '')
+        _ordem_propria_num = _ordem_num.get(_ordem_propria)
+
+        # PATCH 130: a própria ordem da prática ainda nem começou (hoje < início do período dela)
+        _ini_propria = _inicio_por_ordem.get(_ordem_propria)
+        if _ini_propria and _hoje < _ini_propria:
+            o['_anomalia_ordem_futura'] = True
+
         _data_ger = _parse_data_br_ou_iso(o.get('dt_agenda', ''))
-        _ordem_propria_num = _ordem_num.get(o.get('ordem', ''))
         if not _data_ger or not _ordem_propria_num:
             continue
         for _num, _nome, _ini, _fim in _periodos_parsed:
@@ -3858,6 +3877,10 @@ if __name__ == '__main__':
                 ger_por_semestre[_sk]['ger_anomalias_ordem'] = _anomalias_sk
                 if _anomalias_sk:
                     print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_sk)} gerenciamento(s) fora do período esperado da ordem")
+                _anomalias_futuras_sk = [o for o in ger_por_semestre[_sk]['ger_ofertas'] if o.get('_anomalia_ordem_futura')]
+                if _anomalias_futuras_sk:
+                    _ords_futuras = sorted(set(o.get('ordem','?') for o in _anomalias_futuras_sk))
+                    print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_futuras_sk)} gerenciamento(s) marcado(s) numa ordem que AINDA NÃO COMEÇOU ({', '.join(_ords_futuras)}) — provável erro de preenchimento de ordem na origem, não gerenciamento real adiantado")
             dados['gerenciamento_por_semestre'] = ger_por_semestre
             for _sk, _sv in ger_por_semestre.items():
                 print(f"[{ts()}] Gerenciamento {_sk}: {_sv['ger_kpis']['total_ofertas']} ofertas, {_sv['ger_kpis']['ofertas_gerenciadas']} ger.")
@@ -4150,8 +4173,16 @@ if __name__ == '__main__':
     else:
         print(f"[{ts()}] INFO: Relatorio_alunos_por_hub.csv não encontrado — usando contagem GIOCONDA")
 
-    # Preencher alunos_por_curso com hub CSV se ainda vazio (lotação sem TOTAL ALUNOS)
-    if not dados.get('alunos_por_curso') and 'alunos_hub' in dir():
+    # PATCH 131: prioridade invertida — antes só usava o hub CSV (matrículas
+    # DISTINTAS, deduplicado de verdade) se dados['alunos_por_curso'] tivesse
+    # ficado vazio, ou seja, praticamente nunca, porque a Lotação quase
+    # sempre tem a coluna "TOTAL ALUNOS" preenchida (mas sem garantia de
+    # deduplicação — o Leo reportou "quantidade errada de alunos
+    # matriculados"). O mesmo KPI principal de "Alunos" já troca pro hub CSV
+    # como fonte de verdade quando disponível ("KPI alunos substituído",
+    # ver mais abaixo) — aplicando o mesmo critério aqui, pra "Alunos por
+    # Curso"/"Categorias" na Visão Geral bater com o resto do dashboard.
+    if 'alunos_hub' in dir():
         _por_cat = alunos_hub.get('por_cat', {}) if alunos_hub else {}
         _CAT_NOME = {
             'ENF-INS (Multidisciplinar II)':          'Enfermagem e Instrumentação Cirúrgica',
@@ -4162,13 +4193,14 @@ if __name__ == '__main__':
             'QUÍMICA E FÍSICA':                       'Química e Física',
         }
         if _por_cat:
+            _total_hub_cat = sum(int(v) for v in _por_cat.values() if v > 0)
+            _total_lotacao_cat = sum(x['alunos'] for x in dados.get('alunos_por_curso', []))
             dados['alunos_por_curso'] = [
                 {'sigla': k, 'curso': _CAT_NOME.get(k, k), 'alunos': int(v)}
                 for k, v in sorted(_por_cat.items(), key=lambda x: -x[1])
                 if v > 0
             ]
-            _tot = sum(x['alunos'] for x in dados['alunos_por_curso'])
-            print(f"[{ts()}] Alunos por curso (hub CSV): {len(dados['alunos_por_curso'])} categorias, total {_tot:,}")
+            print(f"[{ts()}] Alunos por curso: fonte trocada de Lotação ({_total_lotacao_cat:,}) pra hub CSV/matrículas distintas ({_total_hub_cat:,}) — {len(dados['alunos_por_curso'])} categorias")
 
     html = gerar_html(dados)
     try:
