@@ -482,15 +482,34 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     </div>
   </div>
   <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">📊 Evolução do Engajamento (Visão Geral)</div></div>
+    <div class="card-body" id="ae-evolucao-resumo" style="padding-bottom:8px;font-size:13px"></div>
+    <div class="card-body" style="padding-top:0" id="ae-evolucao-grafico"></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
     <div class="card-hdr"><div class="card-title">📈 Engajamento por Ordem (comparação)</div></div>
     <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding-bottom:0">
       <select class="sel" id="ae-grupo-sel" onchange="renderEngajamentoPorOrdem()"><option value="">Todos os grupos</option></select>
       <span style="font-size:11px;color:var(--muted)">Mesmo agrupamento por curso usado na aba Detalhe (Gerenciamento). Compara o % de engajamento entre as ordens, pra ver se está subindo ou caindo.</span>
     </div>
     <div class="card-body" id="ae-ordem-matriculados" style="padding-top:0;padding-bottom:8px;font-size:12px;color:var(--muted)"></div>
+    <div class="card-body" id="ae-ordem-aviso-anomalia" style="display:none;padding-top:0;padding-bottom:8px;font-size:11px;color:var(--yellow-d)"></div>
     <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
       <th>Grupo</th><th>Ordem</th><th style="text-align:right">Práticas Gerenciadas</th><th>% Engajamento</th><th>Variação vs Ordem Anterior</th>
     </tr></thead><tbody id="ae-ordem-tbody"></tbody></table></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hdr"><div class="card-title">🏆 Horários com Maior Engajamento (por Curso e Região)</div></div>
+    <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding-bottom:0">
+      <select class="sel" id="ae-melhor-dimensao-sel" onchange="renderMelhorEngajamento()">
+        <option value="dia_semana">Por Dia da Semana</option>
+        <option value="turno">Por Turno</option>
+      </select>
+      <span style="font-size:11px;color:var(--muted)">Top 20 combinações de curso × região × horário com maior % de engajamento. Só considera combinações com pelo menos 5 práticas (evita destacar 100% de uma amostra pequena demais).</span>
+    </div>
+    <div class="tbl-wrap" style="max-height:400px"><table><thead><tr>
+      <th>Curso</th><th>Região</th><th id="ae-melhor-dim-th">Dia da Semana</th><th style="text-align:right">Práticas</th><th>% Engajamento</th>
+    </tr></thead><tbody id="ae-melhor-tbody"></tbody></table></div>
   </div>
   <div class="card" style="margin-bottom:16px">
     <div class="card-hdr"><div class="card-title">📤 Exportar Análise de Engajamento (por Turno, Polo, Curso e Ordem)</div></div>
@@ -3091,6 +3110,23 @@ function _getOfertasAgenda(){
 }
 const _DIAS_SEMANA_ORDEM=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const _TURNOS_ORDEM=['Manhã','Tarde','Noite','Madrugada'];
+// PATCH 132: UF -> macrorregião, pra agrupar "Horários com Maior Engajamento"
+// por região geográfica (pedido pelo Leo). Polo vem sempre como "Cidade/UF"
+// ou "Cidade/UF - Bairro" — extrai a UF entre a última "/" e o próximo
+// separador não-letra.
+const _UF_PARA_REGIAO = {
+  'AC':'Norte','AP':'Norte','AM':'Norte','PA':'Norte','RO':'Norte','RR':'Norte','TO':'Norte',
+  'AL':'Nordeste','BA':'Nordeste','CE':'Nordeste','MA':'Nordeste','PB':'Nordeste','PE':'Nordeste','PI':'Nordeste','RN':'Nordeste','SE':'Nordeste',
+  'DF':'Centro-Oeste','GO':'Centro-Oeste','MT':'Centro-Oeste','MS':'Centro-Oeste',
+  'ES':'Sudeste','MG':'Sudeste','RJ':'Sudeste','SP':'Sudeste',
+  'PR':'Sul','RS':'Sul','SC':'Sul',
+};
+function _regiaoDoPolo(polo){
+  if(!polo) return 'Não identificado';
+  const m = String(polo).match(/\/([A-Z]{2})\b/);
+  if(!m) return 'Não identificado';
+  return _UF_PARA_REGIAO[m[1]] || 'Não identificado';
+}
 function _dedupAlunos(ofertas, campo){
   // PATCH 48: mesma regra do PATCH 38 (backend) — cada prática de um mesmo
   // polo+categoria repete o valor de ALUNOS_MATRICULADOS/ALUNOS_AGENDADOS da
@@ -3413,6 +3449,8 @@ function renderAgendasEstudo(){
 
   window._aeTodasOfertas = todasOfertas;
   renderEngajamentoPorOrdem();
+  renderEvolucaoGeral();
+  renderMelhorEngajamento();
 }
 // ── PATCH 125 (revisado 2x): Engajamento por Ordem, agrupado pelos MESMOS 5
 // grupos usados na aba Detalhe/Gerenciamento (GRUPOS_GER + _rowMatchesGrupo)
@@ -3426,6 +3464,93 @@ function _popularFiltroGrupoEngajamento(){
   });
 }
 function _ordemNumOrd(o){const m={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};return m[o]||99;}
+// ── PATCH 132: Evolução do Engajamento (visão geral, todas as ordens juntas) ──
+function renderEvolucaoGeral(){
+  const resumoEl = document.getElementById('ae-evolucao-resumo');
+  const graficoEl = document.getElementById('ae-evolucao-grafico');
+  if(!resumoEl || !graficoEl) return;
+  const ofertas = (window._aeTodasOfertas || []).filter(o=>!o._anomalia_ordem_futura);
+  const porOrdem = {};
+  ofertas.forEach(o=>{
+    const ord = o.ordem || 'Ordem 1';
+    if(!porOrdem[ord]) porOrdem[ord] = {total:0, gerenciadas:0};
+    porOrdem[ord].total++;
+    if(o.gerenciado) porOrdem[ord].gerenciadas++;
+  });
+  const pontos = Object.keys(porOrdem)
+    .map(ord=>({ordem:ord, ...porOrdem[ord], pct: porOrdem[ord].total?Math.round(porOrdem[ord].gerenciadas/porOrdem[ord].total*1000)/10:0}))
+    .filter(p=>p.total>0)
+    .sort((a,b)=>_ordemNumOrd(a.ordem)-_ordemNumOrd(b.ordem));
+
+  if(!pontos.length){ resumoEl.innerHTML='<span style="color:var(--muted)">Sem dados suficientes ainda.</span>'; graficoEl.innerHTML=''; return; }
+
+  const atual = pontos[pontos.length-1];
+  const anterior = pontos.length>1 ? pontos[pontos.length-2] : null;
+  let resumoHtml = `Engajamento atual (<strong>${esc(atual.ordem)}</strong>): <strong style="font-size:18px">${atual.pct}%</strong> (${fmtNum(atual.gerenciadas)} de ${fmtNum(atual.total)} práticas)`;
+  if(anterior){
+    const delta = Math.round((atual.pct - anterior.pct)*10)/10;
+    const cor = delta>0?'var(--ok)':delta<0?'var(--red)':'var(--muted)';
+    const seta = delta>0?'▲':delta<0?'▼':'—';
+    resumoHtml += `<br><span style="color:${cor};font-weight:700">${seta} ${delta>0?'+':''}${delta}pp</span> <span style="color:var(--muted)">vs ${esc(anterior.ordem)} (${anterior.pct}%)</span>`;
+  }
+  resumoEl.innerHTML = resumoHtml;
+
+  // Gráfico de linha simples em SVG, sem dependência externa
+  const W=640, H=180, PAD=36;
+  const xStep = pontos.length>1 ? (W-PAD*2)/(pontos.length-1) : 0;
+  const yFor = pct => H-PAD - (pct/100)*(H-PAD*2);
+  const xFor = i => PAD + i*xStep;
+  const linePts = pontos.map((p,i)=>`${xFor(i)},${yFor(p.pct)}`).join(' ');
+  const areaPts = `${xFor(0)},${H-PAD} ${linePts} ${xFor(pontos.length-1)},${H-PAD}`;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:${H}px">`;
+  [0,25,50,75,100].forEach(g=>{
+    const y=yFor(g);
+    svg += `<line x1="${PAD}" y1="${y}" x2="${W-PAD}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+    svg += `<text x="${PAD-8}" y="${y+4}" font-size="10" fill="var(--muted)" text-anchor="end">${g}%</text>`;
+  });
+  svg += `<polygon points="${areaPts}" fill="var(--teal)" opacity="0.12"/>`;
+  svg += `<polyline points="${linePts}" fill="none" stroke="var(--teal)" stroke-width="2.5"/>`;
+  pontos.forEach((p,i)=>{
+    svg += `<circle cx="${xFor(i)}" cy="${yFor(p.pct)}" r="4" fill="var(--teal)"/>`;
+    svg += `<text x="${xFor(i)}" y="${yFor(p.pct)-10}" font-size="11" font-weight="700" fill="var(--ink)" text-anchor="middle">${p.pct}%</text>`;
+    svg += `<text x="${xFor(i)}" y="${H-PAD+16}" font-size="10" fill="var(--muted)" text-anchor="middle">${esc(p.ordem.replace('Ordem ','O'))}</text>`;
+  });
+  svg += `</svg>`;
+  graficoEl.innerHTML = svg;
+}
+
+// ── PATCH 132: Horários com Maior Engajamento, por Curso e Região ──────────
+function renderMelhorEngajamento(){
+  const tbody = document.getElementById('ae-melhor-tbody');
+  const thEl = document.getElementById('ae-melhor-dim-th');
+  if(!tbody) return;
+  const dimensao = (document.getElementById('ae-melhor-dimensao-sel')||{}).value || 'dia_semana';
+  thEl.textContent = dimensao==='turno' ? 'Turno' : 'Dia da Semana';
+  const ofertas = (window._aeTodasOfertas || []).filter(o=>!o._anomalia_ordem_futura && o[dimensao]);
+
+  const grupos = {};
+  ofertas.forEach(o=>{
+    const curso = _labelGrupoOferta(o);
+    const regiao = _regiaoDoPolo(o.polo);
+    const dimVal = o[dimensao];
+    const key = curso+'|||'+regiao+'|||'+dimVal;
+    if(!grupos[key]) grupos[key] = {curso, regiao, dimVal, total:0, gerenciadas:0};
+    grupos[key].total++;
+    if(o.gerenciado) grupos[key].gerenciadas++;
+  });
+  const linhas = Object.values(grupos)
+    .map(g=>({...g, pct: g.total?Math.round(g.gerenciadas/g.total*1000)/10:0}))
+    .filter(g=>g.total>=5)
+    .sort((a,b)=> b.pct-a.pct || b.total-a.total)
+    .slice(0,20);
+
+  tbody.innerHTML = linhas.map(l=>`<tr>
+    <td>${esc(l.curso)}</td><td>${esc(l.regiao)}</td><td>${esc(l.dimVal)}</td>
+    <td style="text-align:right">${fmtNum(l.gerenciadas)} / ${fmtNum(l.total)}</td>
+    <td>${progCell(l.pct)}</td>
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem combinações com pelo menos 5 práticas ainda.</td></tr>';
+}
+
 function renderEngajamentoPorOrdem(){
   _popularFiltroGrupoEngajamento();
   // BUG CORRIGIDO: usava window._aeOfertasCompletas (nome enganoso — apesar
@@ -3441,18 +3566,43 @@ function renderEngajamentoPorOrdem(){
   const grupo = grupoId ? _grupoById(grupoId) : null;
   const base = grupo ? ofertas.filter(o=>_rowMatchesGrupo(o.categoria, o.subcurso, grupo, null)) : ofertas;
 
-  // Alunos matriculados do recorte atual (dedup por polo+categoria de sempre)
+  // PATCH 131: "Alunos matriculados" trocado pra usar DB.alunos_por_curso
+  // (fonte hub CSV/matrículas distintas, a mesma que já é autoritativa pro
+  // resto do dashboard) em vez de deduplicar alunos_mat cru do GIOCONDA —
+  // o Leo reportou número de matriculados errado, e essa era uma 2ª fonte
+  // divergente da correta.
   const matEl = document.getElementById('ae-ordem-matriculados');
   if(matEl){
-    const matriculados = _dedupAlunos(base, 'alunos_mat');
-    const rotulo = grupo ? `Alunos matriculados em ${esc(grupo.label)}` : 'Alunos matriculados (todos os grupos)';
-    matEl.innerHTML = `🎓 <strong>${fmtNum(matriculados)}</strong> ${esc(rotulo)}`;
+    const porCurso = DB.alunos_por_curso || [];
+    let matriculados = 0, rotulo = 'Alunos matriculados (todos os grupos)', aviso = '';
+    if(grupo){
+      // "multi3" (Multidisciplinar III) cobre Fisioterapia/T.O. E Biomedicina
+      // Estética/Cosmética juntos numa fonte só — não dá pra separar por
+      // sub-área nesse nível de dado, então mostra o total combinado com aviso
+      const baseAlvo = (grupo.base||[]);
+      porCurso.forEach(pc=>{
+        if(baseAlvo.includes(_grupoBaseDaCategoria(pc.sigla))) matriculados += pc.alunos;
+      });
+      rotulo = `Alunos matriculados em ${grupo.label}`;
+      if(baseAlvo.includes('multi3') && (grupo.id==='fisio-to' || grupo.id==='bio-far-est')){
+        aviso = ' <span style="opacity:.75">(número combinado — a fonte não separa Fisioterapia/T.O. de Estética/Cosmética dentro do Multidisciplinar III)</span>';
+      }
+    } else {
+      matriculados = porCurso.reduce((s,pc)=>s+(pc.alunos||0),0);
+    }
+    matEl.innerHTML = `🎓 <strong>${fmtNum(matriculados)}</strong> ${esc(rotulo)}${aviso}`;
   }
 
   // Agrupa por (grupo, ordem) — quando um grupo específico é escolhido, cada
   // linha é uma ordem; em "Todos os grupos", uma linha por grupo × ordem.
+  // PATCH 130: exclui ofertas marcadas com _anomalia_ordem_futura (a própria
+  // ordem ainda nem começou pelo calendário — o Leo reportou Ordem 3
+  // aparecendo com dado antes da hora; geralmente é ordem mal preenchida na
+  // origem, não gerenciamento real adiantado).
+  const anomalasFuturas = base.filter(o=>o._anomalia_ordem_futura).length;
+  const baseValida = base.filter(o=>!o._anomalia_ordem_futura);
   const grupos = {};
-  base.forEach(o=>{
+  baseValida.forEach(o=>{
     const g = grupo ? grupo.label : (GRUPOS_GER.find(gg=>_rowMatchesGrupo(o.categoria,o.subcurso,gg,null))||{label:'Outros'}).label;
     const ord = o.ordem || 'Ordem 1';
     const key = g+'|||'+ord;
@@ -3468,6 +3618,13 @@ function renderEngajamentoPorOrdem(){
 
   const tbody = document.getElementById('ae-ordem-tbody');
   if(!tbody) return;
+  const avisoEl = document.getElementById('ae-ordem-aviso-anomalia');
+  if(avisoEl){
+    avisoEl.textContent = anomalasFuturas>0
+      ? `⚠️ ${anomalasFuturas} registro(s) ignorado(s) nesta comparação — marcados como gerenciados numa ordem cujo período ainda não começou (provável erro de preenchimento na origem).`
+      : '';
+    avisoEl.style.display = anomalasFuturas>0 ? '' : 'none';
+  }
   let html = '';
   Object.values(porCategoria).forEach(grp=>{
     grp.sort((a,b)=>_ordemNumOrd(a.ordem)-_ordemNumOrd(b.ordem));
