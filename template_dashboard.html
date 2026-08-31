@@ -156,30 +156,22 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="sidebar-section">
       <div class="sidebar-section-label" id="sidebar-port-label">Portfólios</div>
       <button class="sidebar-item active" onclick="navTo('port-visao')"><span class="si-icon">📊</span><span class="si-label">Visão Geral</span></button>
-      <button class="sidebar-item" onclick="navTo('port-ordens')"><span class="si-icon">📅</span><span class="si-label">Ordens</span></button>
       <button class="sidebar-item" onclick="navTo('port-praticas')"><span class="si-icon">🔬</span><span class="si-label">Práticas</span></button>
       <button class="sidebar-item" onclick="navTo('port-polos')"><span class="si-icon">🏛️</span><span class="si-label">Polos</span></button>
-      <button class="sidebar-item" onclick="navTo('port-tutores')"><span class="si-icon">👤</span><span class="si-label">Tutores</span></button>
-    </div>
-    <div class="sidebar-section" id="sidebar-tutores-mec">
-      <div class="sidebar-section-label">Tutores</div>
-      <button class="sidebar-item" onclick="navTo('tutores-mec')"><span class="si-icon">👤</span><span class="si-label">Ficha dos Tutores</span></button>
     </div>
     <div class="sidebar-section" id="sidebar-ger" style="display:none">
       <div class="sidebar-section-label">Gerenciamento</div>
-      <button class="sidebar-item" onclick="navTo('ger-visao')"><span class="si-icon">📋</span><span class="si-label">Visão Geral</span></button>
-      <button class="sidebar-item" onclick="navTo('ger-ofertas')"><span class="si-icon">📊</span><span class="si-label">Ofertas</span></button>
       <button class="sidebar-item" onclick="navTo('ger-agendas')"><span class="si-icon">📆</span><span class="si-label">Agendas</span></button>
       <button class="sidebar-item" onclick="navTo('agendas-estudo')"><span class="si-icon">🕐</span><span class="si-label">Horários e Engajamento</span></button>
       <button class="sidebar-item" onclick="navTo('ger-detalhe')"><span class="si-icon">🔍</span><span class="si-label">Detalhe</span></button>
     </div>
     <div class="sidebar-section" id="sidebar-vagas" style="display:none">
-      <div class="sidebar-section-label">RH</div>
+      <div class="sidebar-section-label">Vagas</div>
       <button class="sidebar-item" onclick="navTo('vagas')"><span class="si-icon">📝</span><span class="si-label">Vagas</span></button>
     </div>
-    <div class="sidebar-section" id="sidebar-insumos" style="display:none">
-      <div class="sidebar-section-label">Insumos</div>
-      <button class="sidebar-item" onclick="navTo('insumos')"><span class="si-icon">📦</span><span class="si-label">Racional de Insumos</span></button>
+    <div class="sidebar-section" id="sidebar-futuro" style="display:none">
+      <div class="sidebar-section-label">Em breve</div>
+      <button class="sidebar-item" disabled style="opacity:.4"><span class="si-icon">📦</span><span class="si-label">Insumos</span><span class="si-badge">Em breve</span></button>
     </div>
   </div>
   <div class="sidebar-footer"><span class="sidebar-ts" id="ts-label">—</span><button class="sidebar-dark" onclick="toggleDark()" title="Modo escuro">🌙</button></div>
@@ -210,27 +202,6 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div class="card"><div class="card-hdr"><div class="card-title">Situação dos Tutores</div></div><div class="stat-bar" id="pv-stat-bar"></div><div class="card-body" id="pv-ofensores"></div></div>
     <div class="card"><div class="card-hdr"><div class="card-title">Envios por Mês</div></div><div class="card-body" id="pv-mes"></div></div>
-  <!-- Avisos de portfólio -->
-  <div id="pf-avisos-wrap" style="display:none">
-    <div class="card" style="border-left:4px solid var(--amarelo,#FFD100)">
-      <div class="card-hdr">
-        <div class="card-title">⚠️ Avisos de Portfólio</div>
-        <div class="card-sub" id="pf-avisos-count"></div>
-      </div>
-      <div class="card-body">
-        <div class="tbl-wrap" style="max-height:260px">
-          <table><thead><tr>
-            <th>Tipo</th>
-            <th>E-mail</th>
-            <th>Nome / Polo</th>
-            <th style="text-align:right">Envios</th>
-            <th>Mensagem</th>
-          </tr></thead>
-          <tbody id="pf-avisos-tbody"></tbody>
-        </table></div>
-      </div>
-    </div>
-  </div>
   </div>
   <div class="card"><div class="card-hdr"><div class="card-title">Categorias</div></div><div class="card-body" id="pv-cats"></div></div>
 </div></div>
@@ -474,11 +445,9 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="card" style="margin-bottom:16px">
     <div class="card-hdr"><div class="card-title">🔎 Ver 1 por 1 (opcional)</div></div>
     <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-      <select class="sel" id="ae-filtro-ordem" onchange="filterAgendasPoloTutor()"><option value="">Todas as ordens</option></select>
-      <select class="sel" id="ae-filtro-curso" onchange="filterAgendasPoloTutor()"><option value="">Todos os cursos</option></select>
       <select class="sel" id="ae-filtro-polo" onchange="filterAgendasPoloTutor()"><option value="">Todos os polos</option></select>
       <select class="sel" id="ae-filtro-tutor" onchange="filterAgendasPoloTutor()"><option value="">Todos os tutores</option></select>
-      <span style="font-size:11px;color:var(--muted)">Deixa em "Todos" pra ver o agregado de sempre — escolhe um curso, polo ou tutor pra ver só os horários dele.</span>
+      <span style="font-size:11px;color:var(--muted)">Deixa em "Todos" pra ver o agregado de sempre — escolhe um polo ou tutor pra ver só os horários dele.</span>
     </div>
   </div>
   <div class="card" style="margin-bottom:16px">
@@ -674,88 +643,20 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 
 <!-- ═══ VAGAS (RH) ══════════════════════════════════════════════════════ -->
 <div class="page" id="page-vagas"><div class="container">
-  <div class="ph"><div class="ph-title">Vagas — Contratação e Substituição</div><div class="ph-sub" id="vagas-sub">—</div></div>
+  <div class="ph"><div class="ph-title">Vagas — Situação por Polo</div><div class="ph-sub">Onde tem tutor, onde não tem, e a previsão de contratação</div></div>
   <div class="kpi-row" id="vagas-kpis"></div>
   <div class="card">
-    <div class="card-hdr"><div class="card-title">📚 Por Laboratório / Curso</div></div>
-    <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
-      <th onclick="sortTable('vagas-cat-tbody','curso','str')">Curso<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','tot','num')">Total Vagas<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','aum','num')">Aumento de Quadro<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','sub','num')">Substituição<span class="sort-ind"></span></th>
-      <th style="text-align:right" onclick="sortTable('vagas-cat-tbody','cp','num')">Com Previsão<span class="sort-ind"></span></th>
-    </tr></thead><tbody id="vagas-cat-tbody"></tbody></table></div>
-  </div>
-  <div class="card">
     <div class="toolbar">
-      <input class="search" type="text" placeholder="Buscar polo, curso, perfil…" oninput="filterVagas(this.value)" id="vagas-search"/>
-      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-status-sel"><option value="">Todos os status</option><option value="Aumento de Quadro">Aumento de Quadro</option><option value="Substituição">Substituição</option></select>
-      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-contr-sel"><option value="">Toda contratação</option></select>
-      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-prior-sel"><option value="">Toda prioridade</option></select>
+      <input class="search" type="text" placeholder="Buscar polo…" oninput="filterVagas(this.value)" id="vagas-search"/>
+      <select class="sel" onchange="filterVagas(document.getElementById('vagas-search').value)" id="vagas-status-sel"><option value="">Todos os status</option><option value="Aumento de Quadro">Sem tutor (aumento de quadro)</option><option value="Substituição">Precisa substituir</option></select>
       <span class="tbl-count" id="vagas-count">—</span>
-      <button class="btn-export" onclick="exportVagas()">⬇ Exportar</button>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
       <th onclick="sortVagas('polo')">Polo</th>
-      <th onclick="sortVagas('cursos')">Curso</th>
-      <th onclick="sortVagas('perfil')">Perfil</th>
-      <th onclick="sortVagas('status')">Status</th>
-      <th onclick="sortVagas('contratacao')">Contratação</th>
-      <th onclick="sortVagas('prioridade')">Prioridade</th>
-      <th>Tutor Atual</th>
-      <th>Chamado SYDLE</th>
+      <th onclick="sortVagas('status')">Situação</th>
+      <th onclick="sortVagas('contratacao')">Previsão de Contratação</th>
+      <th onclick="sortVagas('alunos_polo')" style="text-align:right">Alunos no Polo</th>
     </tr></thead><tbody id="vagas-tbody"></tbody></table></div>
-  </div></div></div>
-
-<div class="page" id="page-insumos"><div class="container">
-  <div class="ph"><div class="ph-title">Racional de Insumos por Experimento</div><div class="ph-sub" id="ins-sub">—</div></div>
-  <div style="font-size:11px;color:var(--muted);margin:-4px 0 12px">ℹ️ Estudo estático (cruzamento Controle × Racional de Insumos × Trilha de Aprendizagem × catálogo oficial). Não atualiza sozinho a cada ciclo — reflete um levantamento pontual.</div>
-  <div class="kpi-row" id="ins-kpis"></div>
-  <div class="rtabs"><button class="rtab active" id="ins-tab-consulta" onclick="switchInsumosTab('consulta')">🔎 Consulta por Prática</button><button class="rtab" id="ins-tab-cobertura" onclick="switchInsumosTab('cobertura')">📊 Cobertura por Curso</button><button class="rtab" id="ins-tab-lacunas" onclick="switchInsumosTab('lacunas')">⚠️ Lacunas</button></div>
-
-  <div id="ins-view-consulta">
-    <div class="card">
-      <div class="toolbar">
-        <select class="sel" onchange="filterInsumosConsulta()" id="ins-curso-sel"><option value="">Todos os cursos</option></select>
-        <input class="search" type="text" placeholder="Buscar prática ou item…" oninput="filterInsumosConsulta()" id="ins-search"/>
-        <span class="tbl-count" id="ins-consulta-count">—</span>
-      </div>
-      <div style="padding:8px 16px 0;font-size:11px;color:var(--muted)">Selecione uma prática pra ver a lista completa de itens.</div>
-      <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
-        <th>Curso</th><th>Prática</th><th style="text-align:right">Itens Cadastrados</th>
-      </tr></thead><tbody id="ins-praticas-tbody"></tbody></table></div>
-    </div>
-    <div class="card" id="ins-detalhe-card" style="display:none">
-      <div class="card-hdr"><div class="card-title" id="ins-detalhe-title">—</div><div class="card-badge" id="ins-detalhe-count">—</div></div>
-      <div class="tbl-wrap" style="max-height:420px"><table><thead><tr>
-        <th>Item</th><th>Tipo (fonte original)</th><th style="text-align:right">Racional (turma 20 alunos)</th><th>Unidade</th><th>Fonte</th>
-      </tr></thead><tbody id="ins-itens-tbody"></tbody></table></div>
-    </div>
-  </div>
-
-  <div id="ins-view-cobertura" style="display:none">
-    <div class="card">
-      <div class="card-hdr"><div class="card-title">📚 Cobertura de Insumos por Curso</div></div>
-      <div class="tbl-wrap" style="max-height:500px"><table><thead><tr>
-        <th onclick="sortTable('ins-cobertura-tbody','curso','str')">Curso<span class="sort-ind"></span></th>
-        <th style="text-align:right" onclick="sortTable('ins-cobertura-tbody','total','num')">Práticas no Controle<span class="sort-ind"></span></th>
-        <th style="text-align:right" onclick="sortTable('ins-cobertura-tbody','com','num')">Com Item Cadastrado<span class="sort-ind"></span></th>
-        <th style="text-align:right" onclick="sortTable('ins-cobertura-tbody','sem','num')">Sem Nenhum Item<span class="sort-ind"></span></th>
-        <th onclick="sortTable('ins-cobertura-tbody','pct','num')">% Cobertura<span class="sort-ind"></span></th>
-      </tr></thead><tbody id="ins-cobertura-tbody"></tbody></table></div>
-    </div>
-  </div>
-
-  <div id="ins-view-lacunas" style="display:none">
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-hdr"><div class="card-title">🔴 Sem item cadastrado em nenhuma fonte</div><div class="card-badge" id="ins-lacunas-sem-count">—</div></div>
-      <div class="toolbar"><input class="search" type="text" placeholder="Buscar curso ou prática…" oninput="filterInsumosLacunas(this.value)" id="ins-lacunas-search"/></div>
-      <div class="tbl-wrap" style="max-height:360px"><table><thead><tr><th>Curso</th><th>Prática</th></tr></thead><tbody id="ins-lacunas-sem-tbody"></tbody></table></div>
-    </div>
-    <div class="card">
-      <div class="card-hdr"><div class="card-title">🟡 Existe cadastro em curso irmão (reaproveitável)</div><div class="card-badge" id="ins-lacunas-irmao-count">—</div></div>
-      <div class="tbl-wrap" style="max-height:280px"><table><thead><tr><th>Curso</th><th>Prática</th></tr></thead><tbody id="ins-lacunas-irmao-tbody"></tbody></table></div>
-    </div>
   </div>
 </div></div>
 
@@ -788,6 +689,22 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
   </div>
 </div>
+<!-- PATCH 116: a seleção de curso deixou de ser uma tela cheia bloqueante --
+     agora é um painel que abre por cima do dashboard (que já carrega
+     normalmente depois da senha), e permite marcar mais de um curso. -->
+<div id="curso-painel-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998" onclick="_fecharPainelCurso()">
+  <div id="curso-painel" style="position:absolute;top:60px;right:24px;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);width:340px;max-height:70vh;display:flex;flex-direction:column;overflow:hidden" onclick="event.stopPropagation()">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+      <div style="font-weight:800;font-size:14px;margin-bottom:2px">Selecione o(s) curso(s)</div>
+      <div style="font-size:11px;color:var(--muted)">Pode marcar mais de um — o painel mostra o conjunto combinado.</div>
+    </div>
+    <div id="curso-painel-lista" style="overflow-y:auto;padding:10px 18px;flex:1"></div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px">
+      <button class="senha-btn" style="flex:1;padding:9px" onclick="_aplicarCursosSelecionados()">Aplicar</button>
+      <button style="padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;font-size:13px" onclick="_fecharPainelCurso()">Cancelar</button>
+    </div>
+  </div>
+</div>
 <script>
 // ── SENHA / DESCRIPTOGRAFIA ───────────────────────────────────────────────────
 async function _sha256Buf(msg){
@@ -816,11 +733,10 @@ async function verificarSenha(){
     const cryptoKey = await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
     DB = await _decifrarDados(cryptoKey);
     const chaveHex = _bytesToHex(chaveBuf);
-    try{sessionStorage.setItem('uni_auth_key', chaveHex);}catch(e){}
-    try{localStorage.setItem('uni_auth_key', chaveHex);}catch(e){}
+    try{sessionStorage.setItem('uni_auth_key_coord', chaveHex);}catch(e){}
     document.getElementById('senha-overlay').style.display='none';
     document.getElementById('senha-input').value='';
-    _iniciarDashboard();
+    _iniciarPortalCoordenador();
   }catch(e){
     document.getElementById('senha-err').textContent='Senha incorreta.';
     document.getElementById('senha-input').value='';
@@ -829,19 +745,18 @@ async function verificarSenha(){
 }
 async function initSenha(){
   let chaveHex=null;
-  try{chaveHex=sessionStorage.getItem('uni_auth_key')||localStorage.getItem('uni_auth_key');}catch(e){}
+  try{chaveHex=sessionStorage.getItem('uni_auth_key_coord');}catch(e){}
   if(chaveHex){
     try{
       const chaveBuf=_hexToBytes(chaveHex);
       const cryptoKey=await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
       DB = await _decifrarDados(cryptoKey);
       const ov=document.getElementById('senha-overlay'); if(ov) ov.style.display='none';
-      _iniciarDashboard();
+      _iniciarPortalCoordenador();
       return;
     }catch(e){
       // chave guardada não decifra mais (senha mudou, ou dado corrompido) — pede de novo
-      try{sessionStorage.removeItem('uni_auth_key');}catch(_){}
-      try{localStorage.removeItem('uni_auth_key');}catch(_){}
+      try{sessionStorage.removeItem('uni_auth_key_coord');}catch(_){}
     }
   }
   setTimeout(()=>{const inp=document.getElementById('senha-input');if(inp)inp.focus();},200);
@@ -906,7 +821,6 @@ const pageTitles={
   'ger-contratacao':['Contratação','Gerenciamento'],
   'ger-agendas':['Agendas','Gerenciamento'],'ger-detalhe':['Detalhe','Gerenciamento'],
   'vagas':['Vagas','RH'],
-  'insumos':['Racional de Insumos','Insumos'],
 };
 function navTo(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -923,7 +837,6 @@ function navTo(name){
   if(name==='port-visao') { renderKPIs(); renderOfensores(); renderMes(); }
   if(name==='vagas') { filterVagas(document.getElementById('vagas-search')?.value||''); }
   if(name==='agendas-estudo') { renderAgendasEstudo(); }
-  if(name==='insumos' && _insPraticasIndex) { filterInsumosConsulta(); }
 }
 function esc(s){return(s||'').replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function pctColor(p){return p===100?'var(--ok)':p===0?'var(--red)':p>=60?'var(--teal)':'var(--red)'}
@@ -948,7 +861,7 @@ function renderKPIs(){
     <div class="kpi kpi-red kpi-link" onclick="openListModal('urgentes')"><div class="kpi-label">Urgentes</div><div class="kpi-value">${k.urgentes}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()"><div class="kpi-label">Alunos nas Práticas</div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
-    <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria — não soma a mesma turma repetida em várias práticas)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum(_getSemPortfolioAlunos().geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
+    <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum(_getSemPortfolioAlunos().geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
     <div class="kpi kpi-teal" title="Alunos agendados no GIOCONDA (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(((typeof GER_DB!=='undefined'&&GER_DB?GER_DB:DB).ger_kpis||{}).total_alunos_agendados||0)}</div><div class="kpi-detail" style="color:var(--muted)">via GIOCONDA</div></div>
     <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div><div class="kpi-hint">clique para ver lista</div></div>`;
   renderCruzamentoPortfolioAgendado();
@@ -971,9 +884,8 @@ function renderCruzamentoPortfolioAgendado(){
       <div><div style="font-size:11px;color:var(--muted)">Registrados no Portfólio</div><div style="font-size:26px;font-weight:800;color:var(--teal)">${fmtNum(g.registrado_portfolio)}</div></div>
       <div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:var(--muted)">Compareceu / Registrou (sobre Agendado)</div><div style="font-size:22px;font-weight:700;color:${g.pct_registrado_sobre_agendado>=70?'var(--ok)':g.pct_registrado_sobre_agendado>=40?'var(--yellow)':'var(--red)'}">${pctTxt}</div></div>
     </div>`;
-  const montaLinhas = (lista, campoNome, labelNome) => lista.map(x => {
+  const montaLinhas = (lista, campoNome) => lista.map(x => {
     const pct = x.pct_registrado_sobre_agendado;
-    const pctTxt2 = pct!==null ? pct+'%' : '—';
     return `<tr><td>${esc(x[campoNome])}</td><td style="text-align:right">${fmtNum(x.registrado_portfolio)}</td><td style="text-align:right;color:var(--teal)">${fmtNum(x.agendado)}</td><td>${pct!==null?progCell(pct):'<span style="color:var(--muted)">—</span>'}</td></tr>`;
   }).join('');
   document.getElementById('cruz-polo-tbody').innerHTML = montaLinhas(cruz.por_polo||[], 'polo') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted)">Sem dados.</td></tr>';
@@ -1310,7 +1222,7 @@ function openAlunosModal(){
 function renderGerenciamento(){
   if(!DB.tem_gerenciamento)return;
   if(!GER_DB) GER_DB = DB;  // PATCH 18: fallback antes do seletor de semestre inicializar
-  document.getElementById('sidebar-ger').style.display='';
+  document.getElementById('sidebar-ger').style.display='';document.getElementById('sidebar-futuro').style.display='';
   const k=GER_DB.ger_kpis;document.getElementById('gv-sub').textContent=`${fmtNum(k.total_ofertas)} ofertas · ${fmtNum(k.ofertas_gerenciadas)} gerenciadas · ${fmtNum(k.ofertas_sem_tutor)} sem tutor`;
   document.getElementById('gv-kpis').innerHTML=`
     <div class="kpi kpi-green" title="Total de combinações tutor × laboratório × ordem no GIOCONDA"><div class="kpi-label">Total Ofertas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
@@ -1390,10 +1302,8 @@ function renderGerenciamento(){
   renderEstadosInline(estadosData);renderMapaBrasil(estadosData);
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
-  // PATCH 118: exclusão de tutores sem vínculo ativo (desligados sem
-  // contrapartida ativa, ou "Aviso de Portfólio") movida pro processar.py —
-  // gerDetData já chega limpo do backend, não precisa mais filtrar aqui.
-  // Ver PATCH 118 no processar.py pro histórico completo.
+  // PATCH 118: exclusão de tutores sem vínculo ativo movida pro processar.py
+  // — gerDetData já chega limpo do backend. Ver PATCH 118 no processar.py.
   gerDetData=GER_DB.ger_ofertas||[];
   // PATCH 77: o Leo reportou a MESMA pessoa (Renata Souza da/De Silva) ainda
   // duplicada mesmo depois do PATCH 75/76 bloquearem a re-injeção de "sem
@@ -2021,10 +1931,6 @@ function filterGerDetalhe(q){
       return st==='ger' ? geriu : !geriu;
     });
   }
-  // PATCH 134: filtro independente por status de treinamento (≤60 dias de
-  // casa) — não mistura com o filtro de gerenciado/não-gerenciado, pra dar
-  // pra cruzar as duas coisas (ex: "não gerenciou" + "não é treinamento" =
-  // quem não gerenciou por outro motivo que não ser recém-chegado).
   if(st==='treinamento' || st==='sem_treinamento'){
     sorted = sorted.filter(function(t){
       var dias = _diasDesdeAdmissao(t.tutor);
@@ -2988,26 +2894,12 @@ function openDiaSemanaModal(dia){
     const h=o.hr_agenda||'(sem horário registrado)';
     const turno=o.turno||'—';
     const key=turno+'|||'+h;
-    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,_grupos:{}};
+    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,mat:0,agend:0};
     const p=porHorario[key];
-    p.qtd++;
-    // PATCH 114: mesma deduplicação por polo+categoria do openTurnoModal —
-    // ver comentário lá pra detalhe do porquê (evita inflar matriculados/
-    // agendados quando mais de uma prática do mesmo polo+categoria cai no
-    // mesmo dia+horário+turno).
-    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
-    if(!p._grupos[chaveGrupo]) p._grupos[chaveGrupo]={mat:0,agend:0};
-    const g=p._grupos[chaveGrupo];
-    g.mat=Math.max(g.mat,o.alunos_mat||0);
-    g.agend=Math.max(g.agend,o.alunos_agend||0);
+    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
   });
   const _turnoOrdem={'Manhã':0,'Tarde':1,'Noite':2,'Madrugada':3};
-  const rows=Object.values(porHorario).map(p=>{
-    const grupos=Object.values(p._grupos);
-    p.mat=grupos.reduce((s,g)=>s+g.mat,0);
-    p.agend=grupos.reduce((s,g)=>s+g.agend,0);
-    return p;
-  }).sort((a,b)=>{
+  const rows=Object.values(porHorario).sort((a,b)=>{
     const ta=_turnoOrdem[a.turno]??9, tb=_turnoOrdem[b.turno]??9;
     if(ta!==tb) return ta-tb;
     return a.horario.localeCompare(b.horario,'pt-BR',{numeric:true});
@@ -3065,28 +2957,12 @@ function openTurnoModal(turno){
   const porHorario={};
   ofertas.forEach(o=>{
     const h=o.hr_agenda||'(sem horário registrado)';
-    if(!porHorario[h]) porHorario[h]={horario:h,qtd:0,_grupos:{}};
+    if(!porHorario[h]) porHorario[h]={horario:h,qtd:0,mat:0,agend:0};
     const p=porHorario[h];
-    p.qtd++;
-    // PATCH 114: mesma regra do _dedupAlunos — cada prática de um mesmo
-    // polo+categoria repete o valor de alunos_mat/alunos_agend da origem, então
-    // somar linha a linha (como este modal fazia antes) inflava o total quando
-    // mais de uma prática do mesmo polo+categoria caía no mesmo horário. Agrupa
-    // por polo+categoria e pega o maior valor (não soma), igual ao resto do
-    // dashboard já faz pros KPIs principais.
-    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
-    if(!p._grupos[chaveGrupo]) p._grupos[chaveGrupo]={mat:0,agend:0};
-    const g=p._grupos[chaveGrupo];
-    g.mat=Math.max(g.mat,o.alunos_mat||0);
-    g.agend=Math.max(g.agend,o.alunos_agend||0);
+    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
   });
   // Ordena cronologicamente pelo horário de início — "1º horário", "2º horário" etc.
-  const rows=Object.values(porHorario).map(p=>{
-    const grupos=Object.values(p._grupos);
-    p.mat=grupos.reduce((s,g)=>s+g.mat,0);
-    p.agend=grupos.reduce((s,g)=>s+g.agend,0);
-    return p;
-  }).sort((a,b)=>a.horario.localeCompare(b.horario,'pt-BR',{numeric:true}));
+  const rows=Object.values(porHorario).sort((a,b)=>a.horario.localeCompare(b.horario,'pt-BR',{numeric:true}));
   const max=Math.max(...rows.map(r=>r.qtd),1);
   document.getElementById('m-title').textContent='Turno: '+turno;
   document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste turno · horários ordenados cronologicamente`;
@@ -3121,10 +2997,6 @@ function _getOfertasAgenda(){
 }
 const _DIAS_SEMANA_ORDEM=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const _TURNOS_ORDEM=['Manhã','Tarde','Noite','Madrugada'];
-// PATCH 132: UF -> macrorregião, pra agrupar "Horários com Maior Engajamento"
-// por região geográfica (pedido pelo Leo). Polo vem sempre como "Cidade/UF"
-// ou "Cidade/UF - Bairro" — extrai a UF entre a última "/" e o próximo
-// separador não-letra.
 const _UF_PARA_REGIAO = {
   'AC':'Norte','AP':'Norte','AM':'Norte','PA':'Norte','RO':'Norte','RR':'Norte','TO':'Norte',
   'AL':'Nordeste','BA':'Nordeste','CE':'Nordeste','MA':'Nordeste','PB':'Nordeste','PE':'Nordeste','PI':'Nordeste','RN':'Nordeste','SE':'Nordeste',
@@ -3209,112 +3081,34 @@ function _renderAgendasKpisDiasTurnos(ofertas){
     </div>`;
   }).join('');
 }
-// PATCH 112: mapa de código de curso -> nome legível. O código de engenharias
-// no backend (CURSOS_NOMES) tem os códigos colados numa chave composta só
-// ("ECE-ENM-ENS-...") que na prática nunca bate com um código individual —
-// aqui separo cada um, pra não sobrar código cru sem nome no filtro. Também
-// cobre EFM/ISC, achados nos dados reais como variantes de Enfermagem/
-// Instrumentação Cirúrgica que "EMF-ISN" sozinho não cobria.
-const _CURSOS_NOMES_JS = {
-  'EMF-ISN': 'Enfermagem', 'EMF-ISN2': 'Enfermagem', 'EMF-ISND': 'Enfermagem',
-  'EFM': 'Enfermagem', 'ISC': 'Instrumentação Cirúrgica',
-  'BFR': 'Farmácia', 'BBI': 'Biomedicina', 'BFI': 'Fisioterapia', 'BTO': 'T. Ocupacional',
-  'COS-TIP': 'Estética e Cosmética', 'COS': 'Estética e Cosmética', 'NTR': 'Nutrição', 'AGM': 'Agronomia',
-  'BAU': 'Arquitetura e Urbanismo',
-  'ECE': 'Engenharia Civil', 'ENM': 'Engenharia Mecânica', 'ENS': 'Engenharia Ambiental e Sanitária',
-  'ENG': 'Engenharia', 'EEA': 'Engenharia Elétrica', 'GPI': 'Gestão da Produção Industrial',
-  'CDE': 'Construção de Edifícios', 'OBR': 'Controle de Obras', 'SAN': 'Saneamento Ambiental',
-  'TER': 'Energias Renováveis', 'FSA': 'Licenciatura em Física', 'SLF': 'Segunda Licenciatura em Física',
-  'QUI': 'Licenciatura em Química',
-};
-function _nomeCursoOferta(o){
-  // PATCH 112 (correção): o backend às vezes grava .subcurso já com o nome
-  // certo (Multi III: "Fisioterapia", etc.), mas outras vezes grava o
-  // CÓDIGO cru sem traduzir (mesmo bug do CURSOS_NOMES com chave composta no
-  // backend) -- então sempre tenta traduzir o valor de .subcurso/.curso
-  // primeiro, e só usa como está se não achar tradução nenhuma.
-  if(o.subcurso) return _CURSOS_NOMES_JS[o.subcurso] || o.subcurso;
-  if(o.curso) return _CURSOS_NOMES_JS[o.curso] || o.curso;
-  return o.categoria || '';
-}
-// PATCH 113: curso específico -> laboratório/categoria ampla, pra agrupar o
-// filtro de curso pelo mesmo critério já usado em Gerenciamento (a mesma
-// categorização da tabela "Por Laboratório / Curso" logo abaixo).
-const _CURSO_PARA_LAB_JS = {
-  'Biomedicina':'BIO-FAR (Multidisciplinar I)','Farmácia':'BIO-FAR (Multidisciplinar I)',
-  'Enfermagem':'ENF-INS (Multidisciplinar II)','Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
-  'Fisioterapia':'BIO-FISIO-EST-TO (Multidisciplinar III)','T. Ocupacional':'BIO-FISIO-EST-TO (Multidisciplinar III)','Terapia Ocupacional':'BIO-FISIO-EST-TO (Multidisciplinar III)','Estética e Cosmética':'BIO-FISIO-EST-TO (Multidisciplinar III)',
-  'Nutrição':'NUTRI (Multidisciplinar IV)',
-  'Agronomia':'QUÍMICA E FÍSICA','Licenciatura em Física':'QUÍMICA E FÍSICA','Licenciatura em Química':'QUÍMICA E FÍSICA','Segunda Licenciatura em Física':'QUÍMICA E FÍSICA',
-  'Arquitetura e Urbanismo':'ENGMAKER','Construção de Edifícios':'ENGMAKER','Controle de Obras':'ENGMAKER','Energias Renováveis':'ENGMAKER','Engenharia Ambiental e Sanitária':'ENGMAKER','Engenharia Civil':'ENGMAKER','Engenharia Elétrica':'ENGMAKER','Engenharia Mecânica':'ENGMAKER','Engenharia de Produção':'ENGMAKER','Gestão da Produção Industrial':'ENGMAKER','Saneamento Ambiental':'ENGMAKER','Engenharia':'ENGMAKER',
-};
-function _popularFiltroCurso(){
-  const sel=document.getElementById('ae-filtro-curso');
-  if(!sel || sel.options.length>1) return; // só popula 1 vez -- curso não depende de polo/tutor/ordem
-  const base=window._aeOfertasCompletas||[];
-  const cursos=[...new Set(base.map(o=>_nomeCursoOferta(o)).filter(Boolean))];
-  // Agrupa por laboratório, igual ao Gerenciamento -- cursos sem lab mapeado
-  // caem num grupo "Outros" no final, em vez de sumir.
-  const porLab={};
-  cursos.forEach(c=>{
-    const lab=_CURSO_PARA_LAB_JS[c]||'Outros';
-    if(!porLab[lab]) porLab[lab]=[];
-    porLab[lab].push(c);
-  });
-  const labsOrdenados=Object.keys(porLab).filter(l=>l!=='Outros').sort((a,b)=>a.localeCompare(b,'pt'));
-  if(porLab['Outros']) labsOrdenados.push('Outros');
-  labsOrdenados.forEach(lab=>{
-    const grp=document.createElement('optgroup');
-    grp.label=lab;
-    porLab[lab].sort((a,b)=>a.localeCompare(b,'pt')).forEach(c=>{
-      const o=document.createElement('option');o.value=c;o.textContent=c;grp.appendChild(o);
-    });
-    sel.appendChild(grp);
-  });
-}
-function _popularFiltroOrdem(){
-  const sel=document.getElementById('ae-filtro-ordem');
-  if(!sel || sel.options.length>1) return;
-  const base=window._aeOfertasCompletas||[];
-  const ordens=[...new Set(base.map(o=>o.ordem).filter(Boolean))].sort();
-  ordens.forEach(od=>{const o=document.createElement('option');o.value=od;o.textContent=od;sel.appendChild(o);});
-}
 function _popularFiltroTutor(){
-  // PATCH 79/112: lista de tutores do seletor "ver 1 por 1" passa a depender
-  // do curso e do polo escolhidos — só mostra quem realmente atua nesse
-  // recorte. Se o tutor selecionado não existir mais na lista (porque o
-  // curso/polo mudou), volta pra "Todos os tutores".
-  const selCurso=document.getElementById('ae-filtro-curso');
+  // PATCH 79: lista de tutores do seletor "ver 1 por 1" passa a depender do
+  // polo escolhido — só mostra quem realmente atua naquele polo. Se o tutor
+  // que estava selecionado não existir mais nessa lista (porque o polo mudou
+  // pra um onde ele não atua), volta pra "Todos os tutores" em vez de manter
+  // uma seleção que não faz mais sentido.
   const selPolo=document.getElementById('ae-filtro-polo');
   const selTutor=document.getElementById('ae-filtro-tutor');
   if(!selTutor) return;
-  const cursoAtual=(selCurso||{}).value||'';
   const poloAtual=(selPolo||{}).value||'';
   const prevTutor=selTutor.value;
   const base=window._aeOfertasCompletas||[];
-  let escopo=base;
-  if(cursoAtual) escopo=escopo.filter(o=>_nomeCursoOferta(o)===cursoAtual);
-  if(poloAtual) escopo=escopo.filter(o=>o.polo===poloAtual);
+  const escopo=poloAtual?base.filter(o=>o.polo===poloAtual):base;
   const tutores=[...new Set(escopo.map(o=>o.tutor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));
   while(selTutor.options.length>1) selTutor.remove(1);
   tutores.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selTutor.appendChild(o);});
   selTutor.value=[...selTutor.options].some(o=>o.value===prevTutor)?prevTutor:'';
 }
 function filterAgendasPoloTutor(){
-  // PATCH 78/79/112/113: "ver 1 por 1" — filtra os KPIs + os dois gráficos
-  // por ordem, curso, polo e/ou tutor escolhidos, sem mexer no resto da
-  // página (categoria ampla, incomuns). Com todos os seletores em "Todos",
-  // volta a ser exatamente o agregado de sempre.
-  _popularFiltroOrdem();
-  _popularFiltroCurso();
+  // PATCH 78/79: "ver 1 por 1" — filtra os KPIs + os dois gráficos por polo
+  // e/ou tutor escolhidos, sem mexer no resto da página (categoria, incomuns).
+  // Com os dois seletores em "Todos", volta a ser exatamente o agregado de
+  // sempre — nada muda pra quem não usa o filtro. Repopula o seletor de tutor
+  // ANTES de ler o valor dele, pra já refletir o polo recém-escolhido.
   _popularFiltroTutor();
-  const ordem=(document.getElementById('ae-filtro-ordem')||{}).value||'';
-  const curso=(document.getElementById('ae-filtro-curso')||{}).value||'';
   const polo=(document.getElementById('ae-filtro-polo')||{}).value||'';
   const tutor=(document.getElementById('ae-filtro-tutor')||{}).value||'';
   let ofertas=window._aeOfertasCompletas||[];
-  if(ordem) ofertas=ofertas.filter(o=>o.ordem===ordem);
-  if(curso) ofertas=ofertas.filter(o=>_nomeCursoOferta(o)===curso);
   if(polo) ofertas=ofertas.filter(o=>o.polo===polo);
   if(tutor) ofertas=ofertas.filter(o=>o.tutor===tutor);
   _renderAgendasKpisDiasTurnos(ofertas);
@@ -3397,8 +3191,6 @@ function renderAgendasEstudo(){
     polos.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;selPolo.appendChild(o);});
     if([...selPolo.options].some(o=>o.value===prevPolo)) selPolo.value=prevPolo;
   })();
-  _popularFiltroOrdem();
-  _popularFiltroCurso();
   _popularFiltroTutor();
   _renderAgendasKpisDiasTurnos(ofertas);
 
@@ -3427,14 +3219,10 @@ function renderAgendasEstudo(){
   }).join('');
   if(!catRows.length) document.getElementById('ae-cat-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
 
-  // PATCH 119: visão "Matriculados × Agendados por Prática", pedida pelo Leo.
-  // IMPORTANTE: alunos_mat/alunos_agend vêm por TURMA (Polo+Categoria) no
-  // GIOCONDA, não por prática — cada prática da mesma turma repete o mesmo
-  // valor (mesma regra do _dedupAlunos, ver PATCH 48 mais acima). Confirmado
-  // com o Leo em 21/08 que ele quer ver assim mesmo (uma linha por prática,
-  // repetindo o valor da turma), não agregado por turma — mas o aviso na tela
-  // deixa claro que não dá pra somar essa coluna entre práticas da mesma
-  // turma sem inflar o total.
+  // PATCH 119 (replicado do Vinci principal): "Matriculados × Agendados por
+  // Prática". IMPORTANTE: alunos_mat/alunos_agend vêm por TURMA (Polo+Categoria)
+  // no GIOCONDA, não por prática — cada prática da mesma turma repete o mesmo
+  // valor. Ver comentário completo no template_dashboard.html.
   window._aePraticaData = ofertas.map(o=>({
     pratica: o.pratica||'—', polo: o.polo||'—', categoria: catParaCurso(o.categoria||''),
     mat: o.alunos_mat||0, agend: o.alunos_agend||0
@@ -3475,6 +3263,10 @@ function _popularFiltroGrupoEngajamento(){
   });
 }
 function _ordemNumOrd(o){const m={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};return m[o]||99;}
+function _labelGrupoOferta(o){
+  const g = GRUPOS_GER.find(gg=>_rowMatchesGrupo(o.categoria,o.subcurso,gg,null));
+  return g ? g.label : (o.categoria || '—');
+}
 // ── PATCH 132: Evolução do Engajamento (visão geral, todas as ordens juntas) ──
 function renderEvolucaoGeral(){
   const resumoEl = document.getElementById('ae-evolucao-resumo');
@@ -3506,7 +3298,6 @@ function renderEvolucaoGeral(){
   }
   resumoEl.innerHTML = resumoHtml;
 
-  // Gráfico de linha simples em SVG, sem dependência externa
   const W=640, H=180, PAD=36;
   const xStep = pontos.length>1 ? (W-PAD*2)/(pontos.length-1) : 0;
   const yFor = pct => H-PAD - (pct/100)*(H-PAD*2);
@@ -3564,32 +3355,16 @@ function renderMelhorEngajamento(){
 
 function renderEngajamentoPorOrdem(){
   _popularFiltroGrupoEngajamento();
-  // BUG CORRIGIDO: usava window._aeOfertasCompletas (nome enganoso — apesar
-  // do nome, essa variável só guarda as ofertas COM AGENDA, filtradas por
-  // _getOfertasAgenda(), usada pros seletores "Ver 1 por 1"). Como
-  // "gerenciado" exige tem_agenda, filtrar só quem já tem agenda antes de
-  // calcular o % deixava o engajamento sempre perto de 100% (o Leo reportou
-  // "perdemos a evolução real"). O universo certo pra essa conta é
-  // window._aeTodasOfertas — TODAS as ofertas do semestre, com e sem agenda,
-  // com e sem tutor — só assim a % de engajamento reflete a realidade.
   const ofertas = window._aeTodasOfertas || [];
   const grupoId = (document.getElementById('ae-grupo-sel')||{}).value || '';
   const grupo = grupoId ? _grupoById(grupoId) : null;
   const base = grupo ? ofertas.filter(o=>_rowMatchesGrupo(o.categoria, o.subcurso, grupo, null)) : ofertas;
 
-  // PATCH 131: "Alunos matriculados" trocado pra usar DB.alunos_por_curso
-  // (fonte hub CSV/matrículas distintas, a mesma que já é autoritativa pro
-  // resto do dashboard) em vez de deduplicar alunos_mat cru do GIOCONDA —
-  // o Leo reportou número de matriculados errado, e essa era uma 2ª fonte
-  // divergente da correta.
   const matEl = document.getElementById('ae-ordem-matriculados');
   if(matEl){
     const porCurso = DB.alunos_por_curso || [];
     let matriculados = 0, rotulo = 'Alunos matriculados (todos os grupos)', aviso = '';
     if(grupo){
-      // "multi3" (Multidisciplinar III) cobre Fisioterapia/T.O. E Biomedicina
-      // Estética/Cosmética juntos numa fonte só — não dá pra separar por
-      // sub-área nesse nível de dado, então mostra o total combinado com aviso
       const baseAlvo = (grupo.base||[]);
       porCurso.forEach(pc=>{
         if(baseAlvo.includes(_grupoBaseDaCategoria(pc.sigla))) matriculados += pc.alunos;
@@ -3604,17 +3379,11 @@ function renderEngajamentoPorOrdem(){
     matEl.innerHTML = `🎓 <strong>${fmtNum(matriculados)}</strong> ${esc(rotulo)}${aviso}`;
   }
 
-  // Agrupa por (grupo, ordem) — quando um grupo específico é escolhido, cada
-  // linha é uma ordem; em "Todos os grupos", uma linha por grupo × ordem.
-  // PATCH 130: exclui ofertas marcadas com _anomalia_ordem_futura (a própria
-  // ordem ainda nem começou pelo calendário — o Leo reportou Ordem 3
-  // aparecendo com dado antes da hora; geralmente é ordem mal preenchida na
-  // origem, não gerenciamento real adiantado).
   const anomalasFuturas = base.filter(o=>o._anomalia_ordem_futura).length;
   const baseValida = base.filter(o=>!o._anomalia_ordem_futura);
   const grupos = {};
   baseValida.forEach(o=>{
-    const g = grupo ? grupo.label : (GRUPOS_GER.find(gg=>_rowMatchesGrupo(o.categoria,o.subcurso,gg,null))||{label:'Outros'}).label;
+    const g = grupo ? grupo.label : _labelGrupoOferta(o);
     const ord = o.ordem || 'Ordem 1';
     const key = g+'|||'+ord;
     if(!grupos[key]) grupos[key] = {categoria:g, ordem:ord, total:0, gerenciadas:0};
@@ -3655,10 +3424,6 @@ function renderEngajamentoPorOrdem(){
     });
   });
   tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Sem dados.</td></tr>';
-}
-function _labelGrupoOferta(o){
-  const g = GRUPOS_GER.find(gg=>_rowMatchesGrupo(o.categoria,o.subcurso,gg,null));
-  return g ? g.label : (o.categoria || '—');
 }
 function exportAnaliseEngajamento(){
   const ofertas = window._aeTodasOfertas || [];
@@ -3770,8 +3535,17 @@ function populateVagasFilters(){
   }
 }
 function renderVagasKPIs(){
+  // PATCH 111: versão simplificada -- só os KPIs que fazem sentido pro
+  // coordenador ver (quantos polos sem tutor, com/sem previsão), sem os
+  // indicadores operacionais de RH (prioridade, chamado SYDLE, autorizações).
   const k=(DB.vagas||{}).kpis||{};
-  document.getElementById('vagas-sub').textContent=`${fmtNum(k.total_vagas||0)} vagas em aberto · ${fmtNum(k.com_previsao||0)} com previsão de contratação`;
+  document.getElementById('vagas-kpis').innerHTML=`
+    <div class="kpi kpi-red"><div class="kpi-label">Polos sem Tutor</div><div class="kpi-value">${fmtNum(k.total_vagas||0)}</div></div>
+    <div class="kpi kpi-ok"><div class="kpi-label">Já com Previsão de Contratação</div><div class="kpi-value">${fmtNum(k.com_previsao||0)}</div></div>
+    <div class="kpi kpi-yellow"><div class="kpi-label">Sem Previsão</div><div class="kpi-value">${fmtNum(k.sem_previsao||0)}</div></div>`;
+}
+function _renderVagasKPIs_ORIGINAL_NAO_USAR(){
+  const k=(DB.vagas||{}).kpis||{};
   document.getElementById('vagas-kpis').innerHTML=`
     <div class="kpi kpi-red"><div class="kpi-label">Total de Vagas</div><div class="kpi-value">${fmtNum(k.total_vagas||0)}</div></div>
     <div class="kpi kpi-yellow"><div class="kpi-label">Aumento de Quadro</div><div class="kpi-value">${fmtNum(k.aumento_quadro||0)}</div></div>
@@ -3823,6 +3597,32 @@ function filterVagas(q){
 }
 function sortVagas(k){ if(vagasSortK===k) vagasSortA=!vagasSortA; else { vagasSortK=k; vagasSortA=true; } filterVagas(document.getElementById('vagas-search')?.value||''); }
 function renderVagasTbl(data){
+  // PATCH 111: versão simplificada pro coordenador -- só "tem tutor ou não" e
+  // a previsão de contratação, sem os detalhes operacionais de chamado/
+  // prioridade que são assunto do RH, não do coordenador.
+  const sorted=[...data].sort((a,b)=>{
+    const va=(a[vagasSortK]||''), vb=(b[vagasSortK]||'');
+    return vagasSortA?String(va).localeCompare(String(vb),'pt-BR'):String(vb).localeCompare(String(va),'pt-BR');
+  });
+  const corContr = c => (c||'').includes('Com previsão') ? 'var(--ok)' : (c||'').includes('Sem previsão') ? 'var(--red)' : 'var(--muted)';
+  document.getElementById('vagas-tbody').innerHTML = sorted.map(v=>{
+    const temPrevisao = (v.contratacao||'').includes('Com previsão');
+    const contrCell = temPrevisao && v.chamado_sydle
+      ? `${esc(v.contratacao||'—')}<br><span style="font-size:10px;color:var(--muted)">Chamado Sydle: ${esc(v.chamado_sydle)}</span>`
+      : esc(v.contratacao||'—');
+    const alunosPolo = v.alunos_polo||0;
+    const temChamadoAberto = !!v.chamado_sydle;
+    return `<tr>
+    <td><strong>${esc(v.polo)}</strong></td>
+    <td>${v.status==='Aumento de Quadro' ? '<span class="badge" style="background:var(--red-dim);color:var(--red)">✕ Sem tutor no polo</span>' : '<span class="badge" style="background:var(--yellow-dim);color:var(--yellow-d)">↻ Precisa substituir</span>'}</td>
+    <td style="font-size:12px;font-weight:600;color:${corContr(v.contratacao)}">${contrCell}</td>
+    <td style="text-align:right;font-weight:${temChamadoAberto?'700':'400'}">${fmtNum(alunosPolo)}</td>
+  </tr>`;
+  }).join('');
+  document.getElementById('vagas-count').textContent = sorted.length+' vaga'+(sorted.length!==1?'s':'');
+  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro — todos os polos do seu curso têm tutor.</td></tr>';
+}
+function _renderVagasTbl_ORIGINAL_NAO_USAR(data){
   const sorted=[...data].sort((a,b)=>{
     if(vagasSortK==='prioridade'){ const va=_PRIORIDADE_ORDEM[a.prioridade]??9, vb=_PRIORIDADE_ORDEM[b.prioridade]??9; return vagasSortA?va-vb:vb-va; }
     const va=(a[vagasSortK]||''), vb=(b[vagasSortK]||'');
@@ -3911,10 +3711,6 @@ function _normTutorKey(nome){
   s = s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   return s.toLowerCase().replace(/\s+/g,' ').trim();
 }
-// PATCH 134: sinalização de tutor novo (≤60 dias de casa, "ainda em
-// treinamento") — pedido pelo Leo na tela de Detalhe, pra distinguir quem
-// não gerenciou por estar recém-chegado de quem não gerenciou por outro
-// motivo. Mapa construído uma vez (memoizado) a partir de DB.tutores.
 var _mapaInicioTutorCache = null;
 function _diasDesdeAdmissao(nomeTutor){
   if(!nomeTutor) return null;
@@ -4332,9 +4128,6 @@ function _getSemKpis() {
   return DB.kpis;
 }
 function _getSemPortfolioAlunos() {
-  // PATCH 127: "Alunos Registrados no Portfólio" por semestre selecionado —
-  // antes era um número fixo (histórico todo somado), agora troca junto com
-  // a aba 2026/1 / 2026/2 / Ambos, igual o resto do dashboard.
   const porSem = DB.portfolio_alunos_dedup_por_semestre;
   if (porSem && _SEM_ATUAL && porSem[_SEM_ATUAL]) return porSem[_SEM_ATUAL];
   if (porSem && porSem['Ambos']) return porSem['Ambos'];
@@ -4830,6 +4623,315 @@ function _tutMecSort(col){
   filterTutoresMec(document.getElementById('tutmec-search')?.value||'');
 }
 
+// ── PORTAL DO COORDENADOR: trava por curso ─────────────────────────────────────
+// PATCH 111 (correção definitiva): tutores usam a categoria no formato CURTO
+// ("BIO-FAR (Multidisciplinar I)"), mas práticas usam o formato LONGO/
+// descritivo do CAT_MAP ("Multidisciplinar I - Biomedicina e Farmácia") --
+// são dados inconsistentes entre si. window._CAT_NORM_MAP também não existe
+// globalmente (é local de outra função) -- por isso a filtragem de Práticas
+// nunca batia com nada e vazava tudo. Agora comparamos contra os DOIS
+// formatos possíveis, sem depender de nenhuma função externa.
+const CURSO_PARA_CATEGORIA = {
+  'Biomedicina':'BIO-FAR (Multidisciplinar I)','Farmácia':'BIO-FAR (Multidisciplinar I)',
+  'Enfermagem':'ENF-INS (Multidisciplinar II)','Instrumentação Cirúrgica':'ENF-INS (Multidisciplinar II)',
+  'Fisioterapia':'BIO-FISIO-EST-TO (Multidisciplinar III)','Terapia Ocupacional':'BIO-FISIO-EST-TO (Multidisciplinar III)','Estética e Imagem Pessoal':'BIO-FISIO-EST-TO (Multidisciplinar III)',
+  'Nutrição':'NUTRI (Multidisciplinar IV)',
+  'Agronomia':'QUÍMICA E FÍSICA','Licenciatura em Física':'QUÍMICA E FÍSICA','Licenciatura em Química':'QUÍMICA E FÍSICA','Segunda Licenciatura em Física':'QUÍMICA E FÍSICA',
+  'Arquitetura e Urbanismo':'ENGMAKER','Construção de Edifícios':'ENGMAKER','Controle de Obras':'ENGMAKER','Energias Renováveis':'ENGMAKER','Engenharia Ambiental e Sanitária':'ENGMAKER','Engenharia Civil':'ENGMAKER','Engenharia Elétrica':'ENGMAKER','Engenharia Mecânica':'ENGMAKER','Engenharia de Produção':'ENGMAKER','Gestão da Produção Industrial':'ENGMAKER','Saneamento Ambiental':'ENGMAKER',
+};
+// formato longo/descritivo (CAT_MAP), pra bater com o campo .categoria/.c das práticas
+const CATEGORIA_CURTA_PARA_LONGA = {
+  'ENF-INS (Multidisciplinar II)': 'Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica',
+  'BIO-FISIO-EST-TO (Multidisciplinar III)': 'Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética',
+  'BIO-FAR (Multidisciplinar I)': 'Multidisciplinar I - Biomedicina e Farmácia',
+  'NUTRI (Multidisciplinar IV)': 'Multidisciplinar IV - Nutrição',
+  'QUÍMICA E FÍSICA': 'Química e Física - Agronomia',
+  'ENGMAKER': 'EngeMaker | Química e Física - Engenharias e Licenciaturas',
+};
+function _categoriaBate(valorNoDado, categoriaCurta){
+  if (!valorNoDado) return false;
+  const v = valorNoDado.trim();
+  if (v === categoriaCurta) return true;
+  const longa = CATEGORIA_CURTA_PARA_LONGA[categoriaCurta];
+  if (longa && v === longa) return true;
+  return false;
+}
+// código curto usado em Lotação/Vagas pra cada curso (pra filtrar 'cursos' das vagas)
+const CURSO_PARA_CODIGO = {
+  'Biomedicina':'BBI','Farmácia':'BFR','Enfermagem':'EMF-ISN','Instrumentação Cirúrgica':'EMF-ISN',
+  'Fisioterapia':'BFI','Terapia Ocupacional':'BTO','Estética e Imagem Pessoal':'COS-TIP','Nutrição':'NTR',
+};
+// PATCH 116: agrupamento por laboratório pra organizar o painel de seleção
+// (mesmo critério usado no filtro de curso de Horários e Engajamento).
+const _LABS_ORDENADOS = ['BIO-FAR (Multidisciplinar I)','ENF-INS (Multidisciplinar II)','BIO-FISIO-EST-TO (Multidisciplinar III)','NUTRI (Multidisciplinar IV)','QUÍMICA E FÍSICA','ENGMAKER'];
+
+function _iniciarPortalCoordenador(){
+  // PATCH 116: não bloqueia mais a entrada com uma tela cheia — guarda uma
+  // cópia intocada do DB (pra poder re-filtrar do zero sempre que a seleção
+  // de curso mudar, sem acumular filtro em cima de filtro), monta o painel
+  // de seleção (fechado por padrão) e já abre o dashboard. Se já tinha uma
+  // seleção salva desta sessão, aplica ela; senão entra sem filtro nenhum,
+  // com um botão convidando a escolher o(s) curso(s).
+  window._DB_ORIGINAL = DB;
+  _montarPainelCurso();
+  let cursosSalvos = [];
+  try{ cursosSalvos = JSON.parse(sessionStorage.getItem('coord_cursos_selecionados')||'[]'); }catch(e){}
+  if (cursosSalvos.length){
+    DB = _clonarDB(window._DB_ORIGINAL);
+    _filtrarDBPorCursos(cursosSalvos);
+    _iniciarDashboard();
+    _aplicarMarcaCursos(cursosSalvos);
+  } else {
+    _iniciarDashboard();
+    _aplicarMarcaCursos([]);
+  }
+}
+function _clonarDB(original){
+  return JSON.parse(JSON.stringify(original));
+}
+function _montarPainelCurso(){
+  const lista = document.getElementById('curso-painel-lista');
+  if (!lista || lista.children.length) return; // só monta 1 vez
+  const porLab = {};
+  Object.keys(CURSO_PARA_CATEGORIA).forEach(c=>{
+    const lab = CURSO_PARA_CATEGORIA[c];
+    if(!porLab[lab]) porLab[lab]=[];
+    porLab[lab].push(c);
+  });
+  const labs = _LABS_ORDENADOS.filter(l=>porLab[l]);
+  let html='';
+  labs.forEach(lab=>{
+    html += `<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:12px 0 6px">${lab}</div>`;
+    porLab[lab].sort((a,b)=>a.localeCompare(b,'pt')).forEach(c=>{
+      html += `<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;font-size:13px">
+        <input type="checkbox" value="${c}" class="curso-check" style="cursor:pointer">${c}</label>`;
+    });
+  });
+  lista.innerHTML = html;
+}
+function abrirPainelCurso(){
+  let cursosSalvos = [];
+  try{ cursosSalvos = JSON.parse(sessionStorage.getItem('coord_cursos_selecionados')||'[]'); }catch(e){}
+  document.querySelectorAll('.curso-check').forEach(chk=>{ chk.checked = cursosSalvos.includes(chk.value); });
+  document.getElementById('curso-painel-backdrop').style.display='block';
+}
+function _fecharPainelCurso(){
+  document.getElementById('curso-painel-backdrop').style.display='none';
+}
+function _aplicarCursosSelecionados(){
+  const cursos = [...document.querySelectorAll('.curso-check:checked')].map(c=>c.value);
+  sessionStorage.setItem('coord_cursos_selecionados', JSON.stringify(cursos));
+  _fecharPainelCurso();
+  DB = _clonarDB(window._DB_ORIGINAL);
+  if (cursos.length) _filtrarDBPorCursos(cursos);
+  _iniciarDashboard();
+  _aplicarMarcaCursos(cursos);
+}
+function _aplicarMarcaCursos(cursos){
+  // Mostra quais cursos estão selecionados no topo, com um botão pra abrir o
+  // painel e trocar a qualquer momento (sem recarregar a página).
+  document.querySelectorAll('.topbar > div:not(.topbar-logo):not(.topbar-title-wrap)').forEach(el=>{
+    if(el.dataset && el.dataset.cursoMarca) el.remove();
+  });
+  const wrap = document.createElement('div');
+  wrap.dataset.cursoMarca = '1';
+  wrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-left:auto';
+  const badge = document.createElement('button');
+  badge.style.cssText = 'background:var(--yellow);color:#1a1d23;font-weight:800;font-size:11px;padding:6px 12px;border-radius:6px;border:none;cursor:pointer';
+  badge.textContent = cursos.length ? ('🎓 ' + (cursos.length===1?cursos[0]:cursos.length+' cursos selecionados')) : '🎓 Selecionar curso(s)';
+  badge.onclick = abrirPainelCurso;
+  wrap.appendChild(badge);
+  const topbar = document.querySelector('.topbar');
+  if(topbar) topbar.appendChild(wrap);
+}
+
+// PATCH 111/116: filtra TODAS as coleções relevantes de DB pra só os cursos
+// escolhidos (um ou mais — lógica de "OU": um registro entra se bater com
+// QUALQUER um dos cursos marcados), ANTES de _iniciarDashboard() rodar --
+// assim todas as telas já existentes (Visão Geral, Práticas, Polos, Detalhe,
+// Agendas, Horários e Engajamento) mostram só o dado certo, sem precisar
+// reescrever cada uma. Sempre roda sobre uma cópia fresca de _DB_ORIGINAL
+// (ver _aplicarCursosSelecionados), então trocar a seleção nunca acumula
+// filtro em cima de filtro.
+function _filtrarDBPorCursos(cursos){
+  const categorias = [...new Set(cursos.map(c=>CURSO_PARA_CATEGORIA[c]).filter(Boolean))];
+  const codigos = [...new Set(cursos.map(c=>CURSO_PARA_CODIGO[c]).filter(Boolean))];
+  const bateQualquerCategoria = valor => categorias.some(cat=>_categoriaBate(valor||'', cat));
+
+  // 1. Tutores
+  // PATCH 135: além da categoria ampla, agora checa 'subcurso' quando o
+  // tutor tem essa informação (Multidisciplinar III: Fisioterapia/Terapia
+  // Ocupacional/Estética, que compartilham a mesma categoria ampla
+  // BIO-FISIO-EST-TO). Sem isso, selecionar só "Estética" trazia junto
+  // tutores de Fisioterapia e T.Ocupacional (mesma categoria), inflando a
+  // contagem — reportado pelo Leo (65 reais vs 101+ mostrados).
+  if (Array.isArray(DB.tutores)) {
+    DB.tutores = DB.tutores.filter(t => {
+      if (!bateQualquerCategoria(t.c)) return false;
+      if (t.subcurso) return cursos.some(c => _normTxtCoord(t.subcurso) === _normTxtCoord(c));
+      return true; // sem subcurso (curso não tem sub-divisão, ou dado indisponível) -- mantém pela categoria
+    });
+  }
+
+  // 2. Práticas (raiz + cada semestre)
+  function _filtraPraticasArr(arr){
+    if (!Array.isArray(arr)) return arr;
+    return arr.filter(p => (p.cursos && p.cursos.length) ? p.cursos.some(c=>cursos.includes(c)) : bateQualquerCategoria(p.c||p.categoria));
+  }
+  if (DB.praticas) DB.praticas = _filtraPraticasArr(DB.praticas);
+  if (DB.pratica_stats) DB.pratica_stats = _filtraPraticasArr(DB.pratica_stats);
+
+  // 3. Gerenciamento por semestre -- ger_ofertas tem 'categoria' e às vezes
+  // 'subcurso' (Multi III) ou 'curso' (código Lotação) pra filtro mais fino
+  if (DB.gerenciamento_por_semestre) {
+    Object.keys(DB.gerenciamento_por_semestre).forEach(sem=>{
+      const s = DB.gerenciamento_por_semestre[sem];
+      if (Array.isArray(s.ger_ofertas)) {
+        s.ger_ofertas = s.ger_ofertas.filter(o=>{
+          if (!bateQualquerCategoria(o.categoria)) return false;
+          if (o.subcurso) return cursos.some(c=>_normTxtCoord(o.subcurso)===_normTxtCoord(c));
+          if (o.curso && codigos.length) return codigos.includes(o.curso);
+          return true; // categoria já bate e não tem info mais fina -- mantém
+        });
+      }
+      if (Array.isArray(s.polo_stats)) s.polo_stats = _recalcularPoloStatsDeTutores();
+      if (Array.isArray(s.praticas)) s.praticas = _filtraPraticasArr(s.praticas);
+      if (Array.isArray(s.pratica_stats)) s.pratica_stats = _filtraPraticasArr(s.pratica_stats);
+    });
+  }
+
+  // 3b. dados_por_semestre é uma estrutura SEPARADA (lado Portfólios:
+  // Práticas/Polos/Visão Geral usam ela via _SEM_DB), diferente de
+  // gerenciamento_por_semestre (lado Gerenciamento, via GER_DB).
+  if (DB.dados_por_semestre) {
+    Object.keys(DB.dados_por_semestre).forEach(sem=>{
+      const s = DB.dados_por_semestre[sem];
+      if (Array.isArray(s.praticas)) s.praticas = _filtraPraticasArr(s.praticas);
+      if (Array.isArray(s.pratica_stats)) s.pratica_stats = _filtraPraticasArr(s.pratica_stats);
+      if (Array.isArray(s.polo_stats)) s.polo_stats = _recalcularPoloStatsDeTutores();
+    });
+  }
+
+  // 4. Polo stats (raiz) -- recalcula a partir dos tutores já filtrados
+  DB.polo_stats = _recalcularPoloStatsDeTutores();
+
+  // 5. Vagas -- filtra pelo código de qualquer um dos cursos selecionados
+  if (DB.vagas && Array.isArray(DB.vagas.vagas)) {
+    DB.vagas.vagas = DB.vagas.vagas.filter(v => codigos.length && codigos.some(cod=>(v.cursos||'').includes(cod)));
+    const vs = DB.vagas.vagas;
+    DB.vagas.kpis = {
+      total_vagas: vs.length,
+      aumento_quadro: vs.filter(v=>v.status==='Aumento de Quadro').length,
+      substituicao: vs.filter(v=>v.status==='Substituição').length,
+      com_previsao: vs.filter(v=>(v.contratacao||'').includes('Com previsão')).length,
+      sem_previsao: vs.filter(v=>(v.contratacao||'').includes('Sem previsão')).length,
+    };
+  }
+
+  DB._cursosTravados = cursos;
+
+  // PATCH 135: recalcular DB.kpis e dados_por_semestre[*].kpis a partir dos
+  // tutores JÁ FILTRADOS acima. Esses KPIs vinham prontos do backend (pra
+  // TODOS os tutores) e nunca eram recalculados depois do filtro de curso —
+  // por isso "Urgentes" continuava mostrando o total geral (363) mesmo com
+  // um curso específico selecionado. Reportado pelo Leo.
+  const poloStatsAtual = DB.polo_stats || [];
+  const totalPolosAtual = poloStatsAtual.length;
+  const polosOkAtual = poloStatsAtual.filter(p => (p.pend||0) === 0).length;
+  DB.kpis = Object.assign({}, DB.kpis, _kpisParaSemestre(DB.tutores, null), {
+    total_polos: totalPolosAtual, polos_ok: polosOkAtual,
+  });
+  if (DB.dados_por_semestre) {
+    Object.keys(DB.dados_por_semestre).forEach(sem => {
+      DB.dados_por_semestre[sem].kpis = Object.assign({}, DB.dados_por_semestre[sem].kpis, _kpisParaSemestre(DB.tutores, sem), {
+        total_polos: totalPolosAtual, polos_ok: polosOkAtual,
+      });
+    });
+  }
+
+  // PATCH 135: "Alunos Registrados no Portfólio" / "Alunos Agendados" e o
+  // cruzamento também ficavam com o número GLOBAL mesmo com curso
+  // selecionado (mesma causa das outras duas correções acima — dado
+  // pré-calculado no backend, nunca recalculado depois do filtro).
+  const _catBateFiltro = valor => categorias.some(cat => _categoriaBate(valor||'', cat));
+  if (DB.portfolio_alunos_dedup_por_semestre) {
+    Object.keys(DB.portfolio_alunos_dedup_por_semestre).forEach(sem => {
+      const p = DB.portfolio_alunos_dedup_por_semestre[sem];
+      if (p && p.por_categoria) {
+        const novoPorCategoria = {};
+        let novoGeral = 0;
+        Object.entries(p.por_categoria).forEach(([k, v]) => { if (_catBateFiltro(k)) { novoPorCategoria[k] = v; novoGeral += v; } });
+        p.por_categoria = novoPorCategoria;
+        p.geral = novoGeral;
+        // por_polo não tem granularidade de curso na fonte -- fica como estava (limitação conhecida)
+      }
+    });
+  }
+  if (DB.cruzamento_portfolio_agendado_por_semestre) {
+    Object.keys(DB.cruzamento_portfolio_agendado_por_semestre).forEach(sem => {
+      const c = DB.cruzamento_portfolio_agendado_por_semestre[sem];
+      if (c && Array.isArray(c.por_categoria)) {
+        const filtradas = c.por_categoria.filter(x => _catBateFiltro(x.categoria));
+        const registrado = filtradas.reduce((s,x)=>s+(x.registrado_portfolio||0), 0);
+        const agendado = filtradas.reduce((s,x)=>s+(x.agendado||0), 0);
+        c.por_categoria = filtradas;
+        c.geral = {
+          registrado_portfolio: registrado, agendado: agendado, diferenca: registrado-agendado,
+          pct_registrado_sobre_agendado: agendado ? Math.round(registrado/agendado*1000)/10 : null,
+        };
+        // por_polo tem a mesma limitação de granularidade do portfolio acima
+      }
+    });
+  }
+}
+// PATCH 135: recalcula {total, enviaram, urgentes, atrasados, pendentes} a
+// partir de uma lista de tutores (já filtrada por curso) — sem=null/'Ambos'
+// usa os campos agregados de sempre (t.te/gTS), sem='2026/1' ou '2026/2'
+// refaz o mesmo cálculo por-semestre que _getSemTutores() já faz, só que
+// parametrizado (pra poder recalcular TODOS os semestres de uma vez, não só
+// o selecionado no momento).
+function _kpisParaSemestre(tutoresBase, sem){
+  const semEspecifico = sem && sem !== 'Ambos';
+  const statusOrd = semEspecifico ? (((DB.dados_por_semestre||{})[sem]||{}).status_ordem || DB.status_ordem || {}) : null;
+  let total=0, enviaram=0, urgentes=0, atrasados=0;
+  (tutoresBase||[]).forEach(t=>{
+    total++;
+    let te, sit;
+    if (!semEspecifico) {
+      te = t.te || 0;
+      sit = gTS(t);
+    } else {
+      const semDefault = (DB.todos_semestres||[])[0] || DB.semestre || '';
+      const histSem = (t.hist||[]).filter(h => (h.s||semDefault) === sem);
+      const reais = [...new Set(histSem.map(h=>h.p))];
+      te = reais.length;
+      const porOrdem = {};
+      histSem.forEach(h=>{ porOrdem[h.o] = (porOrdem[h.o]||0)+1; });
+      const ordsVenc = Object.keys(statusOrd).filter(o=>statusOrd[o]==='VENCIDO');
+      sit = 'urgente';
+      if (!ordsVenc.length) sit = te>0 ? 'ok' : 'atrasado';
+      else if (ordsVenc.every(o=>(porOrdem[o]||0)>0)) sit = 'ok';
+      else if (ordsVenc.some(o=>(porOrdem[o]||0)>0)) sit = 'atrasado';
+    }
+    if (te > 0) enviaram++;
+    if (sit === 'urgente') urgentes++;
+    else if (sit === 'atrasado') atrasados++;
+  });
+  return { total, enviaram, urgentes, atrasados, pendentes: total-enviaram };
+}
+function _normTxtCoord(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function _recalcularPoloStatsDeTutores(){
+  const mapa = {};
+  (DB.tutores||[]).forEach(t=>{
+    const p = t.p||'—';
+    if(!mapa[p]) mapa[p] = {n:p, polo:p, POLO:p, total:0, enviaram:0, pend:0, pct:0, t:0, e:0, a:0, alunos:0};
+    mapa[p].total++; mapa[p].t++;
+    if((t.te||0)>0){ mapa[p].enviaram++; mapa[p].e++; }
+    mapa[p].alunos += (t.al||0); mapa[p].a = mapa[p].alunos;
+  });
+  return Object.values(mapa).map(p=>{ p.pend = p.total - p.enviaram; p.pct = p.total ? Math.round(p.enviaram/p.total*100) : 0; return p; });
+}
+
 function _iniciarDashboard(){
   const _lgts=document.getElementById('lgpd-ts');if(_lgts)_lgts.textContent=DB.gerado_em;
   document.getElementById('ts-label').textContent='Gerado: '+DB.gerado_em;
@@ -4851,109 +4953,7 @@ function _iniciarDashboard(){
       renderVagasKPIs();
     }
   }catch(e){console.error('vagas init',e);}
-  try{
-    if(DB.insumos && DB.insumos.base && DB.insumos.base.length){
-      document.getElementById('sidebar-insumos').style.display='';
-      initInsumos();
-    }
-  }catch(e){console.error('insumos init',e);}
   initSemestres();
-}
-
-// ── INSUMOS (PATCH 121 — estudo estático v10_FINAL) ──────────────────────────
-var _insPraticasIndex = null; // [{curso, pratica, itens:[...], count}]
-function initInsumos(){
-  const ins = DB.insumos || {};
-  const k = ins.kpis || {};
-  document.getElementById('ins-sub').textContent = `${fmtNum(k.linhas_base)} linhas na base unificada · ${fmtNum(k.combinacoes)} combinações curso × prática`;
-  document.getElementById('ins-kpis').innerHTML = `
-    <div class="kpi kpi-green" title="Combinações de curso × prática mapeadas no Controle"><div class="kpi-label">Combinações Curso × Prática</div><div class="kpi-value">${fmtNum(k.combinacoes)}</div></div>
-    <div class="kpi kpi-ok" title="Linhas na base unificada (curso × prática × item)"><div class="kpi-label">Linhas na Base</div><div class="kpi-value">${fmtNum(k.linhas_base)}</div></div>
-    <div class="kpi kpi-teal" title="Itens confirmados contra o catálogo oficial (Extração.xlsx, 9.593 itens)"><div class="kpi-label">Itens Confirmados no Catálogo</div><div class="kpi-value">${fmtNum(k.itens_confirmados)}</div></div>
-    <div class="kpi kpi-yellow" title="Itens sem confirmação — pode ser item genuinamente não catalogado OU diferença de redação entre fontes, não necessariamente erro"><div class="kpi-label">Sem Confirmação no Catálogo <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.itens_sem_confirmacao)}</div></div>
-  `;
-
-  // Índice curso+prática -> itens, construído uma vez a partir da base
-  const idx = {};
-  (ins.base||[]).forEach(r=>{
-    const key = r.curso+'|||'+r.pratica;
-    if(!idx[key]) idx[key] = {curso:r.curso, pratica:r.pratica, itens:[]};
-    idx[key].itens.push(r);
-  });
-  _insPraticasIndex = Object.values(idx).map(p=>({...p, count:p.itens.length}));
-  _insPraticasIndex.sort((a,b)=> a.curso.localeCompare(b.curso) || a.pratica.localeCompare(b.pratica));
-
-  // Popular select de curso
-  const cursos = [...new Set(_insPraticasIndex.map(p=>p.curso))].sort();
-  const sel = document.getElementById('ins-curso-sel');
-  sel.innerHTML = '<option value="">Todos os cursos</option>' + cursos.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-
-  filterInsumosConsulta();
-  renderInsumosCobertura();
-  renderInsumosLacunas();
-}
-function switchInsumosTab(tab){
-  ['consulta','cobertura','lacunas'].forEach(t=>{
-    document.getElementById('ins-tab-'+t).classList.toggle('active', t===tab);
-    document.getElementById('ins-view-'+t).style.display = (t===tab)?'':'none';
-  });
-}
-function filterInsumosConsulta(){
-  const q = (document.getElementById('ins-search').value||'').toLowerCase().trim();
-  const cursoSel = document.getElementById('ins-curso-sel').value;
-  let list = _insPraticasIndex || [];
-  if(cursoSel) list = list.filter(p=>p.curso===cursoSel);
-  if(q) list = list.filter(p => p.pratica.toLowerCase().includes(q) || p.itens.some(it=>it.item.toLowerCase().includes(q)));
-  const tbody = document.getElementById('ins-praticas-tbody');
-  tbody.innerHTML = list.map((p,i)=>`<tr style="cursor:pointer" onclick="showInsumosDetalhe(${_insPraticasIndex.indexOf(p)})">
-    <td>${esc(p.curso)}</td><td>${esc(p.pratica)}</td><td style="text-align:right;font-weight:700">${p.count}</td>
-  </tr>`).join('');
-  document.getElementById('ins-consulta-count').textContent = list.length+' prática'+(list.length!==1?'s':'');
-  if(!list.length) tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--muted)">Nenhum resultado encontrado.</td></tr>';
-}
-function showInsumosDetalhe(idx){
-  const p = _insPraticasIndex[idx];
-  if(!p) return;
-  document.getElementById('ins-detalhe-card').style.display='';
-  document.getElementById('ins-detalhe-title').textContent = `${p.pratica} — ${p.curso}`;
-  document.getElementById('ins-detalhe-count').textContent = p.count+' item'+(p.count!==1?'s':'');
-  document.getElementById('ins-itens-tbody').innerHTML = p.itens.map(it=>`<tr>
-    <td>${esc(it.item)}</td>
-    <td style="font-size:11px;color:var(--muted)">${esc(it.tipo||'—')}</td>
-    <td style="text-align:right">${it.racional!==null && it.racional!==undefined ? esc(String(it.racional)) : '—'}</td>
-    <td>${esc(it.unidade||'—')}</td>
-    <td style="font-size:11px;color:var(--muted)">${esc(it.fonte||'—')}</td>
-  </tr>`).join('');
-  const _detCard = document.getElementById('ins-detalhe-card');
-  if(_detCard.scrollIntoView) _detCard.scrollIntoView({behavior:'smooth', block:'nearest'});
-}
-function renderInsumosCobertura(){
-  const cob = (DB.insumos||{}).cobertura_por_curso || [];
-  const tbody = document.getElementById('ins-cobertura-tbody');
-  tbody.innerHTML = [...cob].sort((a,b)=>a.curso.localeCompare(b.curso)).map(c=>`<tr data-curso="${esc(c.curso)}" data-total="${c.total}" data-com="${c.com_item}" data-sem="${c.sem_item}" data-pct="${parseFloat(c.pct)||0}">
-    <td>${esc(c.curso)}</td>
-    <td style="text-align:right">${fmtNum(c.total)}</td>
-    <td style="text-align:right;color:var(--ok)">${fmtNum(c.com_item)}</td>
-    <td style="text-align:right;color:${c.sem_item>0?'var(--red)':'var(--muted)'}">${fmtNum(c.sem_item)}</td>
-    <td>${progCell(parseFloat(c.pct)||0)}</td>
-  </tr>`).join('');
-}
-function renderInsumosLacunas(){
-  const ins = DB.insumos || {};
-  const sem = ins.lacunas_sem_item || [];
-  const irmao = ins.lacunas_curso_irmao || [];
-  document.getElementById('ins-lacunas-sem-count').textContent = sem.length;
-  document.getElementById('ins-lacunas-irmao-count').textContent = irmao.length;
-  window._insLacunasSem = sem;
-  window._insLacunasIrmao = irmao;
-  document.getElementById('ins-lacunas-irmao-tbody').innerHTML = irmao.map(l=>`<tr><td>${esc(l.curso)}</td><td>${esc(l.pratica)}</td></tr>`).join('') || '<tr><td colspan="2" style="text-align:center;padding:16px;color:var(--muted)">Nenhum caso.</td></tr>';
-  filterInsumosLacunas('');
-}
-function filterInsumosLacunas(q){
-  q=(q||'').toLowerCase().trim();
-  let list = window._insLacunasSem || [];
-  if(q) list = list.filter(l=>(l.curso+l.pratica).toLowerCase().includes(q));
-  document.getElementById('ins-lacunas-sem-tbody').innerHTML = list.map(l=>`<tr><td>${esc(l.curso)}</td><td>${esc(l.pratica)}</td></tr>`).join('') || '<tr><td colspan="2" style="text-align:center;padding:16px;color:var(--muted)">Nenhum resultado encontrado.</td></tr>';
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
