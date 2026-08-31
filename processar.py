@@ -4145,6 +4145,44 @@ if __name__ == '__main__':
                     if 'kpis' in dados:
                         dados['kpis']['total_alunos'] = alunos_hub['total_distintos']
                     print(f"[{ts()}] KPI alunos substituído: {alunos_hub['total_distintos']:,} (matrículas distintas)")
+
+                # PATCH 135: o hub CSV já calcula qual sub-área de
+                # Multidisciplinar III (Fisioterapia/T.Ocupacional/Estética)
+                # cada tutor leciona ('tutor_subcurso'), mas isso nunca era
+                # aplicado de volta nos tutores — o filtro de curso do portal
+                # de coordenadores só enxergava a categoria AMPLA
+                # (BIO-FISIO-EST-TO), sem separar as 3 sub-áreas. Resultado
+                # reportado pelo Leo: selecionar só "Estética" trazia também
+                # tutores de Fisioterapia e T.Ocupacional junto (mesma
+                # categoria ampla), inflando a contagem de tutores.
+                _tutor_subcurso_map = alunos_hub.get('tutor_subcurso', {})
+                if _tutor_subcurso_map:
+                    import unicodedata as _ud7, re as _re7
+                    def _norm_tutor_sub(s):
+                        s = _re7.sub(r'\s*\(\d+\)\s*$', '', str(s or '')).strip()
+                        s = _ud7.normalize('NFD', s.lower())
+                        return ''.join(c for c in s if _ud7.category(c) != 'Mn')
+                    # Converte pro MESMO nome de curso usado no seletor do
+                    # portal de coordenadores (CURSO_PARA_CATEGORIA no JS) —
+                    # não pro rótulo abreviado interno nem pro rótulo usado em
+                    # ger_ofertas.subcurso ("Estética e Cosmética"), que é
+                    # ligeiramente diferente do nome oficial do curso
+                    # ("Estética e Imagem Pessoal") e não bateria no filtro.
+                    _SUB_PARA_NOME_CURSO = {
+                        'Fisio': 'Fisioterapia', 'T.Oc': 'Terapia Ocupacional', 'Est': 'Estética e Imagem Pessoal',
+                    }
+                    _enr_sub = 0
+                    for _t in dados.get('tutores', []):
+                        _nome_norm = _norm_tutor_sub(_t.get('n', ''))
+                        _sub = _tutor_subcurso_map.get(_nome_norm)
+                        if not _sub:
+                            _partes = _nome_norm.split()
+                            if len(_partes) >= 2:
+                                _sub = _tutor_subcurso_map.get(_partes[0] + ' ' + _partes[-1])
+                        if _sub:
+                            _t['subcurso'] = _SUB_PARA_NOME_CURSO.get(_sub, _sub)
+                            _enr_sub += 1
+                    print(f"[{ts()}] Tutores enriquecidos com subcurso Multi III (Fisio/T.Oc/Est): {_enr_sub}")
                 # BUG 3 FIX: enriquecer alunos por polo usando hub CSV (por_polo normalizado)
                 # Cobre polos com alunos=0 porque TOTAL_ALUNOS está zerado na lotação 2026_2
                 import unicodedata as _ud3, re as _re4
