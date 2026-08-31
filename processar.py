@@ -3918,9 +3918,18 @@ if __name__ == '__main__':
             _cat_para_curso2 = json.load(open(_cpc_file2, encoding='utf-8')) if os.path.isfile(_cpc_file2) else {}
 
             def _cruza(port, agend):
+                # PATCH 133: a direção estava invertida — o Leo esclareceu:
+                # "de X agendados, Y (Z% dos agendados) foi registrado no
+                # portfólio/compareceu à prática". Ou seja, AGENDADO é a base
+                # (quem deveria comparecer) e REGISTRADO é quanto disso
+                # realmente aconteceu — uma taxa de comparecimento, não o
+                # contrário. Antes: agendado/portfolio (podia passar de 100%
+                # facilmente, sem sentido). Agora: portfolio/agendado (0-100%
+                # na imensa maioria dos casos, só passa de 100% se sobrar
+                # registro sem agendamento prévio, o que é raro e legítimo).
                 return {'registrado_portfolio': port, 'agendado': agend,
                         'diferenca': port - agend,
-                        'pct_agendado_sobre_portfolio': round(agend / port * 100, 1) if port else None}
+                        'pct_registrado_sobre_agendado': round(port / agend * 100, 1) if agend else None}
 
             def _monta_cruzamento(_port_dedup_sem, _ger_dados_sem):
                 _port_por_cat_amplo = {}
