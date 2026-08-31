@@ -193,10 +193,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
     <div class="card-body" id="cruz-geral" style="padding-bottom:8px"></div>
     <div class="rtabs" style="margin:0 16px 8px"><button class="rtab active" id="cruz-tab-polo" onclick="switchCruzamentoTab('polo')">Por Polo</button><button class="rtab" id="cruz-tab-cat" onclick="switchCruzamentoTab('cat')">Por Categoria</button></div>
     <div id="cruz-view-polo">
-      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr><th>Polo</th><th style="text-align:right">Registrado</th><th style="text-align:right">Agendado</th><th>% Agendado</th></tr></thead><tbody id="cruz-polo-tbody"></tbody></table></div>
+      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr><th>Polo</th><th style="text-align:right">Registrado</th><th style="text-align:right">Agendado</th><th>% Compareceu/Registrou</th></tr></thead><tbody id="cruz-polo-tbody"></tbody></table></div>
     </div>
     <div id="cruz-view-cat" style="display:none">
-      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr><th>Categoria</th><th style="text-align:right">Registrado</th><th style="text-align:right">Agendado</th><th>% Agendado</th></tr></thead><tbody id="cruz-cat-tbody"></tbody></table></div>
+      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr><th>Categoria</th><th style="text-align:right">Registrado</th><th style="text-align:right">Agendado</th><th>% Compareceu/Registrou</th></tr></thead><tbody id="cruz-cat-tbody"></tbody></table></div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -602,7 +602,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-cat"><option value="">Todos os grupos</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-subcurso" style="display:none"><option value="">Toda Exatas</option></select>
       <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-ordem"><option value="">Todas ordens</option></select>
-      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status"><option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option></select>
+      <select class="sel" onchange="filterGerDetalhe(document.getElementById('ger-det-search').value)" id="ger-det-status"><option value="">Todos</option><option value="ger">Gerenciadas</option><option value="nger">Não gerenciadas</option><option value="treinamento">🌱 Em treinamento (≤60 dias)</option><option value="sem_treinamento">Sem ser novo (excluir treinamento)</option></select>
       <span class="tbl-count" id="ger-det-count">—</span>
       <button class="btn-export" onclick="exportDetalhe()">⬇ Sem Gerenc.</button>
       <button class="btn-export" onclick="exportPolosSemGerenc()" style="background:var(--red)">⬇ Polos sem Gerenc.</button>
@@ -876,16 +876,16 @@ function renderCruzamentoPortfolioAgendado(){
   }
   el.style.display = '';
   const g = cruz.geral;
-  const pctTxt = g.pct_agendado_sobre_portfolio!==null ? g.pct_agendado_sobre_portfolio+'%' : '—';
+  const pctTxt = g.pct_registrado_sobre_agendado!==null ? g.pct_registrado_sobre_agendado+'%' : '—';
   document.getElementById('cruz-geral').innerHTML = `
     <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
-      <div><div style="font-size:11px;color:var(--muted)">Registrados no Portfólio</div><div style="font-size:26px;font-weight:800">${fmtNum(g.registrado_portfolio)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Agendados</div><div style="font-size:26px;font-weight:800">${fmtNum(g.agendado)}</div></div>
       <div style="font-size:20px;color:var(--muted)">→</div>
-      <div><div style="font-size:11px;color:var(--muted)">Agendados</div><div style="font-size:26px;font-weight:800;color:var(--teal)">${fmtNum(g.agendado)}</div></div>
-      <div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:var(--muted)">Agendado sobre Registrado</div><div style="font-size:22px;font-weight:700;color:${g.pct_agendado_sobre_portfolio>=70?'var(--ok)':g.pct_agendado_sobre_portfolio>=40?'var(--yellow)':'var(--red)'}">${pctTxt}</div></div>
+      <div><div style="font-size:11px;color:var(--muted)">Registrados no Portfólio</div><div style="font-size:26px;font-weight:800;color:var(--teal)">${fmtNum(g.registrado_portfolio)}</div></div>
+      <div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:var(--muted)">Compareceu / Registrou (sobre Agendado)</div><div style="font-size:22px;font-weight:700;color:${g.pct_registrado_sobre_agendado>=70?'var(--ok)':g.pct_registrado_sobre_agendado>=40?'var(--yellow)':'var(--red)'}">${pctTxt}</div></div>
     </div>`;
   const montaLinhas = (lista, campoNome) => lista.map(x => {
-    const pct = x.pct_agendado_sobre_portfolio;
+    const pct = x.pct_registrado_sobre_agendado;
     return `<tr><td>${esc(x[campoNome])}</td><td style="text-align:right">${fmtNum(x.registrado_portfolio)}</td><td style="text-align:right;color:var(--teal)">${fmtNum(x.agendado)}</td><td>${pct!==null?progCell(pct):'<span style="color:var(--muted)">—</span>'}</td></tr>`;
   }).join('');
   document.getElementById('cruz-polo-tbody').innerHTML = montaLinhas(cruz.por_polo||[], 'polo') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted)">Sem dados.</td></tr>';
@@ -1916,7 +1916,7 @@ function filterGerDetalhe(q){
   // - Só Status selecionado (sem ordem): usa o agregado do tutor (todas as
   //   ordens somadas) — critério do PATCH 69 (zero geridas = "não gerenciada").
   // - Os dois juntos: olha o status especificamente DENTRO da ordem escolhida.
-  if(ord || st){
+  if(ord || st==='ger' || st==='nger'){
     sorted = sorted.filter(function(t){
       if(t._semOfertaGioconda){
         // Tutor sem nenhuma oferta real: só faz sentido aparecer numa visão
@@ -1929,6 +1929,13 @@ function filterGerDetalhe(q){
       if(ord && !st) return !!od; // só a ordem importa: precisa ter algum dado real nela
       var geriu = ord ? (od ? od.ger>0 : false) : (t.totalGer>0);
       return st==='ger' ? geriu : !geriu;
+    });
+  }
+  if(st==='treinamento' || st==='sem_treinamento'){
+    sorted = sorted.filter(function(t){
+      var dias = _diasDesdeAdmissao(t.tutor);
+      var emTreinamento = dias!==null && dias<=60;
+      return st==='treinamento' ? emTreinamento : !emTreinamento;
     });
   }
   // PATCH 19: ordenação clicável (Polo/Tutor/% Ger.) — reordena o array antes de
@@ -2033,7 +2040,7 @@ function filterGerDetalhe(q){
     var tutorFmt=_tPts.length>2?_tPts[0]+' '+_tPts[_tPts.length-1]:_tRaw;
     tutorFmt=_trunc(tutorFmt,25);
     tutorDisplay=t.tutor
-      ?('<span title="'+t.tutor+'">'+tutorFmt+'</span>')
+      ?('<span title="'+t.tutor+'">'+tutorFmt+'</span>'+_badgeTreinamento(t.tutor))
       :'<span style="color:var(--red);font-size:10px">⚠ Sem tutor</span>';
     // Curso/Lab: limitar
     var cuLabDisp=_trunc(cuLab,26);
@@ -3703,6 +3710,28 @@ function _normTutorKey(nome){
   var s = String(nome).replace(/\s*\(\d+\)\s*$/,'').trim();
   s = s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   return s.toLowerCase().replace(/\s+/g,' ').trim();
+}
+var _mapaInicioTutorCache = null;
+function _diasDesdeAdmissao(nomeTutor){
+  if(!nomeTutor) return null;
+  if(!_mapaInicioTutorCache){
+    _mapaInicioTutorCache = {};
+    (DB.tutores||[]).forEach(function(t){
+      if(t.inicio) _mapaInicioTutorCache[_normTutorKey(t.n)] = t.inicio;
+    });
+  }
+  var inicioStr = _mapaInicioTutorCache[_normTutorKey(nomeTutor)];
+  if(!inicioStr) return null;
+  var inicio = new Date(inicioStr+'T00:00:00');
+  if(isNaN(inicio.getTime())) return null;
+  var hoje = new Date();
+  var dias = Math.round((hoje - inicio) / (1000*60*60*24));
+  return dias>=0 ? dias : null;
+}
+function _badgeTreinamento(nomeTutor){
+  var dias = _diasDesdeAdmissao(nomeTutor);
+  if(dias===null || dias>60) return '';
+  return ' <span title="Admitido há '+dias+' dia(s) — ainda dentro dos 2 primeiros meses" style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:8px;background:var(--yellow-dim);color:var(--yellow-d);font-size:9px;font-weight:700;white-space:nowrap">🌱 Em treinamento</span>';
 }
 function formatTutorShort(nome) {
   var clean = (nome||'').replace(/\s*\(\d+\)\s*$/, '').trim();
