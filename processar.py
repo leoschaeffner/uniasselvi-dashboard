@@ -781,61 +781,79 @@ def processar(p1, p2):
                     print(f"[{ts()}] Catalogo oficial (Excel): {len(catalogo_oficial)} categorias, {sum(len(v) for v in catalogo_oficial.values())} práticas")
             except Exception as e: print(f"[{ts()}] AVISO: Erro ao ler catálogo Excel: {e}")
 
-    # PATCH 128: schema REAL confirmado pelo log do GitHub Actions (o arquivo
-    # que roda de verdade via secret URL_PORTFOLIO_2026_2, NÃO o que foi
-    # enviado manualmente pro chat de apoio, que era outro arquivo/formato):
-    # colunas ID, DATA_ENVIO, EMAIL_TUTOR, NOME_TUTOR, POLO, CATEGORIA_LAB,
-    # ORDEM_DISCIPLINA, PROTOCOLO_ID, PROTOCOLO_NOME, DISCIPLINA,
-    # DATA_APLICACAO, QTD_ESTUDANTES, COMENTARIOS, FOTO_1/2/3 — um sistema de
-    # envio novo e mais simples pro 2026/2 (1 linha por submissão, não o
-    # formulário antigo com perguntas repetidas). Esse é exatamente o schema
-    # que o PATCH 10 original (antes do PATCH 122) já esperava — o PATCH 122
-    # "corrigiu" com base num arquivo de referência que não era o real, e
-    # quebrou o merge de verdade (log mostrava "sem coluna de Polo/Categoria/
-    # Protocolos — pulando merge", 0 registros). Revertido pro schema real,
-    # mantendo os pontos bons que vieram depois (marcação de semestre pra
-    # dedup, log mais claro).
+    # PATCH 146: o Leo confirmou com um arquivo real recém-salvo do
+    # SharePoint (526 envios de verdade!) que o PORTIFOLIO_TUTOR_2026_2.xlsx
+    # é o MESMO formato do arquivo de 2026/1 (aba Sheet1, formulário com
+    # perguntas repetidas, 122 colunas) — NÃO o schema simplificado
+    # (ID/POLO/CATEGORIA_LAB/PROTOCOLO_ID/QTD_ESTUDANTES) que o PATCH 128
+    # assumia com base num log que aparentemente vinha de outra fonte. A
+    # ÚNICA diferença real do arquivo de 2026/1: não tem a coluna auxiliar
+    # "CHAVE LINK POLO" (adicionada à mão só na planilha de 2026/1) — por
+    # isso não dá pra reusar o c_chave/_faltando_portfolio de cima direto,
+    # mas dá pra reconstruir a chave via categoria_para_curso.json (mesmo
+    # mecanismo já usado no cruzamento Portfólio×Agendado, PATCH 123/127) +
+    # POLO, do mesmo jeito que o CONTROLE constrói a própria chave.
     p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
     if p2b:
         try:
-            df_novo = ler_excel(p2b, sheet_name='PORTIFOLIOS')
+            df_novo = ler_excel(p2b, sheet_name='Sheet1')
         except Exception:
             df_novo = ler_excel(p2b, sheet_name=0)
-        df_novo.columns = [str(c).strip().upper() for c in df_novo.columns]
         if len(df_novo):
-            def _g(coluna): return df_novo[coluna] if coluna in df_novo.columns else pd.Series([''] * len(df_novo))
-            # PATCH 129: se a coluna PROTOCOLO_ID tiver QUALQUER célula vazia
-            # (comum em planilha real), o pandas promove a coluna inteira pra
-            # float64 — "55" vira "55.0" — e isso nunca bate com as chaves do
-            # id_to_perfil.json (strings limpas tipo "55"). Corrigido
-            # convertendo via float->int quando possível, só caindo pro texto
-            # cru se não for numérico de jeito nenhum.
-            def _limpar_id(v):
-                s = str(v).strip()
-                if s in ('', 'nan', 'None'): return ''
-                try:
-                    return str(int(float(s)))
-                except (ValueError, TypeError):
-                    return s
-            _protoid = _g('PROTOCOLO_ID').map(_limpar_id)
-            _perfil_mapeado = _protoid.map(id_to_perfil)
-            _sem_perfil = int(_perfil_mapeado.isna().sum())
-            if _sem_perfil:
-                _ids_exemplo = sorted(set(_protoid[_perfil_mapeado.isna()].tolist()))[:8]
-                print(f"[{ts()}] AVISO: {_sem_perfil} envios em PORTIFOLIO_TUTOR_2026_2 com PROTOCOLO_ID não mapeado em id_to_perfil.json. Exemplos de ID: {_ids_exemplo}")
-            df_novo['_CHAVE']  = _g('POLO').astype(str).str.strip() + _perfil_mapeado.fillna('')
-            df_novo['_POLO']   = _g('POLO').astype(str).str.strip()
-            df_novo['_PROTO']  = _g('PROTOCOLO_NOME').astype(str).str.strip()
-            df_novo['_DATA']   = pd.to_datetime(_g('DATA_APLICACAO'), errors='coerce')
-            df_novo['_ALUNOS'] = pd.to_numeric(_g('QTD_ESTUDANTES'), errors='coerce').fillna(0).astype(int)
-            df_novo['_CAT']    = _g('CATEGORIA_LAB').astype(str).str.strip()
-            df_novo['_ORDEM']  = _g('ORDEM_DISCIPLINA').astype(str).str.strip().replace('', 'Ordem 1')
-            df_novo['EMAIL']      = _g('EMAIL_TUTOR').astype(str).str.strip()
-            df_novo['NOME_TUTOR'] = _g('NOME_TUTOR').astype(str).str.strip()
-            df_novo['_SEMESTRE_ORIGEM'] = '2026/2'  # PATCH 127
-            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2 colunas: polo={'POLO' in df_novo.columns}, categoria={'CATEGORIA_LAB' in df_novo.columns}, protocolo_id={'PROTOCOLO_ID' in df_novo.columns}, qtd_estudantes={'QTD_ESTUDANTES' in df_novo.columns}")
-            df_p = pd.concat([df_p, df_novo], ignore_index=True)
-            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2), {len(df_novo)-_sem_perfil} com chave completa (perfil mapeado)")
+            _cpc_2026_2 = os.path.join(SCRIPT_DIR, 'categoria_para_curso.json')
+            _cat_para_curso_2026_2 = json.load(open(_cpc_2026_2, encoding='utf-8')) if os.path.isfile(_cpc_2026_2) else {}
+            c_polo_2b = col(df_novo, 'POLO')
+            c_proto_2b = col(df_novo, 'PROTOCOLOS', 'ATIVIDADES')
+            for sfx in (':7', ':8', ':6', ':9'):
+                proto_sfx = [c for c in df_novo.columns if 'PROTOCOLOS' in str(c).upper() and str(c).endswith(sfx)]
+                if proto_sfx: c_proto_2b = proto_sfx[0]; break
+            else:
+                proto_any = [c for c in df_novo.columns if 'PROTOCOLOS' in str(c).upper() or 'ATIVIDADE' in str(c).upper()]
+                if proto_any: c_proto_2b = proto_any[0]
+            data_cols_2b = [c for c in df_novo.columns if 'DATA DA APLICA' in str(c).upper() and str(c).endswith(':7')]
+            if not data_cols_2b: data_cols_2b = [c for c in df_novo.columns if 'DATA DA APLICA' in str(c).upper()]
+            if not data_cols_2b: data_cols_2b = [c for c in df_novo.columns if 'DATA' in str(c).upper() and 'APLICA' in str(c).upper()]
+            c_data_2b = data_cols_2b[0] if data_cols_2b else None
+            aluno_soma_2b = soma_estudantes(df_novo)
+            cat_cols_2b = [c for c in df_novo.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
+            c_cat_2b = cat_cols_2b[0] if cat_cols_2b else None
+            ordem_cols_2b = [c for c in df_novo.columns if 'ORDEM' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
+            c_ordem_2b = ordem_cols_2b[0] if ordem_cols_2b else None
+            c_email_2b = col(df_novo, 'EMAIL')
+            c_nome_2b = 'Nome' if 'Nome' in df_novo.columns else col(df_novo, 'NOME')
+            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2 colunas: polo={c_polo_2b}, proto={c_proto_2b}, data={c_data_2b}, cat={c_cat_2b}, ordem={c_ordem_2b}")
+            _faltando_2b = [nome for nome, c in {'POLO': c_polo_2b, 'PROTOCOLOS': c_proto_2b, 'CATEGORIA': c_cat_2b}.items() if not c]
+            if _faltando_2b:
+                print(f"[{ts()}] AVISO: PORTIFOLIO_TUTOR_2026_2 sem coluna(s) {_faltando_2b} — pulando merge deste arquivo (colunas disponíveis: {list(df_novo.columns)[:15]}...)")
+            else:
+                _polo_2b = df_novo[c_polo_2b].astype(str).str.strip()
+                _cat_2b = df_novo[c_cat_2b].astype(str).str.strip()
+                # PATCH 146b: célula real tem espaço NÃO separável (\xa0) em
+                # vez de espaço normal em pelo menos uma categoria ("EngeMaker
+                # |\xa0Química..."), que nunca batia com a chave "normal" do
+                # categoria_para_curso.json — 15 envios de Engenharia caíam
+                # como "sem categoria mapeada" por causa de um caractere
+                # invisível. Normaliza os dois lados antes de comparar.
+                def _norm_espacos(s):
+                    return ' '.join(str(s).replace('\xa0', ' ').split())
+                _cat_para_curso_norm = {_norm_espacos(k): v for k, v in _cat_para_curso_2026_2.items()}
+                _curso_code_2b = _cat_2b.map(lambda c: _cat_para_curso_norm.get(_norm_espacos(c), ''))
+                _sem_curso = int((_curso_code_2b == '').sum())
+                if _sem_curso:
+                    _cats_exemplo = sorted(set(_cat_2b[_curso_code_2b == ''].tolist()))[:8]
+                    print(f"[{ts()}] AVISO: {_sem_curso} envios em PORTIFOLIO_TUTOR_2026_2 com categoria não mapeada em categoria_para_curso.json. Exemplos: {_cats_exemplo}")
+                df_novo['_CHAVE']  = _polo_2b + _curso_code_2b
+                df_novo['_POLO']   = _polo_2b
+                df_novo['_PROTO']  = df_novo[c_proto_2b].astype(str).str.strip()
+                df_novo['_DATA']   = pd.to_datetime(df_novo[c_data_2b], errors='coerce') if c_data_2b else pd.NaT
+                df_novo['_ALUNOS'] = aluno_soma_2b.fillna(0).astype(int) if aluno_soma_2b is not None else 0
+                df_novo['_CAT']    = _cat_2b
+                df_novo['_ORDEM']  = df_novo[c_ordem_2b].astype(str).str.strip() if c_ordem_2b else 'Ordem 1'
+                df_novo['EMAIL']      = df_novo[c_email_2b].astype(str).str.strip() if c_email_2b else ''
+                df_novo['NOME_TUTOR'] = df_novo[c_nome_2b].astype(str).str.strip() if c_nome_2b else ''
+                df_novo['_SEMESTRE_ORIGEM'] = '2026/2'
+                df_p = pd.concat([df_p, df_novo], ignore_index=True)
+                print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2), {len(df_novo)-_sem_curso} com chave completa (categoria mapeada)")
         else:
             print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: 0 envios ainda")
     else:
