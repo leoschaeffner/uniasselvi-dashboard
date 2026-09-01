@@ -1352,6 +1352,29 @@ def processar(p1, p2):
         # PATCH 17: agregado por polo+CURSO ESPECÍFICO (não categoria ampla) — cobre
         # múltiplos tutores do mesmo curso no mesmo polo, sem juntar BFI/BTO/COS-TIP
         hist_bruto = _polo_cat_enviados.get((polo_str, cursos_t), enviados.get(chave, []))
+        # PATCH 141c: mesma proteção do PATCH 139/141 (prática oficialmente
+        # conhecida sob OUTRA categoria não pode ficar aqui), mas aplicada
+        # nesse TERCEIRO ponto — o histórico individual do tutor, montado por
+        # (polo, curso). O diagnóstico do PATCH 140/141b achou 2 tutores de
+        # Agronomia (Ana Julia Ribeiro Dos Santos, Otavio Augusto Queiroz Dos
+        # Santos) com práticas de ENGMAKER no histórico deles — a causa raiz
+        # está na própria planilha fonte (a chave calculada pra essas
+        # submissões bateu com a chave AGM desses tutores, por algum motivo
+        # ainda não confirmado na origem), mas essa proteção pelo menos evita
+        # que o dado errado apareça pro usuário: desvia pro bucket anônimo do
+        # polo (mesmo padrão já usado pra práticas pré-admissão), que agora
+        # tem resolução de categoria por votação (PATCH 141) — deve
+        # recategorizar corretamente como Engenharia lá.
+        _hist_categoria_errada = 0
+        _hist_filtrado = []
+        for h in hist_bruto:
+            _cat_da_pratica = oficial_p_to_cat.get(h['p']) or oficial_p_to_cat_norm.get(_norm_nome_pratica(h['p']))
+            if _cat_da_pratica and _cat_da_pratica != cat_form and _cat_da_pratica != cat_raw:
+                polo_sem_tutor[chave].append(h)
+                _hist_categoria_errada += 1
+            else:
+                _hist_filtrado.append(h)
+        hist_bruto = _hist_filtrado
         # PATCH 16: práticas enviadas ANTES da admissão do tutor atual não são dele —
         # provavelmente foram enviadas por quem ocupava essa vaga antes (desligado).
         # Vão pro bucket anônimo do polo em vez de ficarem com o tutor novo.
@@ -1498,9 +1521,10 @@ def processar(p1, p2):
     # ENGMAKER deveria ter batido, e achar o ponto exato da mistura.
     _prefixos_alerta = ('ENGMAKER', 'ENGEMAKER', 'AGRONOMIA', 'QUÍMICA E FÍSICA')
     _diagnostico_vazamento = []
+    _cfs_engenharia = {'EngeMaker | Química e Física - Engenharias e Licenciaturas', 'ENGMAKER', 'ENGMAKER+QUÍMICA E FÍSICA'}
     for t in tutores:
-        if str(t.get('cf','')).strip() == 'EngeMaker | Química e Física - Engenharias e Licenciaturas':
-            continue  # tutor já é de Engenharia, não é vazamento
+        if str(t.get('cf','')).strip() in _cfs_engenharia:
+            continue  # tutor já é de Engenharia, não é vazamento (cobre os dois apelidos curtos que apontam pro mesmo nome longo via CAT_MAP)
         for p in (t.get('real', []) + t.get('pend', [])):
             if any(str(p).upper().startswith(pref) for pref in _prefixos_alerta):
                 _diagnostico_vazamento.append({
