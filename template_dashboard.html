@@ -932,7 +932,7 @@ function navTo(name){
 function esc(s){return(s||'').replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function pctColor(p){return p===100?'var(--ok)':p===0?'var(--red)':p>=60?'var(--teal)':'var(--red)'}
 function pctBadge(p){if(p===100)return '<span class="badge ok">✓ 100%</span>';if(p===0)return '<span class="badge pend">Pendente</span>';return `<span class="badge parcial">${p.toFixed(0)}%</span>`;}
-function progCell(p){const c=pctColor(p);return `<div class="prog"><div class="prog-track"><div class="prog-fill" style="width:${p}%;background:${c}"></div></div><span class="prog-txt" style="color:${c}">${p.toFixed(0)}%</span></div>`;}
+function progCell(p){const pNum=(p===null||p===undefined||isNaN(p))?0:p;const c=pctColor(pNum);return `<div class="prog"><div class="prog-track"><div class="prog-fill" style="width:${pNum}%;background:${c}"></div></div><span class="prog-txt" style="color:${c}">${pNum.toFixed(0)}%</span></div>`;}
 function fmtNum(n){return(n||0).toLocaleString('pt-BR')}
 function ordemNum(k){return{'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5}[k]||0}
 
@@ -1391,7 +1391,8 @@ function renderGerenciamento(){
   var temLot=DB.tem_lotacao&&(DB.tutores||[]).some(function(t){return t.ch_semanal&&t.ch_semanal>0;});document.querySelectorAll('.col-ch-lot').forEach(function(el){el.style.display=temLot?'':'none';});if(!temLot){var notaLot=document.getElementById('ch-lot-aviso');if(notaLot)notaLot.style.display='none';}
   if(!temLot){var notaLot=document.createElement('div');notaLot.style.cssText='font-size:10px;color:var(--yellow);padding:4px 18px;background:var(--yellow-dim)';notaLot.textContent='⚠ Colunas CH Contratada disponíveis após configurar Planilha de Lotação';var detCard=document.querySelector('#page-ger-detalhe .card');if(detCard)detCard.insertBefore(notaLot,detCard.firstChild);}
   var estadosData=agruparPorEstado(gerPoloData);window._estadosData=estadosData;
-  renderEstadosInline(estadosData);renderMapaBrasil(estadosData);
+  try{ renderEstadosInline(estadosData); }catch(e){ console.error('renderEstadosInline', e); }
+  try{ renderMapaBrasil(estadosData); }catch(e){ console.error('renderMapaBrasil', e); }
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
   // PATCH 118: exclusão de tutores sem vínculo ativo (desligados sem
@@ -2456,7 +2457,7 @@ function renderMapaBrasil(estadosData){
   svgEl.setAttribute('viewBox','0 0 700 700');
   svgEl.setAttribute('overflow','hidden');
   svgEl.style.overflow='hidden';
-  svgEl.setAttribute('width','100%');svgEl.setAttribute('height','auto');
+  svgEl.setAttribute('width','100%');svgEl.style.height='auto';
 
   var defs='<defs>'
     +'<filter id="sh"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="rgba(0,0,0,.3)"/></filter>'
