@@ -4759,8 +4759,18 @@ function _filtrarDBPorCursos(cursos){
   const bateQualquerCategoria = valor => categorias.some(cat=>_categoriaBate(valor||'', cat));
 
   // 1. Tutores
+  // PATCH 135: além da categoria ampla, agora checa 'subcurso' quando o
+  // tutor tem essa informação (Multidisciplinar III: Fisioterapia/Terapia
+  // Ocupacional/Estética, que compartilham a mesma categoria ampla
+  // BIO-FISIO-EST-TO). Sem isso, selecionar só "Estética" trazia junto
+  // tutores de Fisioterapia e T.Ocupacional (mesma categoria), inflando a
+  // contagem — reportado pelo Leo (65 reais vs 101+ mostrados).
   if (Array.isArray(DB.tutores)) {
-    DB.tutores = DB.tutores.filter(t => bateQualquerCategoria(t.c));
+    DB.tutores = DB.tutores.filter(t => {
+      if (!bateQualquerCategoria(t.c)) return false;
+      if (t.subcurso) return cursos.some(c => _normTxtCoord(t.subcurso) === _normTxtCoord(c));
+      return true; // sem subcurso (curso não tem sub-divisão, ou dado indisponível) -- mantém pela categoria
+    });
   }
 
   // 2. Práticas (raiz + cada semestre)
@@ -4819,6 +4829,95 @@ function _filtrarDBPorCursos(cursos){
   }
 
   DB._cursosTravados = cursos;
+
+  // PATCH 135: recalcular DB.kpis e dados_por_semestre[*].kpis a partir dos
+  // tutores JÁ FILTRADOS acima. Esses KPIs vinham prontos do backend (pra
+  // TODOS os tutores) e nunca eram recalculados depois do filtro de curso —
+  // por isso "Urgentes" continuava mostrando o total geral (363) mesmo com
+  // um curso específico selecionado. Reportado pelo Leo.
+  const poloStatsAtual = DB.polo_stats || [];
+  const totalPolosAtual = poloStatsAtual.length;
+  const polosOkAtual = poloStatsAtual.filter(p => (p.pend||0) === 0).length;
+  DB.kpis = Object.assign({}, DB.kpis, _kpisParaSemestre(DB.tutores, null), {
+    total_polos: totalPolosAtual, polos_ok: polosOkAtual,
+  });
+  if (DB.dados_por_semestre) {
+    Object.keys(DB.dados_por_semestre).forEach(sem => {
+      DB.dados_por_semestre[sem].kpis = Object.assign({}, DB.dados_por_semestre[sem].kpis, _kpisParaSemestre(DB.tutores, sem), {
+        total_polos: totalPolosAtual, polos_ok: polosOkAtual,
+      });
+    });
+  }
+
+  // PATCH 135: "Alunos Registrados no Portfólio" / "Alunos Agendados" e o
+  // cruzamento também ficavam com o número GLOBAL mesmo com curso
+  // selecionado (mesma causa das outras duas correções acima — dado
+  // pré-calculado no backend, nunca recalculado depois do filtro).
+  const _catBateFiltro = valor => categorias.some(cat => _categoriaBate(valor||'', cat));
+  if (DB.portfolio_alunos_dedup_por_semestre) {
+    Object.keys(DB.portfolio_alunos_dedup_por_semestre).forEach(sem => {
+      const p = DB.portfolio_alunos_dedup_por_semestre[sem];
+      if (p && p.por_categoria) {
+        const novoPorCategoria = {};
+        let novoGeral = 0;
+        Object.entries(p.por_categoria).forEach(([k, v]) => { if (_catBateFiltro(k)) { novoPorCategoria[k] = v; novoGeral += v; } });
+        p.por_categoria = novoPorCategoria;
+        p.geral = novoGeral;
+        // por_polo não tem granularidade de curso na fonte -- fica como estava (limitação conhecida)
+      }
+    });
+  }
+  if (DB.cruzamento_portfolio_agendado_por_semestre) {
+    Object.keys(DB.cruzamento_portfolio_agendado_por_semestre).forEach(sem => {
+      const c = DB.cruzamento_portfolio_agendado_por_semestre[sem];
+      if (c && Array.isArray(c.por_categoria)) {
+        const filtradas = c.por_categoria.filter(x => _catBateFiltro(x.categoria));
+        const registrado = filtradas.reduce((s,x)=>s+(x.registrado_portfolio||0), 0);
+        const agendado = filtradas.reduce((s,x)=>s+(x.agendado||0), 0);
+        c.por_categoria = filtradas;
+        c.geral = {
+          registrado_portfolio: registrado, agendado: agendado, diferenca: registrado-agendado,
+          pct_registrado_sobre_agendado: agendado ? Math.round(registrado/agendado*1000)/10 : null,
+        };
+        // por_polo tem a mesma limitação de granularidade do portfolio acima
+      }
+    });
+  }
+}
+// PATCH 135: recalcula {total, enviaram, urgentes, atrasados, pendentes} a
+// partir de uma lista de tutores (já filtrada por curso) — sem=null/'Ambos'
+// usa os campos agregados de sempre (t.te/gTS), sem='2026/1' ou '2026/2'
+// refaz o mesmo cálculo por-semestre que _getSemTutores() já faz, só que
+// parametrizado (pra poder recalcular TODOS os semestres de uma vez, não só
+// o selecionado no momento).
+function _kpisParaSemestre(tutoresBase, sem){
+  const semEspecifico = sem && sem !== 'Ambos';
+  const statusOrd = semEspecifico ? (((DB.dados_por_semestre||{})[sem]||{}).status_ordem || DB.status_ordem || {}) : null;
+  let total=0, enviaram=0, urgentes=0, atrasados=0;
+  (tutoresBase||[]).forEach(t=>{
+    total++;
+    let te, sit;
+    if (!semEspecifico) {
+      te = t.te || 0;
+      sit = gTS(t);
+    } else {
+      const semDefault = (DB.todos_semestres||[])[0] || DB.semestre || '';
+      const histSem = (t.hist||[]).filter(h => (h.s||semDefault) === sem);
+      const reais = [...new Set(histSem.map(h=>h.p))];
+      te = reais.length;
+      const porOrdem = {};
+      histSem.forEach(h=>{ porOrdem[h.o] = (porOrdem[h.o]||0)+1; });
+      const ordsVenc = Object.keys(statusOrd).filter(o=>statusOrd[o]==='VENCIDO');
+      sit = 'urgente';
+      if (!ordsVenc.length) sit = te>0 ? 'ok' : 'atrasado';
+      else if (ordsVenc.every(o=>(porOrdem[o]||0)>0)) sit = 'ok';
+      else if (ordsVenc.some(o=>(porOrdem[o]||0)>0)) sit = 'atrasado';
+    }
+    if (te > 0) enviaram++;
+    if (sit === 'urgente') urgentes++;
+    else if (sit === 'atrasado') atrasados++;
+  });
+  return { total, enviaram, urgentes, atrasados, pendentes: total-enviaram };
 }
 function _normTxtCoord(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function _recalcularPoloStatsDeTutores(){
