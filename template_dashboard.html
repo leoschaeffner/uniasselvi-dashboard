@@ -3379,6 +3379,14 @@ function renderAgendasEstudo(){
   // TODAS as ofertas do semestre selecionado (com e sem agenda, com e sem tutor),
   // não só as que já têm data de gerenciamento registrada.
   const todasOfertas = (typeof GER_DB!=='undefined' && GER_DB ? GER_DB : DB).ger_ofertas || [];
+  // PATCH 142: setado e chamado AQUI, logo de cara — mesma correção do
+  // portal de coordenadores (ver comentário lá), por consistência/robustez,
+  // mesmo esse template não tendo filtro de curso pra disparar o mesmo
+  // sintoma exato.
+  window._aeTodasOfertas = todasOfertas;
+  try{ renderEngajamentoPorOrdem(); }catch(e){ console.error('renderEngajamentoPorOrdem', e); }
+  try{ renderEvolucaoGeral(); }catch(e){ console.error('renderEvolucaoGeral', e); }
+  try{ renderMelhorEngajamento(); }catch(e){ console.error('renderMelhorEngajamento', e); }
   const totalDistintas = todasOfertas.length;
   const comTutor = todasOfertas.filter(o=>o.tem_tutor);
   const semTutor = todasOfertas.filter(o=>!o.tem_tutor);
@@ -3512,11 +3520,6 @@ function renderAgendasEstudo(){
     return g;
   });
   filterAgendasSemAluno(document.getElementById('ae-semaluno-search')?.value||'');
-
-  window._aeTodasOfertas = todasOfertas;
-  renderEngajamentoPorOrdem();
-  renderEvolucaoGeral();
-  renderMelhorEngajamento();
 }
 // ── PATCH 125 (revisado 2x): Engajamento por Ordem, agrupado pelos MESMOS 5
 // grupos usados na aba Detalhe/Gerenciamento (GRUPOS_GER + _rowMatchesGrupo)
