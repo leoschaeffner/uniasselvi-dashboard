@@ -1990,15 +1990,16 @@ function filterGerDetalhe(q){
     dSemOrdem.forEach(function(r){
       if(!r.tutor) return;
       var key=_baseKeyOferta(r);
-      if(!mapa[key]) mapa[key] = {tutor:r.tutor, totalGer:0};
+      if(!mapa[key]) mapa[key] = {tutor:r.tutor, totalGer:0, temOrdemSel:false};
       if(r.gerenciado) mapa[key].totalGer++;
+      if(ord && r.ordem===ord) mapa[key].temOrdemSel = true;
     });
     var lista = Object.values(mapa);
     // Reaproveita a lista de "sem oferta no GIOCONDA" SEMPRE preenchida (PATCH
     // 72) — ao contrário de ler de 'sorted', que fica sem esses tutores quando
     // o filtro de status da tabela é "Gerenciadas".
     _semOfertaInjetadosTodos.forEach(function(t){
-      lista.push({tutor:t.tutor, totalGer:0});
+      lista.push({tutor:t.tutor, totalGer:0, temOrdemSel:false});
     });
     return lista;
   })();
@@ -2174,7 +2175,7 @@ function filterGerDetalhe(q){
   }
   window._detCatAtual = grupoLabel;
   renderDetPizza(sortedParaPizza, grupoLabel);
-  renderDetTreinamento(sortedParaPizza);
+  renderDetTreinamento(sortedParaPizza, ord);
   // PATCH 93: segundo gráfico, lado a lado — reflete a ORDEM selecionada
   // especificamente (sem trivializar 100%/0% com o filtro de Status, mesma
   // lógica de sempre: "geriu alguma coisa nesta ordem" independente do
@@ -2263,9 +2264,14 @@ function renderDetPizza(sorted, cat, targetChartId, targetLabelId){
 // independente da ordem), pra ficar automaticamente adaptável aos filtros de
 // curso sem precisar de lógica própria. Conta pela mesma regra central
 // (_estaEmTreinamento): ≤60 dias de admissão E ainda sem nenhum gerenciamento.
-function renderDetTreinamento(sorted){
+function renderDetTreinamento(sorted, ord){
+  // PATCH 138: mesma correção do coordenadores — o gráfico ignorava o filtro
+  // de Ordem (contava em treinamento em qualquer ordem), enquanto a tabela já
+  // exige ter dado registrado especificamente na ordem escolhida. Agora
+  // aplica o mesmo recorte quando uma ordem está selecionada.
+  var lista = ord ? sorted.filter(function(t){ return t.temOrdemSel; }) : sorted;
   var porNome={};
-  sorted.forEach(function(t){
+  lista.forEach(function(t){
     if(!t.tutor) return;
     var key=_normTutorKey(t.tutor);
     if(!(key in porNome)) porNome[key] = {nome:t.tutor, totalGer:0};
@@ -2298,7 +2304,7 @@ function renderDetTreinamento(sorted){
   var legenda = '<div style="font-size:12px">'
     + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corTreino+';display:inline-block"></span> Em treinamento: <strong>'+emTreinamento+'</strong></div>'
     + '<div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corResto+';display:inline-block"></span> Demais: <strong>'+restante+'</strong></div>'
-    + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+' — mesmo recorte de curso do gráfico ao lado</div>'
+    + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+' — '+(ord?'mesmo recorte de curso e '+ord+' do gráfico ao lado':'mesmo recorte de curso do gráfico ao lado')+'</div>'
     + '</div>';
   document.getElementById('det-treinamento-chart').innerHTML = svg + legenda;
 }
