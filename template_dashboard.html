@@ -626,6 +626,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <div class="sec-label" style="margin-bottom:8px">Neste recorte <span id="det-pizza-ordem-label" style="font-weight:400;color:var(--muted)"></span></div>
       <div id="det-pizza-chart-ordem" style="display:flex;align-items:center;gap:16px"></div>
     </div>
+    <div style="flex-shrink:0;padding-left:24px;border-left:1px solid var(--border)">
+      <div class="sec-label" style="margin-bottom:8px">🌱 Em Treinamento (≤60 dias, sem gerenciamento)</div>
+      <div id="det-treinamento-chart" style="display:flex;align-items:center;gap:16px"></div>
+    </div>
   </div>
   <div class="card">
     <div class="toolbar">
@@ -2016,19 +2020,19 @@ function filterGerDetalhe(q){
         return st!=='ger';
       }
       var od = ord ? t.ordens[ord] : null;
-      if(ord && !st) return !!od; // só a ordem importa: precisa ter algum dado real nela
+      if(ord && (!st || st==='treinamento' || st==='sem_treinamento')) return !!od; // ordem sozinha (ou combinada com treinamento) -- só precisa ter dado real nela, treinamento é filtro à parte
       var geriu = ord ? (od ? od.ger>0 : false) : (t.totalGer>0);
       return st==='ger' ? geriu : !geriu;
     });
   }
-  // PATCH 134: filtro independente por status de treinamento (≤60 dias de
-  // casa) — não mistura com o filtro de gerenciado/não-gerenciado, pra dar
-  // pra cruzar as duas coisas (ex: "não gerenciou" + "não é treinamento" =
-  // quem não gerenciou por outro motivo que não ser recém-chegado).
+  // PATCH 134/137: filtro independente por status de treinamento (≤60 dias
+  // de casa E ainda sem nenhum gerenciamento) — não mistura com o filtro de
+  // gerenciado/não-gerenciado, pra dar pra cruzar as duas coisas (ex: "não
+  // gerenciou" + "não é treinamento" = quem não gerenciou por outro motivo
+  // que não ser recém-chegado).
   if(st==='treinamento' || st==='sem_treinamento'){
     sorted = sorted.filter(function(t){
-      var dias = _diasDesdeAdmissao(t.tutor);
-      var emTreinamento = dias!==null && dias<=60;
+      var emTreinamento = _estaEmTreinamento(t.tutor, t.totalGer>0);
       return st==='treinamento' ? emTreinamento : !emTreinamento;
     });
   }
@@ -2134,7 +2138,7 @@ function filterGerDetalhe(q){
     var tutorFmt=_tPts.length>2?_tPts[0]+' '+_tPts[_tPts.length-1]:_tRaw;
     tutorFmt=_trunc(tutorFmt,25);
     tutorDisplay=t.tutor
-      ?('<span title="'+t.tutor+'">'+tutorFmt+'</span>'+_badgeTreinamento(t.tutor))
+      ?('<span title="'+t.tutor+'">'+tutorFmt+'</span>'+_badgeTreinamento(t.tutor, t.totalGer>0))
       :'<span style="color:var(--red);font-size:10px">⚠ Sem tutor</span>';
     // Curso/Lab: limitar
     var cuLabDisp=_trunc(cuLab,26);
@@ -2170,6 +2174,7 @@ function filterGerDetalhe(q){
   }
   window._detCatAtual = grupoLabel;
   renderDetPizza(sortedParaPizza, grupoLabel);
+  renderDetTreinamento(sortedParaPizza);
   // PATCH 93: segundo gráfico, lado a lado — reflete a ORDEM selecionada
   // especificamente (sem trivializar 100%/0% com o filtro de Status, mesma
   // lógica de sempre: "geriu alguma coisa nesta ordem" independente do
@@ -2252,6 +2257,50 @@ function renderDetPizza(sorted, cat, targetChartId, targetLabelId){
     + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+'</div>'
     + '</div>';
   document.getElementById(targetChartId).innerHTML = svg + legenda;
+}
+// PATCH 137: gráfico "Em Treinamento" pedido pelo Leo — mesma base de dados
+// que os outros dois (sortedParaPizza: já respeita grupo/curso selecionado,
+// independente da ordem), pra ficar automaticamente adaptável aos filtros de
+// curso sem precisar de lógica própria. Conta pela mesma regra central
+// (_estaEmTreinamento): ≤60 dias de admissão E ainda sem nenhum gerenciamento.
+function renderDetTreinamento(sorted){
+  var porNome={};
+  sorted.forEach(function(t){
+    if(!t.tutor) return;
+    var key=_normTutorKey(t.tutor);
+    if(!(key in porNome)) porNome[key] = {nome:t.tutor, totalGer:0};
+    if(t.totalGer>0) porNome[key].totalGer += t.totalGer;
+  });
+  var nomesUnicos = Object.values(porNome);
+  var emTreinamento = nomesUnicos.filter(function(x){ return _estaEmTreinamento(x.nome, x.totalGer>0); }).length;
+  var total = nomesUnicos.length || 1;
+  var pctTreino = Math.round(emTreinamento/total*100);
+  var restante = nomesUnicos.length - emTreinamento;
+  var anguloTreino = emTreinamento/total*360;
+  var corTreino='#f5b400', corResto='#d1d5db';
+  function fatiaSVG2(anguloIni, anguloFim, cor){
+    var r=42,cx=50,cy=50;
+    var a1=(anguloIni-90)*Math.PI/180, a2=(anguloFim-90)*Math.PI/180;
+    var x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    var x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    var largeArc = (anguloFim-anguloIni)>180 ? 1 : 0;
+    if((anguloFim-anguloIni)>=360) return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+cor+'"/>';
+    if(anguloFim===anguloIni) return '';
+    return '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+cor+'"/>';
+  }
+  var svg = '<svg viewBox="0 0 100 100" width="110" height="110">'
+    + fatiaSVG2(0, anguloTreino, corTreino)
+    + fatiaSVG2(anguloTreino, 360, corResto)
+    + '<circle cx="50" cy="50" r="24" fill="var(--surface)"/>'
+    + '<text x="50" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="var(--font)">'+pctTreino+'%</text>'
+    + '<text x="50" y="60" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--font)">em treino</text>'
+    + '</svg>';
+  var legenda = '<div style="font-size:12px">'
+    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corTreino+';display:inline-block"></span> Em treinamento: <strong>'+emTreinamento+'</strong></div>'
+    + '<div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corResto+';display:inline-block"></span> Demais: <strong>'+restante+'</strong></div>'
+    + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+' — mesmo recorte de curso do gráfico ao lado</div>'
+    + '</div>';
+  document.getElementById('det-treinamento-chart').innerHTML = svg + legenda;
 }
 function exportRelatorioPorCurso(){
   var sorted = window._detSortedAtual || [];
@@ -3932,10 +3981,23 @@ function _diasDesdeAdmissao(nomeTutor){
   var dias = Math.round((hoje - inicio) / (1000*60*60*24));
   return dias>=0 ? dias : null;
 }
-function _badgeTreinamento(nomeTutor){
+// PATCH 137: "em treinamento" agora também depende de o tutor JÁ ter
+// gerenciado algo (totalGer>0) — o Leo reportou tutores marcados "Em
+// treinamento" mesmo com práticas gerenciadas em alguma ordem (ex: Leticia
+// Facundo, 8/8 na Ordem 2), o que não fazia sentido: o selo existe pra
+// explicar POR QUE alguém ainda não gerenciou, então se já gerenciou
+// qualquer coisa, deixa de se aplicar — independente de quantos dias faz
+// desde a admissão. jaGerenciou é opcional (default false) pra não quebrar
+// quem ainda chama isso só com o nome.
+function _estaEmTreinamento(nomeTutor, jaGerenciou){
+  if(jaGerenciou) return false;
   var dias = _diasDesdeAdmissao(nomeTutor);
-  if(dias===null || dias>60) return '';
-  return ' <span title="Admitido há '+dias+' dia(s) — ainda dentro dos 2 primeiros meses" style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:8px;background:var(--yellow-dim);color:var(--yellow-d);font-size:9px;font-weight:700;white-space:nowrap">🌱 Em treinamento</span>';
+  return dias!==null && dias<=60;
+}
+function _badgeTreinamento(nomeTutor, jaGerenciou){
+  if(!_estaEmTreinamento(nomeTutor, jaGerenciou)) return '';
+  var dias = _diasDesdeAdmissao(nomeTutor);
+  return ' <span title="Admitido há '+dias+' dia(s) — ainda dentro dos 2 primeiros meses e ainda sem nenhum gerenciamento" style="display:inline-block;margin-left:4px;padding:1px 5px;border-radius:8px;background:var(--yellow-dim);color:var(--yellow-d);font-size:9px;font-weight:700;white-space:nowrap">🌱 Em treinamento</span>';
 }
 function formatTutorShort(nome) {
   var clean = (nome||'').replace(/\s*\(\d+\)\s*$/, '').trim();
