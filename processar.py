@@ -930,10 +930,34 @@ def processar(p1, p2):
                     chave_alias.setdefault(v, chave)
 
 
+    # PATCH 139: a checagem "essa prática já é conhecida oficialmente sob OUTRA
+    # categoria, não deixa vazar" só funcionava com correspondência EXATA de
+    # texto — o Leo reportou práticas de Engenharia (ENGMAKER) aparecendo sob
+    # Enfermagem. Causa: o protocolo enviado vem com um prefixo de categoria no
+    # nome ("ENGMAKER - Prática de hidrossanitária"), enquanto o catálogo
+    # oficial guarda só "Prática de hidrossanitária" (sem prefixo) — a
+    # comparação exata nunca batia, `cat_oficial` saía None, e a prática
+    # escapava da proteção, podendo ser adicionada em QUALQUER categoria que a
+    # chave da submissão apontasse (mesmo errada). Normalizado (minúsculas,
+    # remove prefixo tipo "PALAVRA - " ou "PALAVRA/PALAVRA - " no início,
+    # espaços colapsados) pra reconhecer a mesma prática independente de como
+    # o nome foi digitado/formatado na submissão real.
+    import re as _re_pratica
+    def _norm_nome_pratica(s):
+        s = str(s or '').strip().lower()
+        m = _re_pratica.match(r'^(.{2,30}?)\s-\s(.+)$', s)
+        if m and len(m.group(1).split()) <= 3:  # só remove prefixo curto (tipo "ENGMAKER -" ou "BIO-FAR -"), não corta nomes reais com " - " no meio
+            s = m.group(2)
+        s = _re_pratica.sub(r'\s+', ' ', s).strip()
+        return s
     oficial_p_to_cat = {}
+    oficial_p_to_cat_norm = {}
     for cat, pracs in catalogo_oficial.items():
-        for p in pracs: oficial_p_to_cat.setdefault(p, cat)
+        for p in pracs:
+            oficial_p_to_cat.setdefault(p, cat)
+            oficial_p_to_cat_norm.setdefault(_norm_nome_pratica(p), cat)
     catalogo_real = defaultdict(set)
+    _bloqueados_categoria_errada = 0
     for _, r in df_p.iterrows():
         chave = str(r.get('_CHAVE', '') or '').strip()
         chave = chave_alias.get(chave, chave)
@@ -944,9 +968,13 @@ def processar(p1, p2):
         for p in proto.split(';'):
             p = p.strip()
             if not p: continue
-            cat_oficial = oficial_p_to_cat.get(p)
-            if cat_oficial and cat_oficial != cf: continue
+            cat_oficial = oficial_p_to_cat.get(p) or oficial_p_to_cat_norm.get(_norm_nome_pratica(p))
+            if cat_oficial and cat_oficial != cf:
+                _bloqueados_categoria_errada += 1
+                continue
             catalogo_real[cf].add(p)
+    if _bloqueados_categoria_errada:
+        print(f"[{ts()}] Práticas bloqueadas de vazar pra categoria errada (nome já conhecido oficialmente em outra): {_bloqueados_categoria_errada}")
     catalogo = {}
     all_cats = set(list(catalogo_oficial.keys()) + list(catalogo_real.keys()))
     for cat in all_cats:
