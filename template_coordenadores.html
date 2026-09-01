@@ -1303,7 +1303,8 @@ function renderGerenciamento(){
   var temLot=DB.tem_lotacao&&(DB.tutores||[]).some(function(t){return t.ch_semanal&&t.ch_semanal>0;});document.querySelectorAll('.col-ch-lot').forEach(function(el){el.style.display=temLot?'':'none';});if(!temLot){var notaLot=document.getElementById('ch-lot-aviso');if(notaLot)notaLot.style.display='none';}
   if(!temLot){var notaLot=document.createElement('div');notaLot.style.cssText='font-size:10px;color:var(--yellow);padding:4px 18px;background:var(--yellow-dim)';notaLot.textContent='⚠ Colunas CH Contratada disponíveis após configurar Planilha de Lotação';var detCard=document.querySelector('#page-ger-detalhe .card');if(detCard)detCard.insertBefore(notaLot,detCard.firstChild);}
   var estadosData=agruparPorEstado(gerPoloData);window._estadosData=estadosData;
-  renderEstadosInline(estadosData);renderMapaBrasil(estadosData);
+  try{ renderEstadosInline(estadosData); }catch(e){ console.error('renderEstadosInline', e); }
+  try{ renderMapaBrasil(estadosData); }catch(e){ console.error('renderMapaBrasil', e); }
   gerContrData=GER_DB.ger_contratacao||[];renderGerContrTbl(gerContrData);
   gerAgendaData=GER_DB.ger_agendas||[];renderAgendaKPIs();renderGerAgendaTbl(gerAgendaData);
   // PATCH 118: exclusão de tutores sem vínculo ativo movida pro processar.py
@@ -2366,7 +2367,7 @@ function renderMapaBrasil(estadosData){
   svgEl.setAttribute('viewBox','0 0 700 700');
   svgEl.setAttribute('overflow','hidden');
   svgEl.style.overflow='hidden';
-  svgEl.setAttribute('width','100%');svgEl.setAttribute('height','auto');
+  svgEl.setAttribute('width','100%');svgEl.style.height='auto';
 
   var defs='<defs>'
     +'<filter id="sh"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="rgba(0,0,0,.3)"/></filter>'
@@ -4840,11 +4841,55 @@ function _filtrarDBPorCursos(cursos){
   // BIO-FISIO-EST-TO). Sem isso, selecionar só "Estética" trazia junto
   // tutores de Fisioterapia e T.Ocupacional (mesma categoria), inflando a
   // contagem — reportado pelo Leo (65 reais vs 101+ mostrados).
+  // PATCH 145: bug GRAVE achado com o Leo — a checagem de subcurso (linhas
+  // abaixo) era aplicada sempre que o campo existisse, mas o rótulo interno
+  // do GIOCONDA quase nunca bate com o NOME do curso do seletor (ex: ofertas
+  // de Enfermagem têm subcurso "Enfermagem/Instrumentação", o curso
+  // selecionado chama-se só "Enfermagem" — nunca batem). Isso zerava TODAS
+  // as ofertas/tutores de Enfermagem (e de qualquer outro curso com o mesmo
+  // problema de rótulo) sempre que filtrado — "engajamento não sobe em
+  // nenhum curso", exatamente o que foi reportado. A checagem de subcurso só
+  // faz sentido quando existe AMBIGUIDADE DE VERDADE: mais de um curso
+  // SELECIONADO cai na mesma categoria ampla (caso real: Multi III dividido
+  // em Fisioterapia/T.Ocupacional/Estética). Pra qualquer curso que já tem
+  // categoria exclusiva (Enfermagem, Nutrição, etc.), o match de categoria
+  // sozinho já é suficiente e correto — não precisa (e não deve) exigir
+  // bater o subcurso também.
+  // PATCH 145 (revisado): a ambiguidade tem que ser julgada pelo total GLOBAL
+  // de cursos que existem pra uma categoria (não por quantos estão
+  // SELECIONADOS agora) — selecionar só "Estética e Imagem Pessoal" sozinha
+  // ainda precisa do subcurso pra não trazer Fisioterapia/T.Ocupacional
+  // junto (mesma categoria ampla), mesmo sendo 1 curso só selecionado.
+  // PATCH 145 (revisado 2x): tentar adivinhar ambiguidade contando quantos
+  // cursos existem por categoria falhava pra Enfermagem — "Enfermagem" e
+  // "Instrumentação Cirúrgica" são 2 cursos no seletor, mas o GIOCONDA nunca
+  // separa os dois (usa sempre o rótulo combinado "Enfermagem/Instrumentação"
+  // como subcurso), então exigir bater subcurso ali também zerava tudo. A
+  // lista de categorias abaixo é a fonte da verdade: só essas duas têm
+  // valores de subcurso REALMENTE distintos por curso na origem (confirmado
+  // em _SUBCURSO_LABEL do processar.py). Qualquer outra categoria usa só o
+  // match de categoria, mesmo tendo mais de um curso "no papel".
+  const _CATEGORIAS_COM_SUBCURSO_CONFIAVEL = new Set([
+    'BIO-FISIO-EST-TO (Multidisciplinar III)',  // Fisioterapia / Terapia Ocupacional / Estética e Cosmética
+    'BIO-FAR (Multidisciplinar I)',             // Biomedicina / Farmácia
+  ]);
+  const _precisaCheckSubcurso = valorCategoria =>
+    [..._CATEGORIAS_COM_SUBCURSO_CONFIAVEL].some(cat => _categoriaBate(valorCategoria, cat));
+  // Apelido: o GIOCONDA rotula esse subcurso "Estética e Cosmética", mas o
+  // nome oficial do curso no seletor é "Estética e Imagem Pessoal" — sem
+  // isso, selecionar só Estética zerava (mesmo tipo de problema da
+  // Enfermagem, só que dentro do Multi III).
+  const _ALIAS_SUBCURSO = {'estetica e cosmetica': 'estetica e imagem pessoal'};
+  const _subcursoBate = (subcursoOferta, cursoSelecionado) => {
+    const a = _normTxtCoord(subcursoOferta), b = _normTxtCoord(cursoSelecionado);
+    return a === b || (_ALIAS_SUBCURSO[a] || a) === b;
+  };
+
   if (Array.isArray(DB.tutores)) {
     DB.tutores = DB.tutores.filter(t => {
       if (!bateQualquerCategoria(t.c)) return false;
-      if (t.subcurso) return cursos.some(c => _normTxtCoord(t.subcurso) === _normTxtCoord(c));
-      return true; // sem subcurso (curso não tem sub-divisão, ou dado indisponível) -- mantém pela categoria
+      if (t.subcurso && _precisaCheckSubcurso(t.c)) return cursos.some(c => _subcursoBate(t.subcurso, c));
+      return true; // categoria já é exclusiva de um curso só (ou subcurso indisponível) -- categoria sozinha basta
     });
   }
 
@@ -4864,9 +4909,9 @@ function _filtrarDBPorCursos(cursos){
       if (Array.isArray(s.ger_ofertas)) {
         s.ger_ofertas = s.ger_ofertas.filter(o=>{
           if (!bateQualquerCategoria(o.categoria)) return false;
-          if (o.subcurso) return cursos.some(c=>_normTxtCoord(o.subcurso)===_normTxtCoord(c));
-          if (o.curso && codigos.length) return codigos.includes(o.curso);
-          return true; // categoria já bate e não tem info mais fina -- mantém
+          if (o.subcurso && _precisaCheckSubcurso(o.categoria)) return cursos.some(c=>_subcursoBate(o.subcurso, c));
+          if (o.curso && codigos.length && _precisaCheckSubcurso(o.categoria)) return codigos.includes(o.curso);
+          return true; // categoria já é exclusiva de um curso só (ou não tem info mais fina) -- categoria sozinha basta
         });
         // PATCH 136: "Alunos Agendados" (Visão Geral) lê DIRETO de
         // GER_DB.ger_kpis.total_alunos_agendados, não do cruzamento que já
