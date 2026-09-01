@@ -1471,6 +1471,35 @@ def processar(p1, p2):
         for p in t['real'] + t['pend']: _p_fallback.setdefault(p, t['cf'])
     for p in ps: ps[p]['categoria'] = p_to_cat.get(p, _p_fallback.get(p, ''))
     ps_all = sorted([{'nome': k, **v} for k, v in ps.items()], key=lambda x: -x['nao_enviou'])
+
+    # PATCH 140: diagnóstico DIRECIONADO — o PATCH 139 impede uma prática de
+    # entrar na lista OFICIAL agregada da categoria errada, mas isso não
+    # cobre o caso de ela estar na lista INDIVIDUAL de pend/real de um tutor
+    # específico (via 'praticas'/'catalogo.get(cf)' desse tutor, ou via
+    # submissão real dele) — o Leo reportou que o problema persiste mesmo com
+    # o PATCH 139 aplicado, então o vazamento está nesse segundo caminho, que
+    # ainda não tem visibilidade nenhuma no log. Aponta exatamente qual
+    # tutor/chave/curso está puxando a prática errada, pra corrigir com
+    # certeza em vez de continuar tentando adivinhar sem o dado real.
+    _prefixos_alerta = ('ENGMAKER', 'ENGEMAKER', 'AGRONOMIA', 'QUÍMICA E FÍSICA')
+    _diagnostico_vazamento = []
+    for t in tutores:
+        if str(t.get('cf','')).strip() == 'EngeMaker | Química e Física - Engenharias e Licenciaturas':
+            continue  # tutor já é de Engenharia, não é vazamento
+        for p in (t.get('real', []) + t.get('pend', [])):
+            if any(str(p).upper().startswith(pref) for pref in _prefixos_alerta):
+                _diagnostico_vazamento.append({
+                    'pratica': p, 'tutor': t.get('n',''), 'polo': t.get('p',''),
+                    'cf_tutor': t.get('cf',''), 'cursos_tutor': t.get('cursos',''),
+                    'esta_em': 'real' if p in t.get('real', []) else 'pend',
+                })
+    if _diagnostico_vazamento:
+        print(f"[{ts()}] ⚠️  DIAGNÓSTICO PATCH 140: {len(_diagnostico_vazamento)} prática(s) de outra categoria aparecendo na lista de tutor errado:")
+        for d in _diagnostico_vazamento[:15]:
+            print(f"    '{d['pratica']}' está em [{d['esta_em']}] do tutor '{d['tutor']}' (polo: {d['polo']}, cf: {d['cf_tutor']}, cursos: {d['cursos_tutor']})")
+    else:
+        print(f"[{ts()}] DIAGNÓSTICO PATCH 140: nenhuma prática de Engenharia/Química encontrada em tutor de outra categoria — o vazamento reportado pode estar em outro lugar (ex: entries anônimas/polo_sem_tutor, não cobertas aqui)")
+
     ps_list = ps_all[:30]
     cs = defaultdict(lambda: {'total_tutores': 0, 'com_100pct': 0, 'total_previstas': 0, 'total_enviadas': 0})
     for t in tutores:
