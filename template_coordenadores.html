@@ -3177,6 +3177,22 @@ function renderAgendasEstudo(){
   // TODAS as ofertas do semestre selecionado (com e sem agenda, com e sem tutor),
   // não só as que já têm data de gerenciamento registrada.
   const todasOfertas = (typeof GER_DB!=='undefined' && GER_DB ? GER_DB : DB).ger_ofertas || [];
+  // PATCH 142: setado AQUI, logo de cara — antes só era setado no fim da
+  // função (depois de um monte de código no meio). O Leo reportou "Evolução
+  // do Engajamento"/"Engajamento por Ordem"/"Horários com Maior Engajamento"
+  // aparecendo vazios no portal de coordenadores com um curso filtrado,
+  // mesmo com "Distribuição por Dia/Turno" (que usa outra fonte, mais acima
+  // na função) mostrando dado normal — sinal claro de uma exceção em algum
+  // ponto NO MEIO da função, com o filtro de curso ativo, que interrompia a
+  // execução antes de chegar na atribuição antiga (que ficava só no fim).
+  window._aeTodasOfertas = todasOfertas;
+  // PATCH 142: chamadas movidas pra CÁ (logo depois da atribuição, não mais
+  // no fim da função) — não dependem de nada calculado depois neste código,
+  // e ficavam vulneráveis a qualquer exceção no meio do caminho (com o
+  // filtro de curso do coordenador ativo) nunca serem alcançadas.
+  try{ renderEngajamentoPorOrdem(); }catch(e){ console.error('renderEngajamentoPorOrdem', e); }
+  try{ renderEvolucaoGeral(); }catch(e){ console.error('renderEvolucaoGeral', e); }
+  try{ renderMelhorEngajamento(); }catch(e){ console.error('renderMelhorEngajamento', e); }
   const totalDistintas = todasOfertas.length;
   const comTutor = todasOfertas.filter(o=>o.tem_tutor);
   const semTutor = todasOfertas.filter(o=>!o.tem_tutor);
@@ -3304,11 +3320,6 @@ function renderAgendasEstudo(){
     return g;
   });
   filterAgendasSemAluno(document.getElementById('ae-semaluno-search')?.value||'');
-
-  window._aeTodasOfertas = todasOfertas;
-  renderEngajamentoPorOrdem();
-  renderEvolucaoGeral();
-  renderMelhorEngajamento();
 }
 // ── PATCH 125 (revisado 2x): Engajamento por Ordem, agrupado pelos MESMOS 5
 // grupos usados na aba Detalhe/Gerenciamento (GRUPOS_GER + _rowMatchesGrupo)
