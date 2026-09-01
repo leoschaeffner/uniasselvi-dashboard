@@ -1519,26 +1519,37 @@ def processar(p1, p2):
     # é sobre resolução de categoria). Adiciona a CHAVE de cada tutor
     # diagnosticado, pra conseguir comparar contra a chave que a prática
     # ENGMAKER deveria ter batido, e achar o ponto exato da mistura.
-    _prefixos_alerta = ('ENGMAKER', 'ENGEMAKER', 'AGRONOMIA', 'QUÍMICA E FÍSICA')
+    # PATCH 141d: o diagnóstico anterior (PATCH 140/141b) alertava só por
+    # padrão de TEXTO no nome da prática ("começa com QUÍMICA E FÍSICA" etc),
+    # sem checar se isso realmente diverge da categoria do tutor — dava falso
+    # positivo pra tutores de Química e Física/Agronomia com práticas de
+    # Química e Física genuinamente deles (confirmado: "Determinação De Ph...
+    # " e "Estequiometria..." SÃO oficialmente da categoria dela no catálogo).
+    # Agora compara de verdade: resolve a categoria OFICIAL de cada prática
+    # (mesma lógica usada nas 3 correções) contra a categoria do tutor, só
+    # alerta se as duas divergirem de fato.
     _diagnostico_vazamento = []
-    _cfs_engenharia = {'EngeMaker | Química e Física - Engenharias e Licenciaturas', 'ENGMAKER', 'ENGMAKER+QUÍMICA E FÍSICA'}
     for t in tutores:
-        if str(t.get('cf','')).strip() in _cfs_engenharia:
-            continue  # tutor já é de Engenharia, não é vazamento (cobre os dois apelidos curtos que apontam pro mesmo nome longo via CAT_MAP)
+        _cf_tutor = str(t.get('cf', '')).strip()
         for p in (t.get('real', []) + t.get('pend', [])):
-            if any(str(p).upper().startswith(pref) for pref in _prefixos_alerta):
+            _cat_oficial_pratica = oficial_p_to_cat.get(p) or oficial_p_to_cat_norm.get(_norm_nome_pratica(p))
+            if not _cat_oficial_pratica: continue  # prática sem correspondência oficial -- não dá pra afirmar nada
+            # compara pela forma longa (mais confiável, já que cf do tutor às
+            # vezes vem no formato curto tipo "ENGMAKER+QUÍMICA E FÍSICA")
+            _cf_tutor_longo = CAT_MAP.get(_cf_tutor, _cf_tutor)
+            if _cat_oficial_pratica != _cf_tutor_longo and _cat_oficial_pratica != _cf_tutor:
                 _diagnostico_vazamento.append({
                     'pratica': p, 'tutor': t.get('n',''), 'polo': t.get('p',''),
-                    'cf_tutor': t.get('cf',''), 'cursos_tutor': t.get('cursos',''),
-                    'chave_tutor': t.get('_chave_dbg',''),
+                    'cf_tutor': _cf_tutor, 'categoria_oficial_pratica': _cat_oficial_pratica,
+                    'cursos_tutor': t.get('cursos',''), 'chave_tutor': t.get('_chave_dbg',''),
                     'esta_em': 'real' if p in t.get('real', []) else 'pend',
                 })
     if _diagnostico_vazamento:
-        print(f"[{ts()}] ⚠️  DIAGNÓSTICO PATCH 141b: {len(_diagnostico_vazamento)} prática(s) de outra categoria aparecendo na lista de tutor errado (após correção do bucket anônimo):")
+        print(f"[{ts()}] ⚠️  DIAGNÓSTICO PATCH 141d: {len(_diagnostico_vazamento)} prática(s) com categoria oficial DIFERENTE da categoria do tutor que a tem na lista:")
         for d in _diagnostico_vazamento[:15]:
-            print(f"    '{d['pratica']}' está em [{d['esta_em']}] do tutor '{d['tutor']}' (polo: {d['polo']}, chave: '{d['chave_tutor']}', cf: {d['cf_tutor']}, cursos: {d['cursos_tutor']})")
+            print(f"    '{d['pratica']}' está em [{d['esta_em']}] do tutor '{d['tutor']}' (polo: {d['polo']}, chave: '{d['chave_tutor']}') — tutor é '{d['cf_tutor']}', mas a prática é oficialmente de '{d['categoria_oficial_pratica']}'")
     else:
-        print(f"[{ts()}] DIAGNÓSTICO PATCH 141b: nenhuma prática de Engenharia/Química sobrando em tutor de outra categoria — o PATCH 141 (bucket anônimo) parece ter coberto tudo")
+        print(f"[{ts()}] DIAGNÓSTICO PATCH 141d: nenhuma divergência real encontrada — todas as práticas reconhecidas oficialmente batem com a categoria do tutor que as tem")
 
     ps_list = ps_all[:30]
     cs = defaultdict(lambda: {'total_tutores': 0, 'com_100pct': 0, 'total_previstas': 0, 'total_enviadas': 0})
