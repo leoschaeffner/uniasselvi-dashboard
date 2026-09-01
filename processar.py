@@ -1400,6 +1400,7 @@ def processar(p1, p2):
             'exp_tutor_uni_meses': _mec.get('exp_tutor_uni_meses'),
             'whatsapp': str(t.get(col_whats,'') or '') if col_whats else None,
             'chapa': str(t.get(col_chapa,'') or '') if col_chapa else None,
+            '_chave_dbg': chave,  # PATCH 141b: só pra diagnóstico, ver bloco logo abaixo
         })
     if _hist_pre_admissao:
         print(f"[{ts()}] Práticas pré-admissão removidas do tutor atual (vão pro polo): {_hist_pre_admissao}")
@@ -1424,10 +1425,23 @@ def processar(p1, p2):
     for chave_polo, hist_polo in polo_sem_tutor.items():
         if not hist_polo: continue
         _reais_polo = set(h['p'] for h in hist_polo)
-        _cf_polo = ''
+        # PATCH 141: dois problemas aqui, achados com o log real (diagnóstico
+        # PATCH 140 apontou "Tutor desligado" em Manaus/AM com práticas de
+        # ENGMAKER, mas categoria resolvida como ENF-INS): (1) essa busca
+        # usava 'oficial_p_to_cat' original, sem a normalização de prefixo do
+        # PATCH 139 — nomes como "ENGMAKER - Análise estrutural de uma viga"
+        # nunca batiam, ficavam de fora; (2) pegava a categoria da PRIMEIRA
+        # prática encontrada num 'set' (ordem não garantida/arbitrária) — se
+        # esse polo tivesse QUALQUER prática cujo nome batesse (mesmo por
+        # coincidência) com outra categoria, a categoria inteira do bucket
+        # saía errada. Trocado por votação: conta a categoria de CADA prática
+        # reconhecida (agora com fallback normalizado) e usa a mais frequente.
+        from collections import Counter as _Counter_cfpolo
+        _votos_cf_polo = _Counter_cfpolo()
         for _p_polo in _reais_polo:
-            _cf_polo = oficial_p_to_cat.get(_p_polo, '')
-            if _cf_polo: break
+            _cat_p = oficial_p_to_cat.get(_p_polo) or oficial_p_to_cat_norm.get(_norm_nome_pratica(_p_polo))
+            if _cat_p: _votos_cf_polo[_cat_p] += 1
+        _cf_polo = _votos_cf_polo.most_common(1)[0][0] if _votos_cf_polo else ''
         # Normalizar nome da categoria para o padrão do dashboard (usando CAT_MAP invertido)
         _CAT_MAP_INV = {v: k for k, v in CAT_MAP.items()}
         # Também mapear nomes parciais
@@ -1472,15 +1486,16 @@ def processar(p1, p2):
     for p in ps: ps[p]['categoria'] = p_to_cat.get(p, _p_fallback.get(p, ''))
     ps_all = sorted([{'nome': k, **v} for k, v in ps.items()], key=lambda x: -x['nao_enviou'])
 
-    # PATCH 140: diagnóstico DIRECIONADO — o PATCH 139 impede uma prática de
-    # entrar na lista OFICIAL agregada da categoria errada, mas isso não
-    # cobre o caso de ela estar na lista INDIVIDUAL de pend/real de um tutor
-    # específico (via 'praticas'/'catalogo.get(cf)' desse tutor, ou via
-    # submissão real dele) — o Leo reportou que o problema persiste mesmo com
-    # o PATCH 139 aplicado, então o vazamento está nesse segundo caminho, que
-    # ainda não tem visibilidade nenhuma no log. Aponta exatamente qual
-    # tutor/chave/curso está puxando a prática errada, pra corrigir com
-    # certeza em vez de continuar tentando adivinhar sem o dado real.
+    # PATCH 141b: refinamento do diagnóstico — o PATCH 140 já achou e o
+    # PATCH 141 já corrigiu o caso do bucket anônimo "Tutor desligado" (8 das
+    # 13 ocorrências, era resolução de categoria por 1ª prática de um set
+    # sem ordem). Sobraram 5 ocorrências em tutores REAIS e ativos (Ana Julia
+    # Ribeiro Dos Santos, Otavio Augusto Queiroz Dos Santos — cf "Química e
+    # Física - Agronomia") com prática de ENGMAKER no 'real' deles — causa
+    # DIFERENTE (a submissão real está sendo casada com a chave errada, não
+    # é sobre resolução de categoria). Adiciona a CHAVE de cada tutor
+    # diagnosticado, pra conseguir comparar contra a chave que a prática
+    # ENGMAKER deveria ter batido, e achar o ponto exato da mistura.
     _prefixos_alerta = ('ENGMAKER', 'ENGEMAKER', 'AGRONOMIA', 'QUÍMICA E FÍSICA')
     _diagnostico_vazamento = []
     for t in tutores:
@@ -1491,14 +1506,15 @@ def processar(p1, p2):
                 _diagnostico_vazamento.append({
                     'pratica': p, 'tutor': t.get('n',''), 'polo': t.get('p',''),
                     'cf_tutor': t.get('cf',''), 'cursos_tutor': t.get('cursos',''),
+                    'chave_tutor': t.get('_chave_dbg',''),
                     'esta_em': 'real' if p in t.get('real', []) else 'pend',
                 })
     if _diagnostico_vazamento:
-        print(f"[{ts()}] ⚠️  DIAGNÓSTICO PATCH 140: {len(_diagnostico_vazamento)} prática(s) de outra categoria aparecendo na lista de tutor errado:")
+        print(f"[{ts()}] ⚠️  DIAGNÓSTICO PATCH 141b: {len(_diagnostico_vazamento)} prática(s) de outra categoria aparecendo na lista de tutor errado (após correção do bucket anônimo):")
         for d in _diagnostico_vazamento[:15]:
-            print(f"    '{d['pratica']}' está em [{d['esta_em']}] do tutor '{d['tutor']}' (polo: {d['polo']}, cf: {d['cf_tutor']}, cursos: {d['cursos_tutor']})")
+            print(f"    '{d['pratica']}' está em [{d['esta_em']}] do tutor '{d['tutor']}' (polo: {d['polo']}, chave: '{d['chave_tutor']}', cf: {d['cf_tutor']}, cursos: {d['cursos_tutor']})")
     else:
-        print(f"[{ts()}] DIAGNÓSTICO PATCH 140: nenhuma prática de Engenharia/Química encontrada em tutor de outra categoria — o vazamento reportado pode estar em outro lugar (ex: entries anônimas/polo_sem_tutor, não cobertas aqui)")
+        print(f"[{ts()}] DIAGNÓSTICO PATCH 141b: nenhuma prática de Engenharia/Química sobrando em tutor de outra categoria — o PATCH 141 (bucket anônimo) parece ter coberto tudo")
 
     ps_list = ps_all[:30]
     cs = defaultdict(lambda: {'total_tutores': 0, 'com_100pct': 0, 'total_previstas': 0, 'total_enviadas': 0})
@@ -1584,6 +1600,8 @@ def processar(p1, p2):
             if t.get('ch_semanal') and not ex.get('ch_semanal'): ex['ch_semanal'] = t['ch_semanal']
     tutores_out = tutores_dedup
     print(f"[{ts()}] Após deduplicação: {len(tutores_out)} tutores únicos")
+    for _t_clean in tutores_out:
+        _t_clean.pop('_chave_dbg', None)  # PATCH 141b: só era pra diagnóstico, não vai pro JSON final
 
     # PATCH 13: anexa o relatório de acompanhamento/comunicação na ficha do tutor
     def _norm_nome(s):
