@@ -1653,6 +1653,48 @@ def processar(p1, p2):
             if t.get('ch_semanal') and not ex.get('ch_semanal'): ex['ch_semanal'] = t['ch_semanal']
     tutores_out = tutores_dedup
     print(f"[{ts()}] Após deduplicação: {len(tutores_out)} tutores únicos")
+
+    # PATCH 148: ícone de "obras" pedido pelo Leo — planilha de laboratórios
+    # com pendências (Não Apto/Não Implantou/etc), mantida manualmente por
+    # ele (mesmo padrão do catalogo_oficial.json/contatos_por_polo.json:
+    # arquivo JSON comitado no repo, atualizado à mão quando a situação
+    # muda). Casa por polo normalizado (mesma normalização usada no resto do
+    # gerenciamento) + categoria — quando a planilha não tem categoria
+    # informada (seção "Polos Próprios"), vale pra QUALQUER categoria
+    # daquele polo.
+    _labs_pend_path = os.path.join(SCRIPT_DIR, 'labs_pendencias.json')
+    if os.path.isfile(_labs_pend_path):
+        with open(_labs_pend_path, encoding='utf-8') as _f_labs:
+            _labs_pendencias = json.load(_f_labs)
+        import re as _re_labs, unicodedata as _ud_labs
+        def _norm_polo_labs(s):
+            s = str(s or '').replace('\xa0', ' ').strip()
+            s = _re_labs.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_labs.IGNORECASE)
+            s = _re_labs.sub(r'\([^)]*\)', '', s)
+            s = _ud_labs.normalize('NFD', s)
+            s = ''.join(c for c in s if _ud_labs.category(c) != 'Mn')
+            return _re_labs.sub(r'\s+', ' ', s).strip().lower()
+        _labs_por_polo = {}
+        for _lp in _labs_pendencias:
+            _labs_por_polo.setdefault(_lp['polo_norm'], []).append(_lp)
+        _enr_labs = 0
+        for _t in tutores_out:
+            _polo_norm_t = _norm_polo_labs(_t.get('p', ''))
+            _candidatos = _labs_por_polo.get(_polo_norm_t, [])
+            if not _candidatos: continue
+            _cat_t = str(_t.get('c', '') or '')
+            _match = None
+            for _cand in _candidatos:
+                if not _cand.get('categoria') or _cand['categoria'] == _cat_t or _cand['categoria'] in _cat_t or _cat_t in _cand['categoria']:
+                    _match = _cand; break
+            if _match:
+                _t['lab_pendencia'] = {'status': _match['status'], 'motivo': _match['motivo']}
+                _enr_labs += 1
+        if _enr_labs:
+            print(f"[{ts()}] Tutores com laboratório pendente/não apto marcados: {_enr_labs}")
+    else:
+        print(f"[{ts()}] AVISO: labs_pendencias.json não encontrado — ícone de obras não será exibido")
+
     for _t_clean in tutores_out:
         _t_clean.pop('_chave_dbg', None)  # PATCH 141b: só era pra diagnóstico, não vai pro JSON final
 
@@ -4069,9 +4111,34 @@ if __name__ == '__main__':
                 _agend_geral_sem = int((_ger_dados_sem.get('ger_kpis') or {}).get('total_alunos_agendados', 0))
                 _agend_por_polo_sem = {p['polo']: p.get('alunos_agendados', 0) for p in _ger_dados_sem.get('ger_polo', [])}
                 _agend_por_cat_sem = {c['categoria']: c.get('alunos_agendados', 0) for c in _ger_dados_sem.get('ger_cat', [])}
+                # PATCH 147: o cruzamento por polo comparava os nomes de polo
+                # DIRETO, sem normalizar — "Blumenau/SC - Salto Do Norte
+                # (Centro Universitário Dante)" (como vem no formulário de
+                # portfólio) nunca batia com o nome equivalente do lado do
+                # GIOCONDA (normalmente sem esse complemento entre
+                # parênteses), então aparecia "48 registrado, 0 agendado"
+                # como se fossem dois polos diferentes, quando é o mesmo
+                # local físico. Agora normaliza os dois lados (mesma função
+                # já usada no resto do gerenciamento, _norm_polo_ger) antes
+                # de casar, e soma quando mais de um nome bruto colapsa na
+                # mesma chave normalizada.
+                def _agrupar_norm(dic_bruto):
+                    agrupado = {}
+                    nome_disp = {}
+                    for nome_bruto, valor in dic_bruto.items():
+                        chave_norm = _norm_polo_ger(nome_bruto)
+                        agrupado[chave_norm] = agrupado.get(chave_norm, 0) + valor
+                        # nome de exibição: prefere o mais curto (geralmente o
+                        # "oficial", sem complementos como "(Centro X)")
+                        if chave_norm not in nome_disp or len(nome_bruto) < len(nome_disp[chave_norm]):
+                            nome_disp[chave_norm] = nome_bruto
+                    return agrupado, nome_disp
+                _port_norm, _port_nome_disp = _agrupar_norm(_port_dedup_sem.get('por_polo', {}))
+                _agend_norm, _agend_nome_disp = _agrupar_norm(_agend_por_polo_sem)
+                _nome_disp_final = dict(_port_nome_disp); _nome_disp_final.update(_agend_nome_disp)  # prioriza nome do GIOCONDA quando os dois têm
                 _por_polo_c = sorted(
-                    [{'polo': _p, **_cruza(_port_dedup_sem.get('por_polo', {}).get(_p, 0), _agend_por_polo_sem.get(_p, 0))}
-                     for _p in set(_port_dedup_sem.get('por_polo', {}).keys()) | set(_agend_por_polo_sem.keys())],
+                    [{'polo': _nome_disp_final.get(_pn, _pn), **_cruza(_port_norm.get(_pn, 0), _agend_norm.get(_pn, 0))}
+                     for _pn in set(_port_norm.keys()) | set(_agend_norm.keys())],
                     key=lambda x: -x['registrado_portfolio'])
                 _por_cat_c = sorted(
                     [{'categoria': _c, **_cruza(_port_por_cat_amplo.get(_c, 0), _agend_por_cat_sem.get(_c, 0))}
