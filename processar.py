@@ -979,7 +979,7 @@ def processar(p1, p2):
     for _, r in df_p.iterrows():
         chave = str(r.get('_CHAVE', '') or '').strip()
         chave = chave_alias.get(chave, chave)
-        proto = r['_PROTO']
+        proto = str(r['_PROTO']) if pd.notna(r['_PROTO']) else ''
         if not chave or chave == 'nan' or not proto or proto == 'nan': continue
         cf = chave_to_cf.get(chave, '')
         if not cf: continue
@@ -1142,7 +1142,7 @@ def processar(p1, p2):
     _correcoes_perfil = 0
     _correcoes_perfil_falhou = set()
     for _, r in df_p.iterrows():
-        chave = r['_CHAVE']; proto = r['_PROTO']
+        chave = r['_CHAVE']; proto = str(r['_PROTO']) if pd.notna(r['_PROTO']) else ''
         if not chave or chave == 'nan' or not proto or proto == 'nan': continue
 
         # Ignorar emails de gestão
