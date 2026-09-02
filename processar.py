@@ -2808,6 +2808,39 @@ def _processar_gerenciamento_novo(df_g):
     # é a data em DT_GERENCIADA. O critério anterior (tutor + ofertas cadastradas)
     # inflava a contagem de "gerenciadas" pra muito além do que foi feito de fato.
     df['_GERENCIADO'] = df['_TEM_TUTOR'] & df['_TEM_AGENDA']
+    # PATCH 150: confirmado pelo Leo — a coluna de ofertas cadastradas (_OFE)
+    # indica quantas vagas/turmas reais aquela linha representa (ex: GIOCONDA
+    # divide uma prática com 30 alunos em duas ofertas de capacidade menor
+    # quando o laboratório só comporta 20 por vez). O código sempre tratou
+    # cada LINHA do relatório como exatamente 1 oferta, subcontando sempre
+    # que esse valor é maior que 1 — reportado pelo Leo com um exemplo real
+    # (tutora Maira: 8 ofertas reais na Ordem 3, sistema mostrava 6).
+    #
+    # CUIDADO (testado antes de subir): quando a prática já vem DUPLICADA
+    # como linhas físicas separadas na fonte (cada cópia carregando o MESMO
+    # valor de _OFE), expandir CADA linha pelo próprio peso multiplica duas
+    # vezes (2 linhas × peso 2 = 4, quando o real é 2). Por isso: agrupa por
+    # uma chave que identifica UMA prática (polo+categoria+prática+tutor+
+    # data), usa o peso só na PRIMEIRA linha de cada grupo e zera nas
+    # repetidas — reproduzido com o exemplo exato da Maira e confirmado que
+    # bate os 8 esperados, não 12.
+    df['_PESO_OFERTA'] = df['_OFE'].clip(lower=1)
+    _chave_cols = [c for c in [c_polo, c_cat, c_exp, c_tutor, c_dt_ag] if c]
+    if _chave_cols:
+        _ja_visto = set()
+        _pesos_finais = []
+        for _, row in df.iterrows():
+            chave = tuple(row[c] for c in _chave_cols)
+            if chave in _ja_visto:
+                _pesos_finais.append(0)  # já contado na primeira ocorrência deste grupo
+            else:
+                _ja_visto.add(chave)
+                _pesos_finais.append(row['_PESO_OFERTA'])
+        df['_PESO_OFERTA'] = _pesos_finais
+    if (df['_PESO_OFERTA'] != 1).any():
+        _total_antes = len(df)
+        df = df.loc[df.index.repeat(df['_PESO_OFERTA'])].reset_index(drop=True)
+        print(f"[{ts()}] Ofertas expandidas por capacidade (_OFE/QUANTIDADE, deduplicado por prática): {_total_antes} linhas -> {len(df)} ofertas reais")
     df['_HR_AG'] = df[c_hr_ag].fillna('').astype(str).str.strip().replace('nan','').replace('NaT','') if c_hr_ag else ''
     # PATCH 30: dia da semana e turno derivados de DT/HR_GERENCIADA — usados na
     # nova seção "Análise de Agendas" (horários incomuns + sessões sem aluno).
