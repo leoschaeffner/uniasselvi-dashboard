@@ -4101,6 +4101,25 @@ if __name__ == '__main__':
                         'diferenca': port - agend,
                         'pct_registrado_sobre_agendado': round(port / agend * 100, 1) if agend else None}
 
+            import re as _re_cruz, unicodedata as _ud_cruz
+            def _norm_polo_cruzamento(s):
+                # PATCH 149: URGENTE — o PATCH 147 chamava '_norm_polo_ger',
+                # mas essa função só existe dentro de
+                # processar_gerenciamento_semestres(), uma função SEPARADA —
+                # aqui dentro de processar() ela não existe, e isso gerava um
+                # NameError sempre que o cruzamento rodava. Esse erro caía no
+                # except genérico do bloco de gerenciamento, que marca
+                # tem_gerenciamento=False e esconde a aba inteira — foi isso
+                # que fez "sumir tudo" (Gerenciamento inteiro) reportado pelo
+                # Leo. Função local, mesma lógica (remove prefixo "LAP -",
+                # remove parênteses, remove acentos, normaliza espaços).
+                s = str(s or '').strip()
+                s = _re_cruz.sub(r'^LAP\s*[-–]\s*', '', s, flags=_re_cruz.IGNORECASE)
+                s = _re_cruz.sub(r'\([^)]*\)', '', s)
+                s = _ud_cruz.normalize('NFD', s)
+                s = ''.join(c for c in s if _ud_cruz.category(c) != 'Mn')
+                return _re_cruz.sub(r'\s+', ' ', s).strip().lower()
+
             def _monta_cruzamento(_port_dedup_sem, _ger_dados_sem):
                 _port_por_cat_amplo = {}
                 for _cat_bruta, _val in _port_dedup_sem.get('por_categoria', {}).items():
@@ -4119,14 +4138,14 @@ if __name__ == '__main__':
                 # parênteses), então aparecia "48 registrado, 0 agendado"
                 # como se fossem dois polos diferentes, quando é o mesmo
                 # local físico. Agora normaliza os dois lados (mesma função
-                # já usada no resto do gerenciamento, _norm_polo_ger) antes
+                # já usada no resto do gerenciamento, _norm_polo_cruzamento) antes
                 # de casar, e soma quando mais de um nome bruto colapsa na
                 # mesma chave normalizada.
                 def _agrupar_norm(dic_bruto):
                     agrupado = {}
                     nome_disp = {}
                     for nome_bruto, valor in dic_bruto.items():
-                        chave_norm = _norm_polo_ger(nome_bruto)
+                        chave_norm = _norm_polo_cruzamento(nome_bruto)
                         agrupado[chave_norm] = agrupado.get(chave_norm, 0) + valor
                         # nome de exibição: prefere o mais curto (geralmente o
                         # "oficial", sem complementos como "(Centro X)")
