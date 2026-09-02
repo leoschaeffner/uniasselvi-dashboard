@@ -1,0 +1,522 @@
+[
+  {
+    "polo_norm": "nova mutum/mt",
+    "polo_original": "Nova Mutum/MT",
+    "categoria": "ENGMAKER+QUÍMICA E FÍSICA",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CBF"
+  },
+  {
+    "polo_norm": "abaetetuba/pa",
+    "polo_original": "Abaetetuba/PA",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CEC"
+  },
+  {
+    "polo_norm": "ipueiras/ce",
+    "polo_original": "Ipueiras/CE",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CEI"
+  },
+  {
+    "polo_norm": "itapipoca/ce",
+    "polo_original": "Itapipoca/CE",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CEI"
+  },
+  {
+    "polo_norm": "sobral/ce",
+    "polo_original": "Sobral/CE",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CEI"
+  },
+  {
+    "polo_norm": "pato branco/pr",
+    "polo_original": "Pato Branco/PR",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CEOS"
+  },
+  {
+    "polo_norm": "telemaco borba/pr",
+    "polo_original": "Telêmaco Borba/PR",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "DIMENSÃO TB"
+  },
+  {
+    "polo_norm": "criciuma/sc",
+    "polo_original": "Criciúma/SC",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "ESUCRI"
+  },
+  {
+    "polo_norm": "luis eduardo magalhaes/ba",
+    "polo_original": "Luís Eduardo Magalhães/BA",
+    "categoria": "ENGMAKER+QUÍMICA E FÍSICA",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "FACULDADE RIACHAO"
+  },
+  {
+    "polo_norm": "garanhuns/pe",
+    "polo_original": "Garanhuns/PE",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "FOCO"
+  },
+  {
+    "polo_norm": "rolim de moura/ro",
+    "polo_original": "Rolim de Moura/RO",
+    "categoria": "ENGMAKER+QUÍMICA E FÍSICA",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "INSTITUTO ARCHE EDUCACIONAL"
+  },
+  {
+    "polo_norm": "tucuma/pa",
+    "polo_original": "Tucumã/PA",
+    "categoria": "ENGMAKER",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "OMEGA"
+  },
+  {
+    "polo_norm": "aracaju/se - ponto novo",
+    "polo_original": "Aracaju/SE - Ponto Novo",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "ALFAMA"
+  },
+  {
+    "polo_norm": "maceio/al - pitanguinha",
+    "polo_original": "Maceió/AL - Pitanguinha",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "ALFAMA"
+  },
+  {
+    "polo_norm": "recife/pe - madalena",
+    "polo_original": "Recife/PE - Madalena",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Precisa fazer todas as instalações",
+    "empresa": "ALFAMA"
+  },
+  {
+    "polo_norm": "nova mutum/mt",
+    "polo_original": "Nova Mutum/MT",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CBF"
+  },
+  {
+    "polo_norm": "macapa/ap",
+    "polo_original": "Macapá/AP",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "CEA"
+  },
+  {
+    "polo_norm": "ponta pora/ms",
+    "polo_original": "Ponta Porã/MS",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "CEAM"
+  },
+  {
+    "polo_norm": "boa vista/rr - centro",
+    "polo_original": "Boa Vista/RR - Centro",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "CEC"
+  },
+  {
+    "polo_norm": "itapipoca/ce",
+    "polo_original": "Itapipoca/CE",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Precisa instalar o chuveiro lava-olhos e saída de ar da capela",
+    "empresa": "CEI"
+  },
+  {
+    "polo_norm": "pouso alegre/mg",
+    "polo_original": "Pouso Alegre/MG",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "CPAC"
+  },
+  {
+    "polo_norm": "belem/pa - nazare",
+    "polo_original": "Belém/PA - Nazaré",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "EAD PARÁ"
+  },
+  {
+    "polo_norm": "maraba/pa - cidade nova",
+    "polo_original": "Marabá/PA - Cidade Nova",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "EAD PARÁ"
+  },
+  {
+    "polo_norm": "novo progresso/pa",
+    "polo_original": "Novo Progresso/PA",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "EAD PARÁ"
+  },
+  {
+    "polo_norm": "parauapebas/pa",
+    "polo_original": "Parauapebas/PA",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "EAD PARÁ"
+  },
+  {
+    "polo_norm": "nova iguacu/rj - centro",
+    "polo_original": "Nova Iguaçu/RJ - Centro",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "ELION"
+  },
+  {
+    "polo_norm": "foz do iguacu/pr",
+    "polo_original": "Foz do Iguaçu/PR",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Chuveiro lava-olhos, capela, balanças, estufa e mufla instaladas incorretamente",
+    "empresa": "FUTURA INSTITUTO EDU"
+  },
+  {
+    "polo_norm": "capao da canoa/rs",
+    "polo_original": "Capão Da Canoa/RS",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "IEPAR"
+  },
+  {
+    "polo_norm": "novo hamburgo/rs - centro",
+    "polo_original": "Novo Hamburgo/RS - Centro",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "obras complexas",
+    "empresa": "IERGS"
+  },
+  {
+    "polo_norm": "porto alegre/rs - centro historico",
+    "polo_original": "Porto Alegre/RS - Centro Histórico",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "IERGS"
+  },
+  {
+    "polo_norm": "porto alegre/rs - zona norte",
+    "polo_original": "Porto Alegre/RS - Zona Norte",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "IERGS"
+  },
+  {
+    "polo_norm": "herval d'oeste/sc",
+    "polo_original": "Herval D'Oeste/SC",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "IES VALE"
+  },
+  {
+    "polo_norm": "senhor do bonfim/ba",
+    "polo_original": "Senhor do Bonfim/BA",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "INSTITUTO INFORMA"
+  },
+  {
+    "polo_norm": "campinas/sp - abolicao",
+    "polo_original": "Campinas/SP - Abolição",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Integrado a outro Multi, lava-olhos, capela, balanças, estua e mufla instaladas incorretamente",
+    "empresa": "LDS"
+  },
+  {
+    "polo_norm": "florianopolis/sc - centro",
+    "polo_original": "Florianópolis/SC - Centro",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "MBS"
+  },
+  {
+    "polo_norm": "rio verde/go",
+    "polo_original": "Rio Verde/GO",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Está em obra- mudança de endereço",
+    "empresa": "MBS"
+  },
+  {
+    "polo_norm": "itaguai/rj - edificio manancial",
+    "polo_original": "Itaguaí/RJ - Edifício Manancial",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Chuveiro lava-olhos, saída de ar da capela, balanças, estua e mufla instaladas incorretamente",
+    "empresa": "N P DE MELLO CURSOS TECNICOS"
+  },
+  {
+    "polo_norm": "camaqua/rs",
+    "polo_original": "Camaquã/RS",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Precisa ralo abaixo do chuveiro lava-olhos, balanças, estua e mufla instaladas incorretamente",
+    "empresa": "SERVI"
+  },
+  {
+    "polo_norm": "caxias do sul/rs - shopping villagio",
+    "polo_original": "Caxias Do Sul/RS - Shopping Villagio",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "UNIERGS"
+  },
+  {
+    "polo_norm": "campos dos goytacazes/rj",
+    "polo_original": "Campos dos Goytacazes/RJ",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "duque de caxias/rj - centro",
+    "polo_original": "Duque de Caxias/RJ - Centro",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Leo comunicou em 28/08 que laboratório esta em atividade e tutor já esta aplicando prática",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "itaborai/rj",
+    "polo_original": "Itaboraí/RJ",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "macae/rj",
+    "polo_original": "Macaé/RJ",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Sem ralo de chuveiro lava-olhos, sem capela de exaustação",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "niteroi/rj - inga",
+    "polo_original": "Niterói/RJ - Ingá",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "rio de janeiro/rj - campo grande",
+    "polo_original": "Rio de Janeiro/RJ - Campo Grande",
+    "categoria": "BIO-FAR (Multidisciplinar I)",
+    "status": "Não Apto",
+    "motivo": "Polo em obra",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "maceio/al - pitanguinha",
+    "polo_original": "Maceió/AL - Pitanguinha",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Precisa fazer todas as instalações",
+    "empresa": "ALFAMA"
+  },
+  {
+    "polo_norm": "ipueiras/ce",
+    "polo_original": "Ipueiras/CE",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Está integrado com o lab. de Estética e Fisioterapia",
+    "empresa": "CEI"
+  },
+  {
+    "polo_norm": "pouso alegre/mg",
+    "polo_original": "Pouso Alegre/MG",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Não possui ponto hidráulico, torneira de sensor e pia lava-braços",
+    "empresa": "CPAC"
+  },
+  {
+    "polo_norm": "rio verde/go",
+    "polo_original": "Rio Verde/GO",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Está em obra- mudança de endereço",
+    "empresa": "MBS"
+  },
+  {
+    "polo_norm": "maceio/al - pitanguinha",
+    "polo_original": "Maceió/AL - Pitanguinha",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Precisa fazer todas as instalações",
+    "empresa": "ALFAMA"
+  },
+  {
+    "polo_norm": "pouso alegre/mg",
+    "polo_original": "Pouso Alegre/MG",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Não possui ponto hidráulico, torneira de sensor e pia lava-braços",
+    "empresa": "CPAC"
+  },
+  {
+    "polo_norm": "rio verde/go",
+    "polo_original": "Rio Verde/GO",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Está em obra- mudança de endereço",
+    "empresa": "MBS"
+  },
+  {
+    "polo_norm": "sao jose do rio preto/sp - centro",
+    "polo_original": "São José do Rio Preto/SP - Centro",
+    "categoria": "ENF-INS (Multidisciplinar II)",
+    "status": "Não Apto",
+    "motivo": "Polo  em distrato, laboratório será fechado.",
+    "empresa": "EDUCARE"
+  },
+  {
+    "polo_norm": "ipueiras/ce",
+    "polo_original": "Ipueiras/CE",
+    "categoria": "BIO-FISIO-EST-TO (Multidisciplinar III)",
+    "status": "Não Apto",
+    "motivo": "Está integrado com o lab. de Enfermagem",
+    "empresa": "CEI"
+  },
+  {
+    "polo_norm": "criciuma/sc",
+    "polo_original": "Criciúma/SC",
+    "categoria": "BIO-FISIO-EST-TO (Multidisciplinar III)",
+    "status": "Não Apto",
+    "motivo": "Temos visita agendada para dia 31/08",
+    "empresa": "ESUCRI"
+  },
+  {
+    "polo_norm": "duque de caxias/rj - centro",
+    "polo_original": "Duque de Caxias/RJ - Centro",
+    "categoria": "BIO-FISIO-EST-TO (Multidisciplinar III)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "rio de janeiro/rj - campo grande",
+    "polo_original": "Rio de Janeiro/RJ - Campo Grande",
+    "categoria": "BIO-FISIO-EST-TO (Multidisciplinar III)",
+    "status": "Não Apto",
+    "motivo": "Polo em obra",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "brasilia/df - nucleo bandeirante",
+    "polo_original": "Brasília/DF - Núcleo Bandeirante",
+    "categoria": "NUTRI (Multidisciplinar IV)",
+    "status": "Não Apto",
+    "motivo": "Integrado a outro multi",
+    "empresa": "IBRAP"
+  },
+  {
+    "polo_norm": "campinas/sp - abolicao",
+    "polo_original": "Campinas/SP - Abolição",
+    "categoria": "NUTRI (Multidisciplinar IV)",
+    "status": "Não Apto",
+    "motivo": "Não Implantado",
+    "empresa": "LDS"
+  },
+  {
+    "polo_norm": "florianopolis/sc - centro",
+    "polo_original": "Florianópolis/SC - Centro",
+    "categoria": "NUTRI (Multidisciplinar IV)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "MBS"
+  },
+  {
+    "polo_norm": "duque de caxias/rj - centro",
+    "polo_original": "Duque de Caxias/RJ - Centro",
+    "categoria": "NUTRI (Multidisciplinar IV)",
+    "status": "Não Apto",
+    "motivo": "Laboratório não está implantado",
+    "empresa": "YNOVA"
+  },
+  {
+    "polo_norm": "ipu/ce",
+    "polo_original": "Ipu/CE",
+    "categoria": "",
+    "status": "Problemas de obras no lab. Montado",
+    "motivo": "Polo enviou vídeos por e-mail da situação do lab.Sem condições de aplicar a prática. Aline disse que esta sendo tratada a situação.",
+    "empresa": "100250658"
+  },
+  {
+    "polo_norm": "cariacica/es - shopping moxuara",
+    "polo_original": "Cariacica/ES - Shopping Moxuara",
+    "categoria": "",
+    "status": "Não Implantou",
+    "motivo": "Problemas com shopping",
+    "empresa": "100250110"
+  },
+  {
+    "polo_norm": "cariacica/es - shopping moxuara",
+    "polo_original": "Cariacica/ES - Shopping Moxuara",
+    "categoria": "",
+    "status": "Não Implantou",
+    "motivo": "Problemas com shopping",
+    "empresa": "100250110"
+  },
+  {
+    "polo_norm": "belo horizonte/mg - shopping estacao bh",
+    "polo_original": "Belo Horizonte/MG - Shopping Estação BH",
+    "categoria": "",
+    "status": "Não Implantou",
+    "motivo": "Recebeu o lab e não implantou, estão vendo nova sala. No sistema já não consta mais como HUB Multi IV",
+    "empresa": "100250567"
+  }
+]
