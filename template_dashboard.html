@@ -630,6 +630,10 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <div class="sec-label" style="margin-bottom:8px">🌱 Em Treinamento (≤60 dias, sem gerenciamento)</div>
       <div id="det-treinamento-chart" style="display:flex;align-items:center;gap:16px"></div>
     </div>
+    <div style="flex-shrink:0;padding-left:24px;border-left:1px solid var(--border)">
+      <div class="sec-label" style="margin-bottom:8px">🚧 Laboratório em Obras/Não Apto</div>
+      <div id="det-obras-chart" style="display:flex;align-items:center;gap:16px"></div>
+    </div>
   </div>
   <div class="card">
     <div class="toolbar">
@@ -2177,6 +2181,7 @@ function filterGerDetalhe(q){
   window._detCatAtual = grupoLabel;
   renderDetPizza(sortedParaPizza, grupoLabel);
   renderDetTreinamento(sortedParaPizza, ord);
+  renderDetObras(sortedParaPizza, ord);
   // PATCH 93: segundo gráfico, lado a lado — reflete a ORDEM selecionada
   // especificamente (sem trivializar 100%/0% com o filtro de Status, mesma
   // lógica de sempre: "geriu alguma coisa nesta ordem" independente do
@@ -2308,6 +2313,41 @@ function renderDetTreinamento(sorted, ord){
     + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+' — '+(ord?'mesmo recorte de curso e '+ord+' do gráfico ao lado':'mesmo recorte de curso do gráfico ao lado')+'</div>'
     + '</div>';
   document.getElementById('det-treinamento-chart').innerHTML = svg + legenda;
+}
+function renderDetObras(sorted, ord){
+  var lista = ord ? sorted.filter(function(t){ return t.temOrdemSel; }) : sorted;
+  var nomesUnicos = {};
+  lista.forEach(function(t){ if(t.tutor) nomesUnicos[_normTutorKey(t.tutor)] = t.tutor; });
+  var nomes = Object.values(nomesUnicos);
+  var emObras = nomes.filter(function(nome){ return !!_labPendenciaDoTutor(nome); }).length;
+  var total = nomes.length || 1;
+  var pctObras = Math.round(emObras/total*100);
+  var restante = nomes.length - emObras;
+  var anguloObras = emObras/total*360;
+  var corObras='#b45309', corResto='#d1d5db';
+  function fatiaSVG3(anguloIni, anguloFim, cor){
+    var r=42,cx=50,cy=50;
+    var a1=(anguloIni-90)*Math.PI/180, a2=(anguloFim-90)*Math.PI/180;
+    var x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    var x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    var largeArc = (anguloFim-anguloIni)>180 ? 1 : 0;
+    if((anguloFim-anguloIni)>=360) return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+cor+'"/>';
+    if(anguloFim===anguloIni) return '';
+    return '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+cor+'"/>';
+  }
+  var svg = '<svg viewBox="0 0 100 100" width="110" height="110">'
+    + fatiaSVG3(0, anguloObras, corObras)
+    + fatiaSVG3(anguloObras, 360, corResto)
+    + '<circle cx="50" cy="50" r="24" fill="var(--surface)"/>'
+    + '<text x="50" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="var(--font)">'+pctObras+'%</text>'
+    + '<text x="50" y="60" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--font)">em obras</text>'
+    + '</svg>';
+  var legenda = '<div style="font-size:12px">'
+    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corObras+';display:inline-block"></span> Em obras/não apto: <strong>'+emObras+'</strong></div>'
+    + '<div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+corResto+';display:inline-block"></span> Demais: <strong>'+restante+'</strong></div>'
+    + '<div style="margin-top:8px;color:var(--muted);font-size:11px">de '+total+' tutor'+(total!==1?'es':'')+' — '+(ord?'mesmo recorte de curso e '+ord+' do gráfico ao lado':'mesmo recorte de curso do gráfico ao lado')+'</div>'
+    + '</div>';
+  document.getElementById('det-obras-chart').innerHTML = svg + legenda;
 }
 function exportRelatorioPorCurso(){
   var sorted = window._detSortedAtual || [];
