@@ -1386,9 +1386,25 @@ def processar(p1, p2):
         _inicio_ctrl = t.get(col_inicio) if col_inicio else None
         _inicio_str = None
         if _inicio_ctrl and str(_inicio_ctrl) not in ('nan','NaT','None',''):
+            # PATCH 153: achado com o Leo — "Em treinamento" sempre em 0,
+            # mesmo com tutores genuinamente admitidos há poucos dias. Causa:
+            # quando a coluna INÍCIO do CONTROLE vem como TEXTO (não como
+            # data nativa do Excel — comum quando alguém digita a data à
+            # mão), o código antigo pegava só os primeiros 10 caracteres da
+            # string crua ("17/08/2026", formato brasileiro) sem converter
+            # pra ISO — o front-end faz `new Date("17/08/2026T00:00:00")`,
+            # que o JavaScript não consegue interpretar (não é um formato
+            # válido), retornando "Invalid Date" silenciosamente pra TODO
+            # tutor com data em texto. Agora usa um parser de data robusto
+            # (aceita texto BR dia/mês/ano, data nativa do Excel, timestamp)
+            # e sempre grava em ISO (YYYY-MM-DD), formato que o front-end
+            # sabe interpretar.
             try:
-                _inicio_str = _inicio_ctrl.strftime('%Y-%m-%d') if hasattr(_inicio_ctrl,'strftime') else str(_inicio_ctrl)[:10]
-            except: pass
+                _inicio_parsed = pd.to_datetime(_inicio_ctrl, dayfirst=True, errors='coerce')
+                if pd.notna(_inicio_parsed):
+                    _inicio_str = _inicio_parsed.strftime('%Y-%m-%d')
+            except Exception:
+                pass
         if not _inicio_str: _inicio_str = _mec.get('admissao')
 
         # PATCH 17: agregado por polo+CURSO ESPECÍFICO (não categoria ampla) — cobre
