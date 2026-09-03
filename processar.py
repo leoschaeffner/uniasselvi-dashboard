@@ -781,18 +781,18 @@ def processar(p1, p2):
                     print(f"[{ts()}] Catalogo oficial (Excel): {len(catalogo_oficial)} categorias, {sum(len(v) for v in catalogo_oficial.values())} práticas")
             except Exception as e: print(f"[{ts()}] AVISO: Erro ao ler catálogo Excel: {e}")
 
-    # PATCH 146: o Leo confirmou com um arquivo real recém-salvo do
-    # SharePoint (526 envios de verdade!) que o PORTIFOLIO_TUTOR_2026_2.xlsx
-    # é o MESMO formato do arquivo de 2026/1 (aba Sheet1, formulário com
-    # perguntas repetidas, 122 colunas) — NÃO o schema simplificado
-    # (ID/POLO/CATEGORIA_LAB/PROTOCOLO_ID/QTD_ESTUDANTES) que o PATCH 128
-    # assumia com base num log que aparentemente vinha de outra fonte. A
-    # ÚNICA diferença real do arquivo de 2026/1: não tem a coluna auxiliar
-    # "CHAVE LINK POLO" (adicionada à mão só na planilha de 2026/1) — por
-    # isso não dá pra reusar o c_chave/_faltando_portfolio de cima direto,
-    # mas dá pra reconstruir a chave via categoria_para_curso.json (mesmo
-    # mecanismo já usado no cruzamento Portfólio×Agendado, PATCH 123/127) +
-    # POLO, do mesmo jeito que o CONTROLE constrói a própria chave.
+    # PATCH 151: achado GRAVE com o Leo — o PATCH 146 lia só a coluna de
+    # protocolo da "rodada 7" (sufixo ":7"), achando que era a mais completa
+    # (mesmo padrão do arquivo de 2026/1). Só que no 2026/2 CADA rodada (base,
+    # :2, :3 ... :7) representa uma PRÁTICA DIFERENTE que o tutor reportou na
+    # MESMA submissão — não é uma cópia repetida onde só a última vale. Só 17
+    # das 526 linhas tinham dado na rodada 7; a maioria usa rodada 2 (231) e
+    # 3 (156). Resultado: quase todo mundo sumia, sobrando só quem por acaso
+    # preencheu até a rodada 7 (por coincidência, só tutores de Química e
+    # Física apareceram como "enviaram"). Corrigido: expande cada linha em
+    # até 7 sub-linhas, uma por rodada preenchida, cada uma com seu próprio
+    # protocolo+data+alunos (as colunas POLO/CATEGORIA/ORDEM/TUTOR são as
+    # mesmas em todas as rodadas da mesma submissão, só repete).
     p2b = achar_arquivo(SCRIPT_DIR, "PORTIFOLIO_TUTOR_2026_2.xlsx")
     if p2b:
         try:
@@ -803,57 +803,81 @@ def processar(p1, p2):
             _cpc_2026_2 = os.path.join(SCRIPT_DIR, 'categoria_para_curso.json')
             _cat_para_curso_2026_2 = json.load(open(_cpc_2026_2, encoding='utf-8')) if os.path.isfile(_cpc_2026_2) else {}
             c_polo_2b = col(df_novo, 'POLO')
-            c_proto_2b = col(df_novo, 'PROTOCOLOS', 'ATIVIDADES')
-            for sfx in (':7', ':8', ':6', ':9'):
-                proto_sfx = [c for c in df_novo.columns if 'PROTOCOLOS' in str(c).upper() and str(c).endswith(sfx)]
-                if proto_sfx: c_proto_2b = proto_sfx[0]; break
-            else:
-                proto_any = [c for c in df_novo.columns if 'PROTOCOLOS' in str(c).upper() or 'ATIVIDADE' in str(c).upper()]
-                if proto_any: c_proto_2b = proto_any[0]
-            data_cols_2b = [c for c in df_novo.columns if 'DATA DA APLICA' in str(c).upper() and str(c).endswith(':7')]
-            if not data_cols_2b: data_cols_2b = [c for c in df_novo.columns if 'DATA DA APLICA' in str(c).upper()]
-            if not data_cols_2b: data_cols_2b = [c for c in df_novo.columns if 'DATA' in str(c).upper() and 'APLICA' in str(c).upper()]
-            c_data_2b = data_cols_2b[0] if data_cols_2b else None
-            aluno_soma_2b = soma_estudantes(df_novo)
             cat_cols_2b = [c for c in df_novo.columns if 'CATEGORIA' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
             c_cat_2b = cat_cols_2b[0] if cat_cols_2b else None
             ordem_cols_2b = [c for c in df_novo.columns if 'ORDEM' in str(c).upper() and 'PONTOS' not in str(c).upper() and 'COMENT' not in str(c).upper()]
             c_ordem_2b = ordem_cols_2b[0] if ordem_cols_2b else None
             c_email_2b = col(df_novo, 'EMAIL')
             c_nome_2b = 'Nome' if 'Nome' in df_novo.columns else col(df_novo, 'NOME')
-            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2 colunas: polo={c_polo_2b}, proto={c_proto_2b}, data={c_data_2b}, cat={c_cat_2b}, ordem={c_ordem_2b}")
-            _faltando_2b = [nome for nome, c in {'POLO': c_polo_2b, 'PROTOCOLOS': c_proto_2b, 'CATEGORIA': c_cat_2b}.items() if not c]
-            if _faltando_2b:
-                print(f"[{ts()}] AVISO: PORTIFOLIO_TUTOR_2026_2 sem coluna(s) {_faltando_2b} — pulando merge deste arquivo (colunas disponíveis: {list(df_novo.columns)[:15]}...)")
+
+            def _col_rodada_2b(prefixo_upper, n, usa_dois_pontos=True):
+                sufixo = '' if n == 1 else (f':{n}' if usa_dois_pontos else str(n))
+                alvo = (prefixo_upper + sufixo).upper()
+                for c in df_novo.columns:
+                    cu = str(c).upper()
+                    if cu == alvo and 'PONTOS' not in cu and 'COMENT' not in cu.split('–')[0]:
+                        return c
+                # fallback: contém o prefixo E termina exatamente com o sufixo esperado (ou sem sufixo pra n=1)
+                for c in df_novo.columns:
+                    cu = str(c).upper()
+                    if prefixo_upper in cu and 'PONTOS' not in cu and not cu.startswith('COMENT') and not cu.startswith('PONTOS'):
+                        if n == 1 and not any(cu.endswith(s) for s in (':2',':3',':4',':5',':6',':7','2','3','4','5','6','7')):
+                            return c
+                        if n > 1 and (cu.endswith(sufixo)):
+                            return c
+                return None
+
+            _rodadas = []
+            for n in range(1, 8):
+                c_proto_n = _col_rodada_2b('SELECIONE QUAIS PROTOCOLOS DE ATIVIDADES PRÁTICAS FORAM REALIZADOS NO LABORATÓRIO:', n, usa_dois_pontos=True)
+                c_data_n  = _col_rodada_2b('DATA DA APLICAÇÃO DO PROTOCOLO DE PRÁTICA:', n, usa_dois_pontos=True)
+                c_alun_n  = _col_rodada_2b('QUANTOS ESTUDANTES PRESENTES NESTE EXPERIMENTO?', n, usa_dois_pontos=False)
+                if c_proto_n: _rodadas.append((n, c_proto_n, c_data_n, c_alun_n))
+            print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2 colunas: polo={c_polo_2b}, cat={c_cat_2b}, ordem={c_ordem_2b}, rodadas de protocolo encontradas={[r[0] for r in _rodadas]}")
+
+            _faltando_2b = [nome for nome, c in {'POLO': c_polo_2b, 'CATEGORIA': c_cat_2b}.items() if not c]
+            if _faltando_2b or not _rodadas:
+                print(f"[{ts()}] AVISO: PORTIFOLIO_TUTOR_2026_2 sem coluna(s) essenciais {_faltando_2b or ['PROTOCOLOS (nenhuma rodada)']} — pulando merge deste arquivo")
             else:
-                _polo_2b = df_novo[c_polo_2b].astype(str).str.strip()
-                _cat_2b = df_novo[c_cat_2b].astype(str).str.strip()
-                # PATCH 146b: célula real tem espaço NÃO separável (\xa0) em
-                # vez de espaço normal em pelo menos uma categoria ("EngeMaker
-                # |\xa0Química..."), que nunca batia com a chave "normal" do
-                # categoria_para_curso.json — 15 envios de Engenharia caíam
-                # como "sem categoria mapeada" por causa de um caractere
-                # invisível. Normaliza os dois lados antes de comparar.
                 def _norm_espacos(s):
                     return ' '.join(str(s).replace('\xa0', ' ').split())
                 _cat_para_curso_norm = {_norm_espacos(k): v for k, v in _cat_para_curso_2026_2.items()}
+
+                _polo_2b = df_novo[c_polo_2b].astype(str).str.strip()
+                _cat_2b = df_novo[c_cat_2b].astype(str).str.strip()
                 _curso_code_2b = _cat_2b.map(lambda c: _cat_para_curso_norm.get(_norm_espacos(c), ''))
-                _sem_curso = int((_curso_code_2b == '').sum())
+                _sem_curso_mask = (_curso_code_2b == '')
+                _sem_curso = int(_sem_curso_mask.sum())
                 if _sem_curso:
-                    _cats_exemplo = sorted(set(_cat_2b[_curso_code_2b == ''].tolist()))[:8]
+                    _cats_exemplo = sorted(set(_cat_2b[_sem_curso_mask].tolist()))[:8]
                     print(f"[{ts()}] AVISO: {_sem_curso} envios em PORTIFOLIO_TUTOR_2026_2 com categoria não mapeada em categoria_para_curso.json. Exemplos: {_cats_exemplo}")
-                df_novo['_CHAVE']  = _polo_2b + _curso_code_2b
-                df_novo['_POLO']   = _polo_2b
-                df_novo['_PROTO']  = df_novo[c_proto_2b].astype(str).str.strip()
-                df_novo['_DATA']   = pd.to_datetime(df_novo[c_data_2b], errors='coerce') if c_data_2b else pd.NaT
-                df_novo['_ALUNOS'] = aluno_soma_2b.fillna(0).astype(int) if aluno_soma_2b is not None else 0
-                df_novo['_CAT']    = _cat_2b
-                df_novo['_ORDEM']  = df_novo[c_ordem_2b].astype(str).str.strip() if c_ordem_2b else 'Ordem 1'
-                df_novo['EMAIL']      = df_novo[c_email_2b].astype(str).str.strip() if c_email_2b else ''
-                df_novo['NOME_TUTOR'] = df_novo[c_nome_2b].astype(str).str.strip() if c_nome_2b else ''
-                df_novo['_SEMESTRE_ORIGEM'] = '2026/2'
-                df_p = pd.concat([df_p, df_novo], ignore_index=True)
-                print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} envios mesclados (2026/2), {len(df_novo)-_sem_curso} com chave completa (categoria mapeada)")
+                _chave_base = _polo_2b + _curso_code_2b
+                _ordem_base = df_novo[c_ordem_2b].astype(str).str.strip().replace('', 'Ordem 1') if c_ordem_2b else pd.Series(['Ordem 1']*len(df_novo))
+                _email_base = df_novo[c_email_2b].astype(str).str.strip() if c_email_2b else pd.Series(['']*len(df_novo))
+                _nome_base = df_novo[c_nome_2b].astype(str).str.strip() if c_nome_2b else pd.Series(['']*len(df_novo))
+
+                _frames_rodadas = []
+                for n, c_proto_n, c_data_n, c_alun_n in _rodadas:
+                    _proto_n = df_novo[c_proto_n].astype(str).str.strip().replace('nan', '')
+                    _tem_dado = _proto_n.str.len() > 0
+                    if not _tem_dado.any(): continue
+                    _sub = pd.DataFrame({
+                        '_CHAVE': _chave_base[_tem_dado], '_POLO': _polo_2b[_tem_dado],
+                        '_PROTO': _proto_n[_tem_dado],
+                        '_DATA': pd.to_datetime(df_novo[c_data_n], errors='coerce')[_tem_dado] if c_data_n else pd.NaT,
+                        '_ALUNOS': pd.to_numeric(df_novo[c_alun_n], errors='coerce').fillna(0).astype(int)[_tem_dado] if c_alun_n else 0,
+                        '_CAT': _cat_2b[_tem_dado], '_ORDEM': _ordem_base[_tem_dado],
+                        'EMAIL': _email_base[_tem_dado], 'NOME_TUTOR': _nome_base[_tem_dado],
+                    })
+                    _frames_rodadas.append(_sub)
+                if _frames_rodadas:
+                    df_novo_exp = pd.concat(_frames_rodadas, ignore_index=True)
+                    df_novo_exp['_SEMESTRE_ORIGEM'] = '2026/2'
+                    df_p = pd.concat([df_p, df_novo_exp], ignore_index=True)
+                    _com_chave = int((df_novo_exp['_CAT'].map(lambda c: _cat_para_curso_norm.get(_norm_espacos(c), '')) != '').sum())
+                    print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: {len(df_novo)} submissões -> {len(df_novo_exp)} práticas mescladas (2026/2, somando todas as rodadas), {_com_chave} com chave completa (categoria mapeada)")
+                else:
+                    print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: 0 práticas com protocolo preenchido em nenhuma rodada")
         else:
             print(f"[{ts()}] PORTIFOLIO_TUTOR_2026_2: 0 envios ainda")
     else:
