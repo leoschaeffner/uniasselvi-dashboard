@@ -2275,7 +2275,14 @@ function renderDetTreinamento(sorted, ord){
   // de Ordem (contava em treinamento em qualquer ordem), enquanto a tabela já
   // exige ter dado registrado especificamente na ordem escolhida. Agora
   // aplica o mesmo recorte quando uma ordem está selecionada.
-  var lista = ord ? sorted.filter(function(t){ return t.temOrdemSel; }) : sorted;
+  // PATCH 152: revertido pra usar SEMPRE o universo completo (não filtra
+  // por temOrdemSel) — mesma filosofia já estabelecida no PATCH 94 pro
+  // gráfico "Neste recorte": os 4 indicadores (Gerenciaram geral, Neste
+  // recorte, Em treinamento, Em obras) precisam usar o MESMO denominador
+  // pra os números baterem entre si quando uma ordem é selecionada. O Leo
+  // reportou os 3 indicadores não batendo (64 vs 57) -- a causa era este
+  // filtro aplicado só aqui, não nos outros 3 gráficos.
+  var lista = sorted;
   var porNome={};
   lista.forEach(function(t){
     if(!t.tutor) return;
@@ -2315,7 +2322,14 @@ function renderDetTreinamento(sorted, ord){
   document.getElementById('det-treinamento-chart').innerHTML = svg + legenda;
 }
 function renderDetObras(sorted, ord){
-  var lista = ord ? sorted.filter(function(t){ return t.temOrdemSel; }) : sorted;
+  // PATCH 152: revertido pra usar SEMPRE o universo completo (não filtra
+  // por temOrdemSel) — mesma filosofia já estabelecida no PATCH 94 pro
+  // gráfico "Neste recorte": os 4 indicadores (Gerenciaram geral, Neste
+  // recorte, Em treinamento, Em obras) precisam usar o MESMO denominador
+  // pra os números baterem entre si quando uma ordem é selecionada. O Leo
+  // reportou os 3 indicadores não batendo (64 vs 57) -- a causa era este
+  // filtro aplicado só aqui, não nos outros 3 gráficos.
+  var lista = sorted;
   var nomesUnicos = {};
   lista.forEach(function(t){ if(t.tutor) nomesUnicos[_normTutorKey(t.tutor)] = t.tutor; });
   var nomes = Object.values(nomesUnicos);
