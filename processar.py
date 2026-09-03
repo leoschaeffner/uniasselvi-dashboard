@@ -557,9 +557,27 @@ def processar(p1, p2):
     # data no futuro (não existe tutor "já ativo" contratado depois de hoje).
     def _interpretar_data_contratacao(valor):
         if valor is None or (isinstance(valor, float) and pd.isna(valor)): return None
-        if hasattr(valor, 'strftime'):  # já é um datetime/Timestamp nativo (Excel) -- sem ambiguidade
-            try: return valor.strftime('%Y-%m-%d')
-            except Exception: return None
+        _hoje = datetime.now()
+        if hasattr(valor, 'strftime'):
+            # PATCH 156: achado com o Leo — mesmo uma data NATIVA do Excel
+            # (não texto) pode estar errada, se quem digitou usava um Excel
+            # em configuração americana: ao digitar "10/8" pensando em 10 de
+            # agosto, o Excel americano já grava isso como 8 de outubro NA
+            # PRÓPRIA DATA, antes do Python sequer ler o arquivo — a
+            # ambiguidade fica embutida no valor, não só no texto. Aplica a
+            # MESMA checagem de sanidade (data no futuro = suspeita) e, se
+            # for o caso, tenta trocar dia↔mês usando os componentes da
+            # própria data nativa.
+            try:
+                if valor <= _hoje:
+                    return valor.strftime('%Y-%m-%d')
+                try:
+                    _trocada = datetime(valor.year, valor.day, valor.month)
+                    return _trocada.strftime('%Y-%m-%d')
+                except ValueError:
+                    return valor.strftime('%Y-%m-%d')  # não dá pra trocar (dia>12) -- mantém como está, mesmo suspeita
+            except Exception:
+                return None
         _s = str(valor).strip()
         if not _s or _s in ('nan', 'NaT', 'None'): return None
         _partes = _s.split('/')
@@ -574,7 +592,6 @@ def processar(p1, p2):
             _d, _m, _y = int(_partes[0]), int(_partes[1]), int(_partes[2])
         except ValueError:
             return None
-        _hoje = datetime.now()
         try:
             _data_brasileira = datetime(_y, _m, _d)
             if _data_brasileira <= _hoje:
