@@ -549,6 +549,44 @@ def _ler_arquivo_gerenciamento(path):
 
 
 def processar(p1, p2):
+    # PATCH 155: helper compartilhado — ver comentário completo mais abaixo,
+    # onde é usado pra data de contratação/admissão do tutor. Resolve datas
+    # que vêm misturadas em formato brasileiro (DD/MM) e americano (MM/DD) na
+    # MESMA coluna: tenta brasileiro primeiro (padrão), só troca pra
+    # americano quando a leitura brasileira é impossível (mês>12) ou dá uma
+    # data no futuro (não existe tutor "já ativo" contratado depois de hoje).
+    def _interpretar_data_contratacao(valor):
+        if valor is None or (isinstance(valor, float) and pd.isna(valor)): return None
+        if hasattr(valor, 'strftime'):  # já é um datetime/Timestamp nativo (Excel) -- sem ambiguidade
+            try: return valor.strftime('%Y-%m-%d')
+            except Exception: return None
+        _s = str(valor).strip()
+        if not _s or _s in ('nan', 'NaT', 'None'): return None
+        _partes = _s.split('/')
+        if len(_partes) != 3:
+            # não está no formato DD/MM/AAAA nem MM/DD/AAAA -- tenta parser genérico como último recurso
+            try:
+                _p = pd.to_datetime(_s, dayfirst=True, errors='coerce')
+                return _p.strftime('%Y-%m-%d') if pd.notna(_p) else None
+            except Exception:
+                return None
+        try:
+            _d, _m, _y = int(_partes[0]), int(_partes[1]), int(_partes[2])
+        except ValueError:
+            return None
+        _hoje = datetime.now()
+        try:
+            _data_brasileira = datetime(_y, _m, _d)
+            if _data_brasileira <= _hoje:
+                return _data_brasileira.strftime('%Y-%m-%d')
+        except ValueError:
+            pass  # mês>12 -- só pode ser americano
+        try:
+            _data_americana = datetime(_y, _d, _m)  # primeiro número é o mês
+            return _data_americana.strftime('%Y-%m-%d')
+        except ValueError:
+            return None
+
     print(f"[{ts()}] Lendo tutores...")
     with open(p1, 'rb') as _f:
         _magic = _f.read(8); _preview = _f.read(200)
@@ -1384,28 +1422,22 @@ def processar(p1, p2):
         _email_t = str(t.get(col_email, '') or '').strip().lower() if col_email else ''
         _mec = mec_cache.get(_email_t, {})
         _inicio_ctrl = t.get(col_inicio) if col_inicio else None
-        _inicio_str = None
-        if _inicio_ctrl and str(_inicio_ctrl) not in ('nan','NaT','None',''):
-            # PATCH 153: achado com o Leo — "Em treinamento" sempre em 0,
-            # mesmo com tutores genuinamente admitidos há poucos dias. Causa:
-            # quando a coluna INÍCIO do CONTROLE vem como TEXTO (não como
-            # data nativa do Excel — comum quando alguém digita a data à
-            # mão), o código antigo pegava só os primeiros 10 caracteres da
-            # string crua ("17/08/2026", formato brasileiro) sem converter
-            # pra ISO — o front-end faz `new Date("17/08/2026T00:00:00")`,
-            # que o JavaScript não consegue interpretar (não é um formato
-            # válido), retornando "Invalid Date" silenciosamente pra TODO
-            # tutor com data em texto. Agora usa um parser de data robusto
-            # (aceita texto BR dia/mês/ano, data nativa do Excel, timestamp)
-            # e sempre grava em ISO (YYYY-MM-DD), formato que o front-end
-            # sabe interpretar.
-            try:
-                _inicio_parsed = pd.to_datetime(_inicio_ctrl, dayfirst=True, errors='coerce')
-                if pd.notna(_inicio_parsed):
-                    _inicio_str = _inicio_parsed.strftime('%Y-%m-%d')
-            except Exception:
-                pass
-        if not _inicio_str: _inicio_str = _mec.get('admissao')
+        # PATCH 155: achado com o Leo (planilha real de tutores ativos) — a
+        # coluna de data de contratação mistura formato brasileiro (DD/MM) e
+        # americano (MM/DD) na MESMA coluna, dependendo de qual unidade
+        # cadastrou o tutor. O PATCH 153 assumia SEMPRE brasileiro
+        # (dayfirst=True), então as datas americanas viravam data ERRADA (não
+        # nula — pior, porque não dá pra distinguir do log que está errado).
+        # Ex: "08/10/2026" lido como brasileiro vira 8 de outubro (futuro,
+        # impossível pra tutor já ativo); o valor real é 10 de agosto.
+        # Regra confirmada com o Leo: quando a leitura brasileira dá uma
+        # data IMPOSSÍVEL (mês>12) OU no FUTURO (não existe tutor "já ativo"
+        # contratado depois de hoje), tenta a leitura americana em vez de
+        # simplesmente descartar. Testado contra a planilha real: acha
+        # exatamente os 15 casos confirmados, sem tocar nos demais.
+        _inicio_str = _interpretar_data_contratacao(_inicio_ctrl)
+        if not _inicio_str:
+            _inicio_str = _interpretar_data_contratacao(_mec.get('admissao'))
 
         # PATCH 17: agregado por polo+CURSO ESPECÍFICO (não categoria ampla) — cobre
         # múltiplos tutores do mesmo curso no mesmo polo, sem juntar BFI/BTO/COS-TIP
@@ -1693,6 +1725,34 @@ def processar(p1, p2):
             if t.get('ch_semanal') and not ex.get('ch_semanal'): ex['ch_semanal'] = t['ch_semanal']
     tutores_out = tutores_dedup
     print(f"[{ts()}] Após deduplicação: {len(tutores_out)} tutores únicos")
+
+    # PATCH 154: diagnóstico pedido pra confirmar/refutar o relato do Leo —
+    # "só em Biomedicina-Farmácia tem mais de 15 tutores que iniciaram em
+    # agosto". Conta quantos tutores têm 'inicio' preenchido e dentro de 60
+    # dias, quantos têm 'inicio' totalmente vazio (nem CONTROLE nem MEC deram
+    # conta), e quebra isso por categoria — se o número bater com o que ele
+    # espera, o problema não é mais data quebrada; se muitos tutores caем em
+    # "sem data nenhuma", ainda tem uma lacuna na origem a corrigir.
+    from datetime import datetime as _dt_diag
+    _hoje_diag = _dt_diag.now()
+    _com_data_recente = 0; _sem_data_nenhuma = 0; _por_cat_recente = {}
+    for _t in tutores_out:
+        if _t.get('_anonimo') or _t.get('n') == 'Tutor desligado': continue
+        _ini = _t.get('inicio')
+        if not _ini:
+            _sem_data_nenhuma += 1
+            continue
+        try:
+            _dias = (_hoje_diag - _dt_diag.strptime(_ini, '%Y-%m-%d')).days
+            if 0 <= _dias <= 60:
+                _com_data_recente += 1
+                _cat_t = _t.get('c', 'Sem categoria')
+                _por_cat_recente[_cat_t] = _por_cat_recente.get(_cat_t, 0) + 1
+        except Exception:
+            _sem_data_nenhuma += 1
+    print(f"[{ts()}] DIAGNÓSTICO PATCH 154 — tutores com 'inicio' <= 60 dias (candidatos a 'em treinamento'): {_com_data_recente} | tutores SEM nenhuma data de início utilizável: {_sem_data_nenhuma}")
+    if _por_cat_recente:
+        print(f"[{ts()}]   por categoria: {_por_cat_recente}")
 
     # PATCH 148: ícone de "obras" pedido pelo Leo — planilha de laboratórios
     # com pendências (Não Apto/Não Implantou/etc), mantida manualmente por
