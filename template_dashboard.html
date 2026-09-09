@@ -684,6 +684,45 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 <div class="page" id="page-vagas"><div class="container">
   <div class="ph"><div class="ph-title">Vagas — Contratação e Substituição</div><div class="ph-sub" id="vagas-sub">—</div></div>
   <div class="kpi-row" id="vagas-kpis"></div>
+
+  <!-- PATCH 157: Funil de Recrutamento (planilha VAGAS_RH — aba "Agendamento de entrevista", agregado) -->
+  <div class="card" id="rec-funil-card" hidden>
+    <div class="card-hdr"><div class="card-title">🧭 Funil de Recrutamento</div><div class="card-sub" id="rec-funil-sub">—</div></div>
+    <div id="rec-funil"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">POR MÊS</div>
+        <div class="tbl-wrap" style="max-height:200px"><table><tbody id="rec-funil-mes"></tbody></table></div>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">POR CURSO / ÁREA</div>
+        <div class="tbl-wrap" style="max-height:200px"><table><tbody id="rec-funil-curso"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PATCH 157: Vagas no INHIRE (planilha VAGAS_RH — abas "Aumento" + "Substituição") -->
+  <div class="card" id="rec-reqs-card" hidden>
+    <div class="card-hdr"><div class="card-title">📨 Recrutamento — Vagas no INHIRE</div></div>
+    <div class="toolbar">
+      <input class="search" type="text" placeholder="Buscar curso, cidade, ticket, etapa…" oninput="filterRecReqs(this.value)" id="rec-reqs-search"/>
+      <select class="sel" onchange="filterRecReqs(document.getElementById('rec-reqs-search').value)" id="rec-reqs-tipo-sel"><option value="">Aumento + Substituição</option><option value="Aumento">Aumento</option><option value="Substituição">Substituição</option></select>
+      <select class="sel" onchange="filterRecReqs(document.getElementById('rec-reqs-search').value)" id="rec-reqs-fech-sel"><option value="">Abertas + Fechadas</option><option value="abertas">Só abertas</option><option value="fechadas">Só fechadas</option></select>
+      <span class="tbl-count" id="rec-reqs-count">—</span>
+      <button class="btn-export" onclick="exportRecReqs()">⬇ Exportar</button>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th onclick="sortRecReqs('tipo')">Tipo</th>
+      <th onclick="sortRecReqs('curso')">Curso</th>
+      <th onclick="sortRecReqs('cidade')">Cidade / UF</th>
+      <th onclick="sortRecReqs('etapa')">Etapa</th>
+      <th onclick="sortRecReqs('fechada')">Vaga</th>
+      <th onclick="sortRecReqs('admissao')">Admissão</th>
+      <th>Ticket</th>
+      <th>Obs.</th>
+    </tr></thead><tbody id="rec-reqs-tbody"></tbody></table></div>
+  </div>
+
   <div class="card">
     <div class="card-hdr"><div class="card-title">📚 Por Laboratório / Curso</div></div>
     <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
@@ -712,6 +751,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th onclick="sortVagas('prioridade')">Prioridade</th>
       <th>Tutor Atual</th>
       <th>Chamado SYDLE</th>
+      <th onclick="sortVagas('rec_etapa')">Etapa Recrut.</th>
+      <th>Ticket</th>
     </tr></thead><tbody id="vagas-tbody"></tbody></table></div>
   </div></div></div>
 
@@ -3895,6 +3936,10 @@ function renderVagasKPIs(){
     <div class="kpi kpi-red"><div class="kpi-label">Prioridade Alta</div><div class="kpi-value">${fmtNum(k.prioridade_alta||0)}</div></div>
     <div class="kpi kpi-teal"><div class="kpi-label">Com Chamado SYDLE</div><div class="kpi-value">${fmtNum(k.com_chamado_aberto||0)}</div></div>`;
 
+  // PATCH 157/159: os KPIs de recrutamento saíram daqui (poluíam a fileira de
+  // vagas da Lotação) — agora ficam compactos dentro do card "Funil de Recrutamento".
+  renderFunilRecrutamento();
+
   // Quebra por Laboratório/Curso
   const vagas=_getVagas();
   const porCurso={};
@@ -3933,6 +3978,7 @@ function filterVagas(q){
   vagasData=d;
   renderVagasTbl(d);
   renderVagasKPIs();
+  filterRecReqs(document.getElementById('rec-reqs-search')?.value||'');
 }
 function sortVagas(k){ if(vagasSortK===k) vagasSortA=!vagasSortA; else { vagasSortK=k; vagasSortA=true; } filterVagas(document.getElementById('vagas-search')?.value||''); }
 function renderVagasTbl(data){
@@ -3953,12 +3999,101 @@ function renderVagasTbl(data){
     <td><span class="badge" style="background:${corPrior(v.prioridade)}20;color:${corPrior(v.prioridade)}">${esc(v.prioridade)}</span></td>
     <td style="font-size:11px">${v.tutor_atual?esc(v.tutor_atual):'<span style="color:var(--muted)">—</span>'}</td>
     <td style="font-size:11px;color:var(--muted)">${v.chamado_sydle?esc(v.chamado_sydle):'—'}</td>
+    <td style="font-size:11px">${v.rec_etapa?esc(v.rec_etapa):'<span style="color:var(--muted)">—</span>'}${v.rec_fechada?' <span class="badge" style="background:var(--ok)20;color:var(--ok)">fechada</span>':''}</td>
+    <td style="font-size:10px;color:var(--muted)">${v.rec_ticket?(v.rec_link?`<a href="${esc(v.rec_link)}" target="_blank" rel="noopener">${esc(v.rec_ticket)}</a>`:esc(v.rec_ticket)):'—'}</td>
   </tr>`).join('');
   document.getElementById('vagas-count').textContent = sorted.length+' vaga'+(sorted.length!==1?'s':'');
-  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro.</td></tr>';
+  if(!sorted.length) document.getElementById('vagas-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro.</td></tr>';
 }
 function exportVagas(){
-  exportCSV(vagasData.map(v=>({'Polo':v.polo,'Curso':v.cursos,'Perfil':v.perfil,'Status':v.status,'Contratação':v.contratacao,'Prioridade':v.prioridade,'Tutor Atual':v.tutor_atual||'—','CH Semanal':v.ch_semanal||'—','CH Ideal':v.ch_ideal||'—','Chamado SYDLE':v.chamado_sydle||'—','Status Chamado':v.status_chamado||'—'})), 'vagas_'+new Date().toISOString().slice(0,10)+'.csv');
+  exportCSV(vagasData.map(v=>({'Polo':v.polo,'Curso':v.cursos,'Perfil':v.perfil,'Status':v.status,'Contratação':v.contratacao,'Prioridade':v.prioridade,'Tutor Atual':v.tutor_atual||'—','CH Semanal':v.ch_semanal||'—','CH Ideal':v.ch_ideal||'—','Chamado SYDLE':v.chamado_sydle||'—','Status Chamado':v.status_chamado||'—','Etapa Recrutamento':v.rec_etapa||'—','Ticket INHIRE':v.rec_ticket||'—','Vaga Fechada':v.rec_fechada?'Sim':'—'})), 'vagas_'+new Date().toISOString().slice(0,10)+'.csv');
+}
+
+// ── PATCH 157: RECRUTAMENTO (planilha VAGAS_RH anexada em DB.vagas) ────────────
+const _REC_COR_GRUPO = {ok:'var(--ok)', andamento:'var(--teal)', perda:'var(--red)'};
+let recReqsSortK='tipo', recReqsSortA=true, recReqsData=[];
+function _getRecFunil(){ return (DB.vagas||{}).funil || null; }
+function _getRecReqs(){ return (((DB.vagas||{}).recrutamento)||{}).reqs || []; }
+// PATCH 159: funil simplificado — 3 blocos (Em andamento / Contratados / Não
+// seguiram) + os 3 principais motivos de saída + quebra por curso. As 13 barras
+// de status cruas eram informação demais (feedback do Leo).
+function _recFunilResumo(f){
+  const byNorm={}; (f.por_status||[]).forEach(s=>byNorm[s.status_norm]=s.n);
+  const soma = g => (f.por_status||[]).filter(s=>s.grupo===g).reduce((a,s)=>a+s.n,0);
+  const contratados = byNorm['FINALIZADO']||0;
+  const perdidos = soma('perda');
+  const andamento = (f.total||0) - contratados - perdidos;
+  const motivos = (f.por_status||[]).filter(s=>s.grupo==='perda' && s.n>0)
+    .sort((a,b)=>b.n-a.n).slice(0,3);
+  return {contratados, perdidos, andamento, motivos};
+}
+function renderFunilRecrutamento(){
+  const f=_getRecFunil(), card=document.getElementById('rec-funil-card');
+  if(!card) return;
+  if(!f || !f.total){ card.hidden=true; return; }
+  card.hidden=false;
+  const k=(DB.vagas||{}).kpis||{};
+  const r=_recFunilResumo(f);
+  document.getElementById('rec-funil-sub').textContent=`${fmtNum(f.total)} candidatos · ${fmtNum(r.contratados)} contratados (${fmtNum(k.taxa_conversao||0)}%)`;
+  const blocos=[
+    {rot:'Em andamento', n:r.andamento, cor:'var(--teal)'},
+    {rot:'Contratados',  n:r.contratados, cor:'var(--ok)'},
+    {rot:'Não seguiram', n:r.perdidos, cor:'var(--red)'},
+  ];
+  const max=Math.max(1,...blocos.map(b=>b.n));
+  const motivosHtml = r.motivos.length ? `<div style="margin-top:10px;font-size:11px">
+      <span style="color:var(--muted);font-weight:700">POR QUE NÃO SEGUIRAM · </span>
+      ${r.motivos.map(m=>`${esc(m.status)} <strong>${fmtNum(m.n)}</strong>`).join(' · ')}
+    </div>` : '';
+  const inhire = (k.reqs_total!=null) ? `<span style="color:var(--muted)"> · </span>${fmtNum(k.reqs_abertas||0)} vaga${(k.reqs_abertas===1)?'':'s'} aberta${(k.reqs_abertas===1)?'':'s'} no INHIRE (${fmtNum(k.reqs_fechadas||0)} fechada${(k.reqs_fechadas===1)?'':'s'})` : '';
+  document.getElementById('rec-funil').innerHTML = blocos.map(b=>`
+    <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+      <div style="width:110px;font-size:12px;text-align:right;font-weight:600">${b.rot}</div>
+      <div style="flex:1;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${(b.n/max*100).toFixed(1)}%;background:${b.cor};height:20px"></div></div>
+      <div style="width:46px;font-size:13px;font-weight:800">${fmtNum(b.n)}</div>
+    </div>`).join('') + motivosHtml + `<div style="margin-top:2px;font-size:10px;color:var(--muted)">${inhire}</div>`;
+  const miniTbl = (rows, label) => rows.map(r=>`<tr><td style="font-size:11px">${esc(r[label])}</td><td style="text-align:right;font-size:11px;font-weight:700">${fmtNum(r.n)}</td>${r.contratados!=null?`<td style="text-align:right;font-size:10px;color:var(--ok)">${fmtNum(r.contratados)} contratado${r.contratados===1?'':'s'}</td>`:''}</tr>`).join('');
+  document.getElementById('rec-funil-mes').innerHTML=miniTbl(f.por_mes||[],'mes') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
+  document.getElementById('rec-funil-curso').innerHTML=miniTbl(f.por_curso||[],'curso') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
+}
+function filterRecReqs(q){
+  const card=document.getElementById('rec-reqs-card'); if(!card) return;
+  const reqs=_getRecReqs();
+  if(!reqs.length){ card.hidden=true; return; }
+  card.hidden=false;
+  q=(q||'').toLowerCase().trim();
+  const tp=document.getElementById('rec-reqs-tipo-sel')?.value||'';
+  const fc=document.getElementById('rec-reqs-fech-sel')?.value||'';
+  let d=reqs;
+  if(q) d=d.filter(r=>(r.curso+' '+r.cidade+' '+r.uf+' '+r.ticket+' '+r.etapa+' '+r.obs).toLowerCase().includes(q));
+  if(tp) d=d.filter(r=>r.tipo===tp);
+  if(fc==='abertas') d=d.filter(r=>!r.fechada);
+  if(fc==='fechadas') d=d.filter(r=>r.fechada);
+  recReqsData=d;
+  renderRecReqsTbl(d);
+}
+function sortRecReqs(k){ if(recReqsSortK===k) recReqsSortA=!recReqsSortA; else { recReqsSortK=k; recReqsSortA=true; } filterRecReqs(document.getElementById('rec-reqs-search')?.value||''); }
+function renderRecReqsTbl(data){
+  const sorted=[...data].sort((a,b)=>{
+    const va=(a[recReqsSortK]??''), vb=(b[recReqsSortK]??'');
+    return recReqsSortA?String(va).localeCompare(String(vb),'pt-BR'):String(vb).localeCompare(String(va),'pt-BR');
+  });
+  const corTipo = t => t==='Substituição' ? 'var(--teal)' : 'var(--yellow-d)';
+  document.getElementById('rec-reqs-tbody').innerHTML = sorted.map(r=>`<tr>
+    <td><span class="badge" style="background:${corTipo(r.tipo)}20;color:${corTipo(r.tipo)}">${esc(r.tipo)}</span></td>
+    <td style="font-size:11px">${esc(r.curso||'—')}</td>
+    <td style="font-size:11px">${esc(r.cidade||'—')}${r.uf?'/'+esc(r.uf):''}</td>
+    <td style="font-size:11px">${esc(r.etapa||'—')}</td>
+    <td style="font-size:11px">${r.fechada?'<span class="badge" style="background:var(--ok)20;color:var(--ok)">Fechada</span>':'<span style="color:var(--muted)">Aberta</span>'}</td>
+    <td style="font-size:11px">${esc(r.admissao||'—')}</td>
+    <td style="font-size:10px;color:var(--muted)">${r.ticket?(r.link_inhire?`<a href="${esc(r.link_inhire)}" target="_blank" rel="noopener">${esc(r.ticket)}</a>`:esc(r.ticket)):'—'}</td>
+    <td style="font-size:10px;color:var(--muted)">${esc(r.obs||'')}</td>
+  </tr>`).join('');
+  document.getElementById('rec-reqs-count').textContent = sorted.length+' vaga'+(sorted.length!==1?'s':'');
+  if(!sorted.length) document.getElementById('rec-reqs-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma vaga encontrada com este filtro.</td></tr>';
+}
+function exportRecReqs(){
+  exportCSV(recReqsData.map(r=>({'Tipo':r.tipo,'Curso':r.curso,'Cidade':r.cidade,'UF':r.uf,'Etapa':r.etapa,'Vaga Fechada':r.fechada?'Sim':'Não','Admissão':r.admissao||'—','Ticket':r.ticket||'—','Link INHIRE':r.link_inhire||'—','Remuneração':r.remuneracao||'—','Observação':r.obs||'—'})), 'recrutamento_inhire_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
 // ── HELPERS AGENDA ────────────────────────────────────────────────────────────
@@ -4988,10 +5123,13 @@ function _iniciarDashboard(){
   try{renderGerenciamento();populateFilters();}catch(e){console.error('renderGer',e);}
   try{
     const _vg=(DB.vagas||{}).vagas||[];
-    if(_vg.length){
+    const _rec=((DB.vagas||{}).recrutamento||{}).reqs||[];
+    const _fun=(DB.vagas||{}).funil;
+    if(_vg.length || _rec.length || (_fun&&_fun.total)){
       document.getElementById('sidebar-vagas').style.display='';
       populateVagasFilters();
-      renderVagasKPIs();
+      renderVagasKPIs();               // PATCH 157: também chama renderFunilRecrutamento()
+      filterRecReqs('');               // PATCH 157: tabela de vagas no INHIRE
     }
   }catch(e){console.error('vagas init',e);}
   try{

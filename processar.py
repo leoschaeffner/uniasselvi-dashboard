@@ -520,7 +520,62 @@ def verificar_e_localizar():
                 print(f"  [ERRO] Não foi possível baixar onboarding: {e}")
         else:
             print(f"  [INFO] Acompanhamento_Onboarding.xlsx não encontrada (secret URL_ONBOARDING_TUTORES ainda não configurado)")
-    return p1, p2, tmpl, p3, p3b, p4, p5, p6
+
+    # ── PATCH 157: planilha de Recrutamento & Seleção de tutores (RH). Mesmo
+    # padrão de secret+URL do onboarding — um .xlsx com 4 abas (Status-
+    # Anotações / Agendamento de entrevista / Aumento / Substituição). Alimenta
+    # a expansão da seção "Vagas (RH)": funil de candidatos (agregado, SEM dado
+    # pessoal) + vagas no INHIRE + cruzamento com a Lotação. Precisa da variável
+    # de ambiente URL_VAGAS_RH apontando pro link de download direto do
+    # OneDrive/SharePoint. Opcional: sem ela, a seção Vagas segue só com a Lotação.
+    p7 = achar_arquivo(SCRIPT_DIR, "VAGAS_RH.xlsx")
+    if p7:
+        print(f"  [OK] {os.path.basename(p7)}")
+    else:
+        url_vrh = os.environ.get("URL_VAGAS_RH", "").strip()
+        if url_vrh:
+            print(f"  [Baixando] VAGAS_RH.xlsx via URL_VAGAS_RH...")
+            try:
+                import urllib.request as _urlreq_vrh
+                def _build_dl_urls_vrh(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)
+                    return urls
+                dest_vrh = os.path.join(pasta_planilhas, "VAGAS_RH.xlsx")
+                downloaded_vrh = False
+                for url_dl in _build_dl_urls_vrh(url_vrh):
+                    try:
+                        req = _urlreq_vrh.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with _urlreq_vrh.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 2000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest_vrh, 'wb') as f_out: f_out.write(data)
+                            p7 = dest_vrh
+                            print(f"  [OK] VAGAS_RH.xlsx ({len(data):,} bytes)")
+                            downloaded_vrh = True
+                            break
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar Vagas RH: {ex} | URL: {url_dl[:80]}")
+                if not downloaded_vrh:
+                    print(f"  [ERRO] Não foi possível baixar VAGAS_RH.xlsx — verifique URL_VAGAS_RH")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar Vagas RH: {e}")
+        else:
+            print(f"  [INFO] VAGAS_RH.xlsx não encontrada (secret URL_VAGAS_RH ainda não configurado)")
+    return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7
 
 
 def ler_excel(path, **kwargs):
@@ -1839,11 +1894,26 @@ def processar(p1, p2):
                 _matches += 1
         print(f"[{ts()}] Comunicação de tutores: {_matches}/{len(com_lista)} vinculados por nome")
 
-    total     = len(tutores_out)
-    enviaram  = sum(1 for t in tutores_out if t['te'] > 0)
-    atrasados = sum(1 for t in tutores_out if t['situacao'] == 'atrasado')
-    urgentes  = sum(1 for t in tutores_out if t['situacao'] == 'urgente')
+    # PATCH 158: o KPI "Total Tutores" (e enviaram/pendentes/urgentes/atrasados)
+    # estava contando os registros-fantasma que o pipeline cria quando uma
+    # submissão de portfólio NÃO casa com nenhum tutor ativo: os baldes
+    # {'n':'Tutor desligado','_anonimo':True} (criados ~L1650) e os pseudo-
+    # tutores 'Aviso de Portfólio'. Como um tutor demitido some do CONTROLE mas
+    # a submissão histórica dele vira um desses fantasmas, o total ficava
+    # "travado" mesmo com entrada real de tutores novos (relatado pelo Leo,
+    # 09/2026 — 391 no KPI vs ~346 tutores reais). Os fantasmas CONTINUAM em
+    # tutores_out (a seção "Aviso de Portfólio", os agregados por prática e por
+    # polo dependem deles) — só deixam de contar como headcount de tutor.
+    def _eh_tutor_fantasma(t):
+        return bool(t.get('_anonimo')) or t.get('c') == 'Aviso de Portfólio' or t.get('n') == 'Tutor desligado'
+    _tut_reais = [t for t in tutores_out if not _eh_tutor_fantasma(t)]
+
+    total     = len(_tut_reais)
+    enviaram  = sum(1 for t in _tut_reais if t['te'] > 0)
+    atrasados = sum(1 for t in _tut_reais if t['situacao'] == 'atrasado')
+    urgentes  = sum(1 for t in _tut_reais if t['situacao'] == 'urgente')
     total_alunos = sum(h['a'] for t in tutores_out for h in t['hist'])
+    print(f"[{ts()}] Tutores: {total} reais (headcount) | {len(tutores_out) - total} registros-fantasma em tutores_out (Aviso de Portfólio / balde 'Tutor desligado')")
     polo_map = {}
     for t in tutores_out:
         p = t['polo']
@@ -2020,13 +2090,18 @@ def processar(p1, p2):
                 'nome': _p['nome'], 'enviou': _p['enviou'], 'nao_enviou': _p['nao_enviou'], 'categoria': _p['categoria'],
             })
 
-        _total = len(tutores_list)
+        # PATCH 158: mesmo ajuste do headcount global — o KPI por semestre não
+        # pode contar os registros-fantasma (Aviso de Portfólio / balde 'Tutor
+        # desligado'). pratica_stats/cat_stats/por_ordem abaixo seguem usando
+        # tutores_list inteiro (a atividade de portfólio órfã é real).
+        _reais_list = [_t for _t in tutores_list if not _eh_tutor_fantasma(_t)]
+        _total = len(_reais_list)
         _sem_ant = sorted(ALL_SEMESTRES.keys())[0]
-        _enviaram = sum(1 for _t in tutores_list if any(h.get('s',_sem_ant)==sem_key and h.get('p') for h in _t.get('hist',[])))
+        _enviaram = sum(1 for _t in _reais_list if any(h.get('s',_sem_ant)==sem_key and h.get('p') for h in _t.get('hist',[])))
         # Calcular urgentes e atrasados corretamente
         _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
         _urgentes = 0; _atrasados = 0
-        for _t in tutores_list:
+        for _t in _reais_list:
             _sem_ant2 = sorted(ALL_SEMESTRES.keys())[0]
             _h = [h for h in _t.get('hist', []) if h.get('s', _sem_ant2) == sem_key]
             _po = {}
@@ -2341,6 +2416,296 @@ CURSOS_NOMES = {
     'ARQUITETURA E URBANISMO': 'Arquitetura e Urbanismo',
 }
 
+
+# ── PATCH 157: Recrutamento & Seleção (RH) ───────────────────────────────────
+# Lê VAGAS_RH.xlsx (secret URL_VAGAS_RH) e devolve um dict que é anexado a
+# dados['vagas'] pra expandir a seção "Vagas (RH)":
+#   - reqs:  vagas no INHIRE (abas "Aumento" + "Substituição")
+#   - funil: candidatos AGREGADOS por status/mês/curso/UF (aba "Agendamento de
+#            entrevista"). NUNCA nome/telefone/e-mail — é dado pessoal de
+#            terceiro (candidato externo), o portal só precisa do agregado.
+#   - kpis:  números derivados pros cards
+#   - ref_salario: tabela salário x CH (referência estática; a aba "Status-
+#                  Anotações" tem layout livre demais pra ler de forma segura).
+# Tolerante a cabeçalho truncado/variável — a planilha é editada à mão.
+
+# status do funil -> grupo (ok = avançou/foi contratado, perda = saiu do
+# processo, andamento = ainda na fila). Chaves já normalizadas por _vrh_norm.
+_VRH_STATUS_GRUPO = {
+    'FINALIZADO': 'ok',
+    'PARA INCLUIR NO PAINEL DE ADMISSOES': 'ok',
+    'AGUARDANDO EXAME': 'ok',
+    'AGUARDANDO ENTREGA DE DOCUMENTACAO': 'ok',
+    'AGUARDANDO VALIDACAO': 'ok',
+    'DESISTENCIA': 'perda',
+    'NAO PASSOU': 'perda',
+    'DECLINOU DEVIDO REMUNERACAO': 'perda',
+    'NAO COMPARECEU NA ENTREVISTA': 'perda',
+    'SEM RETORNO DO CANDIDATO': 'perda',
+    'SEM RETORNO DO CAN': 'perda',
+    'NAO POSSUI INTERESSE NA VAGA': 'perda',
+    'ENCAMINHAR NEGATIVA': 'perda',
+    'AGUARDANDO AGENDAMENTO': 'andamento',
+    'AGENDADO': 'andamento',
+    'ENVIO DE PROPOSTA': 'andamento',
+    'AGUARDANDO ACEITE': 'andamento',
+    'AGUARDANDO RETORNO NO WHATS': 'andamento',
+    'VAGA CONGELADA': 'andamento',
+}
+# ordem canônica pra desenhar o funil de cima (entrada) pra baixo (contratado)
+_VRH_STATUS_ORDEM = [
+    'AGUARDANDO AGENDAMENTO', 'AGENDADO', 'NAO COMPARECEU NA ENTREVISTA',
+    'NAO PASSOU', 'ENVIO DE PROPOSTA', 'AGUARDANDO ACEITE',
+    'AGUARDANDO RETORNO NO WHATS', 'VAGA CONGELADA', 'NAO POSSUI INTERESSE NA VAGA',
+    'DECLINOU DEVIDO REMUNERACAO', 'ENCAMINHAR NEGATIVA',
+    'DESISTENCIA', 'SEM RETORNO DO CANDIDATO', 'SEM RETORNO DO CAN',
+    'PARA INCLUIR NO PAINEL DE ADMISSOES', 'AGUARDANDO EXAME',
+    'AGUARDANDO ENTREGA DE DOCUMENTACAO', 'AGUARDANDO VALIDACAO', 'FINALIZADO',
+]
+_VRH_REF_SALARIO = [
+    {'ch': '4h semanal',  'ch_mensal': '20h', 'salario': 'R$ 415,80',   'excecao': None},
+    {'ch': '8h semanal',  'ch_mensal': '40h', 'salario': 'R$ 831,60',   'excecao': None},
+    {'ch': '12h semanal', 'ch_mensal': '60h', 'salario': 'R$ 1.247,40', 'excecao': None},
+    {'ch': '4h semanal',  'ch_mensal': '20h', 'salario': 'R$ 600,00',   'excecao': 'Enfermagem'},
+    {'ch': '8h semanal',  'ch_mensal': '40h', 'salario': 'R$ 1.200,00', 'excecao': 'Enfermagem'},
+]
+
+
+def _vrh_norm(s):
+    """UPPER, sem acento, só alfanumérico separado por espaço — pra casar rótulos."""
+    s = unicodedata.normalize('NFKD', str(s or '')).encode('ascii', 'ignore').decode()
+    s = re.sub(r'[^A-Za-z0-9]+', ' ', s).strip().upper()
+    return re.sub(r'\s+', ' ', s)
+
+
+def _vrh_cidade_uf(txt):
+    """'Alta Floresta/MT', 'Boa Viagem-CE', 'Formosa- GO',
+    'Rio de Janeiro/RJ - Campo Grande' -> (cidade, 'UF'). Aceita / ou - como
+    separador; prefere a 1ª ocorrência de '/UF' quando existe."""
+    txt = str(txt or '').strip()
+    m = re.match(r'\s*(.+?)\s*/\s*([A-Za-z]{2})(?:\b|$)', txt)
+    if not m:
+        m = re.match(r'\s*(.+?)\s*[/-]\s*([A-Za-z]{2})(?:\s|$|[/-])', txt)
+    if m:
+        return m.group(1).strip(' -/'), m.group(2).upper()
+    return txt, ''
+
+
+def processar_vagas_rh(p7):
+    print(f"[{ts()}] Lendo Recrutamento & Seleção (Vagas RH)...")
+    try:
+        abas = pd.read_excel(p7, sheet_name=None, header=0, dtype=str)
+    except Exception as e:
+        print(f"[{ts()}] Vagas RH: não foi possível abrir a planilha: {e}")
+        return None
+
+    def _aba(*chaves):
+        for nome, df in abas.items():
+            n = _vrh_norm(nome)
+            if any(_vrh_norm(k) in n for k in chaves):
+                return df
+        return None
+
+    def _col(df, *partes):
+        if df is None:
+            return None
+        for c in df.columns:
+            cn = _vrh_norm(c)
+            if all(_vrh_norm(p) in cn for p in partes):
+                return c
+        return None
+
+    def _val(row, col):
+        if col is None:
+            return ''
+        v = row.get(col, '')
+        if v is None:
+            return ''
+        v = str(v).strip()
+        return '' if v.lower() in ('nan', 'none', 'nat') else v
+
+    # ── reqs: abas "Aumento" + "Substituição" ───────────────────────────────
+    reqs = []
+    for tipo_default, chave in (('Aumento', 'aumento'), ('Substituição', 'substitui')):
+        df = _aba(chave)
+        if df is None or df.empty:
+            print(f"[{ts()}] Vagas RH: aba '{chave}' ausente ou vazia")
+            continue
+        c_rem   = _col(df, 'remunera')
+        c_curso = _col(df, 'curso')
+        c_cid   = _col(df, 'cidade') or _col(df, 'estado')
+        c_tipo  = _col(df, 'aumento', 'substitui') or _col(df, 'aumento ou')
+        c_tick  = _col(df, 'ticket')
+        c_link  = _col(df, 'link') or _col(df, 'inhire') or _col(df, 'inhi')
+        c_fech  = _col(df, 'vaga', 'fechada') or _col(df, 'fechada')
+        c_etapa = _col(df, 'etapa')
+        c_adm   = _col(df, 'admiss')
+        c_obs   = _col(df, 'observ')
+        for _, row in df.iterrows():
+            curso = _val(row, c_curso)
+            cid_raw = _val(row, c_cid)
+            if not curso and not cid_raw:
+                continue
+            cidade, uf = _vrh_cidade_uf(cid_raw)
+            tp = _val(row, c_tipo)
+            tp = 'Substituição' if 'substitu' in tp.lower() else ('Aumento' if tp else tipo_default)
+            reqs.append({
+                'tipo': tp,
+                'curso': curso,
+                'cidade': cidade, 'uf': uf,
+                'ticket': _val(row, c_tick),
+                'link_inhire': _val(row, c_link),
+                'fechada': _vrh_norm(_val(row, c_fech)).startswith('FECHADA'),
+                'etapa': _val(row, c_etapa),
+                'admissao': _val(row, c_adm),
+                'obs': _val(row, c_obs),
+                'remuneracao': _val(row, c_rem),
+            })
+
+    # ── funil: aba "Agendamento de entrevista" — AGREGADO, sem PII ───────────
+    from collections import Counter as _Counter
+    dfa = _aba('agendamento', 'entrevista')
+    if dfa is None:
+        dfa = _aba('agendamento')
+    if dfa is None:
+        dfa = _aba('funil', 'candidato')
+    funil = {'total': 0, 'por_status': [], 'por_mes': [], 'por_curso': [], 'por_uf': [], 'pcd': 0}
+    kpis_funil = {}
+    if dfa is not None and not dfa.empty:
+        c_mes    = _col(dfa, 'mes')
+        c_status = _col(dfa, 'status')
+        c_cid    = _col(dfa, 'cidade')
+        c_pcd    = _col(dfa, 'pcd')
+        c_curso  = _col(dfa, 'curso') or _col(dfa, 'area') or _col(dfa, 'especial')
+        if c_curso is None and c_cid is not None:
+            # na planilha real, a coluna de curso/área tem cabeçalho em branco —
+            # é a coluna imediatamente à direita de "Cidade".
+            _cols = list(dfa.columns)
+            try:
+                _idx = _cols.index(c_cid)
+                if _idx + 1 < len(_cols):
+                    c_curso = _cols[_idx + 1]
+            except ValueError:
+                pass
+        st_ct, mes_ct, uf_ct = _Counter(), _Counter(), _Counter()
+        curso_ct, curso_ok = _Counter(), _Counter()
+        curso_status_ct = defaultdict(_Counter)  # {curso: Counter(status_norm)} — pro funil filtrado por curso (coordenadores)
+        st_label = {}  # status_norm -> rótulo bonito (com acento), pro frontend
+        pcd_n = 0
+        total = 0
+        for _, row in dfa.iterrows():
+            raw_status = _val(row, c_status)
+            if not raw_status and not _val(row, c_mes):
+                continue
+            total += 1
+            stn = _vrh_norm(raw_status) or 'SEM STATUS'
+            if stn not in st_label:
+                _lbl = re.sub(r'^[^0-9A-Za-zÀ-ÿ]+', '', str(raw_status)).strip()
+                st_label[stn] = _lbl.title() if _lbl else stn.title()
+            grupo = _VRH_STATUS_GRUPO.get(stn, 'andamento')
+            st_ct[stn] += 1
+            mes = _val(row, c_mes)
+            if mes:
+                mes_ct[mes] += 1
+            _, uf = _vrh_cidade_uf(_val(row, c_cid))
+            if uf:
+                uf_ct[uf] += 1
+            curso = _val(row, c_curso)
+            if curso:
+                curso_ct[curso] += 1
+                curso_status_ct[curso][stn] += 1
+                if stn == 'FINALIZADO':
+                    curso_ok[curso] += 1
+            if _vrh_norm(_val(row, c_pcd)) in ('SIM', 'S', 'PCD'):
+                pcd_n += 1
+
+        def _ordem_st(s):
+            try:
+                return _VRH_STATUS_ORDEM.index(s)
+            except ValueError:
+                return len(_VRH_STATUS_ORDEM)
+
+        funil = {
+            'total': total,
+            'por_status': sorted(
+                [{'status': st_label.get(s, s.title()), 'status_norm': s, 'n': n,
+                  'grupo': _VRH_STATUS_GRUPO.get(s, 'andamento'), 'ordem': _ordem_st(s)}
+                 for s, n in st_ct.items()],
+                key=lambda d: d['ordem']),
+            'por_mes':   [{'mes': m, 'n': n} for m, n in mes_ct.most_common()],
+            'por_curso': [{'curso': c, 'n': n, 'contratados': curso_ok.get(c, 0)}
+                          for c, n in curso_ct.most_common()],
+            'por_curso_status': {c: dict(sc) for c, sc in curso_status_ct.items()},
+            'por_uf':    [{'uf': u, 'n': n} for u, n in uf_ct.most_common()],
+            'pcd': pcd_n,
+        }
+        contratados = st_ct.get('FINALIZADO', 0)
+        perdas_def = sum(st_ct.get(s, 0) for s in ('DESISTENCIA', 'SEM RETORNO DO CANDIDATO', 'SEM RETORNO DO CAN'))
+        base_conv = max(total - perdas_def, 1)
+        kpis_funil = {
+            'candidatos_total': total,
+            'em_andamento': sum(n for s, n in st_ct.items()
+                                if _VRH_STATUS_GRUPO.get(s, 'andamento') == 'andamento'),
+            'entrevistas_agendadas': st_ct.get('AGENDADO', 0),
+            'propostas_enviadas': st_ct.get('ENVIO DE PROPOSTA', 0) + st_ct.get('AGUARDANDO ACEITE', 0),
+            'contratados': contratados,
+            'declinou_remuneracao': st_ct.get('DECLINOU DEVIDO REMUNERACAO', 0),
+            'nao_compareceu': st_ct.get('NAO COMPARECEU NA ENTREVISTA', 0),
+            'taxa_conversao': round(100.0 * contratados / base_conv, 1),
+        }
+    else:
+        print(f"[{ts()}] Vagas RH: aba 'Agendamento de entrevista' ausente ou vazia")
+
+    kpis = {
+        'reqs_total': len(reqs),
+        'reqs_abertas': sum(1 for r in reqs if not r['fechada']),
+        'reqs_fechadas': sum(1 for r in reqs if r['fechada']),
+    }
+    kpis.update(kpis_funil)
+    print(f"[{ts()}] Vagas RH: {len(reqs)} vagas INHIRE ({kpis['reqs_abertas']} abertas), "
+          f"{funil['total']} candidatos no funil, {kpis.get('contratados', 0)} contratados")
+    return {'reqs': reqs, 'funil': funil, 'kpis': kpis, 'ref_salario': _VRH_REF_SALARIO}
+
+
+def _cruzar_vagas_recrutamento(vagas_lotacao, reqs):
+    """Anota cada vaga da Lotação com a etapa de recrutamento do req que casar
+    por tipo + curso + cidade/polo. Conservador: só grava quando polo E curso
+    batem; req sem match continua visível no bloco de recrutamento."""
+    if not vagas_lotacao or not reqs:
+        return
+
+    def _npolo(s):
+        s = re.sub(r'^\s*LAP\s*-\s*', '', str(s or ''), flags=re.I)
+        s = re.sub(r'\([^)]*\)', '', s)
+        s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode()
+        return re.sub(r'\s+', ' ', re.sub(r'[^a-z0-9]+', ' ', s.lower())).strip()
+
+    def _ncurso(s):
+        n = _vrh_norm(s)
+        return _vrh_norm(CURSOS_NOMES.get(n.replace(' ', '-'), n))
+
+    idx = [(_npolo(r.get('cidade')), _ncurso(r.get('curso')),
+            'Substituição' if 'substitu' in (r.get('tipo') or '').lower() else 'Aumento', r)
+           for r in reqs]
+
+    for v in vagas_lotacao:
+        vpolo = _npolo(v.get('polo'))
+        vcurso = _ncurso(v.get('cursos'))
+        vtipo = 'Substituição' if 'substitu' in (v.get('status') or '').lower() else 'Aumento'
+        for rpolo, rcurso, rtipo, r in idx:
+            if rtipo != vtipo:
+                continue
+            polo_ok = rpolo and vpolo and (rpolo in vpolo or vpolo in rpolo)
+            curso_ok = rcurso and vcurso and (rcurso in vcurso or vcurso in rcurso)
+            if polo_ok and curso_ok:
+                v['rec_etapa'] = r.get('etapa', '')
+                v['rec_ticket'] = r.get('ticket', '')
+                v['rec_link'] = r.get('link_inhire', '')
+                v['rec_fechada'] = bool(r.get('fechada'))
+                r['_casado'] = True
+                break
+
+
 def gerar_onboarding_atualizado(p1, p6, destino):
     """
     PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding.
@@ -2618,15 +2983,45 @@ def enriquecer_tutores(dados, lotacao):
         s = _ud.normalize('NFD', s)
         return ''.join(c for c in s if _ud.category(c) != 'Mn')
 
+    # PATCH 159: muitos "Aviso de Portfólio" são, na verdade, ex-tutores que
+    # foram DESLIGADOS (saíram do CONTROLE) mas cujos envios históricos de
+    # portfólio continuam na planilha — apareciam como pseudo-tutor "quebrado"
+    # (polo = chave crua polo+código, ex "Goiânia/GO - Jardim EuropaBFI") E
+    # também na lista tutores_desligados = a "duplicata" que o Leo apontou.
+    # Casando o nome do aviso com tutores_desligados, o registro fica coerente:
+    # polo limpo, rótulo "ex-tutor desligado em DD/MM", e o frontend pode
+    # tratá-lo como histórico e não como erro/tutor ativo.
+    _desl_por_nome = {}
+    for _d in dados.get('tutores_desligados', []):
+        _dn = _norm_nome_aviso(_d.get('n') or _d.get('nome') or '')
+        if _dn:
+            _desl_por_nome.setdefault(_dn, _d)
+
+    # código de curso GRUDADO no fim do polo (precedido de letra minúscula ou
+    # dígito, sem espaço) — ex "EuropaBFI", "NovaECE-ENM-...". Não toca em
+    # sufixos separados por espaço tipo "Shopping Estação BH".
+    _re_codigo_chave = re.compile(r'(?<=[a-z0-9ãõáéíóúâêô)\]])(?:[A-Z]{2,}(?:-[A-Z]{2,})*D?)\s*$')
+    def _polo_limpo_de_chave(chave):
+        _c = str(chave or '').strip()
+        _prev = None
+        while _c and _c != _prev:
+            _prev = _c
+            _c = _re_codigo_chave.sub('', _c).strip()
+        return _c or str(chave or '').strip()
+
     _avisos_enr = dados.get('avisos_portfolio', [])
     if _avisos_enr:
         for av in _avisos_enr:
-            if av['nome'] and av['nome'] not in ('nan', '-', ''):
+            if av['nome'] and str(av['nome']).strip().lower() not in ('nan', '-', 'none', ''):
                 nome_display = av['nome']
             else:
                 # Extrair nome do email
                 local = av['email'].split('@')[0] if '@' in av['email'] else av['email']
                 nome_display = local.replace('.', ' ').replace('_', ' ').title()
+            # PATCH 159: sem nome utilizável (email tipo @desconhecido) — rótulo
+            # genérico em vez de "Nan"/"Desconhecido" que parecia um tutor real.
+            if str(nome_display).strip().lower() in ('nan', 'none', 'desconhecido', '', '-'):
+                nome_display = 'Remetente não identificado'
             _correcao = _CORRECOES_MANUAIS_AVISO.get(_norm_nome_aviso(nome_display))
             if _correcao:
                 tutores.append({
@@ -2642,18 +3037,34 @@ def enriquecer_tutores(dados, lotacao):
                     'correcao_manual_motivo': 'Erro de preenchimento no Forms (categoria/polo digitados errado) — confirmado com o Leo em 21/08, submissão é real.',
                 })
                 continue
+            _desl = _desl_por_nome.get(_norm_nome_aviso(nome_display))
+            _polo_aviso = (_desl.get('p') if _desl else '') or _polo_limpo_de_chave(av.get('chave', ''))
+            _reg_pol = av.get('tipo') == 'regente_de_polo'
             tutores.append({
                 'n': nome_display,
-                'p': av.get('chave', '').replace('BFR-BBI','').replace('EMF-ISN','').replace('NTR','').strip(),
-                'c': 'Aviso de Portfólio', 'cf': 'Aviso de Portfólio',
+                'p': _polo_aviso,
+                # 'c' fica SEMPRE 'Aviso de Portfólio' — é o que o frontend usa pra
+                # NÃO contar esse registro no headcount de tutores. A categoria real
+                # do ex-tutor vai em 'categoria_ex_tutor' (só exibição).
+                'c': 'Aviso de Portfólio', 'cf': 'Aviso de Portfólio', 'c_exibicao': 'Aviso de Portfólio',
+                'categoria_ex_tutor': (_desl.get('c') if _desl else ''),
                 'tp': 0, 'te': av['count'],
                 'pend': [], 'real': [], 'hist': [],
                 'pct': 0,
                 'ch_semanal': None,
                 'aviso_tipo': av['tipo'],
-                'aviso_msg': av['msg'],
+                'aviso_msg': (
+                    f"Ex-tutor(a) desligado(a) em {_desl.get('data_desligamento','?')} — {av['count']} envio(s) de portfólio depois disso."
+                    if _desl else
+                    ("Envio por e-mail de Regente de Polo (não é tutor de prática)." if _reg_pol else av['msg'])
+                ),
                 'aviso_email': av['email'],
                 'aviso_count': av['count'],
+                # PATCH 159: flags pro frontend distinguir "ex-tutor conhecido" e
+                # "regente de polo" de um erro de matching de verdade.
+                'aviso_ex_tutor': bool(_desl),
+                'aviso_desligamento': (_desl.get('data_desligamento') if _desl else ''),
+                'aviso_regente_polo': _reg_pol,
             })
     dados['tutores'] = tutores
 
@@ -3987,7 +4398,7 @@ if __name__ == '__main__':
     print()
     print(" Verificando arquivos...")
     print()
-    p1, p2, tmpl, p3, p3b, p4, p5, p6 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p3b, p4, p5, p6, p7 = verificar_e_localizar()
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
@@ -4060,6 +4471,29 @@ if __name__ == '__main__':
     else:
         dados['alunos_por_curso'] = []
         dados['vagas'] = {'vagas': [], 'kpis': {}}
+    # PATCH 157: Recrutamento & Seleção (RH). Anexa em dados['vagas'] (não cria
+    # chave top-level) pra o frontend pegar via DB.vagas sem mudança de contrato:
+    #   - dados['vagas']['recrutamento'] = {reqs, status_legenda?, ref_salario}
+    #   - dados['vagas']['funil']        = agregado do funil de candidatos (sem PII)
+    #   - dados['vagas']['kpis']         += KPIs de recrutamento
+    # E cruza cada vaga da Lotação com o req do INHIRE que casar (curso+cidade).
+    if p7:
+        try:
+            _vrh = processar_vagas_rh(p7)
+            if _vrh:
+                dados['vagas'].setdefault('vagas', [])
+                dados['vagas'].setdefault('kpis', {})
+                dados['vagas']['recrutamento'] = {
+                    'reqs': _vrh['reqs'],
+                    'ref_salario': _vrh['ref_salario'],
+                }
+                dados['vagas']['funil'] = _vrh['funil']
+                dados['vagas']['kpis'].update(_vrh['kpis'])
+                _cruzar_vagas_recrutamento(dados['vagas']['vagas'], _vrh['reqs'])
+                _n_cas = sum(1 for r in _vrh['reqs'] if r.get('_casado'))
+                print(f"[{ts()}] Vagas RH: {_n_cas}/{len(_vrh['reqs'])} vagas INHIRE cruzadas com a Lotação")
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar Vagas RH: {e}")
     # PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding —
     # roda sempre (mesmo na primeira vez, quando ainda não existe um p6 pra
     # ler flags antigos) pra garantir que a lista sempre nasce e se mantém
