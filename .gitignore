@@ -1,0 +1,23 @@
+# Planilhas de entrada — contêm dados pessoais (nomes, e-mails, telefones).
+# NUNCA commitar. O pipeline baixa via secrets no GitHub Actions.
+planilhas/
+
+# Saída intermediária do processar.py (o que é publicado vai pra raiz: index.html etc.)
+saida/
+
+# Config local com caminhos absolutos das planilhas (rodar sem baixar)
+config_links.json
+
+# Dumps de auditoria / arquivos temporários
+DB_dump.json
+*.dump.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Onboarding gerado localmente pelo processar.py
+Acompanhamento_Onboarding.xlsx
+
+# Baseline de regressão — regenerada a cada rodada, estado local
+snapshot_manifest.json
