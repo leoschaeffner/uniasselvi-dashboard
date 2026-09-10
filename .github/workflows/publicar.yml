@@ -1,0 +1,179 @@
+name: Atualizar Dashboard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */2 * * *'
+
+concurrency:
+  group: dashboard-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # keepalive (evita o GitHub desativar o cron por inatividade)
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install pandas openpyxl xlrd requests cryptography --quiet
+
+      - name: Baixar planilhas do OneDrive
+        env:
+          URL_CONTROLE:   ${{ secrets.URL_CONTROLE }}
+          URL_PORTFOLIO:  ${{ secrets.URL_PORTFOLIO }}
+          URL_PORTFOLIO_2026_2: ${{ secrets.URL_PORTFOLIO_2026_2 }}
+          URL_GERENCIAL:  ${{ secrets.URL_GERENCIAL }}
+          URL_GERENCIAL_26_02: ${{ secrets.URL_GERENCIAL_26_02 }}
+          URL_LOTACAO:    ${{ secrets.URL_LOTACAO }}
+          URL_REL_NOVO:   ${{ secrets.URL_REL_NOVO }}
+          URL_ALUNOS_HUB: ${{ secrets.URL_ALUNOS_HUB }}
+          URL_VAGAS_RH:   ${{ secrets.URL_VAGAS_RH }}
+        run: |
+          mkdir -p planilhas
+          python3 - << 'PYEOF'
+          import os, urllib.request, re, sys
+
+          def sp_download_url(url):
+              """
+              Converte link de compartilhamento SharePoint para URL de download direto.
+              Formato que funciona neste tenant: download.aspx?share=TOKEN
+              """
+              if not url or 'sharepoint.com' not in url:
+                  return [url] if url else []
+
+              urls = []
+
+              # Formato 1: download.aspx (funciona neste tenant UNIASSELVI)
+              # Extrai TOKEN do path: /personal/USER/TOKEN?...
+              m_token = re.search(r'/([A-Za-z0-9_\-]{20,})(?:\?|$)', url)
+              m_user  = re.search(r'/personal/([^/]+)/', url)
+              m_base  = re.match(r'(https://[^/]+)', url)
+              if m_token and m_user and m_base:
+                  dl = f"{m_base.group(1)}/personal/{m_user.group(1)}/_layouts/15/download.aspx?share={m_token.group(1)}"
+                  urls.append(dl)
+
+              # Formato 2: adicionar &download=1 como fallback
+              sep = '&' if '?' in url else '?'
+              urls.append(url + sep + 'download=1')
+
+              # Formato 3: URL original como último recurso
+              urls.append(url)
+              return urls
+
+          def baixar(env_var, destino, nome, obrigatorio=True):
+              url = os.environ.get(env_var, '').strip()
+              if not url:
+                  msg = f"  [SKIP] {nome}: secret '{env_var}' não configurado"
+                  print(msg)
+                  if obrigatorio:
+                      print(f"  [ERRO] {nome} é obrigatório — abortando")
+                      sys.exit(1)
+                  return False
+
+              for tentativa, u in enumerate(sp_download_url(url), 1):
+                  try:
+                      req = urllib.request.Request(u, headers={
+                          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                      })
+                      with urllib.request.urlopen(req, timeout=180) as r:
+                          data = r.read()
+
+                      # Rejeitar HTML (página de login ou erro)
+                      head = data[:500].lower()
+                      if b'<!doctype' in head or b'<html' in head or b'sign in' in head:
+                          print(f"  [T{tentativa}] {nome}: retornou HTML ({len(data)} bytes) — próxima URL")
+                          continue
+
+                      # Arquivo válido
+                      with open(destino, 'wb') as f:
+                          f.write(data)
+                      print(f"  [OK] {nome}: {len(data):,} bytes (tentativa {tentativa})")
+                      return True
+
+                  except Exception as e:
+                      print(f"  [T{tentativa}] {nome}: {e}")
+
+              print(f"  [ERRO] {nome}: todas as URLs falharam")
+              if obrigatorio:
+                  sys.exit(1)
+              return False
+
+          print("[INFO] Baixando planilhas...")
+          baixar('URL_CONTROLE',   'planilhas/01_CONTROLE_TUTORIA.xlsx',        '01_CONTROLE_TUTORIA',        True)
+          baixar('URL_PORTFOLIO',  'planilhas/PORTIFOLIO_TUTOR.xlsx',           'PORTIFOLIO_TUTOR',           True)
+          baixar('URL_PORTFOLIO_2026_2', 'planilhas/PORTIFOLIO_TUTOR_2026_2.xlsx', 'PORTIFOLIO_TUTOR_2026_2', False)
+          baixar('URL_GERENCIAL',  'planilhas/REL_GERAL_DE_GERENCIAMENTO.xlsx', 'REL_GERENCIAMENTO',          False)
+          baixar('URL_GERENCIAL_26_02', 'planilhas/REL_GERAL_DE_GERENCIAMENTO_26_02.csv', 'REL_GERENCIAMENTO_26_02', False)
+          baixar('URL_LOTACAO',    'planilhas/LOTACAO_TUTORES.xlsm',            'LOTACAO_TUTORES',            False)
+          baixar('URL_REL_NOVO',   'planilhas/REL_DETALHADO.csv',               'REL_DETALHADO',              False)
+          baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'ALUNOS_HUB',                 False)
+          baixar('URL_VAGAS_RH',   'planilhas/VAGAS_RH.xlsx',                  'VAGAS_RH',                   False)
+          print("[INFO] Downloads concluídos")
+          PYEOF
+          echo "=== Planilhas ==="
+          ls -lh planilhas/
+
+      - name: Processar dashboard
+        run: python processar.py --sem-browser
+
+      # ── PATCH 160: publica via artifact do GitHub Pages, NÃO commitando mais os
+      # HTML gerados (index.html / coordenadores.html / lookup.json) no git. Isso
+      # parou o crescimento de ~1 GB/dia do .git (cada rodada de 2h reescrevia
+      # ~86 MB de HTML não-comprimível). O site continua no mesmo endereço.
+      - name: Montar site
+        run: |
+          rm -rf _site && mkdir _site
+          # tudo do checkout, MENOS o que não pode ir pro ar / não é do site
+          rsync -a \
+            --exclude='.git' --exclude='.github' \
+            --exclude='planilhas' --exclude='saida' --exclude='_site' \
+            --exclude='processar.py' --exclude='template_dashboard.html' \
+            --exclude='template_coordenadores.html' \
+            --exclude='*.md' --exclude='*.sh' \
+            ./ _site/
+          cp saida/dashboard.html      _site/index.html
+          cp saida/coordenadores.html  _site/coordenadores.html
+          cp saida/lookup.json         _site/lookup.json
+          echo "=== _site ===" ; ls -lh _site/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Keepalive
+        if: github.event_name == 'schedule'
+        run: |
+          DAY=$(TZ='America/Sao_Paulo' date '+%u')
+          if [ "$DAY" = "1" ]; then
+            echo "keepalive $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M')" > .github/last_run.txt
+            git config user.email "actions@github.com"
+            git config user.name "GitHub Actions"
+            git add .github/last_run.txt
+            git diff --cached --quiet || {
+              git commit -m "keepalive $(date '+%Y-%m-%d')"
+              git pull --rebase -X ours origin main
+              git push
+            }
+          fi

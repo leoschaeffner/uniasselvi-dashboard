@@ -1,0 +1,37 @@
+{
+  "_instrucoes": "Edite apenas os valores de datas e semestre. Nao altere o processar.py para isso.",
+  "semestres": {
+    "2026/1": {
+      "prazos": {
+        "Ordem 1": "14/03/2026",
+        "Ordem 2": "11/04/2026",
+        "Ordem 3": "09/05/2026",
+        "Ordem 4": "06/06/2026",
+        "Ordem 5": "04/07/2026"
+      },
+      "periodos": {
+        "Ordem 1": {"inicio": "16/02/2026", "fim": "14/03/2026", "semanas": 4},
+        "Ordem 2": {"inicio": "16/03/2026", "fim": "11/04/2026", "semanas": 4},
+        "Ordem 3": {"inicio": "13/04/2026", "fim": "09/05/2026", "semanas": 4},
+        "Ordem 4": {"inicio": "11/05/2026", "fim": "06/06/2026", "semanas": 4},
+        "Ordem 5": {"inicio": "08/06/2026", "fim": "04/07/2026", "semanas": 4}
+      }
+    },
+    "2026/2": {
+      "prazos": {
+        "Ordem 1": "22/08/2026",
+        "Ordem 2": "19/09/2026",
+        "Ordem 3": "17/10/2026",
+        "Ordem 4": "14/11/2026",
+        "Ordem 5": "12/12/2026"
+      },
+      "periodos": {
+        "Ordem 1": {"inicio": "27/07/2026", "fim": "22/08/2026", "semanas": 4},
+        "Ordem 2": {"inicio": "24/08/2026", "fim": "19/09/2026", "semanas": 4},
+        "Ordem 3": {"inicio": "21/09/2026", "fim": "17/10/2026", "semanas": 4},
+        "Ordem 4": {"inicio": "19/10/2026", "fim": "14/11/2026", "semanas": 4},
+        "Ordem 5": {"inicio": "16/11/2026", "fim": "12/12/2026", "semanas": 4}
+      }
+    }
+  }
+}

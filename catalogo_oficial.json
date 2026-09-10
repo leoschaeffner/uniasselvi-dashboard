@@ -1,0 +1,2058 @@
+{
+  "Multidisciplinar I - Biomedicina e Farmácia": [
+    {
+      "id": "55",
+      "nome": "Imunocromatografia IgG IgM para Toxoplasmose",
+      "disc": "Imunologia Clínica",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "56",
+      "nome": "Marcadores Reumáticos - Aslo.Pcr.Fr",
+      "disc": "Imunologia Clínica",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "110",
+      "nome": "Pesquisa de antígeno Covid-19",
+      "disc": "Imunologia Clínica",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "111",
+      "nome": "VDRL",
+      "disc": "Imunologia Clínica",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "106",
+      "nome": "Alterações de tamanho e coloração eritrocitária + Pesquisa de antígeno Covid-19",
+      "disc": "Imunologia e Hematologia Clínica",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "104",
+      "nome": "Análise de pH + Análise de acidez titulável - Determinação da acidez por titulometria",
+      "disc": "Bromatologia e Tecnologia de Alimentos",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "107",
+      "nome": "Desenvolvendo um Xampu",
+      "disc": "Tecnologia Farmacêutica e Controle de Qualidade de Medicamentos e Cosméticos",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "53",
+      "nome": "Desenvolvimento do Creme Lanette N + Xarope simples e composto",
+      "disc": "Farmacotécnica",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "52",
+      "nome": "Encapsulamento de pós",
+      "disc": "Farmacotécnica",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "109",
+      "nome": "Formulando uma Nanoemulsão Cosmética",
+      "disc": "Tecnologia Farmacêutica e Controle de Qualidade de Medicamentos e Cosméticos",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "105",
+      "nome": "Histologia vegetal",
+      "disc": "Farmacognosia e Fitoterapia",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "54",
+      "nome": "Latex (fator reumatoide), ALSO e PCR",
+      "disc": "Imunologia e Hematologia Clínica",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "108",
+      "nome": "Peso médio comprimidos + Análise de densidade",
+      "disc": "Tecnologia Farmacêutica e Controle de Qualidade de Medicamentos e Cosméticos",
+      "curso": "BFR",
+      "perfil": "BFR"
+    },
+    {
+      "id": "60",
+      "nome": "Análise à fresco (exame direto) de fungos dermatófitos e leveduras",
+      "disc": "Micologia Clínica E Virologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "123",
+      "nome": "Análise de sedimento urinário",
+      "disc": "Urinálise E Citopatologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "66",
+      "nome": "Análise físico-química da urina",
+      "disc": "Urinálise E Citopatologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "61",
+      "nome": "Análise macro e micromorfológica de fungos leveduriformes",
+      "disc": "Micologia Clínica E Virologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "67",
+      "nome": "Coleta de Sangue",
+      "disc": "Hematologia e Imunologia Básica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "113",
+      "nome": "Contagem diferencial de leucócitos",
+      "disc": "Hematologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "68",
+      "nome": "Contagem diferencial de leucócitos",
+      "disc": "Hematologia e Imunologia Básica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "63",
+      "nome": "Dosagem de colesterol sérico",
+      "disc": "Bioquímica Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "118",
+      "nome": "Dosagem de glicose sérica",
+      "disc": "Bioquímica Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "120",
+      "nome": "Dosagem de triglicerídeos sérico",
+      "disc": "Bioquímica Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "115",
+      "nome": "Esfregaço e coloração de GRAM",
+      "disc": "Microbiologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "69",
+      "nome": "Esfregaço sanguíneo e colorações  (contagem diferencial de leucócitos)",
+      "disc": "Hematologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "59",
+      "nome": "Esfregaço sanguíneo e colorações  (contagem diferencial de leucócitos)",
+      "disc": "Hematologia e Imunologia Básica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "122",
+      "nome": "Exame direto a fresco e gota espessa",
+      "disc": "Parasitologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "116",
+      "nome": "Identificação de estreptococos",
+      "disc": "Microbiologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "65",
+      "nome": "Laminário de ovos de helmintos",
+      "disc": "Parasitologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "64",
+      "nome": "Método de Hoffman",
+      "disc": "Parasitologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "114",
+      "nome": "Preparo de meio de cultura I",
+      "disc": "Micologia Clínica E Virologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "62",
+      "nome": "Preparo de meio de cultura II",
+      "disc": "Microbiologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "117",
+      "nome": "Técnicas de inoculação",
+      "disc": "Microbiologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "70",
+      "nome": "Tipagem sanguínea em lâminas",
+      "disc": "Hematologia e Imunologia Básica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "119",
+      "nome": "Transaminases",
+      "disc": "Bioquímica Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "112",
+      "nome": "Velocidade de Hemossedimentação",
+      "disc": "Hematologia Clínica",
+      "curso": "BFR-BBI",
+      "perfil": "BFR"
+    }
+  ],
+  "Multidisciplinar III - Biomedicina Estética, Fisioterapia, Terapia Ocupacional e Estética e Cosmética": [
+    {
+      "id": "124",
+      "nome": "Abordagens Integradas para Revitalização Facial: Peeling Mecânico e Químico",
+      "disc": "Consulta E Acompanhamento Em Biomedicina Estética",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "72",
+      "nome": "Avaliação Corporal e avaliação facial",
+      "disc": "Estética E Avaliação Facial E Corporal",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "73",
+      "nome": "Limpeza de pele e hidratação facial",
+      "disc": "Estética E Avaliação Facial E Corporal",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "71",
+      "nome": "Microagulhamento no tratamento de cicatrizes/rejuvenescimento facial",
+      "disc": "Procedimentos Injetáveis Em Biomedicina Estética",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "58",
+      "nome": "Microagulhamento no tratamento de disfunções hipercrômicas",
+      "disc": "Procedimentos Injetáveis Em Biomedicina Estética",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "125",
+      "nome": "Tratamento de Flacidez Tissular (corporal e facial) e Gordura Localizada",
+      "disc": "Consulta E Acompanhamento Em Biomedicina Estética",
+      "curso": "BBI",
+      "perfil": "BFR"
+    },
+    {
+      "id": "238",
+      "nome": "Abordagens Fisioterapêuticas no Desenvolvimento Neuropsicomotor",
+      "disc": "Fisioterapia na Saúde da Criança",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "568",
+      "nome": "Aplicação da Eletrotermofototerapia em Casos Clínicos Reais",
+      "disc": "Eletrotermofototerapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "184",
+      "nome": "Aprendizagem",
+      "disc": "Terapia Ocupacional Em Contextos Sociais E Educacionais",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "178",
+      "nome": "Auriculoterapia",
+      "disc": "Spas E Terapias Alternativas",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "257",
+      "nome": "Avaliação Cardiorrespiratória com Testes Incrementais: Protocolos e Interpretação dos Resultados",
+      "disc": "Fisiologia do Exercicio e Avaliação Cardiorrespiratória",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "237",
+      "nome": "Avaliação e Aplicação de Recursos Eletrotermofototerapeuticos em Disfunções Dermatofuncionais",
+      "disc": "Fisioterapia Dermatofuncional",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "247",
+      "nome": "Avaliação e Reabilitação Funcional dos Membros Inferiores : Prática em Fisioterapia Traumato-Ortopédica",
+      "disc": "Fisioterapia Traumato ortopedica",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "275",
+      "nome": "Avaliação e Reabilitação Funcional dos Membros Superiores: Prática em Fisioterapia Traumato-Ortopédica",
+      "disc": "Fisioterapia Traumato ortopedica",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "565",
+      "nome": "Avaliação Físico-Funcional e Imaginológica da Coluna Vertebral e Quadril",
+      "disc": "Avaliação Físico-Funcional e Imaginologia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "240",
+      "nome": "Avaliação Funcional e Exercícios para Gestantes: Atuação Fisioterapêutica na Gravidez",
+      "disc": "Fisioterapia na Saúde da Mulher",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "251",
+      "nome": "Avaliação Funcional Integrada e Correlação Imaginológica nas Patologias do Joelho/Tornozelo/Pé",
+      "disc": "Avaliação Físico-Funcional e Imaginologia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "199",
+      "nome": "Avaliação Funcional Integrada e Correlação Imaginológica nas Patologias do Ombro e Cotovelo",
+      "disc": "Avaliação Físico-Funcional e Imaginologia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "564",
+      "nome": "Avaliação Funcional Integrada e Correlação Imaginológica nas Patologias do Punho/Mão",
+      "disc": "Avaliação Físico-Funcional e Imaginologia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "570",
+      "nome": "Avaliação Infantil",
+      "disc": "Fisioterapia na Saúde da Criança",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "569",
+      "nome": "Avaliação Motora e Estratégias de Reabilitação em Crianças com Paralisia Cerebral e Síndrome de Down",
+      "disc": "Fisioterapia na Saúde da Criança",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "244",
+      "nome": "Avaliação Neurológica",
+      "disc": "Fisioterapia Neurofuncional",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "520",
+      "nome": "Avaliação Semiológica Cardiorrespiratória: Métodos de Inspeção, Palpação e Ausculta no Diagnóstico Cardiovascular",
+      "disc": "Fisiologia do Exercicio e Avaliação Cardiorrespiratória",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "261",
+      "nome": "Avaliação Semiológica Cardiorrespiratória: Técnicas e Protocolos na Fisioterapia Cardiovascular",
+      "disc": "Fisioterapia Cardiovascular",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "218",
+      "nome": "Braintom",
+      "disc": "Teorias E Dinâmicas De Trabalho Em Grupo",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "519",
+      "nome": "Cinesioterapia Aplicada à Estabilização e Controle Motor",
+      "disc": "Cinesioterapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "252",
+      "nome": "Cinesioterapia Aplicada ao Fortalecimento Muscular: Prática de Exercícios",
+      "disc": "Cinesioterapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "264",
+      "nome": "Circuito de  Intervenções Fisioterapêuticas em Pediatria",
+      "disc": "Fisioterapia na Saúde da Criança",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "212",
+      "nome": "Desintoxicação e nutrição Capilar com Argila",
+      "disc": "Estética Capilar",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "177",
+      "nome": "Drenagem Linfática",
+      "disc": "Procedimentos Estéticos Pré E Pós-Operatórios",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "179",
+      "nome": "Escalda Pés",
+      "disc": "Spas E Terapias Alternativas",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "573",
+      "nome": "Estudo Prático da Biomecânica Articular e Muscular no Movimento Funcional Humano",
+      "disc": "Movimento Funcional Humano",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "272",
+      "nome": "Facilitação Motora e Controle Postural na Reabilitação de Pacientes Pós-AVC: Laboratório Prático",
+      "disc": "Fisioterapia Neurofuncional",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "521",
+      "nome": "Fisioterapia com Próteses: Reabilitação Funcional e Adaptação ao Uso de Próteses",
+      "disc": "Prótese e Órteses",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "269",
+      "nome": "Fisioterapia no Idoso: Técnicas de Avaliação Funcional e Neurológica para Diagnóstico e Reabilitação",
+      "disc": "Fisioterapia Na Saúde Do Idoso",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "567",
+      "nome": "Fundamentos e Aplicações Clínicas da Eletroterapia: Prática em Eletrotermofototerapia",
+      "disc": "Eletrotermofototerapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "255",
+      "nome": "Fototerapia na Reabilitação Fisioterapêutica: Prática em Eletrotermofototerapia",
+      "disc": "Eletrotermofototerapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "182",
+      "nome": "Gincana Sensorial",
+      "disc": "Psicomotricidade E Integração Sensorial",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "171",
+      "nome": "Laser e LED",
+      "disc": "Eletroterapia",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "174",
+      "nome": "Limpeza de Pele Facial e avaliação facial",
+      "disc": "Estética E Avaliação Facial",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "186",
+      "nome": "Mapa Conceitual",
+      "disc": "Terapia Ocupacional Nas Disfunções Físicas Da Criança E Do Adolescente",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "175",
+      "nome": "Maquiagem social",
+      "disc": "Maquiagem E Visagismo",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "216",
+      "nome": "Massagem Facial",
+      "disc": "Teorias E Técnicas De Massagem",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "305",
+      "nome": "Massagem Geral Terapêutica: Técnicas e Aplicações em Recursos Manuais",
+      "disc": "Recursos terapêuticos Manuais",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "180",
+      "nome": "Massagem Modeladora",
+      "disc": "Teorias E Técnicas De Massagem",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "215",
+      "nome": "Massagem Relaxante",
+      "disc": "Teorias E Técnicas De Massagem",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "566",
+      "nome": "Mobilização Articular na Cinesioterapia: Avaliação e Intervenção Funcional",
+      "disc": "Cinesioterapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "278",
+      "nome": "Movimento Articular e Goniometria: Avaliação Quantitativa na Prática Fisioterapêutica",
+      "disc": "Movimento Funcional Humano",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "574",
+      "nome": "Movimento Funcional e Cinesiologia da Marcha: Observação e Análise em Laboratório Prático",
+      "disc": "Movimento Funcional Humano",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "181",
+      "nome": "Oficinas de terapia ocupacional na saude mental",
+      "disc": "Comportamento Humano E Transtornos Mentais",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "185",
+      "nome": "Pontos cardeais",
+      "disc": "Terapia Ocupacional Na Saúde Do Trabalhador",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "253",
+      "nome": "Prática de Alongamento Muscular: Estratégias Cinesioterapêuticas para Ganho de Flexibilidade e Função",
+      "disc": "Cinesioterapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "270",
+      "nome": "Prática de Análise Ergonômica: Identificação e Correção de Riscos Ergonômicos no Local de Trabalho",
+      "disc": "Fisioterapia na Saúde do Trabalhador",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "572",
+      "nome": "Prática de Avaliação Intensiva: Uso de Simuladores para Diagnóstico e Intervenção Respiratória",
+      "disc": "Fisioterapia Respiratória e Intensivismo",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "306",
+      "nome": "Prática de Drenagem Linfática Manual: Estímulo à Circulação Linfática e Redução de Edema",
+      "disc": "Recursos terapêuticos Manuais",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "307",
+      "nome": "Prática de Mobilização Articular: Abordagens Terapêuticas em Recursos Manuais",
+      "disc": "Recursos terapêuticos Manuais",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "304",
+      "nome": "Prática Terapêutica com Órteses: Abordagens Funcionais na Reabilitação Musculoesquelética",
+      "disc": "Prótese e Órteses",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "249",
+      "nome": "Prática Traumato-Ortopédica em Coluna Vertebral: Manejo de Disfunções Cervicais, Torácicas e Lombares",
+      "disc": "Fisioterapia Traumato ortopedica",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "176",
+      "nome": "Preparação da pele para receber a maquiagem",
+      "disc": "Maquiagem E Visagismo",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "268",
+      "nome": "Prevenção de Quedas e Técnicas de Transferência: Estratégias Fisioterapêuticas para Idosos",
+      "disc": "Fisioterapia Na Saúde Do Idoso",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "183",
+      "nome": "Produção de Prototipo",
+      "disc": "Tecnologia Assistiva Em Terapia Ocupacional",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "245",
+      "nome": "Reabilitação Fisioterapêutica na Doença de Parkinson: Estratégias para a Melhora da Marcha, Equilíbrio e Funcionalidade",
+      "disc": "Fisioterapia Neurofuncional",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "241",
+      "nome": "Reabilitação Fisioterapêutica no Envelhecimento: Manejo de Doenças Reumáticas em Idosos",
+      "disc": "Fisioterapia Na Saúde Do Idoso",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "571",
+      "nome": "Recursos Terapêuticos em Disfunções Pélvicas Femininas: Prática Integrada",
+      "disc": "Fisioterapia na Saúde da Mulher",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "301",
+      "nome": "Revisão de Anatomorfofisiologia",
+      "disc": "Movimento Funcional Humano",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "246",
+      "nome": "Técnicas Respiratórias na Fisioterapia Intensiva",
+      "disc": "Fisioterapia Respiratória e Intensivismo",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "230",
+      "nome": "Termoterapia na Reabilitação Fisioterapêutica: Aplicações Práticas e Benefícios Terapêuticos",
+      "disc": "Eletrotermofototerapia",
+      "curso": "BFI",
+      "perfil": "BFI"
+    },
+    {
+      "id": "219",
+      "nome": "Tomada de decisão agil",
+      "disc": "Terapia Ocupacional Em Contextos Hospitalares E Cuidados Paliativos",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "213",
+      "nome": "Tratamento de Redução de Medida",
+      "disc": "Estética E Avaliação Corporal",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "173",
+      "nome": "Tratamento Flacidez dérmica",
+      "disc": "Estética E Avaliação Corporal",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "522",
+      "nome": "Treino de Atividades da Vida Diária - Membros Inferiores",
+      "disc": "Movimento Funcional Humano",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "217",
+      "nome": "Treino de Atividades da Vida Diária - Membros Superiores",
+      "disc": "Movimento Funcional Humano",
+      "curso": "BTO",
+      "perfil": "BTO"
+    },
+    {
+      "id": "172",
+      "nome": "Ultrassom Terapêutico (UST)",
+      "disc": "Eletroterapia",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    },
+    {
+      "id": "214",
+      "nome": "Uso de Microcorrentes no pós-operatório",
+      "disc": "Procedimentos Estéticos Pré E Pós-Operatórios",
+      "curso": "TIP-COS",
+      "perfil": "COS-TIP"
+    }
+  ],
+  "Multidisciplinar II - Enfermagem e Instrumentação Cirúrgica": [
+    {
+      "id": "206",
+      "nome": "Abordagem e cuidados de enfermagem em episódio de surto psicótico",
+      "disc": "Assistência de Enfermagem na Saúde Mental",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "79",
+      "nome": "Administração  de medicamento por Cateter Venoso Central + Monitorização hemodinâmica  do paciente",
+      "disc": "Assistência De Enfermagem Em Terapia Intensiva",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "76",
+      "nome": "Administração de medicamento pela via subcutânea + Administração de medicamento pela via oral",
+      "disc": "Assistência de Enfermagem ao Recém-Nascido e Lactente",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "130",
+      "nome": "Aspiração de vias aéreas (com e sem TOT)",
+      "disc": "Assistência De Enfermagem Em Terapia Intensiva",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "211",
+      "nome": "Avaliação corporal + Ausculta pulmonar + Ausculta cardiaca + Verificação de sinais vitais",
+      "disc": "Fundamentos de Enfermagem",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "169",
+      "nome": "Avaliação de enfermagem ao paciente com queimadura + Escala de Coma de Glasgow",
+      "disc": "Assistência de Enfermagem na Urgência e Emergência",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "134",
+      "nome": "Banho de leito + Lavagem gástrica",
+      "disc": "Assistência de Enfermagem na Saúde do Adulto",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "78",
+      "nome": "Consulta de enfermagem no pré-natal de baixo risco + Administração de medicamento pela via intramuscular",
+      "disc": "Assistência de Enfermagem da Gestante e Parturiente",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "210",
+      "nome": "Curativo",
+      "disc": "Fundamentos de Enfermagem",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "75",
+      "nome": "Desmontagem de campo cirúrgico do paciente + Desmontagem de mesa cirurgica e retirada da vestimenta cirúrgica estéril",
+      "disc": "Técnicas de Instrumentação Cirúrgica em Cirurgia Geral e em Videolaparoscopia",
+      "curso": "ISC",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "204",
+      "nome": "Exame físico - sistema cardiovascular + Atuação de enfermagem nas doenças locomotoras",
+      "disc": "Assistência de Enfermagem na Saúde do Idoso",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "74",
+      "nome": "Lavagem cirúrgica das mãos + Calço de luvas cirúrgicas",
+      "disc": "Assistência de Enfermagem no Centro Cirúrgico",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "74",
+      "nome": "Lavagem cirúrgica das mãos + Calço de luvas cirúrgicas",
+      "disc": "Paramentação Cirúrgica e Procedimentos em Centro Cirúrgico",
+      "curso": "ISC",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "207",
+      "nome": "Manobra de Suporte Básico de Vida",
+      "disc": "Assistência de Enfermagem na Urgência e Emergência",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "131",
+      "nome": "Medidas antropométricas da criança e adolescente + Acolhimento e escala de Manchester pediatria",
+      "disc": "Assistência de Enfermagem na Saúde da Criança e do Adolescente",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "208",
+      "nome": "Montagem de mesa cirúrgica básica",
+      "disc": "Assistência de Enfermagem no Centro Cirúrgico",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "127",
+      "nome": "Montagem de mesa cirúrgica básica",
+      "disc": "Técnicas de Instrumentação Cirúrgica em Cirurgia Geral e em Videolaparoscopia",
+      "curso": "ISC",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "205",
+      "nome": "Nutrição parenteral + Instalação de dispositivo urinário",
+      "disc": "Assistência de Enfermagem na Saúde do Idoso",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "132",
+      "nome": "Obstrução de vias aéreas + Prática de vacinação",
+      "disc": "Assistência de Enfermagem na Saúde da Criança e do Adolescente",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "126",
+      "nome": "Paramentação cirúrgica: vestimenta estéril + Colocação de campos cirúrgicos no paciente",
+      "disc": "Paramentação Cirúrgica e Procedimentos em Centro Cirúrgico",
+      "curso": "ISC",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "77",
+      "nome": "Punção e manutenção de cateter de longa permanência + Troca de bolsa de ostomia",
+      "disc": "Assistência de Enfermagem aos Pacientes Oncológicos e Cuidados Paliativos",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "82",
+      "nome": "Punção Venosa + Retirada de pontos",
+      "disc": "Assistência de Enfermagem na Saúde do Adulto",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "133",
+      "nome": "Saúde da mulher no período gravídico-puerperal",
+      "disc": "Assistência de Enfermagem na Saúde da Mulher",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "80",
+      "nome": "Saúde da mulher reprodutiva + Realização do exame de Papanicolau",
+      "disc": "Assistência de Enfermagem na Saúde da Mulher",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "81",
+      "nome": "Sondagem vesical de alívio + Sondagem vesical de demora",
+      "disc": "Assistência de Enfermagem na Saúde do Adulto",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "170",
+      "nome": "Trabalho de parto natural + Emergências obstétricas",
+      "disc": "Assistência de Enfermagem no Centro Obstétrico",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    },
+    {
+      "id": "168",
+      "nome": "Triagem de paciente com transtorno neurológico e risco de suicídio",
+      "disc": "Assistência de Enfermagem na Saúde Mental",
+      "curso": "EFM",
+      "perfil": "EMF-ISN"
+    }
+  ],
+  "EngeMaker | Química e Física - Engenharias e Licenciaturas": [
+    {
+      "id": "290",
+      "nome": "Acionamento de Cargas Remotamente e com sensores",
+      "disc": "Instalações Elétricas de Baixa Tensão",
+      "curso": "TER-ECE-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "289",
+      "nome": "Acionamento de Iluminação",
+      "disc": "Instalações Elétricas de Baixa Tensão",
+      "curso": "TER-ECE-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "248",
+      "nome": "Análise de um sistema de transmissão de potência",
+      "disc": "Experiência Profissional: Sistemas de Transmissão de Potência",
+      "curso": "ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "154",
+      "nome": "Análise estrutural de uma viga",
+      "disc": "Experiência Profissional: Construção e Simulação de Vigas",
+      "curso": "ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "154",
+      "nome": "Análise estrutural de uma viga",
+      "disc": "Imersão Profissional: Construção e simulação de vigas",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "154",
+      "nome": "Análise estrutural de uma viga",
+      "disc": "Seminário Interdisciplinar VIII:",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "94",
+      "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 1)",
+      "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "151",
+      "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 2)",
+      "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "152",
+      "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 3)",
+      "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "153",
+      "nome": "Assessoramento das diretrizes de conforto ambiental (Parte 4)",
+      "disc": "Experiência Profissional: Conforto Ambiental e Projeto Institucional",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "239",
+      "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 1)",
+      "disc": "Experiência Profissional: Projeto de Paisagismo Urbano",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "265",
+      "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 2)",
+      "disc": "Experiência Profissional: Projeto de Paisagismo Urbano",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "242",
+      "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 3)",
+      "disc": "Experiência Profissional: Projeto de Paisagismo Urbano",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "267",
+      "nome": "Assessoramento das técnicas de restauro utilizadas e especificações das espécies de vegatação (Parte 4)",
+      "disc": "Experiência Profissional: Projeto de Paisagismo Urbano",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "243",
+      "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 1)",
+      "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "271",
+      "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 2)",
+      "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "273",
+      "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 3)",
+      "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "274",
+      "nome": "Assessoramento do perfil viário e detalhamento técnico de um lote (Parte 4)",
+      "disc": "Experiência Profissional: Projeto Integrado de Arquitetura e Urbanismo",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "164",
+      "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 1)",
+      "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "165",
+      "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 2)",
+      "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "100",
+      "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 3)",
+      "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "166",
+      "nome": "Assessoramento no desenvolvimento da perspectiva arquitetônica (Parte 4)",
+      "disc": "Experiência Profissional: Perspectiva Arquitetônica e Habitação Multifamiliar",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "86",
+      "nome": "Automação Industrial (Painel Pneumático)",
+      "disc": "Automação Industrial",
+      "curso": "ENG",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "287",
+      "nome": "Avaliação do Número de Reynolds em Jar Test: Regimes de Escoamento na Coagulação",
+      "disc": "Hidráulica e Hidrometria",
+      "curso": "ENS",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "137",
+      "nome": "Conceitos Básicos do Desenho Auxiliado por Computador (AutoCAD)",
+      "disc": "Desenho Auxiliado por Computador",
+      "curso": "CDE-OBR-EEA-ENM-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "163",
+      "nome": "Construção de um motor elétrico",
+      "disc": "Experiência Profissional: Motor Elétrico",
+      "curso": "ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "84",
+      "nome": "Desenho Técnico no AutoCAD: Prática Essencial para Iniciantes.",
+      "disc": "Desenho Auxiliado por Computador",
+      "curso": "CDE-OBR-EEA-ENM-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "309",
+      "nome": "Dimensionamento de Condutores e Dispositivos de Proteção",
+      "disc": "Instalações Elétricas de Baixa Tensão",
+      "curso": "TER-ECE-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "101",
+      "nome": "Elaboração de um algoritmo em Pascalzim",
+      "disc": "Algoritmo e Lógica de Programação",
+      "curso": "EEA-ENM-ECE-ENS-ENG",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "51",
+      "nome": "Elaboração de um algoritmo em Portugol",
+      "disc": "Algoritmo e Lógica de Programação",
+      "curso": "EEA-ENM-ECE-ENS-ENG",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "352",
+      "nome": "Geração de energia elétrica",
+      "disc": "Máquinas Elétricas II",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "162",
+      "nome": "Geração de energia fotovoltaica",
+      "disc": "Experiência Profissional: Materiais Elétricos",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "162",
+      "nome": "Geração de energia fotovoltaica",
+      "disc": "Sistemas De Energia Solar Termica e Fotovoltaica",
+      "curso": "TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "95",
+      "nome": "Impressão 3D",
+      "disc": "Experiência Profissional: Impressão 3D",
+      "curso": "ENS-ECE-ENG-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "1",
+      "nome": "Inspeção ergonômica no polo",
+      "disc": "Ergonomia e Segurança Industrial",
+      "curso": "ENG",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "139",
+      "nome": "Introdução a Caligrafia Técnica dentro das normas da ABNT (NBR 6492). + Introdução aos Primeiros Passos",
+      "disc": "Desenho Técnico",
+      "curso": "AGM-BAU-ECE-BAU-CDE-OBR-ENS-ENG-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "288",
+      "nome": "Levantamento de cargas",
+      "disc": "Instalações Elétricas de Baixa Tensão",
+      "curso": "TER-ECE-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "158",
+      "nome": "Maquete Física Volumétrica (Parte 1)",
+      "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "159",
+      "nome": "Maquete Física Volumétrica (Parte 2)",
+      "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "96",
+      "nome": "Maquete Física Volumétrica (Parte 3)",
+      "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "160",
+      "nome": "Maquete Física Volumétrica (Parte 4)",
+      "disc": "Experiência Profissional: Maquete e Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "321",
+      "nome": "Medição angular e verificação de folgas",
+      "disc": "Metrologia e Confiabilidade de Equipamentos, Máquinas e Produtos",
+      "curso": "ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "98",
+      "nome": "Medição da resistência elétrica",
+      "disc": "Medidas E Materiais Elétricos",
+      "curso": "TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "98",
+      "nome": "Medição da resistência elétrica",
+      "disc": "Experiência Profissional: Materiais Elétricos",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "357",
+      "nome": "Medição de peças com paquímetros e comparação com escala industrial",
+      "disc": "Metrologia e Confiabilidade de Equipamentos, Máquinas e Produtos",
+      "curso": "ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "362",
+      "nome": "Metrologia",
+      "disc": "Análise Dos Sistemas De Medição",
+      "curso": "GPI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "362",
+      "nome": "Metrologia",
+      "disc": "Processos e Metrologia Industrial",
+      "curso": "ENG",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "203",
+      "nome": "Modelagem 3D instalações elétricas",
+      "disc": "Experiência Profissional: Projeto de Instalações Elétricas e Hidrossanitárias",
+      "curso": "ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "203",
+      "nome": "Modelagem 3D instalações elétricas",
+      "disc": "Imersão Profissional: Projeto de Instalações Elétricas e Hidrossanitárias",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "203",
+      "nome": "Modelagem 3D instalações elétricas",
+      "disc": "Seminário Interdisciplinar IX:",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "143",
+      "nome": "Modelo de um canteiro do obras (Parte 1)",
+      "disc": "Experiência Profissional: Canteiro de Obras",
+      "curso": "ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "143",
+      "nome": "Modelo de um canteiro do obras (Parte 1)",
+      "disc": "Imersão Profissional: Canteiro de Obras",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "150",
+      "nome": "Modelo de um canteiro do obras (Parte 2)",
+      "disc": "Experiência Profissional: Canteiro de Obras",
+      "curso": "ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "150",
+      "nome": "Modelo de um canteiro do obras (Parte 2)",
+      "disc": "Imersão Profissional: Canteiro de Obras",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "99",
+      "nome": "Parafuso de Arquimedes",
+      "disc": "Experiência Profissional: Parafuso de Arquimedes",
+      "curso": "ENS-ECE-ENG-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "312",
+      "nome": "Planta Baixa Comercial (Parte 1)",
+      "disc": "Introdução ao Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "297",
+      "nome": "Planta Baixa Comercial (Parte 2)",
+      "disc": "Introdução ao Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "299",
+      "nome": "Planta Baixa Comercial (Parte 3)",
+      "disc": "Introdução ao Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "300",
+      "nome": "Planta Baixa Comercial (Parte 4)",
+      "disc": "Introdução ao Projeto Arquitetônico",
+      "curso": "BAU",
+      "perfil": "BAU"
+    },
+    {
+      "id": "201",
+      "nome": "Ponte Treliçada (Parte 1)",
+      "disc": "Experiência Profissional: Ponte Treliçada",
+      "curso": "ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "167",
+      "nome": "Ponte Treliçada (Parte 2)",
+      "disc": "Experiência Profissional: Ponte Treliçada",
+      "curso": "ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "202",
+      "nome": "Prática de hidrossanitária",
+      "disc": "Experiência Profissional: Projeto de Instalações Elétricas e Hidrossanitárias",
+      "curso": "ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "202",
+      "nome": "Prática de hidrossanitária",
+      "disc": "Imersão Profissional: Projeto de Instalações Elétricas e Hidrossanitárias",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "202",
+      "nome": "Prática de hidrossanitária",
+      "disc": "Seminário Interdisciplinar IX:",
+      "curso": "CDE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "359",
+      "nome": "Programação de um microcontrolador Arduino",
+      "disc": "Microcontroladores e microprocessadores",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "85",
+      "nome": "Representações do Desenho Técnico + Cotas e Escalas",
+      "disc": "Desenho Técnico",
+      "curso": "AGM-BAU-ECE-BAU-CDE-OBR-ENS-ENG-EEA-ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "91",
+      "nome": "Simulação de um circuito de eletrônica de potência",
+      "disc": "Eletrônica de potência",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "149",
+      "nome": "Simulação de um circuito digital",
+      "disc": "Eletrônica Digital",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "87",
+      "nome": "Simulação de um circuito eletrônico",
+      "disc": "Eletrônica Analógica I",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "135",
+      "nome": "Simulação e análise de um circuito RLC série",
+      "disc": "Circuitos Elétricos I",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "136",
+      "nome": "Simulação e análise de um circuito trifásico",
+      "disc": "Circuitos Elétricos II",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "319",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 1)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "353",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 2)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "711",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 3)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "710",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 4)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "358",
+      "nome": "Verificação de concentricidade e variação dimensional com relógio comparador",
+      "disc": "Metrologia e Confiabilidade de Equipamentos, Máquinas e Produtos",
+      "curso": "ENM",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "319",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 1)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "353",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 2)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "711",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 3)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "710",
+      "nome": "Técnicas e Práticas construtivas para residências (parte 4)",
+      "disc": "Materiais de Construção Civil",
+      "curso": "CDE-OBR-ECE",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    }
+  ],
+  "Multidisciplinar IV - Nutrição": [
+    {
+      "id": "196",
+      "nome": "Análise sensorial de dietas hospitalares",
+      "disc": "Técnica e Dietética",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "188",
+      "nome": "Anamnese nutricional do adulto e Diagnóstico nutricional",
+      "disc": "Avaliação Nutricional",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "187",
+      "nome": "Avaliação antropométrico de adulto e de acamado",
+      "disc": "Avaliação Nutricional",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "221",
+      "nome": "Avaliação nutricional de atleta e desportista I: Antropometria e Composição corporal",
+      "disc": "Nutrição Esportiva",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "222",
+      "nome": "Avaliação nutricional de atleta e desportista II: Anamnese e diagnóstico",
+      "disc": "Nutrição Esportiva",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "220",
+      "nome": "Avaliação nutricional de gestante I: Antropometria",
+      "disc": "Nutrição da Gestação a adolescência",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "451",
+      "nome": "Avaliação nutricional de gestante II: Anamnese e diagnóstico",
+      "disc": "Nutrição da Gestação a adolescência",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "189",
+      "nome": "Dietas hospitalares",
+      "disc": "Fisiopatologia e Dietoterapia no Estresse Metabólico",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "195",
+      "nome": "Elaboração de dietas hospitalares",
+      "disc": "Técnica e Dietética",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "198",
+      "nome": "Estudo de caso dirigido  - relacionado ao caso destacado na receita preparada.",
+      "disc": "Terapia Nutricional da Gestação à Pediatria",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "197",
+      "nome": "Gastronomia pediátrica",
+      "disc": "Terapia Nutricional da Gestação à Pediatria",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "192",
+      "nome": "Técnica Dietética 1: carnes, ovos e leguminosas",
+      "disc": "Técnica e Dietética",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "193",
+      "nome": "Técnica Dietética 2: frutas, hortaliças e açúcares",
+      "disc": "Técnica e Dietética",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "194",
+      "nome": "Técnica Dietética 3: cereais, farinhas, massas e óleos e gorduras",
+      "disc": "Técnica e Dietética",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "191",
+      "nome": "Técnica Dietética: pesos e medidas em alimentos e aplicação dos indicadores de preparo dos alimentos",
+      "disc": "Técnica e Dietética",
+      "curso": "NTR",
+      "perfil": "NTR"
+    },
+    {
+      "id": "190",
+      "nome": "Terapia nutricional enteral e suplementação oral",
+      "disc": "Fisiopatologia e Dietoterapia no Estresse Metabólico",
+      "curso": "NTR",
+      "perfil": "NTR"
+    }
+  ],
+  "Química e Física - Agronomia": [
+    {
+      "id": "156",
+      "nome": "Ação do campo magnético sobre a corrente elétrica",
+      "disc": "Experiência Profissional: Eletromagnetismo",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "313",
+      "nome": "Análise de Dados experimentais através de software estatístico",
+      "disc": "Experimentação Agrícola",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "363",
+      "nome": "Análise de pH em amostras ambientais",
+      "disc": "Química Analítica Ambiental",
+      "curso": "ENS",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "317",
+      "nome": "Análise de Pureza Física de lotes de sementes",
+      "disc": "Produção e Tecnologia de Sementes",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "369",
+      "nome": "Aplicação da sonda multiparâmetro no monitoramento da qualidade do efluente ao longo do processo de tratamento",
+      "disc": "Operações Unitárias Aplicadas ao Tratamento de Efluentes",
+      "curso": "ENS",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "369",
+      "nome": "Aplicação da sonda multiparâmetro no monitoramento da qualidade do efluente ao longo do processo de tratamento",
+      "disc": "Sistema de Tratamento de Aguas e Efluentes Líquidos",
+      "curso": "SAN",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "293",
+      "nome": "Armazenamento e observação anatômica de insetos de importância agrícola",
+      "disc": "Entomologia Agrícola",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "295",
+      "nome": "Cálculo da densidade e volume de solos",
+      "disc": "Física e Cálculo Aplicados à Agronomia",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "370",
+      "nome": "Calor latente de fusão + Determinação Do Calor Especifico De Líquidos E Sólidos",
+      "disc": "Termodinâmica I",
+      "curso": "FSA/SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "155",
+      "nome": "Campo magnético criado por uma corrente elétrica",
+      "disc": "Experiência Profissional: Eletromagnetismo",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "318",
+      "nome": "Campo magnético de uma bobina circular +Campo magnético no interior de um solenóide",
+      "disc": "Magnetismo e Eletromagnetismo",
+      "curso": "nan",
+      "perfil": "BAU"
+    },
+    {
+      "id": "296",
+      "nome": "Caracterização bioquímica de bactérias",
+      "disc": "Microbiologia Agrícola",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "284",
+      "nome": "Classificação das Reações Químicas: Endotérmicas e Exotérmicas",
+      "disc": "Físico Química II",
+      "curso": "QUI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "322",
+      "nome": "Comparação entre lupa e microscópio óptico na observação de micro-organismos ambientais (parte 1)",
+      "disc": "Microbiologia Ambiental",
+      "curso": "ENS / SAN",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "323",
+      "nome": "Comparação entre lupa e microscópio óptico na observação de micro-organismos ambientais (parte 2)",
+      "disc": "Microbiologia Ambiental",
+      "curso": "ENS / SAN",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "328",
+      "nome": "Compreendendo os processos de coagulação e floculação aplicados ao tratamento de água",
+      "disc": "Sistema de Tratamento de Aguas e Efluentes Líquidos",
+      "curso": "SAN",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "328",
+      "nome": "Compreendendo os processos de coagulação e floculação aplicados ao tratamento de água",
+      "disc": "Tratamento de Água",
+      "curso": "ENS",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "308",
+      "nome": "Condições de equilíbrio de um corpo rígido",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "308",
+      "nome": "Condições de equilíbrio de um corpo rígido",
+      "disc": "Física Geral e Experimental",
+      "curso": "TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "356",
+      "nome": "Condições de equilíbrio de um corpo rígido + Lei de Hooke",
+      "disc": "Mecânica",
+      "curso": "SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "356",
+      "nome": "Condições de equilíbrio de um corpo rígido + Lei de Hooke",
+      "disc": "Mecânica I",
+      "curso": "FSA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "141",
+      "nome": "Conexões elétricas simples + Verificação da Primeira Lei de Ohm e da Lei de Joule",
+      "disc": "Eletricidade",
+      "curso": "FSA/SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "157",
+      "nome": "Corrente induzida por variação do fluxo magnético",
+      "disc": "Experiência Profissional: Eletromagnetismo",
+      "curso": "EEA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "367",
+      "nome": "Cromatografia em Papel + Determinação de Carater ácido e básico de amostras",
+      "disc": "Reações Orgânicas e Biomoléculas",
+      "curso": "QUI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "103",
+      "nome": "Determinação da Condutividad Elétrica em Amostras de Água +  Determinação De Salinidade Em Amostras Ambientais",
+      "disc": "Análises Fisico Químicas em Saneamento Ambiental",
+      "curso": "SAN",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "365",
+      "nome": "Determinação De Ph + Titulação De Ácido-Base: Determinação Do Teor De Ácido Acético No Vinagre",
+      "disc": "Química geral",
+      "curso": "CDE/ OBR/ENS/ECE/ENG/EEA/ENM/ QUI/SAN/FSA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "102",
+      "nome": "Determinação De pH Em Amostras Ambientais: Calibração E Medição Com Eletrodo + Determinação De Oxigênio Dissolvido Com Sensor Eletroquímico",
+      "disc": "Análises Fisico Químicas em Saneamento Ambiental",
+      "curso": "SAN",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "250",
+      "nome": "Determinação Do Calor Especifíco De Líquidos E Sólidos",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "282",
+      "nome": "Determinação do calor Específico de Líquidos e Sólidos",
+      "disc": "Físico Química I",
+      "curso": "QUI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "314",
+      "nome": "Diagnóstico de Doenças de Plantas em laboratório: Identificação de Sintomas, Sinais e Estruturas Patogênicas",
+      "disc": "Fitopatologia",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "311",
+      "nome": "Emprego da reação de Benedict para a identificação de açúcares redutores em amostras vegetais",
+      "disc": "Bioquímica",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "366",
+      "nome": "Estequiometria + Medidas de Volume e Massa",
+      "disc": "Química Geral",
+      "curso": "CDE/ OBR/ENS/ECE/ENG/EEA/ENM/ QUI/SAN/ FSA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "316",
+      "nome": "Estudo Comparativo da Anatomia dos Órgãos Vegetativos, Raiz, Caule e Folha",
+      "disc": "Morfologia E Sistemática Vegetal",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "280",
+      "nome": "Experimento de Oersted",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "280",
+      "nome": "Experimento de Oersted",
+      "disc": "Física Geral e Experimental",
+      "curso": "TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "351",
+      "nome": "Experimento de Oersted + Imantação por indução + Detector de corrente com a bússola",
+      "disc": "Magnetismo e Eletromagnetismo",
+      "curso": "FSA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "285",
+      "nome": "Fatores que interferem na velocidade das reações",
+      "disc": "Físico Química II",
+      "curso": "QUI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "361",
+      "nome": "Formação da imagem+Reflexão da luz em espelhos esféricos côncavos+Reflexão da luz em espelhos esféricos convexos+Refração em lentes convergentes",
+      "disc": "Ondas e óptica",
+      "curso": "FSA/SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "292",
+      "nome": "Germinação e Desenvolvimento de Plântulas sob Diferentes Condições",
+      "disc": "Botânica Agrícola",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "310",
+      "nome": "Identificação de monocotiledôneas e dicotiledôneas  e a importância da estrutura vegetal para um estande de lavoura sadio",
+      "disc": "Agricultura Geral E Grandes Culturas",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "291",
+      "nome": "Identificação de plantas daninhas de interesse agronômico",
+      "disc": "Biologia E Controle De Plantas Daninhas",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "281",
+      "nome": "Índice De Refração Relativo De Um Par De Meios",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "140",
+      "nome": "Medindo valores de resistência elétrica + Associação De Resistores Em Série e Paralelo",
+      "disc": "Eletricidade",
+      "curso": "FSA/SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "294",
+      "nome": "Métodos de determinação da fertilidade do solo",
+      "disc": "Fertilidade do solo",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "354",
+      "nome": "Movimento retilíneo uniforme +Movimento retilíneo uniformemente variado",
+      "disc": "Mecânica",
+      "curso": "FSA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "354",
+      "nome": "Movimento retilíneo uniforme +Movimento retilíneo uniformemente variado",
+      "disc": "Mecânica I",
+      "curso": "SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "320",
+      "nome": "Pêndulo Simples + Determinação do peso do travessão + Resultante de forças coplanares paralelas",
+      "disc": "Mecânica II",
+      "curso": "FSA",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "368",
+      "nome": "Pesquisa de açúcar redutor (Sulfato de cobre II)",
+      "disc": "Reações Orgânicas e Biomoléculas",
+      "curso": "QUI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "286",
+      "nome": "Reconhecimento de minerais e rochas",
+      "disc": "Geologia e Geotecnia",
+      "curso": "ENS",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "326",
+      "nome": "Refração da luz em lentes divergentes + Leis da reflexão em espelho plano+ Índice de refração do acrílico em relação ao ar",
+      "disc": "Ondas e óptica",
+      "curso": "FSA/SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "315",
+      "nome": "Técnicas de Extração e Purificação de DNA, Fundamentos, Etapas e Aplicações em Biotecnologia Agrícola",
+      "disc": "Genética E Melhoramento De Plantas",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "298",
+      "nome": "Técnicas de propagação de plantas",
+      "disc": "Propagação De Plantas",
+      "curso": "AGM",
+      "perfil": "AGM"
+    },
+    {
+      "id": "283",
+      "nome": "Termômetros + Equação Termométrica",
+      "disc": "Físico Química I",
+      "curso": "QUI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "329",
+      "nome": "Termômetros + Equação termométrica (gelo)+ Equivalente em água de um calorímetro",
+      "disc": "Termodinâmica I",
+      "curso": "FSA/SLF",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "327",
+      "nome": "Teste de chama",
+      "disc": "Química Analítica Qualitativa",
+      "curso": "QUI",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "308",
+      "nome": "Condições de equilíbrio de um corpo rígido",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "250",
+      "nome": "Determinação Do Calor Especifíco De Líquidos E Sólidos",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "280",
+      "nome": "Experimento de Oersted",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    },
+    {
+      "id": "281",
+      "nome": "Índice De Refração Relativo De Um Par De Meios",
+      "disc": "Física Geral",
+      "curso": "CDE-OBR-ENS-ECE-ENG-EEA-ENM-QUI-TER",
+      "perfil": "ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI"
+    }
+  ]
+}
