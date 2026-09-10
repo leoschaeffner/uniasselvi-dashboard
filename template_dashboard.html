@@ -685,18 +685,38 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="ph"><div class="ph-title">Vagas — Contratação e Substituição</div><div class="ph-sub" id="vagas-sub">—</div></div>
   <div class="kpi-row" id="vagas-kpis"></div>
 
+  <!-- PATCH 165: impacto + o que precisa de decisão -->
+  <div id="vagas-impacto" hidden style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+  <div class="card" id="vagas-criticas-card" hidden>
+    <div class="card-hdr"><div class="card-title">🔴 Vagas que precisam de decisão</div><div class="card-sub" id="vagas-criticas-sub">—</div></div>
+    <div class="tbl-wrap" style="max-height:360px"><table><thead><tr>
+      <th>Polo</th><th>Curso</th><th style="text-align:right">Alunos no polo</th>
+      <th>Contratação</th><th>Prioridade</th><th>Recrutamento</th>
+    </tr></thead><tbody id="vagas-criticas-tbody"></tbody></table></div>
+  </div>
+
+  <div class="card" id="vagas-dificeis-card" hidden>
+    <div class="card-hdr"><div class="card-title">🏋️ Polos difíceis de staffar — mais de 200 alunos e sem tutor</div><div class="card-sub" id="vagas-dificeis-sub">—</div></div>
+    <div class="tbl-wrap" style="max-height:300px"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Alunos</th><th>Cursos sem tutor</th><th>Situação</th>
+    </tr></thead><tbody id="vagas-dificeis-tbody"></tbody></table></div>
+  </div>
+
   <!-- PATCH 157: Funil de Recrutamento (planilha VAGAS_RH — aba "Agendamento de entrevista", agregado) -->
   <div class="card" id="rec-funil-card" hidden>
     <div class="card-hdr"><div class="card-title">🧭 Funil de Recrutamento</div><div class="card-sub" id="rec-funil-sub">—</div></div>
     <div id="rec-funil"></div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">
       <div style="flex:1;min-width:220px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">POR MÊS</div>
-        <div class="tbl-wrap" style="max-height:200px"><table><tbody id="rec-funil-mes"></tbody></table></div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">DIFICULDADE POR CURSO <span style="font-weight:400">— candidatos → contratados</span></div>
+        <div class="tbl-wrap" style="max-height:220px"><table><tbody id="rec-dif-curso"></tbody></table></div>
       </div>
-      <div style="flex:1;min-width:220px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">POR CURSO / ÁREA</div>
-        <div class="tbl-wrap" style="max-height:200px"><table><tbody id="rec-funil-curso"></tbody></table></div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">POR MÊS</div>
+        <div class="tbl-wrap" style="max-height:160px"><table><tbody id="rec-funil-mes"></tbody></table></div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin:10px 0 4px">SALÁRIO OFERECIDO — vagas abertas</div>
+        <div class="tbl-wrap" style="max-height:120px"><table><tbody id="rec-salarios"></tbody></table></div>
       </div>
     </div>
   </div>
@@ -3942,6 +3962,9 @@ function renderVagasKPIs(){
   // PATCH 157/159: os KPIs de recrutamento saíram daqui (poluíam a fileira de
   // vagas da Lotação) — agora ficam compactos dentro do card "Funil de Recrutamento".
   renderFunilRecrutamento();
+  renderVagasImpacto();      // PATCH 165
+  renderVagasCriticas();
+  renderVagasDificeis();
 
   // Quebra por Laboratório/Curso
   const vagas=_getVagas();
@@ -4055,9 +4078,77 @@ function renderFunilRecrutamento(){
       <div style="flex:1;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${(b.n/max*100).toFixed(1)}%;background:${b.cor};height:20px"></div></div>
       <div style="width:46px;font-size:13px;font-weight:800">${fmtNum(b.n)}</div>
     </div>`).join('') + motivosHtml + `<div style="margin-top:2px;font-size:10px;color:var(--muted)">${inhire}</div>`;
-  const miniTbl = (rows, label) => rows.map(r=>`<tr><td style="font-size:11px">${esc(r[label])}</td><td style="text-align:right;font-size:11px;font-weight:700">${fmtNum(r.n)}</td>${r.contratados!=null?`<td style="text-align:right;font-size:10px;color:var(--ok)">${fmtNum(r.contratados)} contratado${r.contratados===1?'':'s'}</td>`:''}</tr>`).join('');
-  document.getElementById('rec-funil-mes').innerHTML=miniTbl(f.por_mes||[],'mes') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
-  document.getElementById('rec-funil-curso').innerHTML=miniTbl(f.por_curso||[],'curso') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
+  const em=document.getElementById('rec-funil-mes');
+  if(em) em.innerHTML=(f.por_mes||[]).map(m=>`<tr><td style="font-size:11px">${esc(m.mes)}</td><td style="text-align:right;font-size:11px;font-weight:700">${fmtNum(m.n)}</td></tr>`).join('') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
+  // PATCH 165: dificuldade por curso (taxa de conversão) + salário oferecido
+  const dc=document.getElementById('rec-dif-curso'), difc=(DB.vagas||{}).dificuldade_por_curso||[];
+  if(dc) dc.innerHTML=difc.map(c=>{
+    const cor=c.taxa<12?'var(--red)':c.taxa<20?'var(--yellow-d)':'var(--ok)';
+    return `<tr><td style="font-size:11px">${esc(c.curso)}</td><td style="text-align:right;font-size:11px">${fmtNum(c.candidatos)} → <strong>${fmtNum(c.contratados)}</strong></td><td style="text-align:right;font-size:11px;font-weight:800;color:${cor}">${c.taxa}%</td></tr>`;
+  }).join('') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
+  const sal=document.getElementById('rec-salarios'), sals=((DB.vagas||{}).recrutamento||{}).salarios_vagas_abertas||[];
+  if(sal) sal.innerHTML=sals.map(s=>`<tr><td style="font-size:11px">${esc(s.valor)}</td><td style="text-align:right;font-size:11px;font-weight:700">${fmtNum(s.n)} vaga${s.n===1?'':'s'}</td></tr>`).join('') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
+}
+// PATCH 165: impacto (banner) + vagas que precisam de decisão + polos difíceis
+function renderVagasImpacto(){
+  const el=document.getElementById('vagas-impacto'); if(!el) return;
+  const k=(DB.vagas||{}).kpis||{}; const cards=[];
+  if(k.alunos_sem_tutor){
+    cards.push(`<div class="kpi kpi-red" style="flex:1;min-width:220px"><div class="kpi-label">Alunos sem tutor</div><div class="kpi-value">${fmtNum(k.alunos_sem_tutor)}</div><div class="kpi-detail">em ${fmtNum(k.polos_sem_tutor||0)} polos com vaga de aumento aberta</div></div>`);
+  }
+  if(k.declinou_remuneracao_pct_perdas){
+    cards.push(`<div class="kpi kpi-yellow" style="flex:1;min-width:220px"><div class="kpi-label">Perdas por remuneração</div><div class="kpi-value">${fmtNum(k.declinou_remuneracao_pct_perdas)}%</div><div class="kpi-detail">${fmtNum(k.declinou_remuneracao||0)} de ${fmtNum(k.perdas_total||0)} candidatos que saíram do funil</div></div>`);
+  }
+  if(k.reqs_congeladas){
+    cards.push(`<div class="kpi kpi-teal" style="flex:1;min-width:200px"><div class="kpi-label">Vagas congeladas</div><div class="kpi-value">${fmtNum(k.reqs_congeladas)}</div><div class="kpi-detail">${fmtNum(k.reqs_abertas||0)} realmente em recrutamento${k.reqs_canceladas?` · ${fmtNum(k.reqs_canceladas)} canceladas`:''}</div></div>`);
+  }
+  if(k.ciclo_mediano_dias!=null){
+    cards.push(`<div class="kpi kpi-ok" style="flex:1;min-width:180px"><div class="kpi-label">Ciclo mediano</div><div class="kpi-value">${fmtNum(k.ciclo_mediano_dias)}<span style="font-size:14px"> dias</span></div><div class="kpi-detail">1º contato → entrevista</div></div>`);
+  }
+  el.innerHTML=cards.join(''); el.hidden=!cards.length;
+}
+function renderVagasCriticas(){
+  const card=document.getElementById('vagas-criticas-card'); if(!card) return;
+  const cr=(DB.vagas||{}).criticas||[];
+  if(!cr.length){ card.hidden=true; return; }
+  card.hidden=false;
+  document.getElementById('vagas-criticas-sub').textContent=`${cr.length} vaga${cr.length===1?'':'s'} sem tutor priorizadas por impacto (alunos) e travas (sem previsão, não liberada, sem candidato)`;
+  const badge=(t,c)=>`<span class="badge" style="background:${c}20;color:${c}">${t}</span>`;
+  document.getElementById('vagas-criticas-tbody').innerHTML=cr.map(v=>{
+    const cCont=(v.contratacao||'').includes('Sem previsão')?'var(--red)':(v.contratacao||'').toLowerCase().includes('liberada')?'var(--red)':(v.contratacao||'').includes('Com previsão')?'var(--ok)':'var(--muted)';
+    let rec='—';
+    if(v.rec_travada) rec=badge('sem currículos','var(--red)');
+    else if(v.rec_situacao==='congelada') rec=badge('congelada','var(--yellow-d)');
+    else if(v.rec_etapa) rec=esc(v.rec_etapa);
+    return `<tr>
+      <td><strong>${esc(v.polo)}</strong></td>
+      <td style="font-size:11px">${esc(v.curso||'—')}</td>
+      <td style="text-align:right;font-weight:700">${fmtNum(v.alunos)}</td>
+      <td style="font-size:11px;color:${cCont}">${esc(v.contratacao||'—')}</td>
+      <td><span class="badge" style="background:${v.prioridade==='Alta'?'var(--red)':'var(--muted)'}20;color:${v.prioridade==='Alta'?'var(--red)':'var(--muted)'}">${esc(v.prioridade||'—')}</span></td>
+      <td style="font-size:11px">${rec}</td>
+    </tr>`;
+  }).join('');
+}
+function renderVagasDificeis(){
+  const card=document.getElementById('vagas-dificeis-card'); if(!card) return;
+  const pd=(DB.vagas||{}).polos_dificeis||[];
+  if(!pd.length){ card.hidden=true; return; }
+  card.hidden=false;
+  document.getElementById('vagas-dificeis-sub').textContent=`${pd.length} polo${pd.length===1?'':'s'} com +200 alunos e vaga de tutor aberta`;
+  document.getElementById('vagas-dificeis-tbody').innerHTML=pd.map(p=>{
+    const flags=[];
+    if(p.sem_previsao) flags.push('<span class="badge" style="background:var(--red)20;color:var(--red)">sem previsão</span>');
+    if(p.nao_liberada) flags.push('<span class="badge" style="background:var(--red)20;color:var(--red)">não liberada</span>');
+    if(p.travada) flags.push('<span class="badge" style="background:var(--red)20;color:var(--red)">sem currículos</span>');
+    if(p.congelada) flags.push('<span class="badge" style="background:var(--yellow-d)20;color:var(--yellow-d)">congelada</span>');
+    return `<tr>
+      <td><strong>${esc(p.polo)}</strong></td>
+      <td style="text-align:right;font-weight:800;color:var(--red)">${fmtNum(p.alunos)}</td>
+      <td style="font-size:11px">${(p.cursos||[]).map(esc).join(', ')}</td>
+      <td style="font-size:11px">${flags.join(' ')||'em recrutamento'}</td>
+    </tr>`;
+  }).join('');
 }
 function filterRecReqs(q){
   const card=document.getElementById('rec-reqs-card'); if(!card) return;

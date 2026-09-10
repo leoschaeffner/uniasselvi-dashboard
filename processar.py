@@ -2487,6 +2487,59 @@ _VRH_REF_SALARIO = [
     {'ch': '8h semanal',  'ch_mensal': '40h', 'salario': 'R$ 1.200,00', 'excecao': 'Enfermagem'},
 ]
 
+# PATCH 165: o campo "curso" da aba de candidatos é texto livre com dezenas de
+# variações ("Farmácia", "Farmacia", "Farmácia/com especialização",
+# "Farmácia/com especilização"(sic), "TO", "***", até nome de polo). Colapsa
+# tudo pro nome canônico do curso pra a análise "dificuldade por curso" servir.
+_VRH_CURSO_CANON = {
+    'FARMACIA': 'Farmácia', 'BIOMEDICINA': 'Biomedicina',
+    'ENFERMAGEM': 'Enfermagem', 'INSTRUMENTACAO CIRURGICA': 'Enfermagem',
+    'FISIOTERAPIA': 'Fisioterapia', 'TO': 'Terapia Ocupacional',
+    'TERAPIA OCUPACIONAL': 'Terapia Ocupacional',
+    'ESTETICA E IMAGEM PESSOAL': 'Estética e Imagem Pessoal',
+    'ESTETICA E COSMETICA': 'Estética e Imagem Pessoal', 'ESTETICA': 'Estética e Imagem Pessoal',
+    'NUTRICAO': 'Nutrição', 'AGRONOMIA': 'Agronomia',
+    'ENGENHARIA CIVIL': 'Engenharia Civil', 'ARQUITETURA E URBANISMO': 'Arquitetura e Urbanismo',
+}
+def _vrh_curso_canon(s):
+    n = _vrh_norm(s)
+    if not n or n in ('', 'NAO INFORMADO') or set(n) <= set('* '):
+        return ''
+    n = re.split(r'[/,]| COM | SEM | DUAS | E COSMET', n)[0].strip()
+    n = n.replace('FARMACIA', 'FARMACIA').replace('ENENHARIA', 'ENGENHARIA')
+    n = n.replace('ENGENHARIA CIVILL', 'ENGENHARIA CIVIL')
+    for k, v in _VRH_CURSO_CANON.items():
+        if n == k or n.startswith(k):
+            return v
+    # nome que parece polo (tem "/UF -") ou lixo → descarta
+    if re.search(r'/[A-Z]{2}\b', s or '') or len(n) < 3:
+        return ''
+    return str(s).split('/')[0].strip().title()
+
+
+def _vrh_num_brl(s):
+    """'1.247,40' / ' 831,60' / '600' -> float."""
+    s = re.sub(r'[^\d,.]', '', str(s or ''))
+    if not s:
+        return None
+    if ',' in s:
+        s = s.replace('.', '').replace(',', '.')
+    try:
+        return round(float(s), 2)
+    except ValueError:
+        return None
+
+
+def _vrh_data(s):
+    """'15-01-2026' / '2026-01-20 00:00:00' / '18/02/2026' -> date, senão None."""
+    s = str(s or '').strip()[:10]
+    for fmt in ('%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y'):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
 
 def _vrh_norm(s):
     """UPPER, sem acento, só alfanumérico separado por espaço — pra casar rótulos."""
@@ -2566,17 +2619,30 @@ def processar_vagas_rh(p7):
             cidade, uf = _vrh_cidade_uf(cid_raw)
             tp = _val(row, c_tipo)
             tp = 'Substituição' if 'substitu' in tp.lower() else ('Aumento' if tp else tipo_default)
+            _fn = _vrh_norm(_val(row, c_fech))
+            _situ = ('cancelada' if _fn.startswith('CANCELAD')
+                     else 'congelada' if _fn.startswith('CONGELAD')
+                     else 'fechada' if _fn.startswith('FECHADA')
+                     else 'aberta')
+            _et = _val(row, c_etapa)
+            _etn = _vrh_norm(_et)
             reqs.append({
                 'tipo': tp,
-                'curso': curso,
+                'curso': curso, 'curso_canon': _vrh_curso_canon(curso),
                 'cidade': cidade, 'uf': uf,
                 'ticket': _val(row, c_tick),
                 'link_inhire': _val(row, c_link),
-                'fechada': _vrh_norm(_val(row, c_fech)).startswith('FECHADA'),
-                'etapa': _val(row, c_etapa),
+                'situacao': _situ,
+                'fechada': _situ == 'fechada',   # compat
+                'etapa': re.sub(r'^[^0-9A-Za-zÀ-ÿ]+', '', _et).strip(),
+                # "travada" = etapa que sinaliza que ninguém está avançando
+                'travada': _situ == 'aberta' and (
+                    'SEM CURRICULO' in _etn or 'SEM CURRICULOS' in _etn
+                    or 'AGUARDANDO RETORNO' in _etn),
                 'admissao': _val(row, c_adm),
                 'obs': _val(row, c_obs),
                 'remuneracao': _val(row, c_rem),
+                'remuneracao_valor': _vrh_num_brl(_val(row, c_rem)),
             })
 
     # ── funil: aba "Agendamento de entrevista" — AGREGADO, sem PII ───────────
@@ -2594,6 +2660,10 @@ def processar_vagas_rh(p7):
         c_cid    = _col(dfa, 'cidade')
         c_pcd    = _col(dfa, 'pcd')
         c_curso  = _col(dfa, 'curso') or _col(dfa, 'area') or _col(dfa, 'especial')
+        c_contato = _col(dfa, 'primeiro', 'contato') or _col(dfa, 'contato')
+        c_entrev  = _col(dfa, 'data', 'entrevista')
+        c_disp    = _col(dfa, 'disponib')
+        c_consel  = _col(dfa, 'conselho') or _col(dfa, 'registro')
         if c_curso is None and c_cid is not None:
             # na planilha real, a coluna de curso/área tem cabeçalho em branco —
             # é a coluna imediatamente à direita de "Cidade".
@@ -2605,9 +2675,11 @@ def processar_vagas_rh(p7):
             except ValueError:
                 pass
         st_ct, mes_ct, uf_ct = _Counter(), _Counter(), _Counter()
-        curso_ct, curso_ok = _Counter(), _Counter()
-        curso_status_ct = defaultdict(_Counter)  # {curso: Counter(status_norm)} — pro funil filtrado por curso (coordenadores)
+        curso_ct, curso_ok = _Counter(), _Counter()        # curso_ct usa curso CANÔNICO
+        curso_status_ct = defaultdict(_Counter)  # {curso RAW: Counter(status_norm)} — filtro do coordenador
         st_label = {}  # status_norm -> rótulo bonito (com acento), pro frontend
+        disp_ct, consel_ct = _Counter(), _Counter()
+        ciclo_dias = []   # dias entre primeiro contato e entrevista (PATCH 165)
         pcd_n = 0
         total = 0
         for _, row in dfa.iterrows():
@@ -2628,13 +2700,26 @@ def processar_vagas_rh(p7):
             if uf:
                 uf_ct[uf] += 1
             curso = _val(row, c_curso)
-            if curso:
-                curso_ct[curso] += 1
-                curso_status_ct[curso][stn] += 1
+            _ccanon = _vrh_curso_canon(curso)
+            if _ccanon:
+                curso_ct[_ccanon] += 1
                 if stn == 'FINALIZADO':
-                    curso_ok[curso] += 1
+                    curso_ok[_ccanon] += 1
+            if curso:
+                curso_status_ct[curso][stn] += 1  # RAW — o filtro do coordenador casa por substring
             if _vrh_norm(_val(row, c_pcd)) in ('SIM', 'S', 'PCD'):
                 pcd_n += 1
+            _d = _val(row, c_disp)
+            if _d:
+                disp_ct[_d[:40]] += 1
+            _cn = _vrh_norm(_val(row, c_consel))
+            if _cn in ('SIM', 'ATIVO', 'S'):
+                consel_ct['ativo'] += 1
+            elif _cn in ('NAO', 'INATIVO', 'N', 'PENDENTE', 'EM ANDAMENTO'):
+                consel_ct['sem'] += 1
+            _dc, _de = _vrh_data(_val(row, c_contato)), _vrh_data(_val(row, c_entrev))
+            if _dc and _de and 0 <= (_de - _dc).days <= 365:
+                ciclo_dias.append((_de - _dc).days)
 
         def _ordem_st(s):
             try:
@@ -2650,15 +2735,27 @@ def processar_vagas_rh(p7):
                  for s, n in st_ct.items()],
                 key=lambda d: d['ordem']),
             'por_mes':   [{'mes': m, 'n': n} for m, n in mes_ct.most_common()],
-            'por_curso': [{'curso': c, 'n': n, 'contratados': curso_ok.get(c, 0)}
+            'por_curso': [{'curso': c, 'n': n, 'contratados': curso_ok.get(c, 0),
+                           'taxa': round(100.0 * curso_ok.get(c, 0) / n, 1) if n else 0}
                           for c, n in curso_ct.most_common()],
             'por_curso_status': {c: dict(sc) for c, sc in curso_status_ct.items()},
             'por_uf':    [{'uf': u, 'n': n} for u, n in uf_ct.most_common()],
             'pcd': pcd_n,
         }
+        # disponibilidade / conselho: a planilha quase não preenche (~15/846) —
+        # guarda só a contagem, o frontend decide se mostra.
+        if sum(disp_ct.values()) >= 20:
+            funil['disponibilidade'] = [{'texto': t, 'n': n} for t, n in disp_ct.most_common(6)]
+        if sum(consel_ct.values()) >= 20:
+            funil['conselho_ativo'] = consel_ct.get('ativo', 0)
+            funil['conselho_sem'] = consel_ct.get('sem', 0)
+        _ciclo_dias = sorted(ciclo_dias)
+        funil['ciclo_mediano_dias'] = (_ciclo_dias[len(_ciclo_dias) // 2] if _ciclo_dias else None)
         contratados = st_ct.get('FINALIZADO', 0)
         perdas_def = sum(st_ct.get(s, 0) for s in ('DESISTENCIA', 'SEM RETORNO DO CANDIDATO', 'SEM RETORNO DO CAN'))
         base_conv = max(total - perdas_def, 1)
+        _perdas_total = sum(n for s, n in st_ct.items() if _VRH_STATUS_GRUPO.get(s, 'andamento') == 'perda')
+        _decl_rem = st_ct.get('DECLINOU DEVIDO REMUNERACAO', 0)
         kpis_funil = {
             'candidatos_total': total,
             'em_andamento': sum(n for s, n in st_ct.items()
@@ -2666,22 +2763,39 @@ def processar_vagas_rh(p7):
             'entrevistas_agendadas': st_ct.get('AGENDADO', 0),
             'propostas_enviadas': st_ct.get('ENVIO DE PROPOSTA', 0) + st_ct.get('AGUARDANDO ACEITE', 0),
             'contratados': contratados,
-            'declinou_remuneracao': st_ct.get('DECLINOU DEVIDO REMUNERACAO', 0),
+            'declinou_remuneracao': _decl_rem,
+            'declinou_remuneracao_pct_perdas': round(100.0 * _decl_rem / _perdas_total, 0) if _perdas_total else 0,
+            'perdas_total': _perdas_total,
             'nao_compareceu': st_ct.get('NAO COMPARECEU NA ENTREVISTA', 0),
             'taxa_conversao': round(100.0 * contratados / base_conv, 1),
+            'ciclo_mediano_dias': funil.get('ciclo_mediano_dias'),
         }
     else:
         print(f"[{ts()}] Vagas RH: aba 'Agendamento de entrevista' ausente ou vazia")
 
+    _abertas = [r for r in reqs if r['situacao'] == 'aberta']
+    def _sal_label(v):
+        if v is None:
+            return 'não informado'
+        return ('R$ %s' % ('{:,.2f}'.format(v).replace(',', 'X').replace('.', ',').replace('X', '.')))
+    _sal_ct = _Counter(_sal_label(r.get('remuneracao_valor')) for r in _abertas)
     kpis = {
         'reqs_total': len(reqs),
-        'reqs_abertas': sum(1 for r in reqs if not r['fechada']),
-        'reqs_fechadas': sum(1 for r in reqs if r['fechada']),
+        'reqs_abertas': len(_abertas),
+        'reqs_fechadas': sum(1 for r in reqs if r['situacao'] == 'fechada'),
+        'reqs_congeladas': sum(1 for r in reqs if r['situacao'] == 'congelada'),
+        'reqs_canceladas': sum(1 for r in reqs if r['situacao'] == 'cancelada'),
+        'reqs_travadas': sum(1 for r in reqs if r.get('travada')),
     }
     kpis.update(kpis_funil)
-    print(f"[{ts()}] Vagas RH: {len(reqs)} vagas INHIRE ({kpis['reqs_abertas']} abertas), "
-          f"{funil['total']} candidatos no funil, {kpis.get('contratados', 0)} contratados")
-    return {'reqs': reqs, 'funil': funil, 'kpis': kpis, 'ref_salario': _VRH_REF_SALARIO}
+    print(f"[{ts()}] Vagas RH: {len(reqs)} vagas INHIRE ({kpis['reqs_abertas']} abertas, "
+          f"{kpis['reqs_congeladas']} congeladas, {kpis['reqs_travadas']} travadas), "
+          f"{funil['total']} candidatos, {kpis.get('contratados', 0)} contratados, "
+          f"ciclo mediano {funil.get('ciclo_mediano_dias')}d")
+    return {
+        'reqs': reqs, 'funil': funil, 'kpis': kpis, 'ref_salario': _VRH_REF_SALARIO,
+        'salarios_vagas_abertas': [{'valor': v, 'n': n} for v, n in _sal_ct.most_common()],
+    }
 
 
 def _cruzar_vagas_recrutamento(vagas_lotacao, reqs):
@@ -2719,8 +2833,93 @@ def _cruzar_vagas_recrutamento(vagas_lotacao, reqs):
                 v['rec_ticket'] = r.get('ticket', '')
                 v['rec_link'] = r.get('link_inhire', '')
                 v['rec_fechada'] = bool(r.get('fechada'))
+                v['rec_situacao'] = r.get('situacao', '')
+                v['rec_travada'] = bool(r.get('travada'))
                 r['_casado'] = True
                 break
+
+
+def _analisar_vagas_criticas(vagas, funil, min_alunos=200):
+    """PATCH 165: destaca o que um coordenador/diretor precisa decidir.
+    - criticas: vaga SEM tutor (Aumento de Quadro) com muitos alunos no polo e
+      sem previsão / não liberada / prioridade alta / recrutamento travado.
+    - polos_dificeis: polos com > min_alunos alunos e vaga aberta parada.
+    - kpis: alunos e polos sem tutor, e um índice de dificuldade por curso.
+    """
+    # sem tutor = vaga de aumento, sem tutor atual, E sem recrutamento já
+    # fechado (se o INHIRE fechou a vaga, o tutor foi contratado — a Lotação só
+    # ainda não atualizou).
+    _sem_tutor = [v for v in vagas
+                  if v.get('status') == 'Aumento de Quadro'
+                  and not (v.get('tutor_atual') or '').strip()
+                  and v.get('rec_situacao') != 'fechada']
+    alunos_sem_tutor = sum(int(v.get('alunos_polo') or 0) for v in _sem_tutor)
+    polos_sem_tutor = len({v.get('polo') for v in _sem_tutor})
+
+    def _peso(v):
+        c = (v.get('contratacao') or '')
+        p = 0
+        if 'Sem previsão' in c: p += 3
+        if 'liberada' in c.lower(): p += 3        # "Não liberada" = precisa autorização
+        if v.get('prioridade') == 'Alta': p += 2
+        if v.get('rec_travada'): p += 4           # "sem currículos" = ninguém aplicou
+        if v.get('rec_situacao') == 'congelada': p += 3
+        return p
+
+    # crítica = sem tutor E (muitos alunos OU trava clara). Ordena por alunos
+    # primeiro (impacto), depois pela trava. Lista curta (o que decidir agora).
+    _cand = [v for v in _sem_tutor
+             if int(v.get('alunos_polo') or 0) >= 30 or _peso(v) >= 5]
+    criticas = sorted(
+        [{'polo': v.get('polo'), 'curso': v.get('cursos'), 'perfil': v.get('perfil'),
+          'alunos': int(v.get('alunos_polo') or 0), 'contratacao': v.get('contratacao'),
+          'prioridade': v.get('prioridade'), 'rec_etapa': v.get('rec_etapa', ''),
+          'rec_situacao': v.get('rec_situacao', ''), 'rec_travada': bool(v.get('rec_travada')),
+          'rec_ticket': v.get('rec_ticket', ''), 'rec_link': v.get('rec_link', '')}
+         for v in _cand],
+        key=lambda d: (-d['alunos'], -(3 if d['rec_travada'] else 0)
+                       - (2 if 'Sem previsão' in (d['contratacao'] or '') else 0)))[:20]
+
+    # polos difíceis: agrega por polo os sem-tutor com >= min_alunos
+    _por_polo = {}
+    for v in _sem_tutor:
+        al = int(v.get('alunos_polo') or 0)
+        if al < min_alunos:
+            continue
+        p = v.get('polo')
+        d = _por_polo.setdefault(p, {'polo': p, 'alunos': al, 'cursos': set(),
+                                     'sem_previsao': False, 'nao_liberada': False,
+                                     'travada': False, 'congelada': False})
+        d['alunos'] = max(d['alunos'], al)
+        if v.get('cursos'):
+            d['cursos'].add(v.get('cursos'))
+        _c = v.get('contratacao') or ''
+        if 'Sem previsão' in _c: d['sem_previsao'] = True
+        if 'liberada' in _c.lower(): d['nao_liberada'] = True
+        if v.get('rec_travada'): d['travada'] = True
+        if v.get('rec_situacao') == 'congelada': d['congelada'] = True
+    polos_dificeis = sorted(
+        [{**d, 'cursos': sorted(d['cursos'])} for d in _por_polo.values()],
+        key=lambda d: -d['alunos'])
+
+    # dificuldade por curso: candidatos vs contratados (do funil já canônico)
+    dif_curso = sorted(
+        [{'curso': c['curso'], 'candidatos': c['n'], 'contratados': c['contratados'],
+          'taxa': c.get('taxa', 0)}
+         for c in (funil or {}).get('por_curso', []) if c['n'] >= 10],
+        key=lambda d: d['taxa'])
+
+    return {
+        'criticas': criticas,
+        'polos_dificeis': polos_dificeis,
+        'dificuldade_por_curso': dif_curso,
+        'kpis': {
+            'alunos_sem_tutor': alunos_sem_tutor,
+            'polos_sem_tutor': polos_sem_tutor,
+            'n_criticas': len(criticas),
+            'n_polos_dificeis': len(polos_dificeis),
+        },
+    }
 
 
 def gerar_onboarding_atualizado(p1, p6, destino):
@@ -4527,12 +4726,16 @@ if __name__ == '__main__':
                 dados['vagas']['recrutamento'] = {
                     'reqs': _vrh['reqs'],
                     'ref_salario': _vrh['ref_salario'],
+                    'salarios_vagas_abertas': _vrh.get('salarios_vagas_abertas', []),
                 }
                 dados['vagas']['funil'] = _vrh['funil']
                 dados['vagas']['kpis'].update(_vrh['kpis'])
                 _cruzar_vagas_recrutamento(dados['vagas']['vagas'], _vrh['reqs'])
                 _n_cas = sum(1 for r in _vrh['reqs'] if r.get('_casado'))
                 print(f"[{ts()}] Vagas RH: {_n_cas}/{len(_vrh['reqs'])} vagas INHIRE cruzadas com a Lotação")
+                # a análise de vagas críticas / polos difíceis roda mais tarde
+                # (PATCH 165), depois do enriquecimento de alunos_polo pelo hub CSV.
+                dados['_vrh_funil_ref'] = _vrh['funil']
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar Vagas RH: {e}")
     # PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding —
@@ -5087,6 +5290,22 @@ if __name__ == '__main__':
                 if v > 0
             ]
             print(f"[{ts()}] Alunos por curso: fonte trocada de Lotação ({_total_lotacao_cat:,}) pra hub CSV/matrículas distintas ({_total_hub_cat:,}) — {len(dados['alunos_por_curso'])} categorias")
+
+    # PATCH 165: análise "o que precisa de decisão" na seção Vagas — roda AQUI,
+    # depois que o hub CSV preencheu 'alunos_polo' em cada vaga (PATCH 126).
+    if dados.get('_vrh_funil_ref') is not None and dados.get('vagas', {}).get('vagas'):
+        try:
+            _an = _analisar_vagas_criticas(dados['vagas']['vagas'], dados['_vrh_funil_ref'])
+            dados['vagas']['criticas'] = _an['criticas']
+            dados['vagas']['polos_dificeis'] = _an['polos_dificeis']
+            dados['vagas']['dificuldade_por_curso'] = _an['dificuldade_por_curso']
+            dados['vagas'].setdefault('kpis', {}).update(_an['kpis'])
+            print(f"[{ts()}] Vagas RH: {_an['kpis']['polos_sem_tutor']} polos sem tutor "
+                  f"({_an['kpis']['alunos_sem_tutor']:,} alunos) · {_an['kpis']['n_criticas']} críticas "
+                  f"· {_an['kpis']['n_polos_dificeis']} polos difíceis (>200 alunos)")
+        except Exception as e:
+            print(f"[{ts()}] AVISO: erro na análise de vagas críticas: {e}")
+    dados.pop('_vrh_funil_ref', None)
 
     html = gerar_html(dados)
     try:
