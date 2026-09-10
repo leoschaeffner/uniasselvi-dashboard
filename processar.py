@@ -2445,6 +2445,8 @@ _VRH_STATUS_GRUPO = {
     'SEM RETORNO DO CAN': 'perda',
     'NAO POSSUI INTERESSE NA VAGA': 'perda',
     'ENCAMINHAR NEGATIVA': 'perda',
+    'ENCAMINHAR POSITIVA': 'andamento',
+    'ENCAMINHAR COORDENACAO': 'andamento',
     'AGUARDANDO AGENDAMENTO': 'andamento',
     'AGENDADO': 'andamento',
     'ENVIO DE PROPOSTA': 'andamento',
@@ -2456,7 +2458,8 @@ _VRH_STATUS_GRUPO = {
 _VRH_STATUS_ORDEM = [
     'AGUARDANDO AGENDAMENTO', 'AGENDADO', 'NAO COMPARECEU NA ENTREVISTA',
     'NAO PASSOU', 'ENVIO DE PROPOSTA', 'AGUARDANDO ACEITE',
-    'AGUARDANDO RETORNO NO WHATS', 'VAGA CONGELADA', 'NAO POSSUI INTERESSE NA VAGA',
+    'AGUARDANDO RETORNO NO WHATS', 'ENCAMINHAR COORDENACAO', 'ENCAMINHAR POSITIVA',
+    'VAGA CONGELADA', 'NAO POSSUI INTERESSE NA VAGA',
     'DECLINOU DEVIDO REMUNERACAO', 'ENCAMINHAR NEGATIVA',
     'DESISTENCIA', 'SEM RETORNO DO CANDIDATO', 'SEM RETORNO DO CAN',
     'PARA INCLUIR NO PAINEL DE ADMISSOES', 'AGUARDANDO EXAME',
@@ -3022,8 +3025,14 @@ def enriquecer_tutores(dados, lotacao):
             # genérico em vez de "Nan"/"Desconhecido" que parecia um tutor real.
             if str(nome_display).strip().lower() in ('nan', 'none', 'desconhecido', '', '-'):
                 nome_display = 'Remetente não identificado'
+            _desl = _desl_por_nome.get(_norm_nome_aviso(nome_display))
             _correcao = _CORRECOES_MANUAIS_AVISO.get(_norm_nome_aviso(nome_display))
-            if _correcao:
+            # PATCH 161: a correção manual (PATCH 120, "submissão é real, conta pra
+            # ela") só vale enquanto a pessoa AINDA é tutora. Se ela aparece em
+            # tutores_desligados, saiu — vira ex-tutor (bloco abaixo), não entra
+            # no headcount. Caso real: Ingrid Schroeder Pineiro, desligada
+            # 28/07/2026, seguia contando como ativa pela correção de 21/08.
+            if _correcao and not _desl:
                 tutores.append({
                     'n': nome_display,
                     'p': _correcao['polo'],
@@ -3037,7 +3046,6 @@ def enriquecer_tutores(dados, lotacao):
                     'correcao_manual_motivo': 'Erro de preenchimento no Forms (categoria/polo digitados errado) — confirmado com o Leo em 21/08, submissão é real.',
                 })
                 continue
-            _desl = _desl_por_nome.get(_norm_nome_aviso(nome_display))
             _polo_aviso = (_desl.get('p') if _desl else '') or _polo_limpo_de_chave(av.get('chave', ''))
             _reg_pol = av.get('tipo') == 'regente_de_polo'
             tutores.append({
