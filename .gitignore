@@ -1,0 +1,27 @@
+# Planilhas de entrada — contêm dados pessoais (nomes, e-mails, telefones).
+# NUNCA commitar. O pipeline baixa via secrets no GitHub Actions.
+planilhas/
+
+# Saída do processar.py. Desde o PATCH 160 os HTML gerados NÃO são mais
+# commitados — o GitHub Pages publica direto do artifact do workflow.
+saida/
+index.html
+coordenadores.html
+lookup.json
+
+# Config local com caminhos absolutos das planilhas (rodar sem baixar)
+config_links.json
+
+# Dumps de auditoria / arquivos temporários
+DB_dump.json
+*.dump.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Onboarding gerado localmente pelo processar.py
+Acompanhamento_Onboarding.xlsx
+
+# Baseline de regressão — regenerada a cada rodada, estado local
+snapshot_manifest.json
