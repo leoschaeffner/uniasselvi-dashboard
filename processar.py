@@ -3711,6 +3711,15 @@ def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
             _periodos_parsed.append((_ordem_num.get(_ord_nome, 99), _ord_nome, _ini, _fim))
     _periodos_parsed.sort()
     _inicio_por_ordem = {_nome: _ini for _num, _nome, _ini, _fim in _periodos_parsed}
+    # PATCH 164: início da ordem ANTERIOR — usado como porta do "agendamento".
+    # O período no config é quando as PRÁTICAS começam; o agendamento do aluno
+    # (e o gerenciamento/montagem de agenda pelo tutor) abre bem antes — na
+    # prática, quando a ordem anterior entra em prática. Ver comentário no laço.
+    _num_por_ordem = {_nome: _num for _num, _nome, _ini, _fim in _periodos_parsed}
+    _inicio_ordem_anterior = {}
+    for _num, _nome, _ini, _fim in _periodos_parsed:
+        _antes = [(_n, _i) for _n2, _n, _i, _f in _periodos_parsed if _num_por_ordem.get(_n, 99) < _num]
+        _inicio_ordem_anterior[_nome] = max((_i for _n, _i in _antes), default=None)
     _hoje = _dt_ord.date.today()
 
     for o in ofertas:
@@ -3721,9 +3730,19 @@ def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
         _ordem_propria = o.get('ordem', '')
         _ordem_propria_num = _ordem_num.get(_ordem_propria)
 
-        # PATCH 130: a própria ordem da prática ainda nem começou (hoje < início do período dela)
-        _ini_propria = _inicio_por_ordem.get(_ordem_propria)
-        if _ini_propria and _hoje < _ini_propria:
+        # PATCH 130 + 164: só é "ordem futura de verdade" (provável erro de
+        # preenchimento) quando NEM a ordem anterior entrou em prática ainda.
+        # Gerenciar a Ordem N enquanto a Ordem N-1 está em prática é normal — é
+        # a janela de agendamento da Ordem N. Ex (2026/2, hoje 10/09): Ordem 2
+        # em prática desde 24/08 → gerenciar Ordem 3 (práticas 21/09) é
+        # esperado; gerenciar Ordem 4 (anterior = Ordem 3, práticas só 21/09)
+        # ainda é adiantado demais.
+        _ini_anterior = _inicio_ordem_anterior.get(_ordem_propria)
+        if _ini_anterior is None:
+            _ini_propria = _inicio_por_ordem.get(_ordem_propria)  # Ordem 1: sem anterior
+            if _ini_propria and _hoje < _ini_propria:
+                o['_anomalia_ordem_futura'] = True
+        elif _hoje < _ini_anterior:
             o['_anomalia_ordem_futura'] = True
 
         _data_ger = _parse_data_br_ou_iso(o.get('dt_agenda', ''))
