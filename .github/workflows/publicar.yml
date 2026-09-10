@@ -12,10 +12,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publicar:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write   # keepalive (evita o GitHub desativar o cron por inatividade)
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -127,27 +132,35 @@ jobs:
       - name: Processar dashboard
         run: python processar.py --sem-browser
 
-      - name: Publicar index.html
+      # ── PATCH 160: publica via artifact do GitHub Pages, NÃO commitando mais os
+      # HTML gerados (index.html / coordenadores.html / lookup.json) no git. Isso
+      # parou o crescimento de ~1 GB/dia do .git (cada rodada de 2h reescrevia
+      # ~86 MB de HTML não-comprimível). O site continua no mesmo endereço.
+      - name: Montar site
         run: |
-          cp saida/dashboard.html index.html
-          cp saida/lookup.json lookup.json
-          if [ -f saida/coordenadores.html ]; then cp saida/coordenadores.html coordenadores.html; fi
-          git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
-          git add index.html lookup.json
-          if [ -f coordenadores.html ]; then git add coordenadores.html; fi
-          git diff --cached --quiet && echo "Sem mudanças" || {
-            git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT"
-            git pull --rebase -X ours origin main || {
-              git rebase --abort
-              git fetch origin main
-              git reset --soft origin/main
-              git add index.html lookup.json
-              if [ -f coordenadores.html ]; then git add coordenadores.html; fi
-              git commit -m "Dashboard $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M') BRT [retry]"
-            }
-            git push
-          }
+          rm -rf _site && mkdir _site
+          # tudo do checkout, MENOS o que não pode ir pro ar / não é do site
+          rsync -a \
+            --exclude='.git' --exclude='.github' \
+            --exclude='planilhas' --exclude='saida' --exclude='_site' \
+            --exclude='processar.py' --exclude='template_dashboard.html' \
+            --exclude='template_coordenadores.html' \
+            --exclude='*.md' --exclude='*.sh' \
+            ./ _site/
+          cp saida/dashboard.html      _site/index.html
+          cp saida/coordenadores.html  _site/coordenadores.html
+          cp saida/lookup.json         _site/lookup.json
+          echo "=== _site ===" ; ls -lh _site/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
 
       - name: Keepalive
         if: github.event_name == 'schedule'

@@ -70,9 +70,7 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 | `template_dashboard.html` | Template do portal principal (VinciLab). Placeholder `'DATA_GOES_HERE'` e `TIMESTAMP_GOES_HERE`. |
 | `template_coordenadores.html` | Template do portal de coordenadores (versão travada por curso, simplificada). Placeholder `'DATA_GOES_HERE'`. |
 | `portfolio_form.html` | Formulário público de envio de portfólio; autopreenche via `lookup.json` e redireciona pra uma lista do SharePoint (não passa pelo `processar.py`). |
-| `index.html` | **Saída publicada** do dashboard principal (gerada, commitada pelo Actions). NÃO editar à mão. |
-| `coordenadores.html` | **Saída publicada** do portal de coordenadores. NÃO editar à mão. |
-| `lookup.json` | Saída pública NÃO cifrada (email/nome/polo/categoria dos tutores) para o `portfolio_form.html`. |
+| `index.html` / `coordenadores.html` / `lookup.json` | **Saída gerada.** Desde o PATCH 160 **NÃO são mais commitados** — o workflow monta `_site/` e publica via artifact do GitHub Pages. Estão no `.gitignore`. NÃO editar à mão. |
 | `config_semestre.json` | Config editável de prazos/períodos das Ordens por semestre. Única coisa que se edita pra virar o semestre. |
 | `catalogo_oficial.json` | Catálogo oficial de práticas (formulário de portfólio 2026/2). |
 | `categoria_para_curso.json` | Texto do formulário de portfólio → código fino de curso (ex: `"Multidisciplinar III - Fisioterapia" → "BFI"`). |
@@ -491,12 +489,12 @@ dashboard, procure a função de mesmo nome aqui e replique.**
 
 ## 11. Build e deploy (GitHub Actions)
 
-`.github/workflows/publicar.yml` — job `publicar` em `ubuntu-latest`.
+`.github/workflows/publicar.yml` — jobs `build` (que também faz o deploy) em `ubuntu-latest`.
 
 **Gatilhos:** push em `main`, `workflow_dispatch`, cron `0 */2 * * *` (a cada 2h).
 `concurrency: dashboard-deploy` (não cancela em andamento).
 
-**Passos:**
+**Passos (PATCH 160 — publica via artifact do Pages, não commita mais HTML):**
 1. `checkout` + `setup-python@3.11` + `pip install pandas openpyxl xlrd requests cryptography`.
 2. **Baixar planilhas** — script Python inline. `sp_download_url()` converte link
    de compartilhamento SharePoint em `_layouts/15/download.aspx?share=TOKEN`
@@ -506,16 +504,21 @@ dashboard, procure a função de mesmo nome aqui e replique.**
    `URL_REL_NOVO`, `URL_ALUNOS_HUB`, `URL_VAGAS_RH` (PATCH 157). Só CONTROLE e
    PORTFOLIO são obrigatórios.
 3. `python processar.py --sem-browser`.
-4. **Publicar:** copia `saida/dashboard.html → index.html`,
-   `saida/lookup.json → lookup.json`, `saida/coordenadores.html → coordenadores.html`;
-   commit `"Dashboard DD/MM/AAAA HH:MM BRT"`; `git pull --rebase -X ours` com
-   retry via `reset --soft origin/main` em caso de conflito; `git push`.
-5. **Keepalive:** às segundas, atualiza `.github/last_run.txt` (evita GitHub
-   desativar o cron por inatividade do repo).
+4. **Montar site:** `rsync` do checkout pra `_site/` **excluindo** `.git`,
+   `.github`, `planilhas/`, `saida/`, `processar.py`, os `template_*.html`,
+   `*.md`, `*.sh` (o site nunca precisou desses; `processar.py` ainda vazava a
+   senha `uniasselvi2026`). Depois copia `saida/dashboard.html → _site/index.html`,
+   `saida/coordenadores.html → _site/coordenadores.html`,
+   `saida/lookup.json → _site/lookup.json`.
+5. `configure-pages` + `upload-pages-artifact (path: _site)` + `deploy-pages`.
+   **Nada é commitado no git** — o `.git` parou de crescer ~1 GB/dia.
+6. **Keepalive:** às segundas, commita `.github/last_run.txt` (único commit que o
+   workflow ainda faz — evita o GitHub desativar o cron por inatividade).
 
-**GitHub Pages** serve a raiz: `index.html` (dashboard) e `coordenadores.html`.
-`lookup.json` também é servido (consumido pelo `portfolio_form.html`, que aponta
-pra `https://leoschaeffner.github.io/uniasselvi-dashboard/lookup.json`).
+**GitHub Pages** (source = "GitHub Actions", `build_type: workflow`) serve o
+conteúdo de `_site/`: `index.html`, `coordenadores.html`, `lookup.json`
+(consumido pelo `portfolio_form.html`), `portfolio_form.html`, `robots.txt`, os
+`.json` de dados. Mesmo endereço de sempre.
 
 `insumos_estudo.json` e `catalogo_oficial.json` são **estáticos no repo** — pra
 atualizar, substituir o arquivo e deixar o pipeline rodar (não mexe em código).
@@ -688,6 +691,8 @@ templates, **[both]** = replicado nos dois.
 | 154 | [py] Diagnóstico: tutores com início ≤60 dias vs. sem nenhuma data utilizável. |
 | 155 | [py] `_interpretar_data_contratacao` — resolve datas BR/US misturadas na mesma coluna. |
 | 156 | [py] Mesmo uma data nativa do Excel pode estar ambígua BR/US — tratar também. |
+| 160 | [infra] **Publica via artifact do GitHub Pages, não commita mais os HTML gerados.** `.git` crescia ~1 GB/dia (rodada de 2h × ~86 MB de `index.html`+`coordenadores.html` não-comprimíveis). Workflow monta `_site/` e usa `deploy-pages`; Pages passou pra `build_type: workflow`. `index.html`/`coordenadores.html`/`lookup.json` foram pro `.gitignore` e removidos da history com `git filter-repo` (force-push no `main`). **Todos os SHAs de commit mudaram — quem tinha clone teve que reclonar.** |
+| 159 | [py/both] **Recrutamento: funil simplificado + coerência dos "Aviso de Portfólio".** Funil vira 3 blocos (Em andamento / Contratados / Não seguiram) + top-3 motivos de saída, no lugar de 13 barras. KPIs de recrutamento saem da fileira de Vagas da Lotação. "Aviso de Portfólio" de ex-tutor casa com `tutores_desligados` → polo limpo + rótulo "ex-tutor desligado em DD/MM" (`c` continua 'Aviso de Portfólio' pra não inflar headcount; categoria real em `categoria_ex_tutor`). Remetente sem nome → "Remetente não identificado". Statuses novos da planilha real no `_VRH_STATUS_GRUPO`. Rótulo de status com acento (`st_label`). |
 | 158 | [py] **KPI headcount de tutores excluía os fantasmas.** `total`/`enviaram`/`pendentes`/`urgentes`/`atrasados` (`processar.py:~1911` e dentro de `_stats_semestre` `:~2098`) contavam os baldes `{'n':'Tutor desligado','_anonimo':True}` e os pseudo-tutores `'Aviso de Portfólio'`. Como demitido sai do CONTROLE e vira fantasma, o total ficava travado. Novo helper `_eh_tutor_fantasma`; os fantasmas seguem em `tutores_out` (seção Aviso de Portfólio / agregados de prática dependem deles), só não contam no headcount. `total_alunos`, `polo_stats`, `pratica_stats` e `por_ordem` **não** mudaram (atividade de portfólio órfã é real). Frontend já filtrava no `renderKPIs`, mas lia `k.urgentes`/`k.atrasados` crus do backend. |
 | 157 | [py/both] **Recrutamento & Seleção na seção Vagas.** `p7`/`URL_VAGAS_RH` → `processar_vagas_rh` + `_cruzar_vagas_recrutamento`, anexados em `dados['vagas']` (`recrutamento.reqs`, `funil`, `kpis` estendido). Funil de candidatos **agregado, sem PII** (LGPD — candidato externo). Frontend: KPIs de recrutamento + card "Funil de Recrutamento" + tabela "Vagas no INHIRE" (só dashboard) + colunas `rec_*` na tabela da Lotação; coordenadores tem versão enxuta filtrada por curso via `por_curso_status` no `_filtrarDBPorCursos`. |
 
