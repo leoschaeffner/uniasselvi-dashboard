@@ -673,10 +673,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="card" id="rec-funil-card" hidden>
     <div class="card-hdr"><div class="card-title">🧭 Funil de Recrutamento</div><div class="card-sub" id="rec-funil-sub">—</div></div>
     <div id="rec-funil"></div>
-    <div style="margin-top:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">DIFICULDADE POR CURSO — candidatos → contratados</div>
-      <div class="tbl-wrap" style="max-height:200px"><table><tbody id="rec-funil-curso"></tbody></table></div>
-    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin:14px 0 4px">DIFICULDADE DE CONTRATAÇÃO POR CURSO <span style="font-weight:400">— candidatos entrevistados → contratados</span></div>
+    <div class="tbl-wrap" style="max-height:220px"><table><thead><tr><th>Curso</th><th style="text-align:right">Candidatos → contratados</th><th style="text-align:right">Taxa</th></tr></thead><tbody id="rec-funil-curso"></tbody></table></div>
   </div>
 
   <div class="card">
@@ -3707,14 +3705,17 @@ function renderVagasKPIs(){
   renderFunilRecrutamento();
   renderVagasImpacto(); renderVagasCriticas(); renderVagasDificeis();   // PATCH 165
 }
-// PATCH 165 — versão coordenador (mesma leitura de DB.vagas, já filtrado por curso no _filtrarDBPorCursos)
+// PATCH 165 — faixa única de destaque (filtrada pelo curso do coordenador)
 function renderVagasImpacto(){
   const el=document.getElementById('vagas-impacto'); if(!el) return;
-  const k=(DB.vagas||{}).kpis||{}; const c=[];
-  if(k.alunos_sem_tutor) c.push(`<div class="kpi kpi-red" style="flex:1;min-width:220px"><div class="kpi-label">Alunos sem tutor</div><div class="kpi-value">${fmtNum(k.alunos_sem_tutor)}</div><div class="kpi-detail">em ${fmtNum(k.polos_sem_tutor||0)} polos com vaga aberta</div></div>`);
-  if(k.declinou_remuneracao_pct_perdas) c.push(`<div class="kpi kpi-yellow" style="flex:1;min-width:220px"><div class="kpi-label">Perdas por remuneração</div><div class="kpi-value">${fmtNum(k.declinou_remuneracao_pct_perdas)}%</div><div class="kpi-detail">${fmtNum(k.declinou_remuneracao||0)} de ${fmtNum(k.perdas_total||0)} que saíram do funil</div></div>`);
-  if(k.reqs_congeladas) c.push(`<div class="kpi kpi-teal" style="flex:1;min-width:180px"><div class="kpi-label">Vagas congeladas</div><div class="kpi-value">${fmtNum(k.reqs_congeladas)}</div><div class="kpi-detail">${fmtNum(k.reqs_abertas||0)} em recrutamento</div></div>`);
-  el.innerHTML=c.join(''); el.hidden=!c.length;
+  const k=(DB.vagas||{}).kpis||{}; const it=[];
+  if(k.alunos_sem_tutor) it.push(`<strong>${fmtNum(k.alunos_sem_tutor)}</strong> alunos em ${fmtNum(k.polos_sem_tutor||0)} polos sem tutor`);
+  if(k.declinou_remuneracao_pct_perdas) it.push(`<strong>${fmtNum(k.declinou_remuneracao_pct_perdas)}%</strong> das perdas do funil são por remuneração <span style="opacity:.7">(${fmtNum(k.declinou_remuneracao||0)} de ${fmtNum(k.perdas_total||0)})</span>`);
+  if(k.reqs_congeladas) it.push(`<strong>${fmtNum(k.reqs_congeladas)}</strong> vagas congeladas`);
+  if(!it.length){ el.hidden=true; return; }
+  el.hidden=false;
+  el.innerHTML=`<div style="flex:1;background:var(--red)0d;border:1px solid var(--red)33;border-left:4px solid var(--red);border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.9">
+    <span style="font-weight:800;color:var(--red)">🎯 O que decidir</span><span style="color:var(--muted)"> — </span>${it.join('<span style="color:var(--muted)"> &nbsp;·&nbsp; </span>')}</div>`;
 }
 function renderVagasCriticas(){
   const card=document.getElementById('vagas-criticas-card'); if(!card) return;
