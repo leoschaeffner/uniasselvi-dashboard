@@ -654,12 +654,27 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="ph"><div class="ph-title">Vagas — Situação por Polo</div><div class="ph-sub">Onde tem tutor, onde não tem, e a previsão de contratação</div></div>
   <div class="kpi-row" id="vagas-kpis"></div>
 
+  <!-- PATCH 165: impacto + vagas que precisam de decisão (filtrado pelo curso do coordenador) -->
+  <div id="vagas-impacto" hidden style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
+  <div class="card" id="vagas-criticas-card" hidden>
+    <div class="card-hdr"><div class="card-title">🔴 Vagas que precisam de decisão</div><div class="card-sub" id="vagas-criticas-sub">—</div></div>
+    <div class="tbl-wrap" style="max-height:340px"><table><thead><tr>
+      <th>Polo</th><th>Curso</th><th style="text-align:right">Alunos no polo</th><th>Contratação</th><th>Recrutamento</th>
+    </tr></thead><tbody id="vagas-criticas-tbody"></tbody></table></div>
+  </div>
+  <div class="card" id="vagas-dificeis-card" hidden>
+    <div class="card-hdr"><div class="card-title">🏋️ Polos difíceis — +200 alunos e sem tutor</div><div class="card-sub" id="vagas-dificeis-sub">—</div></div>
+    <div class="tbl-wrap" style="max-height:260px"><table><thead><tr>
+      <th>Polo</th><th style="text-align:right">Alunos</th><th>Cursos sem tutor</th><th>Situação</th>
+    </tr></thead><tbody id="vagas-dificeis-tbody"></tbody></table></div>
+  </div>
+
   <!-- PATCH 157: Funil de Recrutamento (planilha VAGAS_RH — agregado, filtrado pelo curso do coordenador) -->
   <div class="card" id="rec-funil-card" hidden>
     <div class="card-hdr"><div class="card-title">🧭 Funil de Recrutamento</div><div class="card-sub" id="rec-funil-sub">—</div></div>
     <div id="rec-funil"></div>
     <div style="margin-top:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">POR CURSO / ÁREA</div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px">DIFICULDADE POR CURSO — candidatos → contratados</div>
       <div class="tbl-wrap" style="max-height:200px"><table><tbody id="rec-funil-curso"></tbody></table></div>
     </div>
   </div>
@@ -3690,6 +3705,47 @@ function renderVagasKPIs(){
     <div class="kpi kpi-green"><div class="kpi-label">Contratados</div><div class="kpi-value">${fmtNum(k.contratados||0)}</div></div>`;
   }
   renderFunilRecrutamento();
+  renderVagasImpacto(); renderVagasCriticas(); renderVagasDificeis();   // PATCH 165
+}
+// PATCH 165 — versão coordenador (mesma leitura de DB.vagas, já filtrado por curso no _filtrarDBPorCursos)
+function renderVagasImpacto(){
+  const el=document.getElementById('vagas-impacto'); if(!el) return;
+  const k=(DB.vagas||{}).kpis||{}; const c=[];
+  if(k.alunos_sem_tutor) c.push(`<div class="kpi kpi-red" style="flex:1;min-width:220px"><div class="kpi-label">Alunos sem tutor</div><div class="kpi-value">${fmtNum(k.alunos_sem_tutor)}</div><div class="kpi-detail">em ${fmtNum(k.polos_sem_tutor||0)} polos com vaga aberta</div></div>`);
+  if(k.declinou_remuneracao_pct_perdas) c.push(`<div class="kpi kpi-yellow" style="flex:1;min-width:220px"><div class="kpi-label">Perdas por remuneração</div><div class="kpi-value">${fmtNum(k.declinou_remuneracao_pct_perdas)}%</div><div class="kpi-detail">${fmtNum(k.declinou_remuneracao||0)} de ${fmtNum(k.perdas_total||0)} que saíram do funil</div></div>`);
+  if(k.reqs_congeladas) c.push(`<div class="kpi kpi-teal" style="flex:1;min-width:180px"><div class="kpi-label">Vagas congeladas</div><div class="kpi-value">${fmtNum(k.reqs_congeladas)}</div><div class="kpi-detail">${fmtNum(k.reqs_abertas||0)} em recrutamento</div></div>`);
+  el.innerHTML=c.join(''); el.hidden=!c.length;
+}
+function renderVagasCriticas(){
+  const card=document.getElementById('vagas-criticas-card'); if(!card) return;
+  const cr=(DB.vagas||{}).criticas||[];
+  if(!cr.length){ card.hidden=true; return; }
+  card.hidden=false;
+  document.getElementById('vagas-criticas-sub').textContent=`${cr.length} vaga(s) sem tutor priorizadas por impacto e travas`;
+  const badge=(t,c)=>`<span class="badge" style="background:${c}20;color:${c}">${t}</span>`;
+  document.getElementById('vagas-criticas-tbody').innerHTML=cr.map(v=>{
+    let rec='—';
+    if(v.rec_travada) rec=badge('sem currículos','var(--red)');
+    else if(v.rec_situacao==='congelada') rec=badge('congelada','var(--yellow-d)');
+    else if(v.rec_etapa) rec=esc(v.rec_etapa);
+    const cc=(v.contratacao||'').includes('Sem previsão')||((v.contratacao||'').toLowerCase().includes('liberada'))?'var(--red)':(v.contratacao||'').includes('Com previsão')?'var(--ok)':'var(--muted)';
+    return `<tr><td><strong>${esc(v.polo)}</strong></td><td style="font-size:11px">${esc(v.curso||'—')}</td><td style="text-align:right;font-weight:700">${fmtNum(v.alunos)}</td><td style="font-size:11px;color:${cc}">${esc(v.contratacao||'—')}</td><td style="font-size:11px">${rec}</td></tr>`;
+  }).join('');
+}
+function renderVagasDificeis(){
+  const card=document.getElementById('vagas-dificeis-card'); if(!card) return;
+  const pd=(DB.vagas||{}).polos_dificeis||[];
+  if(!pd.length){ card.hidden=true; return; }
+  card.hidden=false;
+  document.getElementById('vagas-dificeis-sub').textContent=`${pd.length} polo(s) com +200 alunos e vaga de tutor aberta`;
+  document.getElementById('vagas-dificeis-tbody').innerHTML=pd.map(p=>{
+    const fl=[];
+    if(p.sem_previsao) fl.push('<span class="badge" style="background:var(--red)20;color:var(--red)">sem previsão</span>');
+    if(p.nao_liberada) fl.push('<span class="badge" style="background:var(--red)20;color:var(--red)">não liberada</span>');
+    if(p.travada) fl.push('<span class="badge" style="background:var(--red)20;color:var(--red)">sem currículos</span>');
+    if(p.congelada) fl.push('<span class="badge" style="background:var(--yellow-d)20;color:var(--yellow-d)">congelada</span>');
+    return `<tr><td><strong>${esc(p.polo)}</strong></td><td style="text-align:right;font-weight:800;color:var(--red)">${fmtNum(p.alunos)}</td><td style="font-size:11px">${(p.cursos||[]).map(esc).join(', ')}</td><td style="font-size:11px">${fl.join(' ')||'em recrutamento'}</td></tr>`;
+  }).join('');
 }
 // ── PATCH 157/159: Funil de Recrutamento (coordenador — simples: 3 blocos +
 // motivos de saída + quebra por curso; sem tabela de tickets INHIRE) ──
@@ -3721,9 +3777,13 @@ function renderFunilRecrutamento(){
       <div style="flex:1;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${(b.n/max*100).toFixed(1)}%;background:${b.cor};height:20px"></div></div>
       <div style="width:46px;font-size:13px;font-weight:800">${fmtNum(b.n)}</div>
     </div>`).join('') + motivosHtml + inhire;
-  document.getElementById('rec-funil-curso').innerHTML=(f.por_curso||[]).map(r=>
-    `<tr><td style="font-size:11px">${esc(r.curso)}</td><td style="text-align:right;font-size:11px;font-weight:700">${fmtNum(r.n)}</td><td style="text-align:right;font-size:10px;color:var(--ok)">${fmtNum(r.contratados||0)} contratado${r.contratados===1?'':'s'}</td></tr>`
-  ).join('') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
+  const _dc=(DB.vagas||{}).dificuldade_por_curso||[];
+  const _rows=_dc.length?_dc.map(c=>({curso:c.curso,n:c.candidatos,contr:c.contratados,taxa:c.taxa}))
+                       :(f.por_curso||[]).map(c=>({curso:c.curso,n:c.n,contr:c.contratados||0,taxa:c.taxa||0}));
+  document.getElementById('rec-funil-curso').innerHTML=_rows.map(r=>{
+    const cor=r.taxa<12?'var(--red)':r.taxa<20?'var(--yellow-d)':'var(--ok)';
+    return `<tr><td style="font-size:11px">${esc(r.curso)}</td><td style="text-align:right;font-size:11px">${fmtNum(r.n)} → <strong>${fmtNum(r.contr)}</strong></td><td style="text-align:right;font-size:11px;font-weight:800;color:${cor}">${r.taxa}%</td></tr>`;
+  }).join('') || '<tr><td style="color:var(--muted);font-size:11px">—</td></tr>';
 }
 function _renderVagasKPIs_ORIGINAL_NAO_USAR(){
   const k=(DB.vagas||{}).kpis||{};
@@ -5078,13 +5138,26 @@ function _filtrarDBPorCursos(cursos){
   if (DB.vagas && Array.isArray(DB.vagas.vagas)) {
     DB.vagas.vagas = DB.vagas.vagas.filter(v => codigos.length && codigos.some(cod=>(v.cursos||'').includes(cod)));
     const vs = DB.vagas.vagas;
+    const _st = vs.filter(v=>v.status==='Aumento de Quadro' && !(v.tutor_atual||'').trim());
     DB.vagas.kpis = {
       total_vagas: vs.length,
       aumento_quadro: vs.filter(v=>v.status==='Aumento de Quadro').length,
       substituicao: vs.filter(v=>v.status==='Substituição').length,
       com_previsao: vs.filter(v=>(v.contratacao||'').includes('Com previsão')).length,
       sem_previsao: vs.filter(v=>(v.contratacao||'').includes('Sem previsão')).length,
+      // PATCH 165: impacto recalculado pro(s) curso(s) do coordenador
+      alunos_sem_tutor: _st.reduce((a,v)=>a+(+v.alunos_polo||0),0),
+      polos_sem_tutor: new Set(_st.map(v=>v.polo)).size,
     };
+  }
+  // PATCH 165: críticas + polos difíceis filtrados por código de curso
+  if (DB.vagas && Array.isArray(DB.vagas.criticas)) {
+    DB.vagas.criticas = DB.vagas.criticas.filter(c => codigos.some(cd=>(c.curso||'').includes(cd)));
+  }
+  if (DB.vagas && Array.isArray(DB.vagas.polos_dificeis)) {
+    DB.vagas.polos_dificeis = DB.vagas.polos_dificeis
+      .map(p => ({...p, cursos:(p.cursos||[]).filter(cd=>codigos.includes(cd))}))
+      .filter(p => p.cursos.length);
   }
 
   // PATCH 157: Recrutamento (planilha VAGAS_RH) -- filtra as vagas do INHIRE e
@@ -5096,6 +5169,9 @@ function _filtrarDBPorCursos(cursos){
     const _cursoRecBate = txt => { const t=_normTxtCoord(txt); return nomesCur.some(n=>t && (t.includes(n)||n.includes(t))); };
     if (DB.vagas.recrutamento && Array.isArray(DB.vagas.recrutamento.reqs)) {
       DB.vagas.recrutamento.reqs = DB.vagas.recrutamento.reqs.filter(r=>_cursoRecBate(r.curso));
+    }
+    if (Array.isArray(DB.vagas.dificuldade_por_curso)) {   // PATCH 165
+      DB.vagas.dificuldade_por_curso = DB.vagas.dificuldade_por_curso.filter(c=>_cursoRecBate(c.curso));
     }
     const f = DB.vagas.funil;
     if (f && f.por_curso_status) {
@@ -5115,6 +5191,8 @@ function _filtrarDBPorCursos(cursos){
       const g = st => stTot[st]||0;
       const contratados = g('FINALIZADO');
       const perdasDef = g('DESISTENCIA')+g('SEM RETORNO DO CANDIDATO')+g('SEM RETORNO DO CAN');
+      const perdasTot = por_status.filter(s=>s.grupo==='perda').reduce((a,s)=>a+s.n,0);
+      const declRem = g('DECLINOU DEVIDO REMUNERACAO');
       const reqs = (DB.vagas.recrutamento&&DB.vagas.recrutamento.reqs)||[];
       DB.vagas.kpis = Object.assign({}, DB.vagas.kpis, {
         candidatos_total: total,
@@ -5122,12 +5200,16 @@ function _filtrarDBPorCursos(cursos){
         entrevistas_agendadas: g('AGENDADO'),
         propostas_enviadas: g('ENVIO DE PROPOSTA')+g('AGUARDANDO ACEITE'),
         contratados,
-        declinou_remuneracao: g('DECLINOU DEVIDO REMUNERACAO'),
+        declinou_remuneracao: declRem,
+        perdas_total: perdasTot,
+        declinou_remuneracao_pct_perdas: perdasTot ? Math.round(100*declRem/perdasTot) : 0,
         nao_compareceu: g('NAO COMPARECEU NA ENTREVISTA'),
         taxa_conversao: Math.round(1000*contratados/Math.max(total-perdasDef,1))/10,
         reqs_total: reqs.length,
-        reqs_abertas: reqs.filter(r=>!r.fechada).length,
-        reqs_fechadas: reqs.filter(r=>r.fechada).length,
+        reqs_abertas: reqs.filter(r=>(r.situacao||(r.fechada?'fechada':'aberta'))==='aberta').length,
+        reqs_fechadas: reqs.filter(r=>(r.situacao||(r.fechada?'fechada':''))==='fechada').length,
+        reqs_congeladas: reqs.filter(r=>r.situacao==='congelada').length,
+        reqs_canceladas: reqs.filter(r=>r.situacao==='cancelada').length,
       });
     }
   }
