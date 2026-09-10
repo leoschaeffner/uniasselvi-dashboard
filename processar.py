@@ -1914,8 +1914,13 @@ def processar(p1, p2):
     urgentes  = sum(1 for t in _tut_reais if t['situacao'] == 'urgente')
     total_alunos = sum(h['a'] for t in tutores_out for h in t['hist'])
     print(f"[{ts()}] Tutores: {total} reais (headcount) | {len(tutores_out) - total} registros-fantasma em tutores_out (Aviso de Portfólio / balde 'Tutor desligado')")
+    # PATCH 162: polo_stats conta só tutores REAIS (mesma lógica do PATCH 158 —
+    # os baldes-fantasma "Tutor desligado" criavam linhas de polo e inflavam a
+    # contagem: 396 vs 356 headcount, ~26 polos-fantasma). Os alunos/envios das
+    # práticas órfãs desses ex-tutores ainda somam no polo QUANDO ele já existe
+    # (a atividade é real), mas não criam linha de polo sem tutor ativo.
     polo_map = {}
-    for t in tutores_out:
+    for t in _tut_reais:
         p = t['polo']
         if p not in polo_map:
             polo_map[p] = {'POLO': p, 'polo': p, 'n': p, 'total': 0, 'enviaram': 0, 'atrasados': 0, 'alunos': 0}
@@ -1923,8 +1928,13 @@ def processar(p1, p2):
         if t['te'] > 0: polo_map[p]['enviaram'] += 1
         if t['situacao'] == 'atrasado': polo_map[p]['atrasados'] += 1
         polo_map[p]['alunos'] += sum(h['a'] for h in t['hist'])
+    for t in tutores_out:
+        if _eh_tutor_fantasma(t) and t['polo'] in polo_map:
+            polo_map[t['polo']]['alunos'] += sum(h['a'] for h in t['hist'])
     polo_envios = {}
     for t in tutores_out:
+        if _eh_tutor_fantasma(t) and t['polo'] not in polo_map:
+            continue
         p = t['polo']
         polo_envios[p] = polo_envios.get(p, 0) + len(t.get('hist', []))
     polo_stats = sorted(polo_map.values(), key=lambda x: -x['atrasados'])
@@ -2051,15 +2061,19 @@ def processar(p1, p2):
             elif any(_po.get(_o,0) > 0 for _o in _orv): _sit = 'atrasado'
             else: _sit = 'urgente'
 
-            # polo
+            # polo — PATCH 162: contagem de tutor por polo só de tutores reais
+            # (pratica_stats/cat_stats acima seguem com o universo completo).
             _p = _t.get('p','')
-            if _p not in _polo_map:
-                _polo_map[_p] = {'n':_p,'polo':_p,'POLO':_p,'total':0,'enviaram':0,'atrasados':0,'alunos':0,'pend':0,'pct':0,'envios':0,'t':0,'e':0,'a':0}
-            _polo_map[_p]['total'] += 1; _polo_map[_p]['t'] += 1
-            if _te_sem > 0: _polo_map[_p]['enviaram'] += 1; _polo_map[_p]['e'] += 1
-            if _sit == 'atrasado': _polo_map[_p]['atrasados'] += 1
-            _polo_map[_p]['alunos'] += sum(h.get('a',0) for h in _hist_sem)
-            _polo_map[_p]['a'] = _polo_map[_p]['alunos']
+            _fant = _eh_tutor_fantasma(_t)
+            if not _fant:
+                if _p not in _polo_map:
+                    _polo_map[_p] = {'n':_p,'polo':_p,'POLO':_p,'total':0,'enviaram':0,'atrasados':0,'alunos':0,'pend':0,'pct':0,'envios':0,'t':0,'e':0,'a':0}
+                _polo_map[_p]['total'] += 1; _polo_map[_p]['t'] += 1
+                if _te_sem > 0: _polo_map[_p]['enviaram'] += 1; _polo_map[_p]['e'] += 1
+                if _sit == 'atrasado': _polo_map[_p]['atrasados'] += 1
+            if _p in _polo_map:
+                _polo_map[_p]['alunos'] += sum(h.get('a',0) for h in _hist_sem)
+                _polo_map[_p]['a'] = _polo_map[_p]['alunos']
 
             # cat_stats
             _cf = _t.get('cf','')
