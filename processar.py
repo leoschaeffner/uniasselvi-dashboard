@@ -2917,6 +2917,21 @@ def _ocor_canon(valor, mapa):
     return mapa.get(_vrh_norm(v), v)
 
 
+def _ocor_parse_polo_tutor(valor):
+    """A pergunta de Polo no Forms é, na prática, um dropdown combinado
+    'Nome do Tutor — Polo/UF' (pra evitar digitar/errar 1 entre 1303 polos —
+    o multiplicador escolhe pelo tutor, que já carrega o polo junto). Quando
+    a opção 'Outro / não é sobre um tutor específico' é usada, o valor vem
+    sem o separador e é o próprio nome do polo. Retorna (polo, tutor|None)."""
+    v = _ocor_txt(valor)
+    if not v:
+        return v, None
+    if ' — ' in v:
+        tutor, polo = v.rsplit(' — ', 1)
+        return polo.strip(), tutor.strip()
+    return v, None
+
+
 def _ocor_parse_data(valor):
     """Mesma lógica de _interpretar_data_contratacao (BR primeiro, troca pra
     US se mês>12 ou a data cair no futuro) — nunca assume um formato fixo.
@@ -3038,10 +3053,12 @@ def processar_ocorrencias(p8):
             _dias_aberta = None
             if _status != 'Resolvida' and _data_dt:
                 _dias_aberta = (_hoje - _data_dt).days
+            _polo, _tutor_ref = _ocor_parse_polo_tutor(row.get(c_polo) if c_polo else None)
             registros.append({
                 'data': _data_dt.strftime('%d/%m/%Y') if _data_dt else None,
                 'multiplicador': _ocor_canon(row.get(c_mult) if c_mult else None, _OCOR_MULT_MAP),
-                'polo': _ocor_txt(row.get(c_polo) if c_polo else None),
+                'polo': _polo,
+                'tutor': _tutor_ref,
                 'curso': _ocor_txt(row.get(c_curso) if c_curso else None),
                 'categoria_lab': _ocor_txt(row.get(c_catlab) if c_catlab else None),
                 'tipo': _ocor_canon(row.get(c_tipo) if c_tipo else None, _OCOR_TIPO_MAP),
