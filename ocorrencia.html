@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow, noarchive"/>
+<title>VinciLab · Registrar Ocorrência</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--green:#006B5E;--green-l:#00A88F;--yellow:#FFD100;--bg:#f4f6f8;--surface:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--shadow:0 1px 3px rgba(0,0,0,.06);--radius:10px;--font:'Plus Jakarta Sans','Segoe UI',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--green);padding:18px 20px;display:flex;align-items:center;gap:12px}
+.logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;letter-spacing:1.5px;padding:5px 10px;border-radius:5px}
+header h1{color:#fff;font-size:15px;font-weight:700}
+header p{color:rgba(255,255,255,.6);font-size:11px}
+main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.intro{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.intro h2{font-size:16px;margin-bottom:6px}
+.intro p{font-size:13px;color:var(--muted);line-height:1.5}
+.form-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;min-height:600px;display:flex;align-items:center;justify-content:center}
+.form-wrap iframe{width:100%;border:none;min-height:900px}
+.fallback{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px}
+.fallback a{display:inline-block;margin-top:12px;background:var(--green);color:#fff;text-decoration:none;font-weight:700;font-size:13px;padding:10px 20px;border-radius:8px}
+.aviso{background:#fff8e1;border:1px solid #ffe08a;color:#8a6d00;border-radius:var(--radius);padding:12px 16px;font-size:12.5px;line-height:1.5}
+footer{text-align:center;padding:16px;font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">VINCILAB</span>
+  <div><h1>Registrar Ocorrência</h1><p>Formulário do multiplicador · leva menos de 2 minutos</p></div>
+</header>
+<main>
+  <div class="intro">
+    <h2>Encontrou um problema em campo?</h2>
+    <p>Preencha aqui — infraestrutura de laboratório, falta de insumo, atraso de tutor, conduta de aluno ou qualquer outra ocorrência do polo. O time de gestão acompanha tudo pelo Painel do Gestor.</p>
+  </div>
+
+  <div id="aviso-config" class="aviso" style="display:none">
+    O link do formulário ainda não foi configurado nesta página. Se você é da gestão: edite <code>ocorrencia.html</code>, defina <code>FORMS_URL</code> no topo do script, e publique de novo.
+  </div>
+
+  <div class="form-wrap" id="form-wrap"></div>
+</main>
+<footer>VinciLab · dado enviado vai direto pra planilha da gestão, sem passar por aqui</footer>
+
+<script>
+// Preencher com o link de EMBED do Microsoft Forms (Forms > Compartilhar >
+// "Incorporar" > copiar só a URL de dentro do atributo src= do iframe).
+// Enquanto estiver vazio, a página mostra o aviso de configuração pendente.
+const FORMS_URL = "";
+
+const wrap = document.getElementById('form-wrap');
+if (FORMS_URL) {
+  const iframe = document.createElement('iframe');
+  iframe.src = FORMS_URL;
+  iframe.title = 'Formulário de Ocorrência';
+  iframe.allowFullscreen = true;
+  wrap.appendChild(iframe);
+} else {
+  document.getElementById('aviso-config').style.display = 'block';
+  wrap.innerHTML = '<div class="fallback">Formulário ainda não conectado a esta página.</div>';
+}
+</script>
+</body>
+</html>
