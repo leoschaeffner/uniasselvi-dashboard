@@ -1,8 +1,9 @@
 # Mapa do Código — VinciLab
 
-Última atualização: 2026-09-09
-Commit de referência: `341316c` (Adiciona 10 subagentes especializados do VinciLab)
-+ mudanças locais não commitadas: **PATCH 157** (Recrutamento & Seleção na seção Vagas).
+Última atualização: 2026-09-11
+Commit de referência: `d804d5d` (PATCH 166) + backend do PATCH 167 (`a510a4f`)
++ mudanças locais não commitadas: **PATCH 168** (novo portal `template_gestor.html`
+— Painel do Gestor).
 
 > Primeiro arquivo a ler antes de mexer no VinciLab. Responde "onde fica X" e
 > "por que Y foi feito assim" sem precisar carregar `processar.py` (~4.600 linhas)
@@ -11,6 +12,13 @@ Commit de referência: `341316c` (Adiciona 10 subagentes especializados do Vinci
 > **Regra de ouro do projeto:** quase toda mudança de frontend precisa ser
 > replicada nos DOIS templates (`template_dashboard.html` e
 > `template_coordenadores.html`). Esquecer um dos dois é a fonte nº 1 de bugs aqui.
+> **PATCH 168:** existe um terceiro portal, `template_gestor.html` ("Painel do
+> Gestor"), mas ele só cobre um recorte enxuto (KPIs herdados + Ocorrências por
+> Multiplicador + Laboratórios/Pendências). Mudança em Ocorrências ou
+> Laboratórios/Pendências pode precisar tocar os TRÊS arquivos; mudança em
+> qualquer outra seção (Portfólios, Gerenciamento, Agendas, Vagas/RH normal
+> etc.) continua sendo só os dois templates de sempre — o gestor não replica
+> essas seções.
 
 ---
 
@@ -69,8 +77,9 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 | `processar.py` | **Todo o ETL + geração de saída.** Ponto de entrada `__main__` (~linha 3986). |
 | `template_dashboard.html` | Template do portal principal (VinciLab). Placeholder `'DATA_GOES_HERE'` e `TIMESTAMP_GOES_HERE`. |
 | `template_coordenadores.html` | Template do portal de coordenadores (versão travada por curso, simplificada). Placeholder `'DATA_GOES_HERE'`. |
+| `template_gestor.html` | **PATCH 168.** Template do terceiro portal, "Painel do Gestor" — visão executiva enxuta (sem filtro de curso, sem tabela operacional completa): KPIs herdados (tutores ativos, alunos sem tutor, vagas críticas, polos difíceis, laboratórios com pendência) + card "Ocorrências por Multiplicador" + card "Laboratórios — Pendências". Senha própria (`SENHA_GESTOR`, diferente de `SENHA_DASHBOARD`), sem link cruzado nos outros dois portais (acesso só por URL direta `/gestor.html`). Placeholder `'DATA_GOES_HERE'` (sem `TIMESTAMP_GOES_HERE` — lê `DB.gerado_em` no cliente, igual ao `template_coordenadores.html`). |
 | `portfolio_form.html` | Formulário público de envio de portfólio; autopreenche via `lookup.json` e redireciona pra uma lista do SharePoint (não passa pelo `processar.py`). |
-| `index.html` / `coordenadores.html` / `lookup.json` | **Saída gerada.** Desde o PATCH 160 **NÃO são mais commitados** — o workflow monta `_site/` e publica via artifact do GitHub Pages. Estão no `.gitignore`. NÃO editar à mão. |
+| `index.html` / `coordenadores.html` / `gestor.html` / `lookup.json` | **Saída gerada.** Desde o PATCH 160 **NÃO são mais commitados** — o workflow monta `_site/` e publica via artifact do GitHub Pages. Estão no `.gitignore`. NÃO editar à mão. |
 | `config_semestre.json` | Config editável de prazos/períodos das Ordens por semestre. Única coisa que se edita pra virar o semestre. |
 | `catalogo_oficial.json` | Catálogo oficial de práticas (formulário de portfólio 2026/2). |
 | `categoria_para_curso.json` | Texto do formulário de portfólio → código fino de curso (ex: `"Multidisciplinar III - Fisioterapia" → "BFI"`). |
@@ -327,6 +336,13 @@ Ambos são página única, JS inline, dados via `DB` (JSON decifrado). Estrutura
 seções quase idêntica; a lógica de render é **replicada** (mesmos nomes de
 função) — mudança no dashboard geralmente tem que ir no coordenadores também.
 
+> **PATCH 168:** há um terceiro portal, `template_gestor.html` ("Painel do
+> Gestor"), mas ele NÃO replica a estrutura de seções abaixo — é uma tela
+> única enxuta (sem abas) com nomes de função próprios (`renderGestorKPIs`,
+> `renderOcorrencias`, `renderLaboratorios`, `_iniciarGestor`). Só entra na
+> "regra de replicar" quando a mudança é em Ocorrências/Laboratórios. Ver
+> tabela de arquivos (§2) e histórico (§13, PATCH 168).
+
 ### Seções / navegação
 
 | Seção (`navTo`) | Dashboard | Coordenadores | Conteúdo |
@@ -513,6 +529,7 @@ dashboard, procure a função de mesmo nome aqui e replique.**
    `*.md`, `*.sh` (o site nunca precisou desses; `processar.py` ainda vazava a
    senha `uniasselvi2026`). Depois copia `saida/dashboard.html → _site/index.html`,
    `saida/coordenadores.html → _site/coordenadores.html`,
+   `saida/gestor.html → _site/gestor.html` (PATCH 168),
    `saida/lookup.json → _site/lookup.json`.
 5. `configure-pages` + `upload-pages-artifact (path: _site)` + `deploy-pages`.
    **Nada é commitado no git** — o `.git` parou de crescer ~1 GB/dia.
@@ -564,6 +581,7 @@ templates, **[both]** = replicado nos dois.
 
 | # | Resumo |
 |---|---|
+| 168 | [py/frontend, novo arquivo] **Novo portal `template_gestor.html` (Painel do Gestor)** — visão executiva enxuta, terceira senha própria (`SENHA_GESTOR`), sem filtro de curso e sem a tabela operacional completa. Faixa de KPIs herdados (`DB.kpis.total`, `DB.vagas.kpis.alunos_sem_tutor`/`n_criticas`/`n_polos_dificeis`, `DB.laboratorios.pendencias.length` — nada recalculado, só lidos) + card "Ocorrências por Multiplicador" (barras por multiplicador, tabela de abertas há +7 dias com badge de gravidade, totais por tipo/gravidade; estado vazio explícito quando `DB.ocorrencias` não existe ou `kpis.total===0`) + card "Laboratórios — Pendências" (tabela buscável de `DB.laboratorios.pendencias`). `gerar_html_gestor(dados)` em `processar.py` (mesmo padrão de `gerar_html_coordenadores`, protegido por `if not os.path.isfile(tmpl)`), chamada no `__main__` logo após `gerar_html_coordenadores`. Workflow: `saida/gestor.html → _site/gestor.html`, `template_gestor.html` excluído do rsync. Sem link cruzado nos outros dois portais — acesso só por URL direta. |
 | 167 | [py] **Fonte de dados Ocorrências por Multiplicador (opcional, secret `URL_OCORRENCIAS`) + pendências de laboratório agregadas.** `p8`/`OCORRENCIAS.xlsx` → `processar_ocorrencias`, mesmo padrão opcional do p7/VAGAS_RH (sem secret, `dados['ocorrencias']` nem existe). Lê a aba `Registro` do formulário de multiplicadores (Data/Multiplicador/Polo/Curso/Categoria de Lab/Tipo/Gravidade/Descrição/Status/Responsável/Data de Resolução), ignora linhas vazias, canoniza os 4 campos de dropdown (tolerante a acento/digitação) e calcula `dias_aberta`/`tempo_medio_resolucao_dias` com o mesmo parser BR/US de `_interpretar_data_contratacao` (nunca assume formato fixo). Retorna `{registros, kpis, por_multiplicador, por_tipo, por_gravidade, por_polo}` — sem PII de terceiro. Alimenta o "Painel do Gestor" (portal novo, construído em paralelo por outro agente a partir deste contrato de dados). Junto: `_carregar_laboratorios()` passa a anexar `lab['pendencias']` = os 66 registros de `labs_pendencias.json` como lista agregada solta (antes só existiam aplicados por tutor dentro de `tutores_out`). |
 | 1 | [py] Detecta e converte coluna "CH SEMANAL" (`HH:MM` ou decimal) para float. |
 | 2 | [py] `tem_lotacao` passa a ser baseado em dado real (CH>0 em ≥1 tutor). |

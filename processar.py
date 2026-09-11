@@ -4896,6 +4896,34 @@ def gerar_html_coordenadores(dados):
     with open(output, 'w', encoding='utf-8') as f: f.write(html)
     print(f"[{ts()}] Salvo: {output} (portal de coordenadores, mesma cifra AES-256-GCM)")
 
+# Senha própria do "Painel do Gestor" -- terceiro portal (PATCH 168), mesmo
+# "teatro de segurança" dos outros dois (senha hardcoded, cifra AES-256-GCM
+# no cliente). Separada de SENHA_DASHBOARD pra não expor os dois primeiros
+# portais caso essa vaze, e vice-versa.
+SENHA_GESTOR = "vincilab_gestor_2026"
+
+def gerar_html_gestor(dados):
+    """
+    PATCH 168: gera gestor.html -- terceiro portal, "Painel do Gestor":
+    visão executiva enxuta (headcount/vagas críticas herdados + Ocorrências
+    por Multiplicador + Laboratórios/Pendências), sem filtro de curso e sem
+    a tabela operacional completa do dashboard. Senha própria (SENHA_GESTOR).
+    Acesso só por URL direta (sem link cruzado nos outros dois portais).
+    """
+    saida = os.path.join(SCRIPT_DIR, "saida")
+    os.makedirs(saida, exist_ok=True)
+    output = os.path.join(saida, "gestor.html")
+    tmpl   = os.path.join(SCRIPT_DIR, "template_gestor.html")
+    if not os.path.isfile(tmpl):
+        print(f"[{ts()}] AVISO: template_gestor.html não encontrado -- pulando geração do Painel do Gestor")
+        return
+    with open(tmpl, encoding='utf-8') as f: html = f.read()
+    json_str = json.dumps(dados, ensure_ascii=False)
+    payload_cifrado = cifrar_dados(json_str, SENHA_GESTOR)
+    html = html.replace("'DATA_GOES_HERE'", json.dumps(payload_cifrado))
+    with open(output, 'w', encoding='utf-8') as f: f.write(html)
+    print(f"[{ts()}] Salvo: {output} (Painel do Gestor, senha própria, cifra AES-256-GCM)")
+
 def gerar_html(dados):
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
@@ -5633,6 +5661,10 @@ if __name__ == '__main__':
         gerar_html_coordenadores(dados)
     except Exception as e:
         print(f"[{ts()}] AVISO: Erro ao gerar portal de coordenadores: {e}")
+    try:
+        gerar_html_gestor(dados)
+    except Exception as e:
+        print(f"[{ts()}] AVISO: Erro ao gerar Painel do Gestor: {e}")
     if '--sem-browser' not in sys.argv:
         print(f"[{ts()}] Abrindo navegador...")
         webbrowser.open(Path(html).as_uri())
