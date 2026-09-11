@@ -575,7 +575,61 @@ def verificar_e_localizar():
                 print(f"  [ERRO] Não foi possível baixar Vagas RH: {e}")
         else:
             print(f"  [INFO] VAGAS_RH.xlsx não encontrada (secret URL_VAGAS_RH ainda não configurado)")
-    return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7
+
+    # ── PATCH 167: registro de ocorrências reportadas por multiplicadores
+    # (staff de campo) — mesmo padrão de secret+URL do p7/VAGAS_RH. Alimenta
+    # o "Painel do Gestor" (portal novo, construído em paralelo por outro
+    # agente). Totalmente opcional: sem o secret, dados['ocorrencias'] nem
+    # existe e nada quebra.
+    p8 = achar_arquivo(SCRIPT_DIR, "OCORRENCIAS.xlsx")
+    if p8:
+        print(f"  [OK] {os.path.basename(p8)}")
+    else:
+        url_ocor = os.environ.get("URL_OCORRENCIAS", "").strip()
+        if url_ocor:
+            print(f"  [Baixando] OCORRENCIAS.xlsx via URL_OCORRENCIAS...")
+            try:
+                import urllib.request as _urlreq_ocor
+                def _build_dl_urls_ocor(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)
+                    return urls
+                dest_ocor = os.path.join(pasta_planilhas, "OCORRENCIAS.xlsx")
+                downloaded_ocor = False
+                for url_dl in _build_dl_urls_ocor(url_ocor):
+                    try:
+                        req = _urlreq_ocor.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with _urlreq_ocor.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 2000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest_ocor, 'wb') as f_out: f_out.write(data)
+                            p8 = dest_ocor
+                            print(f"  [OK] OCORRENCIAS.xlsx ({len(data):,} bytes)")
+                            downloaded_ocor = True
+                            break
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar Ocorrências: {ex} | URL: {url_dl[:80]}")
+                if not downloaded_ocor:
+                    print(f"  [ERRO] Não foi possível baixar OCORRENCIAS.xlsx — verifique URL_OCORRENCIAS")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar Ocorrências: {e}")
+        else:
+            print(f"  [INFO] OCORRENCIAS.xlsx não encontrada (secret URL_OCORRENCIAS ainda não configurado)")
+
+    return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8
 
 
 def ler_excel(path, **kwargs):
@@ -2220,6 +2274,21 @@ def _carregar_laboratorios():
     with open(path, encoding='utf-8') as f:
         lab = json.load(f)
     print(f"[{ts()}] Laboratórios: {len(lab.get('ricos',{}))} categorias ricas, {len(lab.get('simples',{}))} categorias simples")
+    # PATCH 167: hoje labs_pendencias.json só é usado pra marcar 'lab_pendencia'
+    # dentro da ficha de CADA tutor (dentro do loop em tutores_out) — não
+    # existe em lugar nenhum uma lista agregada solta em `dados`. O "Painel do
+    # Gestor" precisa de uma visão consolidada sem navegar tutor por tutor.
+    _labs_pend_path2 = os.path.join(SCRIPT_DIR, 'labs_pendencias.json')
+    if os.path.isfile(_labs_pend_path2):
+        try:
+            with open(_labs_pend_path2, encoding='utf-8') as _f2:
+                lab['pendencias'] = json.load(_f2)
+        except Exception as e:
+            print(f"[{ts()}] AVISO: falha ao ler labs_pendencias.json pra 'pendencias' agregado: {e}")
+            lab['pendencias'] = []
+    else:
+        print(f"[{ts()}] AVISO: labs_pendencias.json não encontrado — 'laboratorios.pendencias' fica vazio")
+        lab['pendencias'] = []
     return lab
 
 
@@ -2795,6 +2864,246 @@ def processar_vagas_rh(p7):
     return {
         'reqs': reqs, 'funil': funil, 'kpis': kpis, 'ref_salario': _VRH_REF_SALARIO,
         'salarios_vagas_abertas': [{'valor': v, 'n': n} for v, n in _sal_ct.most_common()],
+    }
+
+
+# ── PATCH 167: Ocorrências reportadas por multiplicadores (staff de campo) ──
+# Fonte opcional p8/URL_OCORRENCIAS, mesmo padrão do p7/VAGAS_RH. Alimenta o
+# "Painel do Gestor" (portal novo, construído por outro agente). Schema
+# confirmado em planilhas/OCORRENCIAS_template.xlsx, aba "Registro" (a aba
+# "Listas" é só a fonte dos dropdowns do Excel, não tem registro nenhum):
+#   Data | Multiplicador | Polo | Curso / Área | Categoria de Laboratório |
+#   Tipo de Ocorrência | Gravidade | Descrição | Status |
+#   Responsável pela Tratativa | Data de Resolução
+# Sem dado pessoal de terceiro (aluno) — é registro de operação, não de gente
+# de fora, então a descrição pode ir como está (diferente do funil de
+# recrutamento do p7, que é candidato externo/LGPD).
+_OCOR_MULTIPLICADORES = [
+    'Leonardo Schaeffner Camargo', 'Cláudia Nara De Albuquerque Romão',
+    'Antonio Jackson Sabino Da Silva Bezerra', 'Giselle Silva Gonçalves',
+    'Flaviane Pimentel E Silva Warmling', 'Thaina Tavolaro Zocchio',
+]
+_OCOR_TIPOS = [
+    'Infraestrutura do Laboratório', 'Falta de Insumo', 'Atraso/Ausência do Tutor',
+    'Conduta do Aluno', 'Comunicação com o Polo', 'Equipamento com Defeito', 'Outro',
+]
+_OCOR_GRAVIDADES = ['Baixa', 'Média', 'Alta']
+_OCOR_STATUS = ['Aberta', 'Em Tratativa', 'Resolvida']
+# Valores fixos por dropdown na planilha, mas tratados como texto livre
+# tolerante (podem vir com espaço/acento/maiúscula diferente já que é campo
+# editado à mão) — normaliza com _vrh_norm (upper, sem acento, espaço
+# colapsado) antes de casar contra a lista oficial, mesmo padrão já usado
+# pelo p7 (_vrh_curso_canon).
+_OCOR_MULT_MAP = {_vrh_norm(v): v for v in _OCOR_MULTIPLICADORES}
+_OCOR_TIPO_MAP = {_vrh_norm(v): v for v in _OCOR_TIPOS}
+_OCOR_GRAV_MAP = {_vrh_norm(v): v for v in _OCOR_GRAVIDADES}
+_OCOR_STATUS_MAP = {_vrh_norm(v): v for v in _OCOR_STATUS}
+
+
+def _ocor_txt(v):
+    if v is None:
+        return ''
+    if isinstance(v, float) and pd.isna(v):
+        return ''
+    s = str(v).strip()
+    return '' if s.lower() == 'nan' else s
+
+
+def _ocor_canon(valor, mapa):
+    v = _ocor_txt(valor)
+    if not v:
+        return v
+    return mapa.get(_vrh_norm(v), v)
+
+
+def _ocor_parse_data(valor):
+    """Mesma lógica de _interpretar_data_contratacao (BR primeiro, troca pra
+    US se mês>12 ou a data cair no futuro) — nunca assume um formato fixo.
+    Retorna date ou None. Datas nativas do Excel também passam pela mesma
+    checagem de sanidade (PATCH 156: a ambiguidade pode estar embutida no
+    valor, não só no texto)."""
+    if valor is None:
+        return None
+    if isinstance(valor, float) and pd.isna(valor):
+        return None
+    _hoje = datetime.now()
+    if hasattr(valor, 'strftime') and not isinstance(valor, str):
+        try:
+            _dt = valor if isinstance(valor, datetime) else datetime(valor.year, valor.month, valor.day)
+        except Exception:
+            return None
+        if _dt <= _hoje:
+            return _dt.date()
+        try:
+            return datetime(_dt.year, _dt.day, _dt.month).date()
+        except ValueError:
+            return _dt.date()
+    _s = str(valor).strip()
+    if not _s or _s.lower() in ('nan', 'nat', 'none'):
+        return None
+    _s10 = _s[:10]
+    _partes = re.split(r'[/-]', _s10)
+    if len(_partes) != 3:
+        try:
+            _p = pd.to_datetime(_s, dayfirst=True, errors='coerce')
+            return _p.date() if pd.notna(_p) else None
+        except Exception:
+            return None
+    if len(_partes[0]) == 4:  # AAAA-MM-DD (ex: Timestamp virou string com dtype=str)
+        try:
+            _y, _m, _d = int(_partes[0]), int(_partes[1]), int(_partes[2])
+            return datetime(_y, _m, _d).date()
+        except ValueError:
+            return None
+    try:
+        _d, _m, _y = int(_partes[0]), int(_partes[1]), int(_partes[2])
+    except ValueError:
+        return None
+    try:
+        _data_br = datetime(_y, _m, _d)
+        if _data_br <= _hoje:
+            return _data_br.date()
+    except ValueError:
+        pass  # mês>12 -- só pode ser americano
+    try:
+        return datetime(_y, _d, _m).date()  # DD/MM vira MM/DD (americano)
+    except ValueError:
+        return None
+
+
+def processar_ocorrencias(p8):
+    print(f"[{ts()}] Lendo Ocorrências (Multiplicadores)...")
+    try:
+        abas = pd.read_excel(p8, sheet_name=None, header=0, dtype=str)
+    except Exception as e:
+        print(f"[{ts()}] Ocorrências: não foi possível abrir a planilha: {e}")
+        return None
+
+    df = None
+    for nome, _df in abas.items():
+        if _vrh_norm(nome) == _vrh_norm('Registro'):
+            df = _df
+            break
+    if df is None:
+        # fallback tolerante: primeira aba que não seja a "Listas" (dropdowns)
+        for nome, _df in abas.items():
+            if _vrh_norm(nome) != _vrh_norm('Listas'):
+                df = _df
+                break
+
+    def _col(cols, *cands):
+        _norm_cols = {_vrh_norm(c): c for c in cols}
+        for cand in cands:
+            cn = _vrh_norm(cand)
+            if cn in _norm_cols:
+                return _norm_cols[cn]
+        for cand in cands:
+            cn = _vrh_norm(cand)
+            for norm_c, orig_c in _norm_cols.items():
+                if cn in norm_c:
+                    return orig_c
+        return None
+
+    registros = []
+    if df is not None and not df.empty:
+        cols = list(df.columns)
+        c_data = _col(cols, 'Data')
+        c_mult = _col(cols, 'Multiplicador')
+        c_polo = _col(cols, 'Polo')
+        c_curso = _col(cols, 'Curso / Área', 'Curso/Area', 'Curso')
+        c_catlab = _col(cols, 'Categoria de Laboratório', 'Categoria Laboratorio')
+        c_tipo = _col(cols, 'Tipo de Ocorrência', 'Tipo Ocorrencia')
+        c_grav = _col(cols, 'Gravidade')
+        c_desc = _col(cols, 'Descrição', 'Descricao')
+        c_status = _col(cols, 'Status')
+        c_resp = _col(cols, 'Responsável pela Tratativa', 'Responsavel')
+        c_dataresol = _col(cols, 'Data de Resolução', 'Data Resolucao')
+        _hoje = datetime.now().date()
+        _todas_cols = [c for c in [c_data, c_mult, c_polo, c_curso, c_catlab, c_tipo,
+                                    c_grav, c_desc, c_status, c_resp, c_dataresol] if c]
+        for _, row in df.iterrows():
+            if all(_ocor_txt(row.get(c)) == '' for c in _todas_cols):
+                continue  # linha totalmente vazia
+            _status = _ocor_canon(row.get(c_status) if c_status else None, _OCOR_STATUS_MAP)
+            _data_dt = _ocor_parse_data(row.get(c_data) if c_data else None)
+            _data_resol_dt = _ocor_parse_data(row.get(c_dataresol) if c_dataresol else None)
+            _dias_aberta = None
+            if _status != 'Resolvida' and _data_dt:
+                _dias_aberta = (_hoje - _data_dt).days
+            registros.append({
+                'data': _data_dt.strftime('%d/%m/%Y') if _data_dt else None,
+                'multiplicador': _ocor_canon(row.get(c_mult) if c_mult else None, _OCOR_MULT_MAP),
+                'polo': _ocor_txt(row.get(c_polo) if c_polo else None),
+                'curso': _ocor_txt(row.get(c_curso) if c_curso else None),
+                'categoria_lab': _ocor_txt(row.get(c_catlab) if c_catlab else None),
+                'tipo': _ocor_canon(row.get(c_tipo) if c_tipo else None, _OCOR_TIPO_MAP),
+                'gravidade': _ocor_canon(row.get(c_grav) if c_grav else None, _OCOR_GRAV_MAP),
+                'descricao': _ocor_txt(row.get(c_desc) if c_desc else None),
+                'status': _status,
+                'responsavel': _ocor_txt(row.get(c_resp) if c_resp else None),
+                'data_resolucao': _data_resol_dt.strftime('%d/%m/%Y') if _data_resol_dt else None,
+                'dias_aberta': _dias_aberta,
+            })
+
+    total = len(registros)
+    abertas = sum(1 for r in registros if r['status'] == 'Aberta')
+    em_tratativa = sum(1 for r in registros if r['status'] == 'Em Tratativa')
+    resolvidas = sum(1 for r in registros if r['status'] == 'Resolvida')
+    abertas_mais_7_dias = sum(
+        1 for r in registros
+        if r['status'] in ('Aberta', 'Em Tratativa') and r['dias_aberta'] is not None and r['dias_aberta'] > 7
+    )
+    _tempos = []
+    for r in registros:
+        if r['status'] == 'Resolvida' and r['data'] and r['data_resolucao']:
+            _d1 = datetime.strptime(r['data'], '%d/%m/%Y').date()
+            _d2 = datetime.strptime(r['data_resolucao'], '%d/%m/%Y').date()
+            _tempos.append((_d2 - _d1).days)
+    tempo_medio_resolucao_dias = round(sum(_tempos) / len(_tempos), 1) if _tempos else None
+
+    _por_mult = {}
+    for r in registros:
+        m = r['multiplicador'] or 'Não informado'
+        d = _por_mult.setdefault(m, {'multiplicador': m, 'total': 0, 'abertas': 0})
+        d['total'] += 1
+        if r['status'] == 'Aberta':
+            d['abertas'] += 1
+    por_multiplicador = sorted(_por_mult.values(), key=lambda x: -x['total'])
+
+    _por_tipo = {}
+    for r in registros:
+        t = r['tipo'] or 'Não informado'
+        _por_tipo[t] = _por_tipo.get(t, 0) + 1
+    por_tipo = sorted([{'tipo': k, 'n': v} for k, v in _por_tipo.items()], key=lambda x: -x['n'])
+
+    _por_grav = {}
+    for r in registros:
+        g = r['gravidade'] or 'Não informado'
+        _por_grav[g] = _por_grav.get(g, 0) + 1
+    por_gravidade = sorted([{'gravidade': k, 'n': v} for k, v in _por_grav.items()], key=lambda x: -x['n'])
+
+    _por_polo = {}
+    for r in registros:
+        p = r['polo'] or 'Não informado'
+        _por_polo[p] = _por_polo.get(p, 0) + 1
+    por_polo = sorted(
+        [{'polo': k, 'n': v} for k, v in _por_polo.items() if v >= 2],
+        key=lambda x: -x['n']
+    )[:20]
+
+    print(f"[{ts()}] Ocorrências: {total} registros ({abertas} abertas, {em_tratativa} em tratativa, "
+          f"{resolvidas} resolvidas, {abertas_mais_7_dias} abertas há mais de 7 dias)")
+    return {
+        'registros': registros,
+        'kpis': {
+            'total': total, 'abertas': abertas, 'em_tratativa': em_tratativa,
+            'resolvidas': resolvidas, 'abertas_mais_7_dias': abertas_mais_7_dias,
+            'tempo_medio_resolucao_dias': tempo_medio_resolucao_dias,
+        },
+        'por_multiplicador': por_multiplicador,
+        'por_tipo': por_tipo,
+        'por_gravidade': por_gravidade,
+        'por_polo': por_polo,
     }
 
 
@@ -4638,7 +4947,7 @@ if __name__ == '__main__':
     print()
     print(" Verificando arquivos...")
     print()
-    p1, p2, tmpl, p3, p3b, p4, p5, p6, p7 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8 = verificar_e_localizar()
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
@@ -4738,6 +5047,18 @@ if __name__ == '__main__':
                 dados['_vrh_funil_ref'] = _vrh['funil']
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar Vagas RH: {e}")
+    # PATCH 167: registro de Ocorrências reportadas por multiplicadores —
+    # fonte independente, opcional, pro "Painel do Gestor" (portal novo,
+    # construído por outro agente). Se p8 for None ou o parsing falhar,
+    # dados NÃO tem a chave 'ocorrencias' — o frontend precisa checar a
+    # ausência dela (mesmo padrão de degradação do p7/Vagas RH).
+    if p8:
+        try:
+            _ocor = processar_ocorrencias(p8)
+            if _ocor:
+                dados['ocorrencias'] = _ocor
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar Ocorrências: {e}")
     # PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding —
     # roda sempre (mesmo na primeira vez, quando ainda não existe um p6 pra
     # ler flags antigos) pra garantir que a lista sempre nasce e se mantém

@@ -93,7 +93,8 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 
 Baixadas pelo Actions via secrets (`URL_*`) para `planilhas/`. Localizadas por
 `achar_arquivo()` / `verificar_e_localizar()` (`processar.py:363`). Ordem de
-retorno: `p1, p2, tmpl, p3, p3b, p4, p5, p6, p7` (PATCH 157 acrescentou `p7`).
+retorno: `p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8` (PATCH 157 acrescentou
+`p7`; PATCH 167 acrescentou `p8`).
 
 | Var | Arquivo | Secret | Obrigatória | Conteúdo |
 |---|---|---|---|---|
@@ -106,6 +107,7 @@ retorno: `p1, p2, tmpl, p3, p3b, p4, p5, p6, p7` (PATCH 157 acrescentou `p7`).
 | `p5` | `Relatorio_alunos_por_hub.csv` | `URL_ALUNOS_HUB` | Não | **Hub de alunos** — matrículas; usado pra contar alunos DISTINTOS (substitui a contagem inflada do GIOCONDA). Dois esquemas de coluna auto-detectados (PATCH 43). |
 | `p6` | `Acompanhamento_Onboarding.xlsx` (aba `Onboarding Tutores`) | `URL_ONBOARDING_TUTORES` (secret ainda não configurado; download nem está no workflow ainda) | Não | **Onboarding** — flags Trilha/Checklist/1:1 por tutor. O `processar.py` também **gera/atualiza** essa planilha localmente (`gerar_onboarding_atualizado`, roda sempre). |
 | `p7` | `VAGAS_RH.xlsx` | `URL_VAGAS_RH` | Não | **Recrutamento & Seleção (RH)** — 4 abas: `Status- Anotações` (legenda de status + tabela salário×CH), `Agendamento de entrevista` (1 linha por candidato — só o **agregado** entra no JSON, sem nome/telefone/e-mail), `Aumento` e `Substituição` (vagas no INHIRE: ticket, link, "Vaga Fechada", Etapa). PATCH 157. |
+| `p8` | `OCORRENCIAS.xlsx` | `URL_OCORRENCIAS` | Não | **Ocorrências reportadas por multiplicadores** (staff de campo) — aba `Registro` (a aba oculta `Listas` só alimenta os dropdowns do Excel, não tem registro nenhum): Data, Multiplicador, Polo, Curso/Área, Categoria de Laboratório, Tipo de Ocorrência, Gravidade, Descrição, Status, Responsável pela Tratativa, Data de Resolução. Alimenta `dados['ocorrencias']` — fonte pro "Painel do Gestor" (portal novo). Sem PII de terceiro (é registro de operação, não de candidato/aluno). PATCH 167. |
 | — | `REL_DETALHADO.csv` | `URL_REL_NOVO` | Não | Baixado pelo Actions mas **não consumido** por nenhuma função ativa (ver Armadilhas). |
 
 ---
@@ -229,13 +231,14 @@ Helpers internos (só existem dentro de `processar()`):
 
 | Função | Linha ~ | O que faz |
 |---|---|---|
-| `_carregar_laboratorios()` | 2124 | Carrega `laboratorios_data.json`. |
+| `_carregar_laboratorios()` | 2124 | Carrega `laboratorios_data.json`. **PATCH 167:** também anexa `lab['pendencias']` = lista completa dos 66 registros de `labs_pendencias.json` (visão agregada pro "Painel do Gestor" — antes só era usado por tutor dentro do loop de `tutores_out`, ~L1837). `[]` se o arquivo não existir. |
 | `_detectar_e_corrigir_base64(p4)` | 2137 | Detecta Lotação salva em base64 e corrige. |
 | `_ler_lotacao_xlsx / _xls / _pandas(p4)` | 2158-2181 | Leitores da planilha de Lotação por formato. |
 | `carregar_lotacao(p4)` | 2187 | Lê Lotação → dict `{nome_lower: {cursos, polo_hub, total_alunos, ch...}}`. |
 | `processar_vagas(p4)` | 2257 | Extrai posições em aberto (Aumento de Quadro / Substituição) da Lotação → seção RH/Vagas (PATCH 29). `_gv` interno lê célula por índice. |
 | `processar_vagas_rh(p7)` | ~2470 | **PATCH 157.** Lê `VAGAS_RH.xlsx` (4 abas, localizador de coluna tolerante). Retorna `{reqs, funil, kpis, ref_salario}`: `reqs` = vagas no INHIRE (Aumento+Substituição); `funil` = candidatos AGREGADOS (`por_status`/`por_mes`/`por_curso`/`por_curso_status`/`por_uf`/`pcd`) **sem nome/telefone/e-mail**; `kpis` = derivados. Helpers de módulo: `_vrh_norm`, `_vrh_cidade_uf`; constantes `_VRH_STATUS_GRUPO`/`_VRH_STATUS_ORDEM`/`_VRH_REF_SALARIO`. |
-| `_cruzar_vagas_recrutamento(vagas_lotacao, reqs)` | ~2640 | **PATCH 157.** Anota `rec_etapa`/`rec_ticket`/`rec_link`/`rec_fechada` em cada vaga da Lotação que casa com um `req` do INHIRE (mesmo tipo + curso + cidade/polo normalizados). Conservador: só grava com polo E curso batendo. |
+| `processar_ocorrencias(p8)` | ~2810 | **PATCH 167.** Lê `OCORRENCIAS.xlsx` (aba `Registro`, ignora `Listas`). Ignora linhas totalmente vazias. Canoniza Multiplicador/Tipo/Gravidade/Status contra as listas fixas da planilha (`_OCOR_MULT_MAP` etc., tolerante a acento/maiúscula via `_vrh_norm`). Datas por `_ocor_parse_data` (mesma lógica BR/US de `_interpretar_data_contratacao`, nunca assume formato fixo). Retorna `{registros, kpis, por_multiplicador, por_tipo, por_gravidade, por_polo}` — sem PII de terceiro (é registro de operação, não de aluno/candidato). Alimenta o "Painel do Gestor" (portal novo, ainda não construído neste patch). |
+| `_cruzar_vagas_recrutamento(vagas_lotacao, reqs)` | ~2801 | **PATCH 157.** Anota `rec_etapa`/`rec_ticket`/`rec_link`/`rec_fechada` em cada vaga da Lotação que casa com um `req` do INHIRE (mesmo tipo + curso + cidade/polo normalizados). Conservador: só grava com polo E curso batendo. |
 | `gerar_onboarding_atualizado(p1, p6, destino)` | 2344 | (Re)gera `Acompanhamento_Onboarding.xlsx`: preserva flags de quem já é acompanhado, adiciona tutor novo, remove quem virou apto (PATCH 89). `_categoria_exibicao` interno. |
 | `enriquecer_tutores(dados, lotacao)` | 2469 | Casa Lotação↔tutores (por nome, com fallback fuzzy `_nomes_batem_ch`): CH contratada, `alunos_por_curso`, alunos por laboratório. `LAB_PARA_CAT` mapeia string de cursos da Lotação → nome de categoria. |
 | `processar_gerenciamento_csv(p5)` | 2667 | **DEAD CODE** — nunca chamado (ver Armadilhas). Processava um CSV detalhado de gerenciamento. |
@@ -501,8 +504,9 @@ dashboard, procure a função de mesmo nome aqui e replique.**
    (formato que funciona no tenant UNIASSELVI), com 2 fallbacks. Rejeita resposta
    HTML (página de login). Secrets: `URL_CONTROLE`, `URL_PORTFOLIO`,
    `URL_PORTFOLIO_2026_2`, `URL_GERENCIAL`, `URL_GERENCIAL_26_02`, `URL_LOTACAO`,
-   `URL_REL_NOVO`, `URL_ALUNOS_HUB`, `URL_VAGAS_RH` (PATCH 157). Só CONTROLE e
-   PORTFOLIO são obrigatórios.
+   `URL_REL_NOVO`, `URL_ALUNOS_HUB`, `URL_VAGAS_RH` (PATCH 157),
+   `URL_OCORRENCIAS` (PATCH 167 — secret ainda não configurado, o download já
+   está pronto no workflow). Só CONTROLE e PORTFOLIO são obrigatórios.
 3. `python processar.py --sem-browser`.
 4. **Montar site:** `rsync` do checkout pra `_site/` **excluindo** `.git`,
    `.github`, `planilhas/`, `saida/`, `processar.py`, os `template_*.html`,
@@ -560,6 +564,7 @@ templates, **[both]** = replicado nos dois.
 
 | # | Resumo |
 |---|---|
+| 167 | [py] **Fonte de dados Ocorrências por Multiplicador (opcional, secret `URL_OCORRENCIAS`) + pendências de laboratório agregadas.** `p8`/`OCORRENCIAS.xlsx` → `processar_ocorrencias`, mesmo padrão opcional do p7/VAGAS_RH (sem secret, `dados['ocorrencias']` nem existe). Lê a aba `Registro` do formulário de multiplicadores (Data/Multiplicador/Polo/Curso/Categoria de Lab/Tipo/Gravidade/Descrição/Status/Responsável/Data de Resolução), ignora linhas vazias, canoniza os 4 campos de dropdown (tolerante a acento/digitação) e calcula `dias_aberta`/`tempo_medio_resolucao_dias` com o mesmo parser BR/US de `_interpretar_data_contratacao` (nunca assume formato fixo). Retorna `{registros, kpis, por_multiplicador, por_tipo, por_gravidade, por_polo}` — sem PII de terceiro. Alimenta o "Painel do Gestor" (portal novo, construído em paralelo por outro agente a partir deste contrato de dados). Junto: `_carregar_laboratorios()` passa a anexar `lab['pendencias']` = os 66 registros de `labs_pendencias.json` como lista agregada solta (antes só existiam aplicados por tutor dentro de `tutores_out`). |
 | 1 | [py] Detecta e converte coluna "CH SEMANAL" (`HH:MM` ou decimal) para float. |
 | 2 | [py] `tem_lotacao` passa a ser baseado em dado real (CH>0 em ≥1 tutor). |
 | 3 | [py] Situação por Ordem usa datas de início reais de `PERIODOS_ORDENS`. |
