@@ -2972,15 +2972,18 @@ def _ocor_canon(valor, mapa):
 
 def _ocor_parse_polo_tutor(valor):
     """A pergunta de Polo no Forms é, na prática, um dropdown combinado
-    'Nome do Tutor — Polo/UF' (pra evitar digitar/errar 1 entre 1303 polos —
-    o multiplicador escolhe pelo tutor, que já carrega o polo junto). Quando
-    a opção 'Outro / não é sobre um tutor específico' é usada, o valor vem
-    sem o separador e é o próprio nome do polo. Retorna (polo, tutor|None)."""
+    'Polo/UF—Nome do Tutor' (pra evitar digitar/errar 1 entre +1000 polos —
+    o multiplicador escolhe pelo tutor, que já carrega o polo junto). Usa o
+    travessão (—, U+2014) como separador -- nome de polo usa hífen comum
+    ("Blumenau/SC - Salto Do Norte"), nunca travessão, então splitar no
+    travessão é seguro mesmo sem espaço ao redor. Quando a opção 'Outro /
+    não é sobre um tutor específico' é usada, o valor vem sem o separador e
+    é o próprio nome do polo. Retorna (polo, tutor|None)."""
     v = _ocor_txt(valor)
     if not v:
         return v, None
-    if ' — ' in v:
-        tutor, polo = v.rsplit(' — ', 1)
+    if '—' in v:
+        polo, tutor = v.split('—', 1)
         return polo.strip(), tutor.strip()
     return v, None
 
