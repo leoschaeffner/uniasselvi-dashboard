@@ -1,0 +1,8 @@
+{
+  "name": "vincilab-qa-tests",
+  "private": true,
+  "description": "Suíte de regressão de frontend (jsdom) do VinciLab — ver skill 'qa-vinci'. Dependências ficam no package.json da raiz (`npm install` lá).",
+  "scripts": {
+    "test": "node run_all.js"
+  }
+}
