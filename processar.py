@@ -629,7 +629,7 @@ def verificar_e_localizar():
         else:
             print(f"  [INFO] OCORRENCIAS.xlsx não encontrada (secret URL_OCORRENCIAS ainda não configurado)")
 
-    # ── PATCH 170: Vistoria de Laboratório — mesmo padrão opcional do
+    # ── PATCH 172: Vistoria de Laboratório — mesmo padrão opcional do
     # p8/OCORRENCIAS. Multiplicador visita um laboratório periodicamente e
     # registra o status (Apto/Não Apto), substituindo aos poucos o arquivo
     # estático labs_pendencias.json por um fluxo vivo com data. Totalmente
@@ -3217,7 +3217,7 @@ def processar_ocorrencias(p8):
     }
 
 
-# ── PATCH 170: Vistoria de Laboratório (staff de campo) ────────────────────
+# ── PATCH 172: Vistoria de Laboratório (staff de campo) ────────────────────
 # Fonte opcional p9/URL_VISTORIA_LAB, mesmo padrão do p8/Ocorrências. Um
 # multiplicador visita um laboratório periodicamente e registra o status —
 # overlay novo que, com o tempo, substitui o labs_pendencias.json estático
@@ -3276,19 +3276,47 @@ def processar_vistoria(p9):
                     return orig_c
         return None
 
+    def _col_all(cols, *cands):
+        """Como _col(), mas devolve TODAS as colunas que casam — o Forms usa
+        uma trilha de perguntas por multiplicador/grupo (pra filtrar a lista
+        de polos sem exigir branching manual por tutor), o que duplica a
+        coluna no Excel de respostas ("Categoria de Laboratório", "Categoria
+        de Laboratório 2", ...), só uma preenchida por linha (mesmo padrão de
+        processar_ocorrencias)."""
+        _norm_cols = {_vrh_norm(c): c for c in cols}
+        achados = []
+        for cand in cands:
+            cn = _vrh_norm(cand)
+            for norm_c, orig_c in _norm_cols.items():
+                if cn in norm_c and orig_c not in achados:
+                    achados.append(orig_c)
+        return achados
+
+    def _val_multi(row, col_list):
+        """Primeiro valor não-vazio entre as colunas duplicadas (só uma
+        preenchida por linha, o resto vem em branco)."""
+        for c in col_list:
+            v = _ocor_txt(row.get(c))
+            if v:
+                return v
+        return ''
+
     registros = []
     if df is not None and not df.empty:
         cols = list(df.columns)
         c_data = _col(cols, 'Data')
         c_mult = _col(cols, 'Multiplicador')
-        c_polo = _col(cols, 'Polo')
-        c_cat = _col(cols, 'Categoria de Laboratório', 'Categoria Laboratorio')
-        c_status = _col(cols, 'Status')
-        c_motivo = _col(cols, 'Motivo')
-        c_empresa = _col(cols, 'Empresa Responsável', 'Empresa Responsavel')
-        c_obs = _col(cols, 'Observações', 'Observacoes')
-        _todas_cols = [c for c in [c_data, c_mult, c_polo, c_cat, c_status,
-                                    c_motivo, c_empresa, c_obs] if c]
+        # Campos abaixo se repetem uma vez por trilha de branching (Forms:
+        # Leonardo/Cláudia/Antonio/Enfermagem-Giselle+Flaviane/Eneida/Thaina)
+        # — pega todas as cópias e usa a que vier preenchida em cada linha.
+        cs_polo = _col_all(cols, 'Polo')
+        cs_cat = _col_all(cols, 'Categoria de Laboratório', 'Categoria Laboratorio')
+        cs_status = _col_all(cols, 'Status')
+        cs_motivo = _col_all(cols, 'Motivo')
+        cs_empresa = _col_all(cols, 'Empresa Responsável', 'Empresa Responsavel')
+        cs_obs = _col_all(cols, 'Observações', 'Observacoes')
+        _todas_cols = [c for c in [c_data, c_mult, *cs_polo, *cs_cat, *cs_status,
+                                    *cs_motivo, *cs_empresa, *cs_obs] if c]
         for _, row in df.iterrows():
             if all(_ocor_txt(row.get(c)) == '' for c in _todas_cols):
                 continue  # linha totalmente vazia
@@ -3299,18 +3327,18 @@ def processar_vistoria(p9):
             # pelo Forms. Por isso, SEM default: se vier vazio mesmo assim
             # (não deveria acontecer), o registro entra na lista mas fica de
             # fora das contagens por status, sem quebrar o pipeline.
-            _status = _ocor_canon(row.get(c_status) if c_status else None, _VIST_STATUS_MAP)
-            _polo, _tutor_ref = _vist_parse_polo_tutor(row.get(c_polo) if c_polo else None)
+            _status = _ocor_canon(_val_multi(row, cs_status), _VIST_STATUS_MAP)
+            _polo, _tutor_ref = _vist_parse_polo_tutor(_val_multi(row, cs_polo))
             registros.append({
                 'data': _data_dt.strftime('%d/%m/%Y') if _data_dt else None,
                 'multiplicador': _ocor_canon(row.get(c_mult) if c_mult else None, _OCOR_MULT_MAP),
                 'polo': _polo,
                 'tutor': _tutor_ref,
-                'categoria': _ocor_canon(row.get(c_cat) if c_cat else None, _VIST_CAT_MAP),
+                'categoria': _ocor_canon(_val_multi(row, cs_cat), _VIST_CAT_MAP),
                 'status': _status,
-                'motivo': _ocor_txt(row.get(c_motivo) if c_motivo else None),
-                'empresa': _ocor_txt(row.get(c_empresa) if c_empresa else None),
-                'observacoes': _ocor_txt(row.get(c_obs) if c_obs else None),
+                'motivo': _val_multi(row, cs_motivo),
+                'empresa': _val_multi(row, cs_empresa),
+                'observacoes': _val_multi(row, cs_obs),
             })
 
     total = len(registros)
@@ -5343,7 +5371,7 @@ if __name__ == '__main__':
                 dados['ocorrencias'] = _ocor
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar Ocorrências: {e}")
-    # PATCH 170: registro de Vistoria de Laboratório — mesmo padrão opcional
+    # PATCH 172: registro de Vistoria de Laboratório — mesmo padrão opcional
     # do p8/Ocorrências. É um OVERLAY novo em cima do que já existe em
     # dados['laboratorios'] (labs_pendencias.json/laboratorios_data.json
     # continuam existindo do jeito que estão — não mexe neles). Se p9 for

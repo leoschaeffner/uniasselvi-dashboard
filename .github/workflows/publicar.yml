@@ -45,6 +45,7 @@ jobs:
           URL_ALUNOS_HUB: ${{ secrets.URL_ALUNOS_HUB }}
           URL_VAGAS_RH:   ${{ secrets.URL_VAGAS_RH }}
           URL_OCORRENCIAS: ${{ secrets.URL_OCORRENCIAS }}
+          URL_VISTORIA_LAB: ${{ secrets.URL_VISTORIA_LAB }}
         run: |
           mkdir -p planilhas
           python3 - << 'PYEOF'
@@ -126,6 +127,7 @@ jobs:
           baixar('URL_ALUNOS_HUB', 'planilhas/Relatorio_alunos_por_hub.csv',   'ALUNOS_HUB',                 False)
           baixar('URL_VAGAS_RH',   'planilhas/VAGAS_RH.xlsx',                  'VAGAS_RH',                   False)
           baixar('URL_OCORRENCIAS', 'planilhas/OCORRENCIAS.xlsx',              'OCORRENCIAS',                 False)
+          baixar('URL_VISTORIA_LAB', 'planilhas/VISTORIA_LAB.xlsx',            'VISTORIA_LAB',                False)
           print("[INFO] Downloads concluídos")
           PYEOF
           echo "=== Planilhas ==="
