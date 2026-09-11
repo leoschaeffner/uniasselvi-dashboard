@@ -152,13 +152,13 @@ body.dark .search{background:var(--surface)}
     </div>
   </div>
 
-  <!-- ═══ VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA_LAB, PATCH 172) ═══════ -->
+  <!-- ═══ VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA, PATCH 172) ═══════ -->
   <div class="card" id="vist-card">
     <div class="card-hdr">
       <div><div class="card-title">🔬 Vistoria de Laboratório</div><div class="card-badge" id="vist-sub">—</div></div>
     </div>
     <div class="card-body" id="vist-empty" style="display:none">
-      <div class="empty-state">Nenhuma vistoria registrada ainda — o formulário de vistoria ainda não está ligado.<br><span style="font-size:11px">(fica disponível assim que o secret <code>URL_VISTORIA_LAB</code> for configurado)</span></div>
+      <div class="empty-state">Nenhuma vistoria registrada ainda — o formulário de vistoria ainda não está ligado.<br><span style="font-size:11px">(fica disponível assim que o secret <code>URL_VISTORIA</code> for configurado)</span></div>
     </div>
     <div id="vist-conteudo" style="display:none">
       <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
@@ -413,7 +413,7 @@ function filterLabPend(q){
     : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
 }
 
-// ── VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA_LAB, PATCH 172) ────────────
+// ── VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA, PATCH 172) ────────────
 // Overlay novo ao lado de DB.laboratorios.pendencias (estático) — não mexe
 // nele. Sem o secret configurado, DB.laboratorios.vistorias nem existe;
 // isso é o estado normal hoje, não um erro (mesmo padrão do card Ocorrências).

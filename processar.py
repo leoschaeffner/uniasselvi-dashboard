@@ -638,9 +638,9 @@ def verificar_e_localizar():
     if p9:
         print(f"  [OK] {os.path.basename(p9)}")
     else:
-        url_vist = os.environ.get("URL_VISTORIA_LAB", "").strip()
+        url_vist = os.environ.get("URL_VISTORIA", "").strip()
         if url_vist:
-            print(f"  [Baixando] VISTORIA_LAB.xlsx via URL_VISTORIA_LAB...")
+            print(f"  [Baixando] VISTORIA_LAB.xlsx via URL_VISTORIA...")
             try:
                 import urllib.request as _urlreq_vist
                 def _build_dl_urls_vist(url):
@@ -676,11 +676,11 @@ def verificar_e_localizar():
                     except Exception as ex:
                         print(f"  [AVISO] Erro ao baixar Vistoria de Laboratório: {ex} | URL: {url_dl[:80]}")
                 if not downloaded_vist:
-                    print(f"  [ERRO] Não foi possível baixar VISTORIA_LAB.xlsx — verifique URL_VISTORIA_LAB")
+                    print(f"  [ERRO] Não foi possível baixar VISTORIA_LAB.xlsx — verifique URL_VISTORIA")
             except Exception as e:
                 print(f"  [ERRO] Não foi possível baixar Vistoria de Laboratório: {e}")
         else:
-            print(f"  [INFO] VISTORIA_LAB.xlsx não encontrada (secret URL_VISTORIA_LAB ainda não configurado)")
+            print(f"  [INFO] VISTORIA_LAB.xlsx não encontrada (secret URL_VISTORIA ainda não configurado)")
 
     return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8, p9
 
@@ -3221,7 +3221,7 @@ def processar_ocorrencias(p8):
 
 
 # ── PATCH 172: Vistoria de Laboratório (staff de campo) ────────────────────
-# Fonte opcional p9/URL_VISTORIA_LAB, mesmo padrão do p8/Ocorrências. Um
+# Fonte opcional p9/URL_VISTORIA, mesmo padrão do p8/Ocorrências. Um
 # multiplicador visita um laboratório periodicamente e registra o status —
 # overlay novo que, com o tempo, substitui o labs_pendencias.json estático
 # por um fluxo vivo com data. Schema (aba "Registro", aba oculta "Listas" só
