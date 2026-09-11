@@ -2882,6 +2882,7 @@ _OCOR_MULTIPLICADORES = [
     'Leonardo Schaeffner Camargo', 'Cláudia Nara De Albuquerque Romão',
     'Antonio Jackson Sabino Da Silva Bezerra', 'Giselle Silva Gonçalves',
     'Flaviane Pimentel E Silva Warmling', 'Thaina Tavolaro Zocchio',
+    'Eneida Pinheiro Ongaratto',
 ]
 _OCOR_TIPOS = [
     'Infraestrutura do Laboratório', 'Falta de Insumo', 'Atraso/Ausência do Tutor',
