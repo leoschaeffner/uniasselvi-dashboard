@@ -1,9 +1,9 @@
 # Mapa do Código — VinciLab
 
 Última atualização: 2026-09-11
-Commit de referência: `d804d5d` (PATCH 166) + backend do PATCH 167 (`a510a4f`)
-+ mudanças locais não commitadas: **PATCH 168** (novo portal `template_gestor.html`
-— Painel do Gestor).
+Commit de referência: `bca44e1` (PATCH 172, backend de Vistoria de Laboratório)
++ **PATCH 173** (frontend: card "Vistoria de Laboratório" em `template_gestor.html`,
+consumindo `DB.laboratorios.vistorias`).
 
 > Primeiro arquivo a ler antes de mexer no VinciLab. Responde "onde fica X" e
 > "por que Y foi feito assim" sem precisar carregar `processar.py` (~4.600 linhas)
@@ -14,11 +14,13 @@ Commit de referência: `d804d5d` (PATCH 166) + backend do PATCH 167 (`a510a4f`)
 > `template_coordenadores.html`). Esquecer um dos dois é a fonte nº 1 de bugs aqui.
 > **PATCH 168:** existe um terceiro portal, `template_gestor.html` ("Painel do
 > Gestor"), mas ele só cobre um recorte enxuto (KPIs herdados + Ocorrências por
-> Multiplicador + Laboratórios/Pendências). Mudança em Ocorrências ou
-> Laboratórios/Pendências pode precisar tocar os TRÊS arquivos; mudança em
-> qualquer outra seção (Portfólios, Gerenciamento, Agendas, Vagas/RH normal
-> etc.) continua sendo só os dois templates de sempre — o gestor não replica
-> essas seções.
+> Multiplicador + Laboratórios/Pendências + **PATCH 173:** Vistoria de
+> Laboratório). Mudança em Ocorrências, Laboratórios/Pendências ou Vistoria
+> pode precisar tocar os TRÊS arquivos (hoje `DB.laboratorios.vistorias` só é
+> exibido no gestor — dashboard/coordenadores ainda não têm card próprio pra
+> essa fonte); mudança em qualquer outra seção (Portfólios, Gerenciamento,
+> Agendas, Vagas/RH normal etc.) continua sendo só os dois templates de
+> sempre — o gestor não replica essas seções.
 
 ---
 
@@ -77,7 +79,7 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 | `processar.py` | **Todo o ETL + geração de saída.** Ponto de entrada `__main__` (~linha 3986). |
 | `template_dashboard.html` | Template do portal principal (VinciLab). Placeholder `'DATA_GOES_HERE'` e `TIMESTAMP_GOES_HERE`. |
 | `template_coordenadores.html` | Template do portal de coordenadores (versão travada por curso, simplificada). Placeholder `'DATA_GOES_HERE'`. |
-| `template_gestor.html` | **PATCH 168.** Template do terceiro portal, "Painel do Gestor" — visão executiva enxuta (sem filtro de curso, sem tabela operacional completa): KPIs herdados (tutores ativos, alunos sem tutor, vagas críticas, polos difíceis, laboratórios com pendência) + card "Ocorrências por Multiplicador" + card "Laboratórios — Pendências". Senha própria (`SENHA_GESTOR`, diferente de `SENHA_DASHBOARD`), sem link cruzado nos outros dois portais (acesso só por URL direta `/gestor.html`). Placeholder `'DATA_GOES_HERE'` (sem `TIMESTAMP_GOES_HERE` — lê `DB.gerado_em` no cliente, igual ao `template_coordenadores.html`). |
+| `template_gestor.html` | **PATCH 168** (+ **PATCH 173**). Template do terceiro portal, "Painel do Gestor" — visão executiva enxuta (sem filtro de curso, sem tabela operacional completa): KPIs herdados (tutores ativos, alunos sem tutor, vagas críticas, polos difíceis, laboratórios com pendência) + card "Ocorrências por Multiplicador" + card "Laboratórios — Pendências" + card "Vistoria de Laboratório" (PATCH 173, consome `DB.laboratorios.vistorias`, overlay do PATCH 172). Senha própria (`SENHA_GESTOR`, diferente de `SENHA_DASHBOARD`), sem link cruzado nos outros dois portais (acesso só por URL direta `/gestor.html`). Placeholder `'DATA_GOES_HERE'` (sem `TIMESTAMP_GOES_HERE` — lê `DB.gerado_em` no cliente, igual ao `template_coordenadores.html`). |
 | `portfolio_form.html` | Formulário público de envio de portfólio; autopreenche via `lookup.json` e redireciona pra uma lista do SharePoint (não passa pelo `processar.py`). |
 | `index.html` / `coordenadores.html` / `gestor.html` / `lookup.json` | **Saída gerada.** Desde o PATCH 160 **NÃO são mais commitados** — o workflow monta `_site/` e publica via artifact do GitHub Pages. Estão no `.gitignore`. NÃO editar à mão. |
 | `config_semestre.json` | Config editável de prazos/períodos das Ordens por semestre. Única coisa que se edita pra virar o semestre. |
@@ -341,9 +343,10 @@ função) — mudança no dashboard geralmente tem que ir no coordenadores tamb�
 > **PATCH 168:** há um terceiro portal, `template_gestor.html` ("Painel do
 > Gestor"), mas ele NÃO replica a estrutura de seções abaixo — é uma tela
 > única enxuta (sem abas) com nomes de função próprios (`renderGestorKPIs`,
-> `renderOcorrencias`, `renderLaboratorios`, `_iniciarGestor`). Só entra na
-> "regra de replicar" quando a mudança é em Ocorrências/Laboratórios. Ver
-> tabela de arquivos (§2) e histórico (§13, PATCH 168).
+> `renderOcorrencias`, `renderLaboratorios`, `renderVistoria` — PATCH 173,
+> `_iniciarGestor`). Só entra na "regra de replicar" quando a mudança é em
+> Ocorrências/Laboratórios/Vistoria. Ver tabela de arquivos (§2) e histórico
+> (§13, PATCH 168/173).
 
 ### Seções / navegação
 
@@ -585,6 +588,7 @@ templates, **[both]** = replicado nos dois.
 
 | # | Resumo |
 |---|---|
+| 173 | [frontend, gestor] **Card "Vistoria de Laboratório" no `template_gestor.html`**, consumindo o overlay `DB.laboratorios.vistorias` do PATCH 172. Segue o mesmo desenho visual/estados do card "Ocorrências por Multiplicador" (PATCH 168): se `DB.laboratorios.vistorias` não existir ou `kpis.total===0` (situação real hoje, secret `URL_VISTORIA_LAB` ainda não configurado), mostra estado vazio explícito (`vist-empty`, mesmo texto/tom do de Ocorrências); com dado presente, mostra `% Apto`/`Aptos·Não Aptos`/`Última Vistoria` (via `kpis`, `pct_apto` é fração 0..1 → multiplicado por 100 só na exibição), barras por categoria (`por_categoria`, cor verde/amarela/vermelha por faixa de `pct_apto`, reaproveitando o padrão `.rank-item`/`.rank-bar` já usado em Ocorrências) e uma tabela buscável de `polos_nao_aptos_recentes` (mesmo padrão de `filterLabPend`, aqui `filterVistNaoApto`). Funções novas: `_vistAptoCor`, `renderVistoria`, `filterVistNaoApto`; chamada em `_iniciarGestor()`. Não mexe nos cards de Ocorrências nem em Laboratórios — Pendências (estático, `labs_pendencias.json`) além de inserir o card novo logo abaixo. Não toca `template_dashboard.html`/`template_coordenadores.html` — a fonte é exclusiva do Painel do Gestor por ora. Testado com jsdom (`node --eval` do script inline extraído do template) nos dois cenários: `DB.laboratorios.vistorias` ausente (estado real de produção hoje) e populado com 4 registros sintéticos (2 aptos/2 não aptos, incluindo motivo/empresa) gerados a partir de `planilhas/VISTORIA_LAB_template.xlsx` copiado pra `VISTORIA_LAB.xlsx`, processado local via `processar.py --sem-browser`, decifrado com `SENHA_GESTOR` e removido depois do teste. |
 | 172 | [py] **Nona fonte de dado: Vistoria de Laboratório (`p9`/`URL_VISTORIA_LAB`, opcional) — overlay vivo sobre `labs_pendencias.json`.** Mesmo padrão exato do `p8`/Ocorrências (PATCH 167/169/171): `VISTORIA_LAB.xlsx` → `processar_vistoria(p9)`, resolvida em `verificar_e_localizar()` e ligada no `__main__` dentro de `try/except` tolerante — sem o secret, `dados['laboratorios']['vistorias']` nem existe; `labs_pendencias.json`/`laboratorios_data.json` continuam exatamente como estão (esta fonte não os substitui ainda). Schema (aba `Registro`, aba oculta `Listas` só alimenta dropdown): `Data | Multiplicador | Polo | Categoria de Laboratório | Status | Motivo | Empresa Responsável | Observações`. `Multiplicador` reaproveita `_OCOR_MULTIPLICADORES`/`_OCOR_MULT_MAP` de Ocorrências (não duplica); `Categoria de Laboratório` ganha `_VIST_CATEGORIAS` (8 opções, mesma lista usada em Ocorrências); `Status` só tem 2 valores (`Apto`/`Não Apto`) e **não leva default quando vazio** (diferente de Ocorrências: aqui é o próprio dado que o multiplicador está reportando, deveria sempre vir preenchido pelo Forms — se vier vazio mesmo assim, o registro entra na lista mas fica fora das contagens por status, sem quebrar o pipeline). `Polo` usa o mesmo dropdown combinado `"Nome do Tutor — Polo/UF"` do PATCH 171 (`_vist_parse_polo_tutor = _ocor_parse_polo_tutor`, reaproveitado direto — é lógica de texto genérica, não específica de Ocorrências) e o mesmo coalescing de colunas duplicadas por branching de Forms (`_col_all`/`_val_multi` locais, réplica dos de `processar_ocorrencias`, aplicados a Polo/Categoria/Status/Motivo/Empresa/Observações — não a Data/Multiplicador). Retorna `{registros, kpis: {total, aptos, nao_aptos, pct_apto (fração 0..1, não *100), ultima_vistoria}, por_categoria, polos_nao_aptos_recentes (só Não Apto, top 30 por data desc)}`. Sem PII de terceiro. Testado com dado sintético (planilha vazia → `total=0` sem quebrar; linha com Status em branco → fora das contagens; polo em formato combinado tutor+polo; 3 cópias da mesma pergunta simulando branching). Template local `planilhas/VISTORIA_LAB_template.xlsx` (gitignored, gerado com `openpyxl`, mesmo estilo visual do `OCORRENCIAS_template.xlsx`: aba `Registro` com cabeçalho teal + aba oculta `Listas` com `DataValidation`, Polo reaproveitando os 1303 polos de `contatos_por_polo.json`). |
 | 171 | [py] **Ocorrências: coalescing de colunas duplicadas por branching do Forms.** O Forms de Ocorrências usa uma trilha de perguntas por multiplicador (filtra a lista de tutor sem precisar de branching individual por tutor — ver `_ocor_parse_polo_tutor` no PATCH anterior). Isso faz o Excel de respostas ter colunas repetidas ("Tipo de Ocorrência", "Tipo de Ocorrência 2"...), só uma preenchida por linha. `_col_all()`/`_val_multi()` (locais dentro de `processar_ocorrencias`) juntam as cópias e usam a que vier preenchida. `processar_vistoria` (PATCH 172) usa o mesmo desenho de Forms e recebeu o mesmo tratamento. |
 | 170 | [novo arquivo, público] **`ocorrencia.html`** — página standalone (sem senha, sem cifra, não passa por `processar.py`) com o Microsoft Forms de ocorrências embutido num `<iframe>`. Alvo: multiplicador preenche pelo celular, sem precisar abrir o Forms separado. `FORMS_URL` é uma constante vazia no topo do `<script>` — enquanto vazia, mostra aviso "formulário ainda não conectado" em vez de iframe quebrado. Publicada automaticamente pelo rsync do workflow (não está na lista de excludes, e não precisa estar — não é um template consumido por `gerar_html_*`). |

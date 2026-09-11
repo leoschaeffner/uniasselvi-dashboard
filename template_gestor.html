@@ -151,6 +151,33 @@ body.dark .search{background:var(--surface)}
       </tr></thead><tbody id="lab-tbody"></tbody></table></div>
     </div>
   </div>
+
+  <!-- ═══ VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA_LAB, PATCH 172) ═══════ -->
+  <div class="card" id="vist-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🔬 Vistoria de Laboratório</div><div class="card-badge" id="vist-sub">—</div></div>
+    </div>
+    <div class="card-body" id="vist-empty" style="display:none">
+      <div class="empty-state">Nenhuma vistoria registrada ainda — o formulário de vistoria ainda não está ligado.<br><span style="font-size:11px">(fica disponível assim que o secret <code>URL_VISTORIA_LAB</code> for configurado)</span></div>
+    </div>
+    <div id="vist-conteudo" style="display:none">
+      <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+        <div><div class="kpi-label">% Apto</div><div class="kpi-value" id="vist-pct-apto" style="font-size:22px">—</div></div>
+        <div><div class="kpi-label">Aptos / Não Aptos</div><div class="kpi-value" id="vist-aptos-naoaptos" style="font-size:22px">—</div></div>
+        <div><div class="kpi-label">Última Vistoria</div><div class="kpi-value" id="vist-ultima" style="font-size:22px">—</div></div>
+      </div>
+      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">POR CATEGORIA DE LABORATÓRIO</div>
+      <div class="card-body" id="vist-cat-bars"></div>
+      <div style="padding:0 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">NÃO APTOS RECENTES</div>
+      <div class="toolbar">
+        <input class="search" type="text" placeholder="Buscar polo, categoria, motivo, empresa…" oninput="filterVistNaoApto(this.value)" id="vist-search"/>
+        <span class="tbl-count" id="vist-count">—</span>
+      </div>
+      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
+        <th>Polo</th><th>Categoria</th><th>Motivo</th><th>Empresa</th><th>Data</th>
+      </tr></thead><tbody id="vist-tbody"></tbody></table></div>
+    </div>
+  </div>
 </div>
 </div><!-- /main -->
 
@@ -386,6 +413,68 @@ function filterLabPend(q){
     : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
 }
 
+// ── VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA_LAB, PATCH 172) ────────────
+// Overlay novo ao lado de DB.laboratorios.pendencias (estático) — não mexe
+// nele. Sem o secret configurado, DB.laboratorios.vistorias nem existe;
+// isso é o estado normal hoje, não um erro (mesmo padrão do card Ocorrências).
+function _vistAptoCor(pct){
+  if (pct == null) return 'var(--muted)';
+  if (pct >= 0.8) return 'var(--ok)';
+  if (pct >= 0.5) return 'var(--yellow-d)';
+  return 'var(--red)';
+}
+let _vistNaoAptosData = [];
+function renderVistoria(){
+  const vi = (DB.laboratorios || {}).vistorias;
+  const empty = document.getElementById('vist-empty');
+  const conteudo = document.getElementById('vist-conteudo');
+  if (!vi || !vi.kpis || !vi.kpis.total) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('vist-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const k = vi.kpis;
+  document.getElementById('vist-sub').textContent =
+    `${fmtNum(k.total)} vistoria(s) · ${fmtNum(k.aptos)} apto(s) · ${fmtNum(k.nao_aptos)} não apto(s)`;
+  const pctAptoEl = document.getElementById('vist-pct-apto');
+  pctAptoEl.textContent = k.pct_apto != null ? (k.pct_apto*100).toFixed(0) + '%' : '—';
+  pctAptoEl.style.color = _vistAptoCor(k.pct_apto);
+  document.getElementById('vist-aptos-naoaptos').textContent = `${fmtNum(k.aptos)} / ${fmtNum(k.nao_aptos)}`;
+  document.getElementById('vist-ultima').textContent = k.ultima_vistoria || '—';
+
+  const porCat = vi.por_categoria || [];
+  document.getElementById('vist-cat-bars').innerHTML = porCat.length
+    ? porCat.map(c => `<div class="rank-item">
+        <div class="rank-name" title="${esc(c.categoria)}">${esc(c.categoria)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${((c.pct_apto||0)*100).toFixed(1)}%;background:${_vistAptoCor(c.pct_apto)}"></div></div>
+        <div class="rank-val">${fmtNum(c.aptos)}/${fmtNum(c.total)}${c.pct_apto!=null ? ` (${(c.pct_apto*100).toFixed(0)}%)` : ''}</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por categoria.</div>';
+
+  _vistNaoAptosData = vi.polos_nao_aptos_recentes || [];
+  filterVistNaoApto('');
+}
+function filterVistNaoApto(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _vistNaoAptosData;
+  if (q) {
+    d = d.filter(p => ((p.polo||'') + (p.categoria||'') + (p.motivo||'') + (p.empresa||'')).toLowerCase().includes(q));
+  }
+  document.getElementById('vist-count').textContent = `${d.length} de ${_vistNaoAptosData.length}`;
+  document.getElementById('vist-tbody').innerHTML = d.length
+    ? d.map(p => `<tr>
+        <td>${esc(p.polo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.categoria)||'—'}</td>
+        <td style="font-size:11px">${esc(p.motivo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.empresa)||'—'}</td>
+        <td>${esc(p.data)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum registro não apto.</td></tr>';
+}
+
 // ── BOOTSTRAP ─────────────────────────────────────────────────────────────
 function _iniciarGestor(){
   try{
@@ -397,6 +486,7 @@ function _iniciarGestor(){
   renderGestorKPIs();
   renderOcorrencias();
   renderLaboratorios();
+  renderVistoria();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
