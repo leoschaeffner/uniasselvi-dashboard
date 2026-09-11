@@ -1,0 +1,11 @@
+{
+  "name": "vincilab",
+  "private": true,
+  "description": "Dependências de dev pro VinciLab — hoje só a suíte de testes de frontend (jsdom) em tests/. O app em si não tem build step (HTML+JS inline).",
+  "scripts": {
+    "test": "node tests/run_all.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

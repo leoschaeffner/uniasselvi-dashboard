@@ -25,3 +25,13 @@ Acompanhamento_Onboarding.xlsx
 
 # Baseline de regressão — regenerada a cada rodada, estado local
 snapshot_manifest.json
+
+# Suíte de testes (jsdom) — dependências de dev
+node_modules/
+
+# Dado real decifrado usado transitoriamente pra montar fixture anonimizada —
+# NUNCA deve ser commitado (ver tests/tools/decifrar_payload.js). A fixture
+# final (tests/fixtures/db_real_anonimizado.json) é gerada só depois de passar
+# por tests/tools/anonimizar_db.js + revisão manual.
+tests/fixtures/*_real.json
+tests/fixtures/*_raw.json
