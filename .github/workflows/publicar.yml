@@ -147,10 +147,12 @@ jobs:
             --exclude='planilhas' --exclude='saida' --exclude='_site' \
             --exclude='processar.py' --exclude='template_dashboard.html' \
             --exclude='template_coordenadores.html' \
+            --exclude='template_gestor.html' \
             --exclude='*.md' --exclude='*.sh' \
             ./ _site/
           cp saida/dashboard.html      _site/index.html
           cp saida/coordenadores.html  _site/coordenadores.html
+          cp saida/gestor.html         _site/gestor.html
           cp saida/lookup.json         _site/lookup.json
           echo "=== _site ===" ; ls -lh _site/
 

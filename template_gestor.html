@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow, noarchive"/>
+<title>VinciLab · Painel do Gestor</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--green:#006B5E;--green-l:#00A88F;--green-dim:rgba(0,107,94,.1);--yellow:#FFD100;--yellow-d:#E5BC00;--yellow-dim:rgba(255,209,0,.12);--teal:#00C9A7;--teal-dim:rgba(0,201,167,.1);--red:#dc2626;--red-dim:rgba(220,38,38,.08);--ok:#16a34a;--ok-dim:rgba(22,163,74,.1);--bg:#f4f6f8;--surface:#fff;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--dim:#9ca3af;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--radius:10px;--font:'Plus Jakarta Sans','Segoe UI',sans-serif;--mono:'Cascadia Code','Consolas',monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh}
+body.dark{--bg:#0f1419;--surface:#1a2028;--card:#1e2530;--border:#2d3748;--text:#e5e7eb;--muted:#9ca3af;--dim:#6b7280;}
+.sidebar{width:240px;min-height:100vh;background:var(--green);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:300;overflow:hidden;}
+.sidebar-brand{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;letter-spacing:1.5px;padding:5px 10px;border-radius:5px;display:inline-block;}
+.sidebar-title{color:#fff;font-size:14px;font-weight:700;margin-top:8px}
+.sidebar-sub{color:rgba(255,255,255,.5);font-size:10px;margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.sidebar-section{margin-bottom:16px}
+.sidebar-section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.35);padding:0 12px;margin-bottom:6px;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.7);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left;}
+.sidebar-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.sidebar-item.active{background:var(--yellow);color:#1a1d23;font-weight:700}
+.sidebar-item .si-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:8px;}
+.sidebar-ts{font-size:10px;color:rgba(255,255,255,.4);font-family:var(--mono)}
+.sidebar-dark{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;margin-left:auto;padding:4px;}
+.main{margin-left:240px;flex:1;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:200;}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text)}
+.topbar-breadcrumb{font-size:12px;color:var(--muted)}
+.container{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+.ph{margin-bottom:20px}.ph-title{font-size:22px;font-weight:800}.ph-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--card);border-radius:var(--radius);padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.kpi.kpi-green::before{background:var(--green)}.kpi.kpi-yellow::before{background:var(--yellow)}
+.kpi.kpi-teal::before{background:var(--teal)}.kpi.kpi-red::before{background:var(--red)}.kpi.kpi-ok::before{background:var(--ok)}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px;}.kpi-detail{font-size:11px;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.card-title{font-size:14px;font-weight:700}.card-badge{font-size:11px;color:var(--muted);font-weight:500}
+.card-body{padding:16px 18px}
+.toolbar{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.search{padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text);font-family:var(--font);min-width:200px;flex:1;max-width:320px;}
+.search:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
+.tbl-count{font-size:11px;color:var(--muted);margin-left:auto;font-weight:600}
+.tbl-wrap{overflow-x:auto;max-height:420px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--bg);padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;z-index:5;}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,107,94,.02)}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap}
+.badge.ok{background:var(--ok-dim);color:var(--ok)}.badge.pend{background:var(--red-dim);color:var(--red)}
+.badge.parcial{background:var(--yellow-dim);color:#b45309}.badge.info{background:var(--green-dim);color:var(--green)}
+.rank-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.rank-item:last-child{border:none}
+.rank-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-bar-wrap{width:140px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.rank-bar{height:100%;border-radius:4px}.rank-val{font-size:12px;font-weight:700;min-width:60px;text-align:right}
+.empty-state{color:var(--muted);font-size:13px;text-align:center;padding:32px 16px;line-height:1.6}
+.senha-box{background:var(--card);border-radius:16px;padding:40px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.senha-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;letter-spacing:2px;padding:6px 16px;border-radius:6px;display:inline-block;margin-bottom:16px;}
+.senha-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.senha-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.senha-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:var(--font);background:var(--bg);color:var(--text);}
+.senha-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-dim)}
+.senha-btn{width:100%;padding:12px;border:none;border-radius:8px;margin-top:12px;background:var(--green);color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--font);}
+.senha-btn:hover{background:var(--green-l)}
+.senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+.senha-lgpd{font-size:10px;color:var(--dim);margin-top:16px}
+#senha-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green) 0%,#0d2b25 100%);}
+#moria-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#1a1a1f 0%,#000 80%);font-family:Georgia,'Times New Roman',serif;}
+.moria-box{max-width:520px;text-align:center;padding:40px;color:#9a9a9a;}
+.moria-runas{font-size:42px;letter-spacing:18px;color:#5a6e5e;margin-bottom:24px;text-shadow:0 0 18px rgba(90,110,94,.5);}
+.moria-texto{font-size:15px;line-height:1.9;color:#b8b8b8;margin-bottom:8px;}
+.moria-frase{font-size:13px;color:#6e8a72;font-style:italic;margin-top:20px;letter-spacing:1px;}
+.moria-btn{margin-top:32px;background:transparent;border:1px solid #4a4a4a;color:#9a9a9a;padding:10px 28px;border-radius:4px;font-family:var(--font);font-size:12px;cursor:pointer;letter-spacing:1px;}
+.moria-btn:hover{border-color:#6e8a72;color:#cfe0d0;}
+#lgpd-bar{position:fixed;bottom:0;left:240px;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--dim);display:flex;justify-content:space-between;z-index:100;}
+@media(max-width:900px){.sidebar{width:60px}.sidebar .si-label,.sidebar-title,.sidebar-sub,.sidebar-section-label,.sidebar-ts{display:none}.sidebar-brand{padding:12px 8px;text-align:center}.sidebar-item{justify-content:center;padding:10px}.main{margin-left:60px}#lgpd-bar{left:60px}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+body.dark .sidebar{background:#0a1f1c}
+body.dark th{background:var(--surface)}
+body.dark .search{background:var(--surface)}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="sidebar-logo">VinciLab</div><div class="sidebar-title">Painel do Gestor</div><div class="sidebar-sub">Visão executiva · 2026</div></div>
+  <div class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Executivo</div>
+      <button class="sidebar-item active" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span class="si-icon">📌</span><span class="si-label">Visão Geral</span></button>
+    </div>
+  </div>
+  <div class="sidebar-footer"><span class="sidebar-ts" id="ts-label">—</span><button class="sidebar-dark" onclick="toggleDark()" title="Modo escuro">🌙</button></div>
+</nav>
+<div class="main">
+<div class="topbar">
+  <span class="topbar-title">Painel do Gestor</span>
+  <span class="topbar-breadcrumb">Visão Executiva</span>
+  <span id="topbar-ts" style="margin-left:auto;font-size:10px;color:var(--dim);font-family:var(--mono)"></span>
+</div>
+
+<div class="container">
+  <div class="ph">
+    <div class="ph-title">Painel do Gestor</div>
+    <div class="ph-sub">Recorte executivo — o essencial para decisão: headcount, vagas críticas, ocorrências de campo e laboratórios. Não é o dashboard operacional completo.</div>
+  </div>
+
+  <!-- ═══ KPIs HERDADOS (tutores/vagas/labs — mesmos dados do dashboard/coordenadores) ═══ -->
+  <div class="kpi-row" id="gestor-kpis"></div>
+
+  <!-- ═══ OCORRÊNCIAS POR MULTIPLICADOR ═══════════════════════════════════ -->
+  <div class="card" id="ocor-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🚨 Ocorrências por Multiplicador</div><div class="card-badge" id="ocor-sub">—</div></div>
+    </div>
+    <div class="card-body" id="ocor-empty" style="display:none">
+      <div class="empty-state">Nenhuma ocorrência registrada ainda — a planilha de multiplicadores ainda não está ligada.<br><span style="font-size:11px">(fica disponível assim que o secret <code>URL_OCORRENCIAS</code> for configurado)</span></div>
+    </div>
+    <div id="ocor-conteudo" style="display:none">
+      <div class="card-body" id="ocor-mult-bars"></div>
+      <div style="padding:0 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">ABERTAS HÁ MAIS DE 7 DIAS</div>
+      <div class="tbl-wrap" style="max-height:280px"><table><thead><tr>
+        <th>Polo</th><th>Multiplicador</th><th>Tipo</th><th>Gravidade</th><th style="text-align:right">Dias aberta</th><th>Status</th>
+      </tr></thead><tbody id="ocor-atraso-tbody"></tbody></table></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 18px">
+        <div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">POR TIPO</div><div id="ocor-tipo-list"></div></div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">POR GRAVIDADE</div><div id="ocor-grav-list"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LABORATÓRIOS — PENDÊNCIAS ════════════════════════════════════════ -->
+  <div class="card" id="lab-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🧪 Laboratórios — Pendências</div><div class="card-badge" id="lab-sub">—</div></div>
+    </div>
+    <div id="lab-empty" style="display:none"><div class="empty-state">Sem dados de pendências de laboratório disponíveis no momento.</div></div>
+    <div id="lab-conteudo" style="display:none">
+      <div class="toolbar">
+        <input class="search" type="text" placeholder="Buscar polo, categoria, empresa…" oninput="filterLabPend(this.value)" id="lab-search"/>
+        <span class="tbl-count" id="lab-count">—</span>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr>
+        <th>Polo</th><th>Categoria</th><th>Status</th><th>Motivo</th><th>Empresa</th>
+      </tr></thead><tbody id="lab-tbody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+</div><!-- /main -->
+
+<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · VinciLab 2026</span><span id="lgpd-ts"></span></div>
+<div id="moria-overlay">
+  <div class="moria-box">
+    <div class="moria-runas">⟁ ⟐ ⟁</div>
+    <div class="moria-texto">As portas de pedra permanecem fechadas.</div>
+    <div class="moria-texto">A senha que ecoou nas sombras não foi reconhecida.</div>
+    <div class="moria-texto">Apenas quem conhece a palavra certa atravessa este limiar.</div>
+    <div class="moria-frase">"Você não passará."</div>
+    <button class="moria-btn" onclick="document.getElementById('moria-overlay').style.display='none';document.getElementById('senha-overlay').style.display='flex';setTimeout(()=>document.getElementById('senha-input').focus(),100);">Tentar novamente</button>
+  </div>
+</div>
+<div id="senha-overlay">
+  <div class="senha-box">
+    <div class="senha-logo">VinciLab</div>
+    <div class="senha-title">Painel do Gestor</div>
+    <div class="senha-sub">VinciLab · 2026</div>
+    <input class="senha-input" type="password" id="senha-input" placeholder="Digite a senha de acesso" onkeydown="if(event.key==='Enter')verificarSenha()"/>
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <div class="senha-err" id="senha-err"></div>
+    <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
+  </div>
+</div>
+<script>
+// ── SENHA / DESCRIPTOGRAFIA (mesmo padrão AES-256-GCM dos outros 2 portais,
+//    senha própria — ver SENHA_GESTOR em processar.py) ────────────────────
+async function _sha256Buf(msg){
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+}
+function _hexToBytes(hex){
+  const bytes = new Uint8Array(hex.length/2);
+  for(let i=0;i<bytes.length;i++) bytes[i] = parseInt(hex.substr(i*2,2),16);
+  return bytes;
+}
+function _bytesToHex(buf){
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function _decifrarDados(cryptoKey){
+  const [ivB64, ctB64] = ENCRYPTED_PAYLOAD.split(':');
+  const iv = Uint8Array.from(atob(ivB64), c=>c.charCodeAt(0));
+  const ct = Uint8Array.from(atob(ctB64), c=>c.charCodeAt(0));
+  const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, cryptoKey, ct);
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+async function verificarSenha(){
+  const val=document.getElementById('senha-input').value.trim();
+  if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
+  try{
+    const chaveBuf = await _sha256Buf(val);
+    const cryptoKey = await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+    DB = await _decifrarDados(cryptoKey);
+    const chaveHex = _bytesToHex(chaveBuf);
+    try{sessionStorage.setItem('uni_auth_key_gestor', chaveHex);}catch(e){}
+    document.getElementById('senha-overlay').style.display='none';
+    document.getElementById('senha-input').value='';
+    _iniciarGestor();
+  }catch(e){
+    document.getElementById('senha-err').textContent='Senha incorreta.';
+    document.getElementById('senha-input').value='';
+    document.getElementById('senha-input').focus();
+  }
+}
+async function initSenha(){
+  let chaveHex=null;
+  try{chaveHex=sessionStorage.getItem('uni_auth_key_gestor');}catch(e){}
+  if(chaveHex){
+    try{
+      const chaveBuf=_hexToBytes(chaveHex);
+      const cryptoKey=await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+      DB = await _decifrarDados(cryptoKey);
+      const ov=document.getElementById('senha-overlay'); if(ov) ov.style.display='none';
+      _iniciarGestor();
+      return;
+    }catch(e){
+      try{sessionStorage.removeItem('uni_auth_key_gestor');}catch(_){}
+    }
+  }
+  setTimeout(()=>{const inp=document.getElementById('senha-input');if(inp)inp.focus();},200);
+}
+
+// ── BLOQUEIO DE INSPEÇÃO (mesmo "teatro de segurança" dos outros 2 portais) ─
+function _ativarMoria(){
+  document.getElementById('senha-overlay').style.display='none';
+  document.getElementById('moria-overlay').style.display='flex';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='F12'){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&!e.shiftKey&&['u','U'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+});
+document.addEventListener('contextmenu',function(e){e.preventDefault();_ativarMoria();});
+
+const ENCRYPTED_PAYLOAD = 'DATA_GOES_HERE';
+let DB;
+
+// ── UTIL ────────────────────────────────────────────────────────────────────
+function esc(s){return(s||'').toString().replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtNum(n){return(n||0).toLocaleString('pt-BR')}
+function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');}
+function initDark(){if(localStorage.getItem('dark')==='1')document.body.classList.add('dark')}
+
+// ── KPIs HERDADOS ─────────────────────────────────────────────────────────
+// Não recalcula nada: só lê os mesmos agregados que o dashboard/coordenadores
+// já mostram (DB.kpis, DB.vagas.kpis, DB.laboratorios.pendencias). Se uma
+// fonte não existir (ex: sem Lotação → sem DB.vagas), o card correspondente
+// simplesmente não aparece — não inventa número.
+function renderGestorKPIs(){
+  const k = DB.kpis || {};
+  const vk = (DB.vagas || {}).kpis || {};
+  const pend = ((DB.laboratorios || {}).pendencias) || [];
+  const cards = [];
+  cards.push(`<div class="kpi kpi-green"><div class="kpi-label">Tutores Ativos</div><div class="kpi-value">${fmtNum(k.total)}</div><div class="kpi-detail">${fmtNum(k.enviaram||0)} enviaram portfólio</div></div>`);
+  if (vk.alunos_sem_tutor != null) {
+    cards.push(`<div class="kpi kpi-red"><div class="kpi-label">Alunos sem Tutor</div><div class="kpi-value">${fmtNum(vk.alunos_sem_tutor)}</div><div class="kpi-detail">${fmtNum(vk.polos_sem_tutor||0)} polo(s)</div></div>`);
+  }
+  if (vk.n_criticas != null) {
+    cards.push(`<div class="kpi kpi-yellow"><div class="kpi-label">Vagas Críticas</div><div class="kpi-value">${fmtNum(vk.n_criticas)}</div><div class="kpi-detail">sem tutor, priorizadas por impacto</div></div>`);
+  }
+  if (vk.n_polos_dificeis != null) {
+    cards.push(`<div class="kpi kpi-yellow"><div class="kpi-label">Polos Difíceis</div><div class="kpi-value">${fmtNum(vk.n_polos_dificeis)}</div><div class="kpi-detail">+200 alunos e sem tutor</div></div>`);
+  }
+  cards.push(`<div class="kpi kpi-teal"><div class="kpi-label">Laboratórios com Pendência</div><div class="kpi-value">${fmtNum(pend.length)}</div><div class="kpi-detail">obras / não apto</div></div>`);
+  document.getElementById('gestor-kpis').innerHTML = cards.join('');
+}
+
+// ── OCORRÊNCIAS POR MULTIPLICADOR ────────────────────────────────────────
+function _gravCor(g){
+  if (g === 'Alta') return 'var(--red)';
+  if (g === 'Média') return 'var(--yellow-d)';
+  if (g === 'Baixa') return 'var(--ok)';
+  return 'var(--muted)';
+}
+function renderOcorrencias(){
+  const oc = DB.ocorrencias;
+  const empty = document.getElementById('ocor-empty');
+  const conteudo = document.getElementById('ocor-conteudo');
+  if (!oc || !oc.kpis || !oc.kpis.total) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('ocor-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const k = oc.kpis;
+  document.getElementById('ocor-sub').textContent =
+    `${fmtNum(k.total)} registro(s) · ${fmtNum(k.abertas)} aberta(s) · ${fmtNum(k.em_tratativa)} em tratativa · ${fmtNum(k.resolvidas)} resolvida(s)`
+    + (k.tempo_medio_resolucao_dias != null ? ` · tempo médio de resolução: ${k.tempo_medio_resolucao_dias} dia(s)` : '');
+
+  // barras por multiplicador
+  const porMult = oc.por_multiplicador || [];
+  const max = Math.max(1, ...porMult.map(m => m.total));
+  document.getElementById('ocor-mult-bars').innerHTML = porMult.length
+    ? porMult.map(m => `<div class="rank-item">
+        <div class="rank-name" title="${esc(m.multiplicador)}">${esc(m.multiplicador)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(m.total/max*100).toFixed(1)}%;background:var(--green)"></div></div>
+        <div class="rank-val">${fmtNum(m.total)}${m.abertas ? ` <span style="color:var(--red);font-weight:700">(${fmtNum(m.abertas)} aberta${m.abertas!==1?'s':''})</span>` : ''}</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por multiplicador.</div>';
+
+  // tabela de abertas há mais de 7 dias
+  const atrasadas = (oc.registros || [])
+    .filter(r => (r.status === 'Aberta' || r.status === 'Em Tratativa') && r.dias_aberta != null && r.dias_aberta > 7)
+    .sort((a, b) => (b.dias_aberta||0) - (a.dias_aberta||0));
+  document.getElementById('ocor-atraso-tbody').innerHTML = atrasadas.length
+    ? atrasadas.map(r => `<tr>
+        <td>${esc(r.polo)||'—'}</td>
+        <td>${esc(r.multiplicador)||'—'}</td>
+        <td>${esc(r.tipo)||'—'}</td>
+        <td><span class="badge" style="background:${_gravCor(r.gravidade)}20;color:${_gravCor(r.gravidade)}">${esc(r.gravidade)||'—'}</span></td>
+        <td style="text-align:right;font-weight:800;color:var(--red)">${fmtNum(r.dias_aberta)}</td>
+        <td>${esc(r.status)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhuma ocorrência aberta há mais de 7 dias — em dia. ✓</td></tr>';
+
+  // totais por tipo / gravidade
+  const porTipo = oc.por_tipo || [];
+  const maxTipo = Math.max(1, ...porTipo.map(t => t.n));
+  document.getElementById('ocor-tipo-list').innerHTML = porTipo.length
+    ? porTipo.map(t => `<div class="rank-item">
+        <div class="rank-name">${esc(t.tipo)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(t.n/maxTipo*100).toFixed(1)}%;background:var(--teal)"></div></div>
+        <div class="rank-val">${fmtNum(t.n)}</div>
+      </div>`).join('')
+    : '<div class="empty-state">—</div>';
+
+  const porGrav = oc.por_gravidade || [];
+  const maxGrav = Math.max(1, ...porGrav.map(g => g.n));
+  document.getElementById('ocor-grav-list').innerHTML = porGrav.length
+    ? porGrav.map(g => `<div class="rank-item">
+        <div class="rank-name">${esc(g.gravidade)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(g.n/maxGrav*100).toFixed(1)}%;background:${_gravCor(g.gravidade)}"></div></div>
+        <div class="rank-val">${fmtNum(g.n)}</div>
+      </div>`).join('')
+    : '<div class="empty-state">—</div>';
+}
+
+// ── LABORATÓRIOS — PENDÊNCIAS ────────────────────────────────────────────
+let _labPendData = [];
+function renderLaboratorios(){
+  const pend = ((DB.laboratorios || {}).pendencias) || [];
+  const empty = document.getElementById('lab-empty');
+  const conteudo = document.getElementById('lab-conteudo');
+  if (!pend.length) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('lab-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  document.getElementById('lab-sub').textContent = `${fmtNum(pend.length)} laboratório(s) com pendência (obras / não apto)`;
+  _labPendData = pend;
+  filterLabPend('');
+}
+function filterLabPend(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _labPendData;
+  if (q) {
+    d = d.filter(p => ((p.polo_original||p.polo_norm||'') + (p.categoria||'') + (p.empresa||'') + (p.motivo||'')).toLowerCase().includes(q));
+  }
+  document.getElementById('lab-count').textContent = `${d.length} de ${_labPendData.length}`;
+  document.getElementById('lab-tbody').innerHTML = d.length
+    ? d.map(p => `<tr>
+        <td>${esc(p.polo_original||p.polo_norm)||'—'}</td>
+        <td style="font-size:11px">${esc(p.categoria)||'—'}</td>
+        <td><span class="badge pend">${esc(p.status)||'—'}</span></td>
+        <td style="font-size:11px">${esc(p.motivo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.empresa)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+}
+
+// ── BOOTSTRAP ─────────────────────────────────────────────────────────────
+function _iniciarGestor(){
+  try{
+    const ts = DB.gerado_em || '—';
+    document.getElementById('ts-label').textContent = 'Gerado: ' + ts;
+    document.getElementById('topbar-ts').textContent = 'Atualizado: ' + ts;
+    const lgts = document.getElementById('lgpd-ts'); if (lgts) lgts.textContent = ts;
+  }catch(e){}
+  renderGestorKPIs();
+  renderOcorrencias();
+  renderLaboratorios();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initDark();
+  initSenha();
+});
+</script>
+</body>
+</html>
