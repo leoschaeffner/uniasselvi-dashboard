@@ -119,10 +119,36 @@ function main() {
   let strayEmails = 0;
   jsonStr = jsonStr.replace(emailRe, (m) => { strayEmails++; return anonEmail(m); });
 
+  // Varredura final por nome: o mesmo tutor aparece em MUITOS lugares fora
+  // das NAME_KEYS conhecidas — listas soltas de nome (`tutores_unicos`,
+  // `ger_contratacao[].tutores`), dict data->[nomes] (`datas_por_tutor`), e
+  // até string combinada ("Fulano — 19:00 - 20:30" em `datas_por_horario`).
+  // Em vez de tentar mapear key por key (frágil, sempre aparece um lugar
+  // novo), troca pelo texto inteiro todo nome real já descoberto no walk()
+  // por key conhecida (nameMap) — mais comprido primeiro, pra um nome nunca
+  // comer parte de um nome mais longo que o contém.
+  let strayNames = 0;
+  const nomesReais = [...nameMap.keys()].sort((a, b) => b.length - a.length);
+  for (const nomeReal of nomesReais) {
+    const sintetico = nameMap.get(nomeReal);
+    // nome real pode ter aspas/backslash escapados dentro do JSON serializado
+    const escapado = JSON.stringify(nomeReal).slice(1, -1);
+    if (escapado !== nomeReal && jsonStr.includes(escapado)) {
+      const re = new RegExp(escapado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      const n = (jsonStr.match(re) || []).length;
+      if (n) { strayNames += n; jsonStr = jsonStr.replace(re, sintetico); }
+    }
+    if (jsonStr.includes(nomeReal)) {
+      const re = new RegExp(nomeReal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      const n = (jsonStr.match(re) || []).length;
+      if (n) { strayNames += n; jsonStr = jsonStr.replace(re, sintetico); }
+    }
+  }
+
   fs.writeFileSync(outPath, jsonStr, 'utf-8');
   const stat = fs.statSync(outPath);
   console.log('OK ->', outPath, (stat.size / 1024 / 1024).toFixed(1) + ' MB');
-  console.log('nomes:', nameCounter, '| emails por chave:', emailCounter - strayEmails, '| emails via varredura de texto:', strayEmails, '| whatsapp:', phoneCounter, '| chapas:', chapaCounter);
+  console.log('nomes:', nameCounter, '| emails por chave:', emailCounter - strayEmails, '| emails via varredura de texto:', strayEmails, '| whatsapp:', phoneCounter, '| chapas:', chapaCounter, '| ocorrências de nome fora das NAME_KEYS (varredura de texto):', strayNames);
   console.log('Confira manualmente por PII residual antes de commitar (grep por domínios reais, nomes etc).');
 }
 main();
