@@ -3025,6 +3025,13 @@ def processar_ocorrencias(p8):
             if all(_ocor_txt(row.get(c)) == '' for c in _todas_cols):
                 continue  # linha totalmente vazia
             _status = _ocor_canon(row.get(c_status) if c_status else None, _OCOR_STATUS_MAP)
+            if not _status:
+                # Status em branco = registro recém-chegado via Forms (só
+                # preenche as colunas de entrada; Status/Responsável/Data de
+                # Resolução são preenchidos depois, na tratativa). Sem status
+                # explícito, tratamos como 'Aberta' -- senão o registro não
+                # entra em nenhuma contagem do painel.
+                _status = 'Aberta'
             _data_dt = _ocor_parse_data(row.get(c_data) if c_data else None)
             _data_resol_dt = _ocor_parse_data(row.get(c_dataresol) if c_dataresol else None)
             _dias_aberta = None
