@@ -629,7 +629,60 @@ def verificar_e_localizar():
         else:
             print(f"  [INFO] OCORRENCIAS.xlsx não encontrada (secret URL_OCORRENCIAS ainda não configurado)")
 
-    return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8
+    # ── PATCH 170: Vistoria de Laboratório — mesmo padrão opcional do
+    # p8/OCORRENCIAS. Multiplicador visita um laboratório periodicamente e
+    # registra o status (Apto/Não Apto), substituindo aos poucos o arquivo
+    # estático labs_pendencias.json por um fluxo vivo com data. Totalmente
+    # opcional: sem o secret, dados['laboratorios']['vistorias'] nem existe.
+    p9 = achar_arquivo(SCRIPT_DIR, "VISTORIA_LAB.xlsx")
+    if p9:
+        print(f"  [OK] {os.path.basename(p9)}")
+    else:
+        url_vist = os.environ.get("URL_VISTORIA_LAB", "").strip()
+        if url_vist:
+            print(f"  [Baixando] VISTORIA_LAB.xlsx via URL_VISTORIA_LAB...")
+            try:
+                import urllib.request as _urlreq_vist
+                def _build_dl_urls_vist(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)
+                    return urls
+                dest_vist = os.path.join(pasta_planilhas, "VISTORIA_LAB.xlsx")
+                downloaded_vist = False
+                for url_dl in _build_dl_urls_vist(url_vist):
+                    try:
+                        req = _urlreq_vist.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with _urlreq_vist.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 2000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest_vist, 'wb') as f_out: f_out.write(data)
+                            p9 = dest_vist
+                            print(f"  [OK] VISTORIA_LAB.xlsx ({len(data):,} bytes)")
+                            downloaded_vist = True
+                            break
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar Vistoria de Laboratório: {ex} | URL: {url_dl[:80]}")
+                if not downloaded_vist:
+                    print(f"  [ERRO] Não foi possível baixar VISTORIA_LAB.xlsx — verifique URL_VISTORIA_LAB")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar Vistoria de Laboratório: {e}")
+        else:
+            print(f"  [INFO] VISTORIA_LAB.xlsx não encontrada (secret URL_VISTORIA_LAB ainda não configurado)")
+
+    return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8, p9
 
 
 def ler_excel(path, **kwargs):
@@ -3020,23 +3073,55 @@ def processar_ocorrencias(p8):
                     return orig_c
         return None
 
+    def _col_all(cols, *cands):
+        """Como _col(), mas devolve TODAS as colunas que casam, não só a
+        primeira. Necessário porque o Forms usa branching por multiplicador
+        (uma trilha de perguntas por grupo, pra filtrar a lista de tutores) —
+        perguntas com o mesmo texto em trilhas diferentes viram colunas
+        duplicadas no Excel de respostas ("Tipo de Ocorrência", "Tipo de
+        Ocorrência 2", ...), só uma preenchida por linha (a pessoa passa por
+        uma trilha só). Contains-match (igual ao 2º passo de _col) já cobre
+        qualquer sufixo que o Forms use pra desambiguar, sem precisar saber o
+        formato exato."""
+        _norm_cols = {_vrh_norm(c): c for c in cols}
+        achados = []
+        for cand in cands:
+            cn = _vrh_norm(cand)
+            for norm_c, orig_c in _norm_cols.items():
+                if cn in norm_c and orig_c not in achados:
+                    achados.append(orig_c)
+        return achados
+
+    def _val_multi(row, col_list):
+        """Primeiro valor não-vazio entre as colunas duplicadas (só uma
+        preenchida por linha, o resto vem em branco)."""
+        for c in col_list:
+            v = _ocor_txt(row.get(c))
+            if v:
+                return v
+        return ''
+
     registros = []
     if df is not None and not df.empty:
         cols = list(df.columns)
         c_data = _col(cols, 'Data')
         c_mult = _col(cols, 'Multiplicador')
-        c_polo = _col(cols, 'Polo')
-        c_curso = _col(cols, 'Curso / Área', 'Curso/Area', 'Curso')
-        c_catlab = _col(cols, 'Categoria de Laboratório', 'Categoria Laboratorio')
-        c_tipo = _col(cols, 'Tipo de Ocorrência', 'Tipo Ocorrencia')
-        c_grav = _col(cols, 'Gravidade')
-        c_desc = _col(cols, 'Descrição', 'Descricao')
+        # Campos abaixo se repetem uma vez por trilha de branching (Forms) —
+        # pega todas as cópias e usa a que vier preenchida em cada linha.
+        cs_polo = _col_all(cols, 'Polo')
+        cs_curso = _col_all(cols, 'Curso / Área', 'Curso/Area', 'Curso')
+        cs_catlab = _col_all(cols, 'Categoria de Laboratório', 'Categoria Laboratorio')
+        cs_tipo = _col_all(cols, 'Tipo de Ocorrência', 'Tipo Ocorrencia')
+        cs_grav = _col_all(cols, 'Gravidade')
+        cs_desc = _col_all(cols, 'Descrição', 'Descricao')
+        # Preenchidos depois, manualmente na planilha (não vêm do Forms, não
+        # se repetem por trilha) — coluna única.
         c_status = _col(cols, 'Status')
         c_resp = _col(cols, 'Responsável pela Tratativa', 'Responsavel')
         c_dataresol = _col(cols, 'Data de Resolução', 'Data Resolucao')
         _hoje = datetime.now().date()
-        _todas_cols = [c for c in [c_data, c_mult, c_polo, c_curso, c_catlab, c_tipo,
-                                    c_grav, c_desc, c_status, c_resp, c_dataresol] if c]
+        _todas_cols = [c for c in [c_data, c_mult, *cs_polo, *cs_curso, *cs_catlab, *cs_tipo,
+                                    *cs_grav, *cs_desc, c_status, c_resp, c_dataresol] if c]
         for _, row in df.iterrows():
             if all(_ocor_txt(row.get(c)) == '' for c in _todas_cols):
                 continue  # linha totalmente vazia
@@ -3053,17 +3138,17 @@ def processar_ocorrencias(p8):
             _dias_aberta = None
             if _status != 'Resolvida' and _data_dt:
                 _dias_aberta = (_hoje - _data_dt).days
-            _polo, _tutor_ref = _ocor_parse_polo_tutor(row.get(c_polo) if c_polo else None)
+            _polo, _tutor_ref = _ocor_parse_polo_tutor(_val_multi(row, cs_polo))
             registros.append({
                 'data': _data_dt.strftime('%d/%m/%Y') if _data_dt else None,
                 'multiplicador': _ocor_canon(row.get(c_mult) if c_mult else None, _OCOR_MULT_MAP),
                 'polo': _polo,
                 'tutor': _tutor_ref,
-                'curso': _ocor_txt(row.get(c_curso) if c_curso else None),
-                'categoria_lab': _ocor_txt(row.get(c_catlab) if c_catlab else None),
-                'tipo': _ocor_canon(row.get(c_tipo) if c_tipo else None, _OCOR_TIPO_MAP),
-                'gravidade': _ocor_canon(row.get(c_grav) if c_grav else None, _OCOR_GRAV_MAP),
-                'descricao': _ocor_txt(row.get(c_desc) if c_desc else None),
+                'curso': _val_multi(row, cs_curso),
+                'categoria_lab': _val_multi(row, cs_catlab),
+                'tipo': _ocor_canon(_val_multi(row, cs_tipo), _OCOR_TIPO_MAP),
+                'gravidade': _ocor_canon(_val_multi(row, cs_grav), _OCOR_GRAV_MAP),
+                'descricao': _val_multi(row, cs_desc),
                 'status': _status,
                 'responsavel': _ocor_txt(row.get(c_resp) if c_resp else None),
                 'data_resolucao': _data_resol_dt.strftime('%d/%m/%Y') if _data_resol_dt else None,
@@ -3129,6 +3214,152 @@ def processar_ocorrencias(p8):
         'por_tipo': por_tipo,
         'por_gravidade': por_gravidade,
         'por_polo': por_polo,
+    }
+
+
+# ── PATCH 170: Vistoria de Laboratório (staff de campo) ────────────────────
+# Fonte opcional p9/URL_VISTORIA_LAB, mesmo padrão do p8/Ocorrências. Um
+# multiplicador visita um laboratório periodicamente e registra o status —
+# overlay novo que, com o tempo, substitui o labs_pendencias.json estático
+# por um fluxo vivo com data. Schema (aba "Registro", aba oculta "Listas" só
+# alimenta os dropdowns do Excel, não tem registro nenhum):
+#   Data | Multiplicador | Polo | Categoria de Laboratório | Status |
+#   Motivo | Empresa Responsável | Observações
+# Sem PII de terceiro (dado de infraestrutura, não de aluno/tutor).
+_VIST_CATEGORIAS = [
+    'Enfermagem', 'Terapia Ocupacional', 'EngeMaker', 'Multidisciplinar I',
+    'Multidisciplinar II', 'Multidisciplinar III', 'Multidisciplinar IV',
+    'Química e Física / Agronomia',
+]
+_VIST_STATUS = ['Apto', 'Não Apto']
+_VIST_CAT_MAP = {_vrh_norm(v): v for v in _VIST_CATEGORIAS}
+_VIST_STATUS_MAP = {_vrh_norm(v): v for v in _VIST_STATUS}
+# Multiplicador é a mesma lista de 7 nomes de Ocorrências — reaproveita
+# _OCOR_MULTIPLICADORES/_OCOR_MULT_MAP direto, não duplica.
+# Polo no Forms é o mesmo dropdown combinado "Nome do Tutor — Polo/UF" do
+# p8/Ocorrências (evita escolher entre 1303 polos soltos — o multiplicador
+# acha pelo tutor, o polo vem junto). O parser é lógica genérica de texto,
+# não específica de Ocorrências, então reaproveita direto em vez de duplicar.
+_vist_parse_polo_tutor = _ocor_parse_polo_tutor
+
+
+def processar_vistoria(p9):
+    print(f"[{ts()}] Lendo Vistoria de Laboratório...")
+    try:
+        abas = pd.read_excel(p9, sheet_name=None, header=0, dtype=str)
+    except Exception as e:
+        print(f"[{ts()}] Vistoria de Laboratório: não foi possível abrir a planilha: {e}")
+        return None
+
+    df = None
+    for nome, _df in abas.items():
+        if _vrh_norm(nome) == _vrh_norm('Registro'):
+            df = _df
+            break
+    if df is None:
+        # fallback tolerante: primeira aba que não seja a "Listas" (dropdowns)
+        for nome, _df in abas.items():
+            if _vrh_norm(nome) != _vrh_norm('Listas'):
+                df = _df
+                break
+
+    def _col(cols, *cands):
+        _norm_cols = {_vrh_norm(c): c for c in cols}
+        for cand in cands:
+            cn = _vrh_norm(cand)
+            if cn in _norm_cols:
+                return _norm_cols[cn]
+        for cand in cands:
+            cn = _vrh_norm(cand)
+            for norm_c, orig_c in _norm_cols.items():
+                if cn in norm_c:
+                    return orig_c
+        return None
+
+    registros = []
+    if df is not None and not df.empty:
+        cols = list(df.columns)
+        c_data = _col(cols, 'Data')
+        c_mult = _col(cols, 'Multiplicador')
+        c_polo = _col(cols, 'Polo')
+        c_cat = _col(cols, 'Categoria de Laboratório', 'Categoria Laboratorio')
+        c_status = _col(cols, 'Status')
+        c_motivo = _col(cols, 'Motivo')
+        c_empresa = _col(cols, 'Empresa Responsável', 'Empresa Responsavel')
+        c_obs = _col(cols, 'Observações', 'Observacoes')
+        _todas_cols = [c for c in [c_data, c_mult, c_polo, c_cat, c_status,
+                                    c_motivo, c_empresa, c_obs] if c]
+        for _, row in df.iterrows():
+            if all(_ocor_txt(row.get(c)) == '' for c in _todas_cols):
+                continue  # linha totalmente vazia
+            _data_dt = _ocor_parse_data(row.get(c_data) if c_data else None)
+            # Diferente de Ocorrências (onde Status é preenchido depois por
+            # outra pessoa), aqui Status é o próprio dado que o multiplicador
+            # está reportando na vistoria — sempre deveria vir preenchido
+            # pelo Forms. Por isso, SEM default: se vier vazio mesmo assim
+            # (não deveria acontecer), o registro entra na lista mas fica de
+            # fora das contagens por status, sem quebrar o pipeline.
+            _status = _ocor_canon(row.get(c_status) if c_status else None, _VIST_STATUS_MAP)
+            _polo, _tutor_ref = _vist_parse_polo_tutor(row.get(c_polo) if c_polo else None)
+            registros.append({
+                'data': _data_dt.strftime('%d/%m/%Y') if _data_dt else None,
+                'multiplicador': _ocor_canon(row.get(c_mult) if c_mult else None, _OCOR_MULT_MAP),
+                'polo': _polo,
+                'tutor': _tutor_ref,
+                'categoria': _ocor_canon(row.get(c_cat) if c_cat else None, _VIST_CAT_MAP),
+                'status': _status,
+                'motivo': _ocor_txt(row.get(c_motivo) if c_motivo else None),
+                'empresa': _ocor_txt(row.get(c_empresa) if c_empresa else None),
+                'observacoes': _ocor_txt(row.get(c_obs) if c_obs else None),
+            })
+
+    total = len(registros)
+    aptos = sum(1 for r in registros if r['status'] == 'Apto')
+    nao_aptos = sum(1 for r in registros if r['status'] == 'Não Apto')
+    # Fração 0..1 (não *100) — segue o contrato combinado com o frontend.
+    pct_apto = round(aptos / total, 4) if total else None
+
+    _datas_validas = [
+        datetime.strptime(r['data'], '%d/%m/%Y').date() for r in registros if r['data']
+    ]
+    ultima_vistoria = max(_datas_validas).strftime('%d/%m/%Y') if _datas_validas else None
+
+    _por_cat = {}
+    for r in registros:
+        c = r['categoria'] or 'Não informado'
+        d = _por_cat.setdefault(c, {'categoria': c, 'total': 0, 'aptos': 0, 'nao_aptos': 0})
+        d['total'] += 1
+        if r['status'] == 'Apto':
+            d['aptos'] += 1
+        elif r['status'] == 'Não Apto':
+            d['nao_aptos'] += 1
+    por_categoria = []
+    for d in _por_cat.values():
+        d['pct_apto'] = round(d['aptos'] / d['total'], 4) if d['total'] else 0.0
+        por_categoria.append(d)
+    por_categoria.sort(key=lambda x: -x['total'])
+
+    _nao_aptos = [r for r in registros if r['status'] == 'Não Apto']
+    _nao_aptos.sort(
+        key=lambda r: datetime.strptime(r['data'], '%d/%m/%Y').date() if r['data'] else datetime.min.date(),
+        reverse=True,
+    )
+    polos_nao_aptos_recentes = [
+        {'polo': r['polo'], 'categoria': r['categoria'], 'motivo': r['motivo'],
+         'empresa': r['empresa'], 'data': r['data']}
+        for r in _nao_aptos[:30]
+    ]
+
+    print(f"[{ts()}] Vistoria de Laboratório: {total} registros ({aptos} aptos, {nao_aptos} não aptos, "
+          f"última vistoria {ultima_vistoria})")
+    return {
+        'registros': registros,
+        'kpis': {
+            'total': total, 'aptos': aptos, 'nao_aptos': nao_aptos,
+            'pct_apto': pct_apto, 'ultima_vistoria': ultima_vistoria,
+        },
+        'por_categoria': por_categoria,
+        'polos_nao_aptos_recentes': polos_nao_aptos_recentes,
     }
 
 
@@ -5000,7 +5231,7 @@ if __name__ == '__main__':
     print()
     print(" Verificando arquivos...")
     print()
-    p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8, p9 = verificar_e_localizar()
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
@@ -5112,6 +5343,18 @@ if __name__ == '__main__':
                 dados['ocorrencias'] = _ocor
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar Ocorrências: {e}")
+    # PATCH 170: registro de Vistoria de Laboratório — mesmo padrão opcional
+    # do p8/Ocorrências. É um OVERLAY novo em cima do que já existe em
+    # dados['laboratorios'] (labs_pendencias.json/laboratorios_data.json
+    # continuam existindo do jeito que estão — não mexe neles). Se p9 for
+    # None ou o parsing falhar, dados['laboratorios']['vistorias'] nem existe.
+    if p9:
+        try:
+            _vist = processar_vistoria(p9)
+            if _vist:
+                dados.setdefault('laboratorios', {})['vistorias'] = _vist
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar Vistoria de Laboratório: {e}")
     # PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding —
     # roda sempre (mesmo na primeira vez, quando ainda não existe um p6 pra
     # ler flags antigos) pra garantir que a lista sempre nasce e se mantém
