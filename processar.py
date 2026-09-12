@@ -1469,9 +1469,13 @@ def processar(p1, p2):
 
         if chave not in chave_to_cf:
             # Fallback 3: normalizar a própria chave (diferenças de espaços/acentos)
-            chave_norm = _norm_nome_match(chave.replace(' ', ''))
+            # PATCH: `chave` pode ter virado NaN/float num fallback anterior (ex:
+            # email_to_chave_tutor/nome_to_chave_tutor com um valor de CHAVE em
+            # branco no CONTROLE pra algum tutor) -- str(x or '') cobre isso sem
+            # precisar rastrear qual fallback especificamente introduziu o não-texto.
+            chave_norm = _norm_nome_match(str(chave or '').replace(' ', ''))
             for k in chave_to_cf:
-                if _norm_nome_match(k.replace(' ', '')) == chave_norm:
+                if _norm_nome_match(str(k or '').replace(' ', '')) == chave_norm:
                     chave = k; match_por_nome += 1; break
 
         # Fallback 4: código composto (ex: BFR-BBI → BFR e BBI)
