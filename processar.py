@@ -1467,13 +1467,16 @@ def processar(p1, p2):
                                 match_por_nome += 1
                                 break
 
+        # `chave` pode ter virado NaN/float num fallback anterior (ex:
+        # email_to_chave_tutor/nome_to_chave_tutor devolvendo um valor de CHAVE
+        # em branco no CONTROLE pra algum tutor com e-mail duplicado -- ver
+        # aviso "e-mail(s) duplicado(s)" acima). Normaliza pra string ANTES dos
+        # fallbacks 3/4, que fazem `.replace()`/regex direto em cima disso.
+        chave = str(chave or '')
+
         if chave not in chave_to_cf:
             # Fallback 3: normalizar a própria chave (diferenças de espaços/acentos)
-            # PATCH: `chave` pode ter virado NaN/float num fallback anterior (ex:
-            # email_to_chave_tutor/nome_to_chave_tutor com um valor de CHAVE em
-            # branco no CONTROLE pra algum tutor) -- str(x or '') cobre isso sem
-            # precisar rastrear qual fallback especificamente introduziu o não-texto.
-            chave_norm = _norm_nome_match(str(chave or '').replace(' ', ''))
+            chave_norm = _norm_nome_match(chave.replace(' ', ''))
             for k in chave_to_cf:
                 if _norm_nome_match(str(k or '').replace(' ', '')) == chave_norm:
                     chave = k; match_por_nome += 1; break
