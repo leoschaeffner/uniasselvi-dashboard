@@ -5194,7 +5194,7 @@ def gerar_html_coordenadores(dados):
 # "teatro de segurança" dos outros dois (senha hardcoded, cifra AES-256-GCM
 # no cliente). Separada de SENHA_DASHBOARD pra não expor os dois primeiros
 # portais caso essa vaze, e vice-versa.
-SENHA_GESTOR = "vincilab_gestor_2026"
+SENHA_GESTOR = "gestor2026"
 
 def gerar_html_gestor(dados):
     """
