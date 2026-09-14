@@ -114,16 +114,35 @@ body.dark .search{background:var(--surface)}
   <!-- ═══ KPIs HERDADOS (tutores/vagas/labs — mesmos dados do dashboard/coordenadores) ═══ -->
   <div class="kpi-row" id="gestor-kpis"></div>
 
-  <!-- ═══ ENGAJAMENTO (resumo executivo, DB.kpis raiz — PATCH 175) ═════════ -->
+  <!-- ═══ ENGAJAMENTO (engajamento de ALUNO — % de ofertas de prática
+       gerenciadas, DB.gerenciamento_engajamento — PATCH 177) ══════════════ -->
   <div class="card" id="engaj-card">
     <div class="card-hdr">
       <div><div class="card-title">📊 Engajamento</div><div class="card-badge" id="engaj-sub">—</div></div>
     </div>
-    <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap">
-      <div><div class="kpi-label">Enviaram Portfólio</div><div class="kpi-value" id="engaj-pct" style="font-size:22px">—</div></div>
-      <div><div class="kpi-label">Urgentes</div><div class="kpi-value" id="engaj-urgentes" style="font-size:22px;color:var(--red)">—</div></div>
-      <div><div class="kpi-label">Atrasados</div><div class="kpi-value" id="engaj-atrasados" style="font-size:22px;color:var(--yellow-d)">—</div></div>
-      <div><div class="kpi-label">Pendentes</div><div class="kpi-value" id="engaj-pendentes" style="font-size:22px">—</div></div>
+    <div class="card-body" id="engaj-empty" style="display:none">
+      <div class="empty-state">Sem dados de gerenciamento/engajamento disponíveis no momento.</div>
+    </div>
+    <div id="engaj-conteudo" style="display:none">
+      <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+        <div><div class="kpi-label">Gerenciamento Acumulado</div><div class="kpi-value" id="engaj-pct" style="font-size:26px">—</div><div style="font-size:11px;color:var(--muted);margin-top:4px" id="engaj-frac">—</div></div>
+      </div>
+      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">CURSOS QUE PRECISAM DE ATENÇÃO (MENOR % GERENCIADO)</div>
+      <div class="card-body" style="padding-top:0" id="engaj-cursos-piores"></div>
+      <div style="padding:0 18px 12px">
+        <span onclick="toggleEngajCursos()" id="engaj-toggle-btn" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--teal);text-decoration:underline">Ver todos os cursos ▾</span>
+      </div>
+      <div id="engaj-cursos-todos" style="display:none">
+        <div class="toolbar">
+          <input class="search" type="text" placeholder="Buscar curso…" oninput="filterEngajCursos(this.value)" id="engaj-search"/>
+          <span class="tbl-count" id="engaj-count">—</span>
+        </div>
+        <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
+          <th>Curso</th><th style="text-align:right">Gerenciadas / Total</th><th style="text-align:right">% Gerenciado</th>
+        </tr></thead><tbody id="engaj-tbody"></tbody></table></div>
+      </div>
+      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">POR ORDEM</div>
+      <div class="card-body" id="engaj-ordem-bars"></div>
     </div>
   </div>
 
@@ -333,17 +352,81 @@ function renderGestorKPIs(){
   document.getElementById('gestor-kpis').innerHTML = cards.join('');
 }
 
-// ── ENGAJAMENTO (resumo executivo, lê DB.kpis raiz direto — mesmos campos
-// que já alimentam o card "Visão Geral" do dashboard principal; não
-// recalcula nada) — PATCH 175
+// ── ENGAJAMENTO (engajamento de ALUNO — % de ofertas de prática
+// GERENCIADAS, lê DB.gerenciamento_engajamento: acumulado/por_curso/por_ordem.
+// É o mesmo pct_gerenciado que o dashboard completo já mostra em
+// "ger-visao"/"ger-detalhe", só resumido em 3 recortes pro Gestor.) — PATCH 177
+// pct_gerenciado já vem do backend em escala 0..100 (ex: 23.8), NÃO fração 0..1
+// — ver PATCH 176 (dados['gerenciamento_engajamento']).
+function _engajCor(pct){
+  if (pct == null) return 'var(--muted)';
+  if (pct >= 60) return 'var(--ok)';
+  if (pct >= 30) return 'var(--yellow-d)';
+  return 'var(--red)';
+}
+let _engajCursosData = [];
 function renderEngajamento(){
-  const k = DB.kpis || {};
-  document.getElementById('engaj-sub').textContent = `${fmtNum(k.total)} tutor(es) ativos`;
-  const pct = k.total ? Math.round((k.enviaram||0)/k.total*100) : 0;
-  document.getElementById('engaj-pct').textContent = `${pct}% (${fmtNum(k.enviaram||0)})`;
-  document.getElementById('engaj-urgentes').textContent = fmtNum(k.urgentes||0);
-  document.getElementById('engaj-atrasados').textContent = fmtNum(k.atrasados||0);
-  document.getElementById('engaj-pendentes').textContent = fmtNum(k.pendentes||0);
+  const ge = DB.gerenciamento_engajamento;
+  const empty = document.getElementById('engaj-empty');
+  const conteudo = document.getElementById('engaj-conteudo');
+  if (!ge || !ge.acumulado || !ge.acumulado.total_ofertas) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('engaj-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+
+  const ac = ge.acumulado;
+  const pct = ac.pct_gerenciado != null ? ac.pct_gerenciado : (ac.total_ofertas ? ac.gerenciadas / ac.total_ofertas * 100 : 0);
+  document.getElementById('engaj-sub').textContent = `${pct.toFixed(1)}% de gerenciamento`;
+  const pctEl = document.getElementById('engaj-pct');
+  pctEl.textContent = `${pct.toFixed(1)}%`;
+  pctEl.style.color = _engajCor(pct);
+  document.getElementById('engaj-frac').textContent = `${fmtNum(ac.gerenciadas)} / ${fmtNum(ac.total_ofertas)} ofertas de prática gerenciadas`;
+
+  const porCurso = ge.por_curso || []; // já vem ordenado por pct_gerenciado ASC (pior primeiro)
+  const piores = porCurso.slice(0, 6);
+  document.getElementById('engaj-cursos-piores').innerHTML = piores.length
+    ? piores.map(c => `<div class="rank-item">
+        <div class="rank-name" title="${esc(c.curso)}">${esc(c.curso)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(c.pct_gerenciado||0).toFixed(1)}%;background:${_engajCor(c.pct_gerenciado)}"></div></div>
+        <div class="rank-val">${fmtNum(c.gerenciadas)}/${fmtNum(c.total_ofertas)} (${(c.pct_gerenciado||0).toFixed(0)}%)</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por curso.</div>';
+
+  _engajCursosData = porCurso;
+  filterEngajCursos('');
+
+  const porOrdem = ge.por_ordem || [];
+  document.getElementById('engaj-ordem-bars').innerHTML = porOrdem.length
+    ? porOrdem.map(o => `<div class="rank-item">
+        <div class="rank-name">${esc(o.ordem)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(o.pct_gerenciado||0).toFixed(1)}%;background:${_engajCor(o.pct_gerenciado)}"></div></div>
+        <div class="rank-val">${fmtNum(o.gerenciadas)}/${fmtNum(o.total_ofertas)} (${(o.pct_gerenciado||0).toFixed(0)}%)</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por ordem.</div>';
+}
+function toggleEngajCursos(){
+  const el = document.getElementById('engaj-cursos-todos');
+  const btn = document.getElementById('engaj-toggle-btn');
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : '';
+  btn.textContent = showing ? 'Ver todos os cursos ▾' : 'Ocultar lista completa ▴';
+}
+function filterEngajCursos(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _engajCursosData;
+  if (q) d = d.filter(c => (c.curso||'').toLowerCase().includes(q));
+  document.getElementById('engaj-count').textContent = `${d.length} de ${_engajCursosData.length}`;
+  document.getElementById('engaj-tbody').innerHTML = d.length
+    ? d.map(c => `<tr>
+        <td>${esc(c.curso)||'—'}</td>
+        <td style="text-align:right">${fmtNum(c.gerenciadas)} / ${fmtNum(c.total_ofertas)}</td>
+        <td style="text-align:right;font-weight:700;color:${_engajCor(c.pct_gerenciado)}">${(c.pct_gerenciado||0).toFixed(1)}%</td>
+      </tr>`).join('')
+    : '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
 }
 
 // ── TURNOVER DE TUTORES (DB.turnover, PATCH 174) ─────────────────────────

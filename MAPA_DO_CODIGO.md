@@ -10,6 +10,19 @@ portfólio), pedido errado; o certo é engajamento de ALUNO, % de ofertas de
 prática GERENCIADAS, em 3 visões: `acumulado`, `por_curso`, `por_ordem`.
 Backend pronto; frontend do card ainda não foi atualizado — fica pro
 `frontend-vinci`).
++ **PATCH 177** (frontend: `renderEngajamento` em `template_gestor.html`
+reescrito pra consumir `DB.gerenciamento_engajamento` em vez de `DB.kpis`.
+Número grande = `acumulado.pct_gerenciado` (23,8% / 7.667/32.244); "cursos que
+precisam de atenção" = top-6 piores de `por_curso` (já vem ordenado ASC) em
+`.rank-item`/`.rank-bar`, com seção "ver todos os cursos" recolhível (tabela
+buscável, mesmo padrão `.toolbar`/`.tbl-wrap` do card Laboratórios) pros
+demais ~21; "por ordem" = 5 `.rank-item` diretos (`por_ordem`). Cor por faixa
+(`_engajCor`): <30% vermelho, 30–60% âmbar, ≥60% verde — **atenção:**
+`pct_gerenciado` vem do backend já em escala 0–100 (ex: `23.8`), não fração
+0–1, ao contrário do que o nome sugere; não multiplicar por 100 de novo no
+JS. Só mexe no `template_gestor.html` — Engajamento não tem card equivalente
+no dashboard/coordenadores (ver §8/§9). Testado via jsdom decifrando
+`saida/gestor.html` com `SENHA_GESTOR`.)
 
 > Primeiro arquivo a ler antes de mexer no VinciLab. Responde "onde fica X" e
 > "por que Y foi feito assim" sem precisar carregar `processar.py` (~4.600 linhas)
@@ -85,7 +98,7 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 | `processar.py` | **Todo o ETL + geração de saída.** Ponto de entrada `__main__` (~linha 3986). |
 | `template_dashboard.html` | Template do portal principal (VinciLab). Placeholder `'DATA_GOES_HERE'` e `TIMESTAMP_GOES_HERE`. |
 | `template_coordenadores.html` | Template do portal de coordenadores (versão travada por curso, simplificada). Placeholder `'DATA_GOES_HERE'`. |
-| `template_gestor.html` | **PATCH 168** (+ **PATCH 173**, **PATCH 175**). Template do terceiro portal, "Painel do Gestor" — visão executiva enxuta (sem filtro de curso, sem tabela operacional completa): KPIs herdados (tutores ativos, alunos sem tutor, vagas críticas, polos difíceis, laboratórios com pendência) + card "Engajamento" (PATCH 175, ainda lê `DB.kpis` raiz — % enviaram, urgentes, atrasados, pendentes; **PATCH 176 trocou o dado certo pro card**: `DB.gerenciamento_engajamento` já existe pronto, com engajamento de ALUNO — % de ofertas de prática gerenciadas, acumulado/por curso/por ordem — mas o `renderEngajamento` do card ainda não foi atualizado pra consumir essa fonte nova, pendência do `frontend-vinci`) + card "Turnover de Tutores" (PATCH 175, consome `DB.turnover` do PATCH 174 — 3 blocos semana/mês/semestre com contratados/demitidos/saldo + top-3 cursos com mais movimento) + card "Ocorrências por Multiplicador" + card "Laboratórios — Pendências" + card "Vistoria de Laboratório" (PATCH 173, consome `DB.laboratorios.vistorias`, overlay do PATCH 172). Senha própria (`SENHA_GESTOR`, diferente de `SENHA_DASHBOARD`), sem link cruzado nos outros dois portais (acesso só por URL direta `/gestor.html`). Placeholder `'DATA_GOES_HERE'` (sem `TIMESTAMP_GOES_HERE` — lê `DB.gerado_em` no cliente, igual ao `template_coordenadores.html`). |
+| `template_gestor.html` | **PATCH 168** (+ **PATCH 173**, **PATCH 175**, **PATCH 177**). Template do terceiro portal, "Painel do Gestor" — visão executiva enxuta (sem filtro de curso, sem tabela operacional completa): KPIs herdados (tutores ativos, alunos sem tutor, vagas críticas, polos difíceis, laboratórios com pendência) + card "Engajamento" (**PATCH 177**: `renderEngajamento` consome `DB.gerenciamento_engajamento` — engajamento de ALUNO, % de ofertas de prática gerenciadas, em 3 recortes: acumulado (número grande), por curso (top-6 piores + tabela buscável recolhível pro resto), por ordem (5 barras); substitui a versão do PATCH 175 que lia `DB.kpis` raiz — envio de portfólio de TUTOR, dado errado) + card "Turnover de Tutores" (PATCH 175, consome `DB.turnover` do PATCH 174 — 3 blocos semana/mês/semestre com contratados/demitidos/saldo + top-3 cursos com mais movimento) + card "Ocorrências por Multiplicador" + card "Laboratórios — Pendências" + card "Vistoria de Laboratório" (PATCH 173, consome `DB.laboratorios.vistorias`, overlay do PATCH 172). Senha própria (`SENHA_GESTOR`, diferente de `SENHA_DASHBOARD`), sem link cruzado nos outros dois portais (acesso só por URL direta `/gestor.html`). Placeholder `'DATA_GOES_HERE'` (sem `TIMESTAMP_GOES_HERE` — lê `DB.gerado_em` no cliente, igual ao `template_coordenadores.html`). |
 | `portfolio_form.html` | Formulário público de envio de portfólio; autopreenche via `lookup.json` e redireciona pra uma lista do SharePoint (não passa pelo `processar.py`). |
 | `index.html` / `coordenadores.html` / `gestor.html` / `lookup.json` | **Saída gerada.** Desde o PATCH 160 **NÃO são mais commitados** — o workflow monta `_site/` e publica via artifact do GitHub Pages. Estão no `.gitignore`. NÃO editar à mão. |
 | `config_semestre.json` | Config editável de prazos/períodos das Ordens por semestre. Única coisa que se edita pra virar o semestre. |
