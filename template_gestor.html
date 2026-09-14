@@ -114,6 +114,34 @@ body.dark .search{background:var(--surface)}
   <!-- ═══ KPIs HERDADOS (tutores/vagas/labs — mesmos dados do dashboard/coordenadores) ═══ -->
   <div class="kpi-row" id="gestor-kpis"></div>
 
+  <!-- ═══ ENGAJAMENTO (resumo executivo, DB.kpis raiz — PATCH 175) ═════════ -->
+  <div class="card" id="engaj-card">
+    <div class="card-hdr">
+      <div><div class="card-title">📊 Engajamento</div><div class="card-badge" id="engaj-sub">—</div></div>
+    </div>
+    <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap">
+      <div><div class="kpi-label">Enviaram Portfólio</div><div class="kpi-value" id="engaj-pct" style="font-size:22px">—</div></div>
+      <div><div class="kpi-label">Urgentes</div><div class="kpi-value" id="engaj-urgentes" style="font-size:22px;color:var(--red)">—</div></div>
+      <div><div class="kpi-label">Atrasados</div><div class="kpi-value" id="engaj-atrasados" style="font-size:22px;color:var(--yellow-d)">—</div></div>
+      <div><div class="kpi-label">Pendentes</div><div class="kpi-value" id="engaj-pendentes" style="font-size:22px">—</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TURNOVER DE TUTORES (DB.turnover, PATCH 174/175) ════════════════ -->
+  <div class="card" id="turnover-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🔄 Turnover de Tutores</div><div class="card-badge" id="turnover-sub">—</div></div>
+    </div>
+    <div class="card-body" id="turnover-empty" style="display:none">
+      <div class="empty-state">Sem dados de turnover disponíveis no momento.</div>
+    </div>
+    <div id="turnover-conteudo" style="display:none">
+      <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px" id="turnover-blocos"></div>
+      <div style="padding:0 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">CURSOS COM MAIS MOVIMENTO (SEMESTRE)</div>
+      <div class="card-body" id="turnover-cursos"></div>
+    </div>
+  </div>
+
   <!-- ═══ OCORRÊNCIAS POR MULTIPLICADOR ═══════════════════════════════════ -->
   <div class="card" id="ocor-card">
     <div class="card-hdr">
@@ -305,6 +333,74 @@ function renderGestorKPIs(){
   document.getElementById('gestor-kpis').innerHTML = cards.join('');
 }
 
+// ── ENGAJAMENTO (resumo executivo, lê DB.kpis raiz direto — mesmos campos
+// que já alimentam o card "Visão Geral" do dashboard principal; não
+// recalcula nada) — PATCH 175
+function renderEngajamento(){
+  const k = DB.kpis || {};
+  document.getElementById('engaj-sub').textContent = `${fmtNum(k.total)} tutor(es) ativos`;
+  const pct = k.total ? Math.round((k.enviaram||0)/k.total*100) : 0;
+  document.getElementById('engaj-pct').textContent = `${pct}% (${fmtNum(k.enviaram||0)})`;
+  document.getElementById('engaj-urgentes').textContent = fmtNum(k.urgentes||0);
+  document.getElementById('engaj-atrasados').textContent = fmtNum(k.atrasados||0);
+  document.getElementById('engaj-pendentes').textContent = fmtNum(k.pendentes||0);
+}
+
+// ── TURNOVER DE TUTORES (DB.turnover, PATCH 174) ─────────────────────────
+// Sempre presente (fonte não-opcional) — mas trata ausência defensivamente
+// mesmo assim, mesmo padrão dos outros cards.
+function _turnoverSaldoHtml(c, d){
+  const saldo = c - d;
+  const cor = saldo > 0 ? 'var(--ok)' : (saldo < 0 ? 'var(--red)' : 'var(--muted)');
+  const seta = saldo > 0 ? '▲' : (saldo < 0 ? '▼' : '—');
+  const num = saldo > 0 ? `+${saldo}` : `${saldo}`;
+  return `<span style="color:${cor};font-weight:700">${seta} ${num}</span>`;
+}
+function renderTurnover(){
+  const tv = DB.turnover;
+  const empty = document.getElementById('turnover-empty');
+  const conteudo = document.getElementById('turnover-conteudo');
+  if (!tv || !tv.semana) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('turnover-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const semestre = tv.semestre || {};
+  document.getElementById('turnover-sub').textContent =
+    `${fmtNum(semestre.contratados||0)} contratados / ${fmtNum(semestre.demitidos||0)} demitidos no semestre`;
+  const labels = {semana: 'Semana', mes: 'Mês', semestre: 'Semestre'};
+  document.getElementById('turnover-blocos').innerHTML = ['semana','mes','semestre'].map(chave => {
+    const p = tv[chave] || {};
+    const c = p.contratados||0, d = p.demitidos||0;
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:14px">
+      <div class="kpi-label">${labels[chave]}</div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:8px">${esc(p.inicio_periodo)||'—'} – ${esc(p.fim_periodo)||'—'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <div><div style="font-size:20px;font-weight:800;color:var(--ok)">✓ ${fmtNum(c)}</div><div style="font-size:10px;color:var(--muted)">contratados</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--red)">✗ ${fmtNum(d)}</div><div style="font-size:10px;color:var(--muted)">demitidos</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:13px">Saldo: ${_turnoverSaldoHtml(c, d)}</div>
+    </div>`;
+  }).join('');
+
+  const porCurso = (tv.por_curso || []).slice().sort((a,b) => {
+    const mA = (a.contratados_semestre||0)+(a.demitidos_semestre||0);
+    const mB = (b.contratados_semestre||0)+(b.demitidos_semestre||0);
+    return mB - mA;
+  });
+  const top = porCurso.filter(c => (c.contratados_semestre||0)+(c.demitidos_semestre||0) > 0).slice(0,3);
+  document.getElementById('turnover-cursos').innerHTML = top.length
+    ? top.map(c => `<div class="rank-item">
+        <div class="rank-name" title="${esc(c.curso)}">${esc(c.curso)}</div>
+        <div class="rank-val" style="color:var(--ok)">✓ ${fmtNum(c.contratados_semestre||0)}</div>
+        <div class="rank-val" style="color:var(--red)">✗ ${fmtNum(c.demitidos_semestre||0)}</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem movimento por curso no semestre.</div>';
+}
+
 // ── OCORRÊNCIAS POR MULTIPLICADOR ────────────────────────────────────────
 function _gravCor(g){
   if (g === 'Alta') return 'var(--red)';
@@ -484,6 +580,8 @@ function _iniciarGestor(){
     const lgts = document.getElementById('lgpd-ts'); if (lgts) lgts.textContent = ts;
   }catch(e){}
   renderGestorKPIs();
+  renderEngajamento();
+  renderTurnover();
   renderOcorrencias();
   renderLaboratorios();
   renderVistoria();
