@@ -114,35 +114,66 @@ body.dark .search{background:var(--surface)}
   <!-- ═══ KPIs HERDADOS (tutores/vagas/labs — mesmos dados do dashboard/coordenadores) ═══ -->
   <div class="kpi-row" id="gestor-kpis"></div>
 
-  <!-- ═══ ENGAJAMENTO (engajamento de ALUNO — % de ofertas de prática
-       gerenciadas, DB.gerenciamento_engajamento — PATCH 177) ══════════════ -->
+  <!-- ═══ ENGAJAMENTO DE ALUNOS (Taxa de Preenchimento — mesma métrica e
+       fórmula do card "Horários e Engajamento" do template_dashboard.html,
+       #ae-kpis: alunos AGENDADOS / alunos MATRICULADOS, só dentro das ofertas
+       que já têm agenda. Simplificado de propósito — sem quebra por
+       curso/ordem, é só o número grande. PATCH 178) ═══════════════════════ -->
   <div class="card" id="engaj-card">
     <div class="card-hdr">
-      <div><div class="card-title">📊 Engajamento</div><div class="card-badge" id="engaj-sub">—</div></div>
+      <div><div class="card-title">📊 Engajamento de Alunos</div><div class="card-badge" id="engaj-sub">—</div></div>
     </div>
     <div class="card-body" id="engaj-empty" style="display:none">
-      <div class="empty-state">Sem dados de gerenciamento/engajamento disponíveis no momento.</div>
+      <div class="empty-state">Sem dados de agenda disponíveis no momento.</div>
     </div>
-    <div id="engaj-conteudo" style="display:none">
+    <div class="card-body" id="engaj-conteudo" style="display:none">
+      <div>
+        <div class="kpi-label">Taxa de Preenchimento <span title="Dentro das ofertas que já têm agenda registrada: % dos alunos matriculados que conseguiram um horário individual agendado. Mesma métrica do dashboard completo (Gerenciamento → Horários e Engajamento).">ⓘ</span></div>
+        <div class="kpi-value" id="engaj-pct" style="font-size:34px">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="engaj-frac">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ GERENCIAMENTO POR TUTOR (% tutores que gerenciaram ao menos 1
+       oferta, % em treinamento, % com lab em obras — mesma lógica de
+       renderDetPizza/renderDetTreinamento/renderDetObras do dashboard
+       completo, "Gerenciamento → Detalhe de Ofertas": os 3 indicadores usam
+       SEMPRE o mesmo denominador (tutores distintos do recorte), pra não
+       repetir o bug do PATCH 152 (64 vs 57). 3 recortes: acumulado, por
+       curso (top piores + tabela buscável, mesmo padrão do card antigo de
+       Engajamento) e por ordem. PATCH 178 — substitui o card antigo que lia
+       DB.gerenciamento_engajamento (engajamento de OFERTA, conceito
+       diferente — ver #engaj-card acima). ═════════════════════════════════ -->
+  <div class="card" id="gertutor-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🗂️ Gerenciamento (por Tutor)</div><div class="card-badge" id="gertutor-sub">—</div></div>
+    </div>
+    <div class="card-body" id="gertutor-empty" style="display:none">
+      <div class="empty-state">Sem dados de gerenciamento disponíveis no momento.</div>
+    </div>
+    <div id="gertutor-conteudo" style="display:none">
       <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
-        <div><div class="kpi-label">Gerenciamento Acumulado</div><div class="kpi-value" id="engaj-pct" style="font-size:26px">—</div><div style="font-size:11px;color:var(--muted);margin-top:4px" id="engaj-frac">—</div></div>
+        <div><div class="kpi-label">% Tutores Gerenciaram</div><div class="kpi-value" id="gertutor-pct-ger" style="font-size:24px">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px" id="gertutor-frac-ger">—</div></div>
+        <div><div class="kpi-label">% Em Treinamento</div><div class="kpi-value" id="gertutor-pct-treino" style="font-size:24px">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px" id="gertutor-frac-treino">—</div></div>
+        <div><div class="kpi-label">% Lab em Obras</div><div class="kpi-value" id="gertutor-pct-obras" style="font-size:24px">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px" id="gertutor-frac-obras">—</div></div>
       </div>
-      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">CURSOS QUE PRECISAM DE ATENÇÃO (MENOR % GERENCIADO)</div>
-      <div class="card-body" style="padding-top:0" id="engaj-cursos-piores"></div>
+      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">CURSOS QUE PRECISAM DE ATENÇÃO (MENOR % GERENCIARAM)</div>
+      <div class="card-body" style="padding-top:0" id="gertutor-cursos-piores"></div>
       <div style="padding:0 18px 12px">
-        <span onclick="toggleEngajCursos()" id="engaj-toggle-btn" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--teal);text-decoration:underline">Ver todos os cursos ▾</span>
+        <span onclick="toggleGerTutorCursos()" id="gertutor-toggle-btn" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--teal);text-decoration:underline">Ver todos os cursos ▾</span>
       </div>
-      <div id="engaj-cursos-todos" style="display:none">
+      <div id="gertutor-cursos-todos" style="display:none">
         <div class="toolbar">
-          <input class="search" type="text" placeholder="Buscar curso…" oninput="filterEngajCursos(this.value)" id="engaj-search"/>
-          <span class="tbl-count" id="engaj-count">—</span>
+          <input class="search" type="text" placeholder="Buscar curso…" oninput="filterGerTutorCursos(this.value)" id="gertutor-search"/>
+          <span class="tbl-count" id="gertutor-count">—</span>
         </div>
         <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
-          <th>Curso</th><th style="text-align:right">Gerenciadas / Total</th><th style="text-align:right">% Gerenciado</th>
-        </tr></thead><tbody id="engaj-tbody"></tbody></table></div>
+          <th>Curso</th><th style="text-align:right">Tutores</th><th style="text-align:right">% Gerenciaram</th><th style="text-align:right">% Em Treino</th><th style="text-align:right">% Em Obras</th>
+        </tr></thead><tbody id="gertutor-tbody"></tbody></table></div>
       </div>
       <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">POR ORDEM</div>
-      <div class="card-body" id="engaj-ordem-bars"></div>
+      <div class="card-body" id="gertutor-ordem-rows"></div>
     </div>
   </div>
 
@@ -352,24 +383,34 @@ function renderGestorKPIs(){
   document.getElementById('gestor-kpis').innerHTML = cards.join('');
 }
 
-// ── ENGAJAMENTO (engajamento de ALUNO — % de ofertas de prática
-// GERENCIADAS, lê DB.gerenciamento_engajamento: acumulado/por_curso/por_ordem.
-// É o mesmo pct_gerenciado que o dashboard completo já mostra em
-// "ger-visao"/"ger-detalhe", só resumido em 3 recortes pro Gestor.) — PATCH 177
-// pct_gerenciado já vem do backend em escala 0..100 (ex: 23.8), NÃO fração 0..1
-// — ver PATCH 176 (dados['gerenciamento_engajamento']).
-function _engajCor(pct){
-  if (pct == null) return 'var(--muted)';
-  if (pct >= 60) return 'var(--ok)';
-  if (pct >= 30) return 'var(--yellow-d)';
-  return 'var(--red)';
+// ── ENGAJAMENTO DE ALUNOS (Taxa de Preenchimento) ────────────────────────
+// PATCH 178: mesma métrica/fórmula do template_dashboard.html (#ae-kpis, fn
+// que monta "Taxa de Preenchimento" dentro de "Horários e Engajamento"):
+// alunos AGENDADOS / alunos MATRICULADOS, só dentro das ofertas que JÁ têm
+// agenda registrada (o._getOfertasAgenda filtra por tem_agenda). Reaproveita
+// literalmente a função de dedup do dashboard (_dedupAlunos) — sem ela o
+// número fica inflado, porque cada prática de um mesmo polo+categoria repete
+// o valor de alunos_mat/alunos_agend da origem (ver comentário completo no
+// dashboard). Usa DB.ger_ofertas (raiz) — no dashboard isso é "GER_DB", que
+// aponta pro semestre ATIVO por padrão (sem seletor de semestre no Gestor,
+// não faz sentido oferecer "Ambos" aqui); DB.ger_ofertas já É o semestre
+// ativo (dados.update(ger_dados) no processar.py). Validado: bate 1:1 com o
+// que aparece no dashboard completo (40,1% / 2.454 de 6.125, rodada de
+// referência 2026-09-14).
+function _dedupAlunosGestor(ofertas, campo){
+  const porGrupo = {};
+  ofertas.forEach(o => {
+    const k = (o._semOrigem||'') + '|||' + (o.polo||'') + '|||' + (o.categoria||'');
+    const v = o[campo] || 0;
+    if (!(k in porGrupo) || v > porGrupo[k]) porGrupo[k] = v;
+  });
+  return Object.values(porGrupo).reduce((s, v) => s + v, 0);
 }
-let _engajCursosData = [];
-function renderEngajamento(){
-  const ge = DB.gerenciamento_engajamento;
+function renderEngajamentoAlunos(){
+  const ofertas = (DB.ger_ofertas || []).filter(o => o.tem_agenda);
   const empty = document.getElementById('engaj-empty');
   const conteudo = document.getElementById('engaj-conteudo');
-  if (!ge || !ge.acumulado || !ge.acumulado.total_ofertas) {
+  if (!ofertas.length) {
     empty.style.display = '';
     conteudo.style.display = 'none';
     document.getElementById('engaj-sub').textContent = 'Sem dados';
@@ -377,56 +418,238 @@ function renderEngajamento(){
   }
   empty.style.display = 'none';
   conteudo.style.display = '';
+  const totMat = _dedupAlunosGestor(ofertas, 'alunos_mat');
+  const totAgend = _dedupAlunosGestor(ofertas, 'alunos_agend');
+  const pct = totMat ? Math.round(totAgend / totMat * 1000) / 10 : 0;
+  document.getElementById('engaj-sub').textContent = `${pct}% de preenchimento`;
+  document.getElementById('engaj-pct').textContent = `${pct}%`;
+  document.getElementById('engaj-frac').textContent =
+    `${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados — dentro das ofertas com agenda`;
+}
 
-  const ac = ge.acumulado;
-  const pct = ac.pct_gerenciado != null ? ac.pct_gerenciado : (ac.total_ofertas ? ac.gerenciadas / ac.total_ofertas * 100 : 0);
-  document.getElementById('engaj-sub').textContent = `${pct.toFixed(1)}% de gerenciamento`;
-  const pctEl = document.getElementById('engaj-pct');
-  pctEl.textContent = `${pct.toFixed(1)}%`;
-  pctEl.style.color = _engajCor(pct);
-  document.getElementById('engaj-frac').textContent = `${fmtNum(ac.gerenciadas)} / ${fmtNum(ac.total_ofertas)} ofertas de prática gerenciadas`;
+// ── GERENCIAMENTO POR TUTOR (% Tutores Gerenciaram / % Em Treinamento /
+// % Lab em Obras) ─────────────────────────────────────────────────────────
+// PATCH 178: substitui o card antigo (PATCH 175/177) que media engajamento
+// de OFERTA (DB.gerenciamento_engajamento) — conceito diferente, mantido
+// só pro card "Engajamento de Alunos" acima não usar. Aqui replica a lógica
+// tutor-a-tutor de renderDetPizza/renderDetTreinamento/renderDetObras do
+// dashboard completo ("Gerenciamento → Detalhe de Ofertas"):
+//  - % Tutores Gerenciaram: de todos os tutores distintos (nome normalizado)
+//    do recorte, quantos têm ao menos 1 oferta com gerenciado=true nesse
+//    recorte (renderDetPizza).
+//  - % Em Treinamento: _estaEmTreinamentoGestor — tutor com DB.tutores[].inicio
+//    há ≤60 dias E que ainda não gerenciou nada no recorte (mesma regra de
+//    _estaEmTreinamento do dashboard, PATCH 134/137).
+//  - % Lab em Obras: tutor com DB.tutores[].lab_pendencia truthy no recorte
+//    (_labPendenciaDoTutorGestor, mesma regra de _labPendenciaDoTutor).
+// Os 3 indicadores usam SEMPRE o MESMO denominador (tutores distintos do
+// recorte) — é crítico, já causou bug antes no dashboard (PATCH 152, "os 3
+// indicadores não batendo, 64 vs 57") quando um deles usava um filtro
+// diferente dos outros dois. Não repete esse erro aqui.
+// 3 recortes:
+//  - acumulado: TODOS os tutores de TODOS os semestres/cursos (soma
+//    DB.gerenciamento_por_semestre, igual ao 'acumulado' do PATCH 176) +
+//    tutores cadastrados que ainda não têm NENHUMA oferta no GIOCONDA (fica
+//    de fora do denominador senão — mesmo espírito do PATCH 32/33 do
+//    dashboard, "_semOfertaInjetadosTodos", mas aqui simplificado: casa pelo
+//    código de curso do cadastro (DB.tutores[].cursos), sem a etapa extra de
+//    match difuso por polo/nome que o dashboard faz — não é necessária aqui
+//    porque não há uma tabela nominal pra duplicar, só o agregado).
+//  - por_curso: mesmo agrupamento/rótulo de curso (~27 cursos) usado em
+//    DB.gerenciamento_engajamento.por_curso (CURSOS_NOMES, código curto →
+//    nome) — mesma taxonomia já estabelecida no PATCH 176/177, não inventa
+//    nova. Mesmo tratamento visual do card antigo: top piores em destaque +
+//    tabela buscável recolhível pro resto.
+//  - por_ordem: só ofertas COM ordem (mesmo critério do backend
+//    _por_ordem_eng) — cadastro-only não entra aqui (não tem ordem).
+var _CURSOS_NOMES_GESTOR = {
+  'EMF-ISN':'Enfermagem e Instrumentação Cirúrgica', 'EMF-ISN2':'Enfermagem e Instrumentação Cirúrgica',
+  'BFR':'Farmácia', 'BBI':'Biomedicina', 'BFI':'Fisioterapia', 'BTO':'T. Ocupacional',
+  'COS-TIP':'Estética e Cosmética', 'NTR':'Nutrição', 'AGM':'Agronomia',
+  'BAU':'Arquitetura e Urbanismo', 'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI':'Engenharias e Licenciaturas',
+  'BIOMEDICINA':'Biomedicina', 'FARMÁCIA':'Farmácia', 'FISIOTERAPIA':'Fisioterapia',
+  'TERAPIA OCUPACIONAL':'T. Ocupacional', 'NUTRIÇÃO':'Nutrição', 'AGRONOMIA':'Agronomia',
+  'ARQUITETURA E URBANISMO':'Arquitetura e Urbanismo',
+};
+function _cursoLabelGestor(cod){
+  const primeiro = String(cod||'').split('|')[0].trim();
+  return _CURSOS_NOMES_GESTOR[primeiro] || primeiro || 'Sem curso';
+}
+function _normTutorKeyGestor(nome){
+  if (!nome) return '__SEM_TUTOR__';
+  let s = String(nome).replace(/\s*\(\d+\)\s*$/, '').trim();
+  s = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return s.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+let _mapaInicioTutorGestor = null, _mapaLabPendenciaGestor = null;
+function _diasDesdeAdmissaoGestor(nomeTutor){
+  if (!nomeTutor) return null;
+  if (!_mapaInicioTutorGestor) {
+    _mapaInicioTutorGestor = {};
+    (DB.tutores||[]).forEach(t => { if (t.inicio) _mapaInicioTutorGestor[_normTutorKeyGestor(t.n)] = t.inicio; });
+  }
+  const inicioStr = _mapaInicioTutorGestor[_normTutorKeyGestor(nomeTutor)];
+  if (!inicioStr) return null;
+  const inicio = new Date(inicioStr + 'T00:00:00');
+  if (isNaN(inicio.getTime())) return null;
+  const dias = Math.round((new Date() - inicio) / (1000*60*60*24));
+  return dias >= 0 ? dias : null;
+}
+function _estaEmTreinamentoGestor(nomeTutor, jaGerenciou){
+  if (jaGerenciou) return false;
+  const dias = _diasDesdeAdmissaoGestor(nomeTutor);
+  return dias !== null && dias <= 60;
+}
+function _labPendenciaDoTutorGestor(nomeTutor){
+  if (!nomeTutor) return null;
+  if (!_mapaLabPendenciaGestor) {
+    _mapaLabPendenciaGestor = {};
+    (DB.tutores||[]).forEach(t => { if (t.lab_pendencia) _mapaLabPendenciaGestor[_normTutorKeyGestor(t.n)] = t.lab_pendencia; });
+  }
+  return _mapaLabPendenciaGestor[_normTutorKeyGestor(nomeTutor)] || null;
+}
+function _todasOfertasGestor(){
+  const por = DB.gerenciamento_por_semestre || {};
+  const semKeys = Object.keys(por);
+  if (!semKeys.length) return DB.ger_ofertas || [];
+  let out = [];
+  semKeys.forEach(sem => { out = out.concat((por[sem]||{}).ger_ofertas || []); });
+  return out;
+}
+function _gerTutorCalc(mapa){
+  const nomes = Object.values(mapa);
+  const total = nomes.length;
+  const ger = nomes.filter(x => x.totalGer > 0).length;
+  const treino = nomes.filter(x => _estaEmTreinamentoGestor(x.nome, x.totalGer > 0)).length;
+  const obras = nomes.filter(x => !!_labPendenciaDoTutorGestor(x.nome)).length;
+  const r1 = n => Math.round(n*10)/10;
+  return {
+    total, gerenciaram: ger, em_treinamento: treino, em_obras: obras,
+    pct_gerenciaram: total ? r1(ger/total*100) : 0,
+    pct_treinamento: total ? r1(treino/total*100) : 0,
+    pct_obras: total ? r1(obras/total*100) : 0,
+  };
+}
+function _gerTutorStats(){
+  const ofertas = _todasOfertasGestor();
+  const geral = {}, porCurso = {}, porOrdem = {};
+  ofertas.forEach(o => {
+    if (!o.tutor) return;
+    const key = _normTutorKeyGestor(o.tutor);
+    const cursoLabel = _cursoLabelGestor(o.curso);
+    const ger = !!o.gerenciado;
 
-  const porCurso = ge.por_curso || []; // já vem ordenado por pct_gerenciado ASC (pior primeiro)
+    if (!geral[key]) geral[key] = {nome:o.tutor, totalGer:0};
+    if (ger) geral[key].totalGer++;
+
+    const pc = porCurso[cursoLabel] || (porCurso[cursoLabel]={});
+    if (!pc[key]) pc[key] = {nome:o.tutor, totalGer:0};
+    if (ger) pc[key].totalGer++;
+
+    if (o.ordem) {
+      const po = porOrdem[o.ordem] || (porOrdem[o.ordem]={});
+      if (!po[key]) po[key] = {nome:o.tutor, totalGer:0};
+      if (ger) po[key].totalGer++;
+    }
+  });
+  // Tutores cadastrados sem NENHUMA oferta no GIOCONDA ainda (ex: recém-
+  // admitidos) — entram no acumulado/por_curso (pelo código de curso do
+  // cadastro), não em por_ordem (cadastro não tem ordem).
+  (DB.tutores||[]).forEach(t => {
+    if (t._anonimo || t.c === 'Aviso de Portfólio' || !t.n || t.n === 'Tutor desligado') return;
+    const key = _normTutorKeyGestor(t.n);
+    if (geral[key]) return;
+    geral[key] = {nome:t.n, totalGer:0};
+    const cursoLabel = _cursoLabelGestor(t.cursos);
+    const pc = porCurso[cursoLabel] || (porCurso[cursoLabel]={});
+    if (!pc[key]) pc[key] = {nome:t.n, totalGer:0};
+  });
+
+  const acumulado = _gerTutorCalc(geral);
+  const porCursoArr = Object.keys(porCurso).map(c => {
+    const s = _gerTutorCalc(porCurso[c]); s.curso = c; return s;
+  }).sort((a,b) => a.pct_gerenciaram - b.pct_gerenciaram); // pior primeiro
+  const ordemOrder = {'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
+  const porOrdemArr = Object.keys(porOrdem).map(o => {
+    const s = _gerTutorCalc(porOrdem[o]); s.ordem = o; return s;
+  }).sort((a,b) => (ordemOrder[a.ordem]||9) - (ordemOrder[b.ordem]||9));
+  return {acumulado, por_curso: porCursoArr, por_ordem: porOrdemArr};
+}
+function _gerTutorCor(pct){
+  if (pct == null) return 'var(--muted)';
+  if (pct >= 60) return 'var(--ok)';
+  if (pct >= 30) return 'var(--yellow-d)';
+  return 'var(--red)';
+}
+let _gerTutorCursosData = [];
+function renderGerenciamentoTutor(){
+  const stats = _gerTutorStats();
+  const empty = document.getElementById('gertutor-empty');
+  const conteudo = document.getElementById('gertutor-conteudo');
+  if (!stats.acumulado.total) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('gertutor-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const ac = stats.acumulado;
+  document.getElementById('gertutor-sub').textContent =
+    `${ac.pct_gerenciaram}% dos tutores gerenciaram · ${fmtNum(ac.total)} tutor${ac.total!==1?'es':''}`;
+  document.getElementById('gertutor-pct-ger').textContent = `${ac.pct_gerenciaram}%`;
+  document.getElementById('gertutor-pct-ger').style.color = _gerTutorCor(ac.pct_gerenciaram);
+  document.getElementById('gertutor-frac-ger').textContent = `${fmtNum(ac.gerenciaram)} / ${fmtNum(ac.total)} tutores`;
+  document.getElementById('gertutor-pct-treino').textContent = `${ac.pct_treinamento}%`;
+  document.getElementById('gertutor-pct-treino').style.color = '#f5b400';
+  document.getElementById('gertutor-frac-treino').textContent = `${fmtNum(ac.em_treinamento)} / ${fmtNum(ac.total)} tutores`;
+  document.getElementById('gertutor-pct-obras').textContent = `${ac.pct_obras}%`;
+  document.getElementById('gertutor-pct-obras').style.color = '#b45309';
+  document.getElementById('gertutor-frac-obras').textContent = `${fmtNum(ac.em_obras)} / ${fmtNum(ac.total)} tutores`;
+
+  const porCurso = stats.por_curso; // já vem ordenado por pct_gerenciaram ASC (pior primeiro)
   const piores = porCurso.slice(0, 6);
-  document.getElementById('engaj-cursos-piores').innerHTML = piores.length
+  document.getElementById('gertutor-cursos-piores').innerHTML = piores.length
     ? piores.map(c => `<div class="rank-item">
         <div class="rank-name" title="${esc(c.curso)}">${esc(c.curso)}</div>
-        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(c.pct_gerenciado||0).toFixed(1)}%;background:${_engajCor(c.pct_gerenciado)}"></div></div>
-        <div class="rank-val">${fmtNum(c.gerenciadas)}/${fmtNum(c.total_ofertas)} (${(c.pct_gerenciado||0).toFixed(0)}%)</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${c.pct_gerenciaram.toFixed(1)}%;background:${_gerTutorCor(c.pct_gerenciaram)}"></div></div>
+        <div class="rank-val">${c.pct_gerenciaram.toFixed(0)}% ger. · ${c.pct_treinamento.toFixed(0)}% treino · ${c.pct_obras.toFixed(0)}% obras</div>
       </div>`).join('')
     : '<div class="empty-state">Sem dados por curso.</div>';
 
-  _engajCursosData = porCurso;
-  filterEngajCursos('');
+  _gerTutorCursosData = porCurso;
+  filterGerTutorCursos('');
 
-  const porOrdem = ge.por_ordem || [];
-  document.getElementById('engaj-ordem-bars').innerHTML = porOrdem.length
+  const porOrdem = stats.por_ordem;
+  document.getElementById('gertutor-ordem-rows').innerHTML = porOrdem.length
     ? porOrdem.map(o => `<div class="rank-item">
         <div class="rank-name">${esc(o.ordem)}</div>
-        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(o.pct_gerenciado||0).toFixed(1)}%;background:${_engajCor(o.pct_gerenciado)}"></div></div>
-        <div class="rank-val">${fmtNum(o.gerenciadas)}/${fmtNum(o.total_ofertas)} (${(o.pct_gerenciado||0).toFixed(0)}%)</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${o.pct_gerenciaram.toFixed(1)}%;background:${_gerTutorCor(o.pct_gerenciaram)}"></div></div>
+        <div class="rank-val">${o.pct_gerenciaram.toFixed(0)}% ger. (${fmtNum(o.gerenciaram)}/${fmtNum(o.total)}) · ${o.pct_treinamento.toFixed(0)}% treino · ${o.pct_obras.toFixed(0)}% obras</div>
       </div>`).join('')
     : '<div class="empty-state">Sem dados por ordem.</div>';
 }
-function toggleEngajCursos(){
-  const el = document.getElementById('engaj-cursos-todos');
-  const btn = document.getElementById('engaj-toggle-btn');
+function toggleGerTutorCursos(){
+  const el = document.getElementById('gertutor-cursos-todos');
+  const btn = document.getElementById('gertutor-toggle-btn');
   const showing = el.style.display !== 'none';
   el.style.display = showing ? 'none' : '';
   btn.textContent = showing ? 'Ver todos os cursos ▾' : 'Ocultar lista completa ▴';
 }
-function filterEngajCursos(q){
+function filterGerTutorCursos(q){
   q = (q||'').toLowerCase().trim();
-  let d = _engajCursosData;
+  let d = _gerTutorCursosData;
   if (q) d = d.filter(c => (c.curso||'').toLowerCase().includes(q));
-  document.getElementById('engaj-count').textContent = `${d.length} de ${_engajCursosData.length}`;
-  document.getElementById('engaj-tbody').innerHTML = d.length
+  document.getElementById('gertutor-count').textContent = `${d.length} de ${_gerTutorCursosData.length}`;
+  document.getElementById('gertutor-tbody').innerHTML = d.length
     ? d.map(c => `<tr>
         <td>${esc(c.curso)||'—'}</td>
-        <td style="text-align:right">${fmtNum(c.gerenciadas)} / ${fmtNum(c.total_ofertas)}</td>
-        <td style="text-align:right;font-weight:700;color:${_engajCor(c.pct_gerenciado)}">${(c.pct_gerenciado||0).toFixed(1)}%</td>
+        <td style="text-align:right">${fmtNum(c.total)}</td>
+        <td style="text-align:right;font-weight:700;color:${_gerTutorCor(c.pct_gerenciaram)}">${c.pct_gerenciaram.toFixed(1)}%</td>
+        <td style="text-align:right">${c.pct_treinamento.toFixed(1)}%</td>
+        <td style="text-align:right">${c.pct_obras.toFixed(1)}%</td>
       </tr>`).join('')
-    : '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
 }
 
 // ── TURNOVER DE TUTORES (DB.turnover, PATCH 174) ─────────────────────────
@@ -663,7 +886,8 @@ function _iniciarGestor(){
     const lgts = document.getElementById('lgpd-ts'); if (lgts) lgts.textContent = ts;
   }catch(e){}
   renderGestorKPIs();
-  renderEngajamento();
+  renderEngajamentoAlunos();
+  renderGerenciamentoTutor();
   renderTurnover();
   renderOcorrencias();
   renderLaboratorios();

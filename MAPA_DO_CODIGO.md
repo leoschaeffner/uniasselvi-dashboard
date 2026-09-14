@@ -23,6 +23,63 @@ demais ~21; "por ordem" = 5 `.rank-item` diretos (`por_ordem`). Cor por faixa
 JS. Só mexe no `template_gestor.html` — Engajamento não tem card equivalente
 no dashboard/coordenadores (ver §8/§9). Testado via jsdom decifrando
 `saida/gestor.html` com `SENHA_GESTOR`.)
++ **PATCH 178** (frontend: PATCH 175/177 media o conceito ERRADO —
+`DB.gerenciamento_engajamento` é engajamento de OFERTA (% de linhas do
+GIOCONDA marcadas `gerenciado`), mas o Leo confirmou que o card do Gestor
+precisa de dois conceitos DIFERENTES, ambos já existentes no
+`template_dashboard.html`, só resumidos:
+  1. **Card "Engajamento de Alunos"** (`renderEngajamentoAlunos`) = a "Taxa
+     de Preenchimento" do dashboard (`#ae-kpis`): alunos AGENDADOS / alunos
+     MATRICULADOS, só dentro das ofertas com `tem_agenda` — reaproveita
+     literalmente `_dedupAlunos` (aqui `_dedupAlunosGestor`, mesma lógica,
+     nome renomeado só pra não colidir) pra não inflar o número (cada
+     prática de um polo+categoria repete alunos_mat/alunos_agend da
+     origem). Usa `DB.ger_ofertas` (raiz = semestre ativo, sem seletor de
+     semestre no Gestor). Validado 1:1 contra o dashboard: 40,1% —
+     2.454/6.125 (rodada 2026-09-14).
+  2. **Card "Gerenciamento (por Tutor)"** (`renderGerenciamentoTutor`) =
+     réplica tutor-a-tutor de `renderDetPizza`/`renderDetTreinamento`/
+     `renderDetObras` do dashboard ("Gerenciamento → Detalhe de Ofertas"):
+     `% Tutores Gerenciaram` (≥1 oferta `gerenciado=true` no recorte),
+     `% Em Treinamento` (`_estaEmTreinamentoGestor`: `DB.tutores[].inicio`
+     ≤60 dias E ainda sem gerenciar nada no recorte) e `% Lab em Obras`
+     (`DB.tutores[].lab_pendencia` truthy) — **sempre com o MESMO
+     denominador** (tutores distintos do recorte), pra não repetir o PATCH
+     152 (3 indicadores não batendo). 3 recortes: `acumulado` (todos os
+     tutores de `DB.gerenciamento_por_semestre`, + tutores cadastrados sem
+     NENHUMA oferta no GIOCONDA ainda, casados pelo código de curso do
+     cadastro — `DB.tutores[].cursos` — versão simplificada do
+     `_semOfertaInjetadosTodos` do dashboard, sem a etapa de match difuso
+     por polo/nome porque aqui não há tabela nominal pra duplicar), `por
+     curso` (mesma taxonomia de ~27 cursos de `gerenciamento_engajamento.
+     por_curso`, código curto → nome via `_CURSOS_NOMES_GESTOR`, mirror do
+     `CURSOS_NOMES` do `processar.py` — top-6 piores + tabela buscável
+     recolhível, mesmo padrão visual do card antigo de Engajamento) e `por
+     ordem` (só ofertas COM `ordem`, cadastro-only não entra aqui).
+     **Atenção:** essa taxonomia de curso É DIFERENTE dos 5 grupos amplos
+     do seletor "Detalhe de Ofertas" do dashboard (`GRUPOS_GER` —
+     Enfermagem / Fisioterapia e T.O. / Biomedicina+Farmácia+Estética /
+     Nutrição / Exatas); o exemplo real que o Leo deu pra validar
+     ("Biomedicina/Farmácia/Estética, Ordem 3 ≈ 54%/36%/31%") usa o
+     agrupamento AMPLO do dashboard, não os 27 cursos — nessa taxonomia
+     de 27 cursos, Biomedicina/Farmácia/Estética aparecem como 3 linhas
+     separadas. Validado calculando os dois jeitos em Python contra o
+     `DB` real decifrado: com o agrupamento amplo (replicando
+     `GRUPOS_GER['bio-far-est']` + a mesma injeção de cadastro), bateu
+     bem — 30,9% em obras (vs 31% do Leo, quase exato) e gerenciaram/
+     treinamento na faixa esperada, com a diferença explicável por deriva
+     de data (dias desde admissão mudam todo dia; o exemplo do Leo é de
+     uma rodada anterior). Não foi possível validar bit-a-bit o combo
+     "Biomedicina/Farmácia/Estética + Ordem 3" na taxonomia de 27 cursos
+     porque essa combinação simplesmente não existe nela — se o Leo
+     preferir o agrupamento amplo (`GRUPOS_GER`) em vez dos 27 cursos
+     nesse card, é só trocar `_cursoLabelGestor` por uma versão que chama
+     `_grupoBaseDaCategoria`. Testado via jsdom (script ad-hoc,
+     `tests/lib/jsdom_portal.js` + `saida/gestor.html` decifrado) — 0 erros,
+     valores batendo com o cálculo em Python. Não mexeu em
+     `template_dashboard.html`/`template_coordenadores.html` — só reaproveitou
+     a LÓGICA de lá. `dados['gerenciamento_engajamento']` (PATCH 176)
+     continua no backend, só não é mais consumido no `template_gestor.html`.)
 
 > Primeiro arquivo a ler antes de mexer no VinciLab. Responde "onde fica X" e
 > "por que Y foi feito assim" sem precisar carregar `processar.py` (~4.600 linhas)
@@ -98,7 +155,7 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 | `processar.py` | **Todo o ETL + geração de saída.** Ponto de entrada `__main__` (~linha 3986). |
 | `template_dashboard.html` | Template do portal principal (VinciLab). Placeholder `'DATA_GOES_HERE'` e `TIMESTAMP_GOES_HERE`. |
 | `template_coordenadores.html` | Template do portal de coordenadores (versão travada por curso, simplificada). Placeholder `'DATA_GOES_HERE'`. |
-| `template_gestor.html` | **PATCH 168** (+ **PATCH 173**, **PATCH 175**, **PATCH 177**). Template do terceiro portal, "Painel do Gestor" — visão executiva enxuta (sem filtro de curso, sem tabela operacional completa): KPIs herdados (tutores ativos, alunos sem tutor, vagas críticas, polos difíceis, laboratórios com pendência) + card "Engajamento" (**PATCH 177**: `renderEngajamento` consome `DB.gerenciamento_engajamento` — engajamento de ALUNO, % de ofertas de prática gerenciadas, em 3 recortes: acumulado (número grande), por curso (top-6 piores + tabela buscável recolhível pro resto), por ordem (5 barras); substitui a versão do PATCH 175 que lia `DB.kpis` raiz — envio de portfólio de TUTOR, dado errado) + card "Turnover de Tutores" (PATCH 175, consome `DB.turnover` do PATCH 174 — 3 blocos semana/mês/semestre com contratados/demitidos/saldo + top-3 cursos com mais movimento) + card "Ocorrências por Multiplicador" + card "Laboratórios — Pendências" + card "Vistoria de Laboratório" (PATCH 173, consome `DB.laboratorios.vistorias`, overlay do PATCH 172). Senha própria (`SENHA_GESTOR`, diferente de `SENHA_DASHBOARD`), sem link cruzado nos outros dois portais (acesso só por URL direta `/gestor.html`). Placeholder `'DATA_GOES_HERE'` (sem `TIMESTAMP_GOES_HERE` — lê `DB.gerado_em` no cliente, igual ao `template_coordenadores.html`). |
+| `template_gestor.html` | **PATCH 168** (+ **PATCH 173**, **PATCH 175**, **PATCH 177**, **PATCH 178**). Template do terceiro portal, "Painel do Gestor" — visão executiva enxuta (sem filtro de curso, sem tabela operacional completa): KPIs herdados (tutores ativos, alunos sem tutor, vagas críticas, polos difíceis, laboratórios com pendência) + card "Engajamento de Alunos" (**PATCH 178**: `renderEngajamentoAlunos` — Taxa de Preenchimento, mesma fórmula/dado do `#ae-kpis` do dashboard: alunos agendados/matriculados dentro das ofertas com agenda; substitui o card "Engajamento" do PATCH 177, que media um conceito diferente — engajamento de OFERTA — e não o que o Leo pediu) + card "Gerenciamento (por Tutor)" (**PATCH 178**: `renderGerenciamentoTutor` — % Tutores Gerenciaram / % Em Treinamento / % Lab em Obras, réplica tutor-a-tutor de `renderDetPizza`/`renderDetTreinamento`/`renderDetObras` do dashboard, MESMO denominador nos 3 indicadores, em 3 recortes: acumulado, por curso (~27 cursos, top-6 piores + tabela buscável recolhível), por ordem) + card "Turnover de Tutores" (PATCH 175, consome `DB.turnover` do PATCH 174 — 3 blocos semana/mês/semestre com contratados/demitidos/saldo + top-3 cursos com mais movimento) + card "Ocorrências por Multiplicador" + card "Laboratórios — Pendências" + card "Vistoria de Laboratório" (PATCH 173, consome `DB.laboratorios.vistorias`, overlay do PATCH 172). Senha própria (`SENHA_GESTOR`, diferente de `SENHA_DASHBOARD`), sem link cruzado nos outros dois portais (acesso só por URL direta `/gestor.html`). Placeholder `'DATA_GOES_HERE'` (sem `TIMESTAMP_GOES_HERE` — lê `DB.gerado_em` no cliente, igual ao `template_coordenadores.html`). |
 | `portfolio_form.html` | Formulário público de envio de portfólio; autopreenche via `lookup.json` e redireciona pra uma lista do SharePoint (não passa pelo `processar.py`). |
 | `index.html` / `coordenadores.html` / `gestor.html` / `lookup.json` | **Saída gerada.** Desde o PATCH 160 **NÃO são mais commitados** — o workflow monta `_site/` e publica via artifact do GitHub Pages. Estão no `.gitignore`. NÃO editar à mão. |
 | `config_semestre.json` | Config editável de prazos/períodos das Ordens por semestre. Única coisa que se edita pra virar o semestre. |
