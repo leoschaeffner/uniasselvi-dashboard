@@ -851,6 +851,12 @@ def processar(p1, p2):
                 'n': str(_tr.get(col_nome, '') or ''),
                 'p': str(_tr.get(col_polo, '') or ''),
                 'c': str(_tr.get(col_cat, '') or '') if col_cat else '',
+                # PATCH 174: código de curso específico (mesma coluna/formato de
+                # 'cursos' em tutores[] — ver linha ~1684), pra poder agrupar
+                # turnover (entrada/saída) por curso do mesmo jeito que o resto
+                # do arquivo já agrupa (CURSOS_NOMES). Não existia antes porque
+                # nenhuma seção usava curso específico de desligado.
+                'cursos': str(_tr.get(col_cur, '') or ''),
                 'situacao': str(_tr.get(col_sit, '') or ''),
                 'data_desligamento': _data_desl,
             })
@@ -2322,6 +2328,90 @@ def processar(p1, p2):
         'disciplinas_por_ordem': _DISCIPLINAS_POR_ORDEM_GLOBAL,
         'laboratorios': _carregar_laboratorios(),
     })
+
+
+def _calcular_turnover(tutores, tutores_desligados):
+    """PATCH 174: entrada/saída de tutores por período (semana/mês/semestre
+    ativo) pro Painel do Gestor. Cru — só as 2 contagens (contratados,
+    demitidos) por período, sem "saldo líquido" nem interpretação visual
+    (isso é trabalho do frontend).
+
+    Contratados: tutor['inicio'] (string 'YYYY-MM-DD', já resolvida pelo
+    parser BR/US tolerante de _interpretar_data_contratacao) cai dentro do
+    período.
+    Demitidos: tutores_desligados[]['data_desligamento'] (string
+    'DD/MM/AAAA', PATCH 106) cai dentro do período.
+    Ambas as datas passam por `_ocor_parse_data` — MESMO parser BR/US
+    tolerante já usado em Ocorrências/Vistoria (nunca assume formato fixo,
+    nunca reimplementa um parser de data novo).
+
+    'semana' = últimos 7 dias corridos até hoje; 'mes' = mês corrente
+    (calendário); 'semestre' = intervalo do semestre ATIVO
+    (SEMESTRE_ATUAL/ALL_SEMESTRES — o mesmo semestre que já decide o resto do
+    dashboard), calculado como min(início) .. max(fim) das 5 Ordens
+    configuradas em config_semestre.json (não há um campo de "data de início/
+    fim do semestre" separado — as Ordens JÁ são o calendário do semestre).
+
+    'por_curso': mesmo agrupamento por curso específico usado em outros
+    pontos do arquivo (`cursos_t.split('|')[0]` → CURSOS_NOMES, ver
+    processar():~1677 e gerar_onboarding_atualizado():~3550) — não inventa
+    taxonomia nova.
+    """
+    hoje = datetime.now().date()
+    _ini_semana = hoje - timedelta(days=7)
+    _ini_mes = hoje.replace(day=1)
+    if hoje.month == 12:
+        _fim_mes = hoje.replace(day=31)
+    else:
+        _fim_mes = hoje.replace(day=1, month=hoje.month + 1) - timedelta(days=1)
+    _periodos_sem = ALL_SEMESTRES.get(SEMESTRE_ATUAL, {}).get('periodos', {})
+    _inicios_sem, _fins_sem = [], []
+    for _cfg in _periodos_sem.values():
+        try:
+            _inicios_sem.append(datetime.strptime(_cfg['inicio'], '%d/%m/%Y').date())
+            _fins_sem.append(datetime.strptime(_cfg['fim'], '%d/%m/%Y').date())
+        except Exception:
+            pass
+    _ini_sem_periodo = min(_inicios_sem) if _inicios_sem else hoje.replace(month=1, day=1)
+    _fim_sem_periodo = max(_fins_sem) if _fins_sem else hoje
+
+    def _curso_label(cod):
+        primeiro = str(cod or '').split('|')[0].strip()
+        return CURSOS_NOMES.get(primeiro, primeiro or 'Sem curso')
+
+    def _fmt(d):
+        return d.strftime('%d/%m/%Y')
+
+    periodos = {
+        'semana': (_ini_semana, hoje),
+        'mes': (_ini_mes, _fim_mes),
+        'semestre': (_ini_sem_periodo, _fim_sem_periodo),
+    }
+    turnover = {}
+    por_curso = defaultdict(lambda: {
+        'contratados_semana': 0, 'demitidos_semana': 0,
+        'contratados_mes': 0, 'demitidos_mes': 0,
+        'contratados_semestre': 0, 'demitidos_semestre': 0,
+    })
+    for chave, (ini, fim) in periodos.items():
+        contratados = 0
+        for t in tutores:
+            d = _ocor_parse_data(t.get('inicio'))
+            if d and ini <= d <= fim:
+                contratados += 1
+                por_curso[_curso_label(t.get('cursos'))][f'contratados_{chave}'] += 1
+        demitidos = 0
+        for td in tutores_desligados:
+            d = _ocor_parse_data(td.get('data_desligamento'))
+            if d and ini <= d <= fim:
+                demitidos += 1
+                por_curso[_curso_label(td.get('cursos'))][f'demitidos_{chave}'] += 1
+        turnover[chave] = {
+            'contratados': contratados, 'demitidos': demitidos,
+            'inicio_periodo': _fmt(ini), 'fim_periodo': _fmt(fim),
+        }
+    turnover['por_curso'] = [{'curso': c, **v} for c, v in sorted(por_curso.items())]
+    return turnover
 
 
 def _carregar_laboratorios():
@@ -5406,6 +5496,22 @@ if __name__ == '__main__':
     _ch_ok = sum(1 for t in dados.get('tutores', []) if t.get('ch_semanal') and t['ch_semanal'] > 0)
     dados['tem_lotacao'] = _ch_ok > 0
     print(f"[{ts()}] tem_lotacao={dados['tem_lotacao']} ({_ch_ok} tutores com CH SEMANAL)")
+    # PATCH 174: entrada/saída de tutores por período (semana/mês/semestre
+    # ativo) — pedido do Leo pro Painel do Gestor (visão rápida de
+    # contratados x demitidos). Roda sempre (não depende de p4/Lotação nem de
+    # nenhum secret opcional — só usa dados['tutores'] e
+    # dados['tutores_desligados'], que já existem sempre a essa altura).
+    try:
+        dados['turnover'] = _calcular_turnover(dados.get('tutores', []), dados.get('tutores_desligados', []))
+        print(f"[{ts()}] Turnover — semana: {dados['turnover']['semana']['contratados']} contratados / "
+              f"{dados['turnover']['semana']['demitidos']} demitidos | "
+              f"mês: {dados['turnover']['mes']['contratados']} contratados / "
+              f"{dados['turnover']['mes']['demitidos']} demitidos | "
+              f"semestre ({SEMESTRE_ATUAL}): {dados['turnover']['semestre']['contratados']} contratados / "
+              f"{dados['turnover']['semestre']['demitidos']} demitidos")
+    except Exception as e:
+        print(f"[{ts()}] AVISO: Erro ao calcular turnover de tutores: {e}")
+        dados['turnover'] = None
     # PATCH 121: estudo do Racional de Insumos por Experimento (aba Insumos).
     # ESTÁTICO por decisão do Leo (21/08) — não é uma fonte que atualiza a
     # cada ciclo de 2h, é um estudo pontual (v10_FINAL) embutido uma vez. Se
