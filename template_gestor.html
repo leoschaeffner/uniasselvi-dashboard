@@ -447,14 +447,19 @@ function renderEngajamentoAlunos(){
 // indicadores não batendo, 64 vs 57") quando um deles usava um filtro
 // diferente dos outros dois. Não repete esse erro aqui.
 // 3 recortes:
-//  - acumulado: TODOS os tutores de TODOS os semestres/cursos (soma
-//    DB.gerenciamento_por_semestre, igual ao 'acumulado' do PATCH 176) +
-//    tutores cadastrados que ainda não têm NENHUMA oferta no GIOCONDA (fica
-//    de fora do denominador senão — mesmo espírito do PATCH 32/33 do
-//    dashboard, "_semOfertaInjetadosTodos", mas aqui simplificado: casa pelo
-//    código de curso do cadastro (DB.tutores[].cursos), sem a etapa extra de
-//    match difuso por polo/nome que o dashboard faz — não é necessária aqui
-//    porque não há uma tabela nominal pra duplicar, só o agregado).
+//  - acumulado: PATCH 179 (correção do Leo) — só o SEMESTRE ATIVO (o mesmo
+//    DB.ger_ofertas que já alimenta "Engajamento de Alunos"), NÃO soma
+//    2026/1+2026/2. A primeira versão (PATCH 178) somava todos os semestres
+//    de DB.gerenciamento_por_semestre, igual ao 'acumulado' do PATCH 176 --
+//    isso fazia Ordem 4/5 (que ainda não começaram no semestre ativo)
+//    aparecerem com dado de gerenciamento de verdade, vazado do semestre
+//    anterior (onde já tinham acontecido). Tutores cadastrados que ainda não
+//    têm NENHUMA oferta no GIOCONDA continuam fora do denominador (mesmo
+//    espírito do PATCH 32/33 do dashboard, "_semOfertaInjetadosTodos", mas
+//    aqui simplificado: casa pelo código de curso do cadastro
+//    (DB.tutores[].cursos), sem a etapa extra de match difuso por
+//    polo/nome que o dashboard faz — não é necessária aqui porque não há
+//    uma tabela nominal pra duplicar, só o agregado).
 //  - por_curso: PATCH 178 (revisão pós-confirmação do Leo) — NÃO usa mais a
 //    taxonomia de ~27 cursos de DB.gerenciamento_engajamento.por_curso
 //    (CURSOS_NOMES). O Leo confirmou que o exemplo real que ele usa pra
@@ -565,12 +570,11 @@ function _labPendenciaDoTutorGestor(nomeTutor){
   return _mapaLabPendenciaGestor[_normTutorKeyGestor(nomeTutor)] || null;
 }
 function _todasOfertasGestor(){
-  const por = DB.gerenciamento_por_semestre || {};
-  const semKeys = Object.keys(por);
-  if (!semKeys.length) return DB.ger_ofertas || [];
-  let out = [];
-  semKeys.forEach(sem => { out = out.concat((por[sem]||{}).ger_ofertas || []); });
-  return out;
+  // PATCH 179: só o semestre ATIVO -- DB.ger_ofertas (raiz) já É esse
+  // recorte, mesma fonte que "Engajamento de Alunos" já usa (ver comentário
+  // ~L394-396). Não soma DB.gerenciamento_por_semestre (isso vazava dado do
+  // semestre anterior pra ordens que ainda não começaram no semestre atual).
+  return DB.ger_ofertas || [];
 }
 function _gerTutorCalc(mapa){
   const nomes = Object.values(mapa);
