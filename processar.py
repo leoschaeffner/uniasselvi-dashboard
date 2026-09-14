@@ -2341,9 +2341,17 @@ def _calcular_turnover(tutores, tutores_desligados):
     período.
     Demitidos: tutores_desligados[]['data_desligamento'] (string
     'DD/MM/AAAA', PATCH 106) cai dentro do período.
-    Ambas as datas passam por `_ocor_parse_data` — MESMO parser BR/US
-    tolerante já usado em Ocorrências/Vistoria (nunca assume formato fixo,
-    nunca reimplementa um parser de data novo).
+
+    `inicio` (ISO 'YYYY-MM-DD') passa por `_ocor_parse_data` -- seguro, essa
+    função já detecta o prefixo de 4 dígitos e não aplica heurística de
+    ambiguidade nesse caso. `data_desligamento` NÃO usa esse parser: ele
+    sempre chega aqui já formatado com `strftime('%d/%m/%Y')` fixo
+    (`processar.py:~847`, a partir de um Timestamp do Excel sem ambiguidade
+    nenhuma) -- reaplicar a heurística BR/US-se-futuro do `_ocor_parse_data`
+    (desenhada pra texto digitado por humano, genuinamente ambíguo) nesse
+    formato fixo pode trocar dia/mês errado quando a data BR correta cai no
+    futuro (achado do qa-vinci, PATCH 175: desligamento agendado pra
+    dez/2026 virando ago/2026). Usa `strptime('%d/%m/%Y')` direto.
 
     'semana' = últimos 7 dias corridos até hoje; 'mes' = mês corrente
     (calendário); 'semestre' = intervalo do semestre ATIVO
@@ -2382,6 +2390,17 @@ def _calcular_turnover(tutores, tutores_desligados):
     def _fmt(d):
         return d.strftime('%d/%m/%Y')
 
+    def _parse_data_desligamento(s):
+        # Sempre 'DD/MM/AAAA' fixo (strftime em processar.py:~847) -- nunca
+        # ambíguo, então NÃO usa _ocor_parse_data aqui (ver docstring acima).
+        s = str(s or '').strip()
+        if not s:
+            return None
+        try:
+            return datetime.strptime(s, '%d/%m/%Y').date()
+        except ValueError:
+            return None
+
     periodos = {
         'semana': (_ini_semana, hoje),
         'mes': (_ini_mes, _fim_mes),
@@ -2402,7 +2421,7 @@ def _calcular_turnover(tutores, tutores_desligados):
                 por_curso[_curso_label(t.get('cursos'))][f'contratados_{chave}'] += 1
         demitidos = 0
         for td in tutores_desligados:
-            d = _ocor_parse_data(td.get('data_desligamento'))
+            d = _parse_data_desligamento(td.get('data_desligamento'))
             if d and ini <= d <= fim:
                 demitidos += 1
                 por_curso[_curso_label(td.get('cursos'))][f'demitidos_{chave}'] += 1
