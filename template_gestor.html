@@ -455,25 +455,81 @@ function renderEngajamentoAlunos(){
 //    código de curso do cadastro (DB.tutores[].cursos), sem a etapa extra de
 //    match difuso por polo/nome que o dashboard faz — não é necessária aqui
 //    porque não há uma tabela nominal pra duplicar, só o agregado).
-//  - por_curso: mesmo agrupamento/rótulo de curso (~27 cursos) usado em
-//    DB.gerenciamento_engajamento.por_curso (CURSOS_NOMES, código curto →
-//    nome) — mesma taxonomia já estabelecida no PATCH 176/177, não inventa
-//    nova. Mesmo tratamento visual do card antigo: top piores em destaque +
-//    tabela buscável recolhível pro resto.
+//  - por_curso: PATCH 178 (revisão pós-confirmação do Leo) — NÃO usa mais a
+//    taxonomia de ~27 cursos de DB.gerenciamento_engajamento.por_curso
+//    (CURSOS_NOMES). O Leo confirmou que o exemplo real que ele usa pra
+//    conferir esse card ("Biomedicina/Farmácia/Estética, Ordem 3 ≈ 54%
+//    gerenciaram / 36% obras / 31% treinamento") é o agrupamento AMPLO de 5
+//    grupos que o dashboard já usa em "Gerenciamento → Detalhe de Ofertas"
+//    (GRUPOS_GER/_grupoBaseDaCategoria) — não a lista fina de 27 cursos. Os
+//    27 cursos splitam Biomedicina/Farmácia/Estética em 3 linhas separadas,
+//    esse combo simplesmente não existe nessa taxonomia. Mirror literal de
+//    GRUPOS_GER/_grupoBaseDaCategoria/_rowMatchesGrupo/_tutorMatchesGrupo do
+//    template_dashboard.html (sufixo "Gestor" só pra não colidir de nome —
+//    mesma lógica, sem subfiltro porque aqui sempre queremos "todo o grupo").
+//    Mesmo tratamento visual do card antigo: top piores em destaque + tabela
+//    buscável recolhível pro resto (só que agora com 5 linhas, não ~27).
 //  - por_ordem: só ofertas COM ordem (mesmo critério do backend
 //    _por_ordem_eng) — cadastro-only não entra aqui (não tem ordem).
-var _CURSOS_NOMES_GESTOR = {
-  'EMF-ISN':'Enfermagem e Instrumentação Cirúrgica', 'EMF-ISN2':'Enfermagem e Instrumentação Cirúrgica',
-  'BFR':'Farmácia', 'BBI':'Biomedicina', 'BFI':'Fisioterapia', 'BTO':'T. Ocupacional',
-  'COS-TIP':'Estética e Cosmética', 'NTR':'Nutrição', 'AGM':'Agronomia',
-  'BAU':'Arquitetura e Urbanismo', 'ECE-ENM-ENS-ENG-EEA-GPI-CDE-OBR-SAN-TER-FSA-SLF-QUI':'Engenharias e Licenciaturas',
-  'BIOMEDICINA':'Biomedicina', 'FARMÁCIA':'Farmácia', 'FISIOTERAPIA':'Fisioterapia',
-  'TERAPIA OCUPACIONAL':'T. Ocupacional', 'NUTRIÇÃO':'Nutrição', 'AGRONOMIA':'Agronomia',
-  'ARQUITETURA E URBANISMO':'Arquitetura e Urbanismo',
+var GRUPOS_GER_GESTOR = [
+  {id:'enfermagem', label:'Enfermagem', base:['enfermagem']},
+  {id:'fisio-to', label:'Fisioterapia e Terapia Ocupacional', base:['multi3'],
+    subcursos:['Fisioterapia','Terapia Ocupacional']},
+  {id:'bio-far-est', label:'Biomedicina, Farmácia e Estética/Cosmética', base:['bio-far','multi3']},
+  {id:'nutricao', label:'Nutrição', base:['nutricao']},
+  {id:'exatas', label:'Exatas', base:['exatas']},
+];
+function _semAcentoGestor(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,''); }
+function _grupoBaseDaCategoriaGestor(catStr){
+  var s = _semAcentoGestor(catStr).toUpperCase();
+  var m = s.match(/MULTIDISCIPLINAR\s+(IV|III|II|I)\b/);
+  if (m) {
+    var r = m[1];
+    if (r === 'IV') return 'nutricao';
+    if (r === 'III') return 'multi3';
+    if (r === 'II') return 'enfermagem';
+    if (r === 'I') return 'bio-far';
+  }
+  if (s.indexOf('ENGMAKER') >= 0 || s.indexOf('ENGEMAKER') >= 0 || s.indexOf('QUIMICA') >= 0) return 'exatas';
+  return null;
+}
+var _SUBCURSO_LABEL_GESTOR = {
+  'BFI':'Fisioterapia', 'BTO':'Terapia Ocupacional',
+  'COS-TIP':'Estética e Cosmética', 'TIP-COS':'Estética e Cosmética', 'COS':'Estética e Cosmética',
+  'BBI':'Biomedicina', 'BFR':'Farmácia',
+  'EMF-ISN':'Enfermagem/Instrumentação', 'NTR':'Nutrição'
 };
-function _cursoLabelGestor(cod){
-  const primeiro = String(cod||'').split('|')[0].trim();
-  return _CURSOS_NOMES_GESTOR[primeiro] || primeiro || 'Sem curso';
+function _subcursoDeCodigoGestor(codigo){
+  var raw = (codigo||'').split('|')[0].trim().toUpperCase();
+  return _SUBCURSO_LABEL_GESTOR[raw] || null;
+}
+function _rowMatchesGrupoGestor(catRow, subcursoRow, grupo){
+  if (!grupo) return true;
+  var base = _grupoBaseDaCategoriaGestor(catRow);
+  if (!base || grupo.base.indexOf(base) < 0) return false;
+  if (grupo.id === 'fisio-to' && (!subcursoRow || grupo.subcursos.indexOf(subcursoRow) < 0)) return false;
+  if (grupo.id === 'bio-far-est' && base === 'multi3' && subcursoRow !== 'Estética e Cosmética') return false;
+  return true;
+}
+function _tutorMatchesGrupoGestor(t, grupo){
+  if (!grupo) return true;
+  var catT = t.c || '';
+  var base = _grupoBaseDaCategoriaGestor(catT);
+  if (!base || grupo.base.indexOf(base) < 0) return false;
+  var subT = _subcursoDeCodigoGestor(t.cursos);
+  if (grupo.id === 'fisio-to' && subT && grupo.subcursos.indexOf(subT) < 0) return false;
+  if (grupo.id === 'bio-far-est' && base === 'multi3' && subT && subT !== 'Estética e Cosmética') return false;
+  return true;
+}
+function _grupoDaOfertaGestor(catRow, subcursoRow){
+  return GRUPOS_GER_GESTOR.find(function(g){ return _rowMatchesGrupoGestor(catRow, subcursoRow, g); }) || null;
+}
+function _grupoDoTutorGestor(t){
+  return GRUPOS_GER_GESTOR.find(function(g){ return _tutorMatchesGrupoGestor(t, g); }) || null;
+}
+function _cursoLabelGestor(catRow, subcursoRow){
+  var g = _grupoDaOfertaGestor(catRow, subcursoRow);
+  return g ? g.label : 'Outros';
 }
 function _normTutorKeyGestor(nome){
   if (!nome) return '__SEM_TUTOR__';
@@ -536,7 +592,7 @@ function _gerTutorStats(){
   ofertas.forEach(o => {
     if (!o.tutor) return;
     const key = _normTutorKeyGestor(o.tutor);
-    const cursoLabel = _cursoLabelGestor(o.curso);
+    const cursoLabel = _cursoLabelGestor(o.categoria, o.subcurso);
     const ger = !!o.gerenciado;
 
     if (!geral[key]) geral[key] = {nome:o.tutor, totalGer:0};
@@ -560,7 +616,8 @@ function _gerTutorStats(){
     const key = _normTutorKeyGestor(t.n);
     if (geral[key]) return;
     geral[key] = {nome:t.n, totalGer:0};
-    const cursoLabel = _cursoLabelGestor(t.cursos);
+    const grupoT = _grupoDoTutorGestor(t);
+    const cursoLabel = grupoT ? grupoT.label : 'Outros';
     const pc = porCurso[cursoLabel] || (porCurso[cursoLabel]={});
     if (!pc[key]) pc[key] = {nome:t.n, totalGer:0};
   });
