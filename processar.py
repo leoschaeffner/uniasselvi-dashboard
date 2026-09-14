@@ -5669,6 +5669,64 @@ if __name__ == '__main__':
             dados.update(ger_dados)
             dados['tem_gerenciamento'] = True
 
+            # PATCH 176: Engajamento de ALUNOS (% de ofertas de prática
+            # gerenciadas), quebrado em 3 visões pro card "Engajamento" do
+            # Painel do Gestor — antes esse card mostrava engajamento de TUTOR
+            # (envio de portfólio), pedido errado corrigido pelo Leo. Reaproveita
+            # a MESMA lista de ofertas (`ger_ofertas`) e a MESMA condição
+            # booleana `gerenciado` já usadas nos blocos `ger_kpis`/`ger_cat`/
+            # `ger_ordem` de cada semestre — não reinventa o cálculo de
+            # "gerenciada". 'acumulado' = TODAS as ofertas de TODOS os semestres
+            # somadas (não só o semestre ativo do dashboard). 'curso' usa o
+            # mesmo agrupamento/label já estabelecido em `_calcular_turnover`
+            # (`cursos_t.split('|')[0]` → `CURSOS_NOMES`, "Sem curso" como
+            # fallback) — mesma taxonomia do resto do arquivo, não inventa
+            # nova. 'ordem' ignora ofertas sem ordem (ex: placeholder injetado
+            # pra tutor sem nenhuma oferta cadastrada no GIOCONDA — PATCH 32).
+            def _ger_eng_curso_label(cod):
+                primeiro = str(cod or '').split('|')[0].strip()
+                return CURSOS_NOMES.get(primeiro, primeiro or 'Sem curso')
+            _todas_ofertas_eng = []
+            for _sv_eng in ger_por_semestre.values():
+                _todas_ofertas_eng.extend(_sv_eng.get('ger_ofertas', []))
+            _total_eng = len(_todas_ofertas_eng)
+            _ger_eng = sum(1 for _o in _todas_ofertas_eng if _o.get('gerenciado'))
+            _acumulado_eng = {
+                'total_ofertas': _total_eng, 'gerenciadas': _ger_eng,
+                'pct_gerenciado': round(_ger_eng / _total_eng * 100, 1) if _total_eng else 0,
+            }
+            _curso_map_eng = {}
+            for _o in _todas_ofertas_eng:
+                _label_eng = _ger_eng_curso_label(_o.get('curso'))
+                _cm_eng = _curso_map_eng.setdefault(_label_eng, {'curso': _label_eng, 'total_ofertas': 0, 'gerenciadas': 0})
+                _cm_eng['total_ofertas'] += 1
+                if _o.get('gerenciado'):
+                    _cm_eng['gerenciadas'] += 1
+            _por_curso_eng = []
+            for _cm_eng in _curso_map_eng.values():
+                _cm_eng['pct_gerenciado'] = round(_cm_eng['gerenciadas'] / _cm_eng['total_ofertas'] * 100, 1) if _cm_eng['total_ofertas'] else 0
+                _por_curso_eng.append(_cm_eng)
+            _por_curso_eng.sort(key=lambda x: x['pct_gerenciado'])  # pior primeiro chama mais atenção do gestor
+            _ordem_sort_eng = {'Ordem 1': 1, 'Ordem 2': 2, 'Ordem 3': 3, 'Ordem 4': 4, 'Ordem 5': 5}
+            _ordem_map_eng = {}
+            for _o in _todas_ofertas_eng:
+                _od_eng = _o.get('ordem') or ''
+                if not _od_eng:
+                    continue
+                _om_eng = _ordem_map_eng.setdefault(_od_eng, {'ordem': _od_eng, 'total_ofertas': 0, 'gerenciadas': 0})
+                _om_eng['total_ofertas'] += 1
+                if _o.get('gerenciado'):
+                    _om_eng['gerenciadas'] += 1
+            _por_ordem_eng = []
+            for _om_eng in _ordem_map_eng.values():
+                _om_eng['pct_gerenciado'] = round(_om_eng['gerenciadas'] / _om_eng['total_ofertas'] * 100, 1) if _om_eng['total_ofertas'] else 0
+                _por_ordem_eng.append(_om_eng)
+            _por_ordem_eng.sort(key=lambda x: _ordem_sort_eng.get(x['ordem'], 9))
+            dados['gerenciamento_engajamento'] = {
+                'acumulado': _acumulado_eng, 'por_curso': _por_curso_eng, 'por_ordem': _por_ordem_eng,
+            }
+            print(f"[{ts()}] Gerenciamento (engajamento de alunos) -- acumulado: {_acumulado_eng['pct_gerenciado']}% ({_acumulado_eng['gerenciadas']}/{_acumulado_eng['total_ofertas']}) | {len(_por_curso_eng)} cursos | {len(_por_ordem_eng)} ordens")
+
             # PATCH 123/127: cruzamento "Registrado no Portfólio × Agendado" —
             # pedido pelo Leo, nos 3 níveis (geral, por polo, por categoria).
             # Duas fontes com vocabulário de categoria DIFERENTE: o Portfólio
