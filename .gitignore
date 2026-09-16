@@ -35,3 +35,11 @@ node_modules/
 # por tests/tools/anonimizar_db.js + revisão manual.
 tests/fixtures/*_real.json
 tests/fixtures/*_raw.json
+
+# Ferramentas de assistente de IA — não fazem parte do produto, ficam só
+# localmente (fora do controle de versão, escondidas no explorer do VSCode
+# via .vscode/settings.json).
+.claude/
+.codex/
+CLAUDE.md
+AGENTS.md

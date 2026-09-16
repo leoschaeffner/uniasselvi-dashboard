@@ -1,0 +1,20 @@
+{
+  "files.exclude": {
+    ".claude": true,
+    ".claude-checkpoints": true,
+    ".codex": true,
+    "CLAUDE.md": true,
+    "AGENTS.md": true
+  },
+  "search.exclude": {
+    ".claude": true,
+    ".claude-checkpoints": true,
+    ".codex": true,
+    "CLAUDE.md": true,
+    "AGENTS.md": true
+  },
+  "files.watcherExclude": {
+    ".claude/**": true,
+    ".codex/**": true
+  }
+}
