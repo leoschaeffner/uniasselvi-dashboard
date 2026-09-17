@@ -4114,11 +4114,16 @@ function getTutorCatAbrev(tutorNome, polo) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function renderAvisosPortfolio(){
-  var avisos = DB.avisos_portfolio || [];
   var wrap = document.getElementById('pf-avisos-wrap');
   var tbody = document.getElementById('pf-avisos-tbody');
   var count = document.getElementById('pf-avisos-count');
   if(!wrap || !tbody) return;
+  // Avisos de portfólio só têm 'chave' (polo+categoria colados, sem
+  // separador confiável) -- não dá pra filtrar por curso com segurança
+  // sem mudar o backend. Com um curso travado, esconde o painel inteiro em
+  // vez de arriscar mostrar aviso (com nome/e-mail de tutor) de outro curso.
+  if (DB._cursosTravados && DB._cursosTravados.length) { wrap.style.display='none'; return; }
+  var avisos = DB.avisos_portfolio || [];
   if(!avisos.length){wrap.style.display='none';return;}
   wrap.style.display='';
   if(count) count.textContent = avisos.length + ' aviso(s) · ' + avisos.reduce(function(s,a){return s+a.count;},0) + ' envio(s) afetado(s)';
@@ -5110,12 +5115,18 @@ function _filtrarDBPorCursos(cursos){
           if (o.curso && codigos.length && _precisaCheckSubcurso(o.categoria)) return codigos.includes(o.curso);
           return true; // categoria já é exclusiva de um curso só (ou não tem info mais fina) -- categoria sozinha basta
         });
-        // PATCH 136: "Alunos Agendados" (Visão Geral) lê DIRETO de
-        // GER_DB.ger_kpis.total_alunos_agendados, não do cruzamento que já
-        // tinha sido corrigido no PATCH 135 — esse número pré-calculado
-        // nunca era recalculado a partir das ofertas já filtradas acima.
-        // Mesma dedup (_dedupAlunos) já usada no resto do dashboard.
-        if (s.ger_kpis) {
+        // Antes só corrigia total_alunos_agendados/matriculados dentro de
+        // ger_kpis (PATCH 136), mas ger_cat/ger_polo/ger_ordem/
+        // ger_contratacao/ger_agendas ficavam com o valor pré-calculado de
+        // TODOS os cursos, nunca recalculados a partir das ofertas já
+        // filtradas acima -- vazava dado de outros cursos em quase toda a
+        // aba Gerenciamento (Ofertas/Contratação/Agendas/Detalhe/mapa).
+        // _gerAggregateFromOfertas já existe e recalcula tudo de uma vez a
+        // partir do array de ofertas -- reaproveita em vez de corrigir campo
+        // por campo.
+        if (typeof _gerAggregateFromOfertas === 'function') {
+          Object.assign(s, _gerAggregateFromOfertas(s.ger_ofertas));
+        } else if (s.ger_kpis) {
           s.ger_kpis.total_alunos_agendados = _dedupAlunos(s.ger_ofertas, 'alunos_agend');
           s.ger_kpis.total_alunos_matriculados = _dedupAlunos(s.ger_ofertas, 'alunos_mat');
         }
@@ -5275,6 +5286,21 @@ function _filtrarDBPorCursos(cursos){
         // por_polo tem a mesma limitação de granularidade do portfolio acima
       }
     });
+  }
+
+  // Alunos Matriculados por Categoria (openAlunosModal) lia DB.alunos_hub.por_cat
+  // inteiro, sem filtro -- coordenador via alunos de TODOS os cursos mesmo com
+  // um curso selecionado. Mesma normalização de chave usada em renderCatPracBars
+  // (_CAT_NORM_MAP) pra comparar contra a categoria do curso selecionado.
+  if (DB.alunos_hub && DB.alunos_hub.por_cat) {
+    const _normHub = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
+    const novoPorCat = {};
+    let novoTotal = 0;
+    Object.entries(DB.alunos_hub.por_cat).forEach(([k, v]) => {
+      if (bateQualquerCategoria(_normHub(k))) { novoPorCat[k] = v; novoTotal += v; }
+    });
+    DB.alunos_hub.por_cat = novoPorCat;
+    DB.alunos_hub.total_distintos = novoTotal;
   }
 }
 // PATCH 135: recalcula {total, enviaram, urgentes, atrasados, pendentes} a
