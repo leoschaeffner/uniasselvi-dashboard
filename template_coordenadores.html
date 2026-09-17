@@ -4572,7 +4572,13 @@ function renderTutoresMec() {
       // e Estética juntos aqui, só categoria por categoria separada.
       if(typeof GRUPOS_GER!=='undefined' && GRUPOS_GER && GRUPOS_GER.length){
         const _optGroup=document.createElement('optgroup');_optGroup.label='Grupos combinados';
-        GRUPOS_GER.forEach(g=>{const o=document.createElement('option');o.value='grupo:'+g.id;o.textContent=g.label;_optGroup.appendChild(o);});
+        // Com curso filtrado, só oferece o(s) grupo(s) que realmente têm
+        // categoria presente em _cats -- antes listava os 5 sempre, mesmo
+        // quando os outros 4 não tinham nenhum tutor no recorte atual
+        // (selecionar um deles só mostrava lista vazia, sem vazar dado, mas
+        // confuso).
+        GRUPOS_GER.filter(g=>_cats.some(c=>g.base.indexOf(_grupoBaseDaCategoria(c))>=0))
+          .forEach(g=>{const o=document.createElement('option');o.value='grupo:'+g.id;o.textContent=g.label;_optGroup.appendChild(o);});
         _catSel.appendChild(_optGroup);
         const _optGroup2=document.createElement('optgroup');_optGroup2.label='Categoria específica';
         _catSel.appendChild(_optGroup2);
