@@ -97,6 +97,36 @@ def _data_para_semestre(data_str):
     except: pass
     return None
 
+def _data_para_date(v):
+    """Converte datetime/ISO/DD/MM/AAAA em date; None se nao der."""
+    import datetime as _dt
+    if v is None: return None
+    if isinstance(v, _dt.datetime): return v.date()
+    if isinstance(v, _dt.date): return v
+    sv = str(v).strip()
+    if not sv or sv.lower() in ('nan', 'nat', 'none'): return None
+    for fmt, n in (('%d/%m/%Y', 10), ('%Y-%m-%d', 10)):
+        try: return _dt.datetime.strptime(sv[:n], fmt).date()
+        except Exception: pass
+    return None
+
+def _inferir_ordem_por_data(dt_ofertada, dt_expiracao, semestre=None):
+    """Linha sem prefixo 'O.N:' no NOME_EXPERIMENTO: infere a ordem pela
+    DATA_OFERTADA == inicio ou DATA_EXPIRACAO == fim do periodo configurado.
+    Sem match, retorna ''."""
+    from datetime import datetime as _dt
+    d_of = _data_para_date(dt_ofertada); d_ex = _data_para_date(dt_expiracao)
+    if not d_of and not d_ex: return ''
+    sems = [ALL_SEMESTRES[semestre]] if semestre in ALL_SEMESTRES else list(ALL_SEMESTRES.values())
+    for cfg in sems:
+        for nome, per in cfg.get('periodos', {}).items():
+            try:
+                ini = _dt.strptime(per['inicio'], '%d/%m/%Y').date()
+                fim = _dt.strptime(per['fim'], '%d/%m/%Y').date()
+            except Exception: continue
+            if (d_of and d_of == ini) or (d_ex and d_ex == fim): return nome
+    return ''
+
 def _ordem_relativa(ordem_forms, semestre):
     """Ordem 1 no Forms sempre = Ordem 1 do semestre em questão."""
     return ordem_forms  # As ordens são relativas dentro de cada semestre
@@ -4176,7 +4206,7 @@ def processar_gerenciamento_csv(p5):
     }
 
 
-def _processar_gerenciamento_novo(df_g):
+def _processar_gerenciamento_novo(df_g, semestre=None):
     import re as _re
     col = {str(c).strip().upper(): c for c in df_g.columns}
     def gc(name): return col.get(name.upper())
@@ -4311,6 +4341,19 @@ def _processar_gerenciamento_novo(df_g):
     df['_SEM_ALUNOS'] = df['_GERENCIADO'] & (df['_AGEND'] == 0)
     parsed = (df[c_exp] if c_exp else pd.Series([''] * len(df))).apply(extrair_ordem_exp)
     df['_ORDEM'] = parsed.apply(lambda x: x[0])
+    # Linhas sem prefixo "O.N:" (ex: 6.350 linhas de 2026/2): infere a ordem pela
+    # DATA_OFERTADA/DATA_EXPIRACAO casando com inicio/fim do periodo configurado.
+    _c_dof = gc('DATA_OFERTADA'); _c_dex = gc('DATA_EXPIRACAO')
+    if _c_dof or _c_dex:
+        _sem_ord = df['_ORDEM'] == ''
+        if _sem_ord.any():
+            _blank = pd.Series([None] * len(df), index=df.index)
+            _dof = df[_c_dof] if _c_dof else _blank
+            _dex = df[_c_dex] if _c_dex else _blank
+            df.loc[_sem_ord, '_ORDEM'] = [
+                _inferir_ordem_por_data(a, b, semestre)
+                for a, b in zip(_dof[_sem_ord], _dex[_sem_ord])]
+            print(f"[{ts()}] Ordem inferida por data em {int((df.loc[_sem_ord, '_ORDEM'] != '').sum())}/{int(_sem_ord.sum())} linhas sem prefixo")
     df['_PRATICA'] = parsed.apply(lambda x: x[1])
     df = df[df['_POLO'].str.len() > 0].copy()
     total = len(df); com_tutor = int(df['_TEM_TUTOR'].sum()); gerenciadas = int(df['_GERENCIADO'].sum())
@@ -4918,7 +4961,7 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
         for sem, grp in df_all.groupby('_SEM_ROW'):
             grp2 = grp.drop(columns=['_SEM_ROW'])
             print(f"[{ts()}] Gerenciamento {sem}: {len(grp2)} linhas")
-            resultado[sem] = _processar_gerenciamento_novo(grp2)
+            resultado[sem] = _processar_gerenciamento_novo(grp2, sem)
     return resultado
 
 
