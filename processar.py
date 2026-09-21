@@ -42,11 +42,11 @@ _SEMESTRES_DEFAULT = {
             'Ordem 3': '17/10/2026', 'Ordem 4': '14/11/2026', 'Ordem 5': '12/12/2026',
         },
         'periodos': {
-            'Ordem 1': {'inicio': '27/07/2026', 'fim': '22/08/2026', 'semanas': 4},
-            'Ordem 2': {'inicio': '24/08/2026', 'fim': '19/09/2026', 'semanas': 4},
-            'Ordem 3': {'inicio': '21/09/2026', 'fim': '17/10/2026', 'semanas': 4},
-            'Ordem 4': {'inicio': '19/10/2026', 'fim': '14/11/2026', 'semanas': 4},
-            'Ordem 5': {'inicio': '16/11/2026', 'fim': '12/12/2026', 'semanas': 4},
+            'Ordem 1': {'inicio': '27/07/2026', 'fim': '22/08/2026', 'semanas': 4, 'ger_inicio': '26/06/2026', 'ger_fim': '11/07/2026', 'agend_inicio': '12/07/2026', 'agend_fim': '25/07/2026'},
+            'Ordem 2': {'inicio': '24/08/2026', 'fim': '19/09/2026', 'semanas': 4, 'ger_inicio': '23/07/2026', 'ger_fim': '07/08/2026', 'agend_inicio': '08/08/2026', 'agend_fim': '22/08/2026'},
+            'Ordem 3': {'inicio': '21/09/2026', 'fim': '17/10/2026', 'semanas': 4, 'ger_inicio': '20/08/2026', 'ger_fim': '04/09/2026', 'agend_inicio': '05/09/2026', 'agend_fim': '19/09/2026'},
+            'Ordem 4': {'inicio': '19/10/2026', 'fim': '14/11/2026', 'semanas': 4, 'ger_inicio': '17/09/2026', 'ger_fim': '02/10/2026', 'agend_inicio': '03/10/2026', 'agend_fim': '17/10/2026'},
+            'Ordem 5': {'inicio': '16/11/2026', 'fim': '12/12/2026', 'semanas': 4, 'ger_inicio': '15/10/2026', 'ger_fim': '30/10/2026', 'agend_inicio': '31/10/2026', 'agend_fim': '14/11/2026'},
         },
     },
 }
@@ -4631,6 +4631,14 @@ def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
     for _num, _nome, _ini, _fim in _periodos_parsed:
         _antes = [(_n, _i) for _n2, _n, _i, _f in _periodos_parsed if _num_por_ordem.get(_n, 99) < _num]
         _inicio_ordem_anterior[_nome] = max((_i for _n, _i in _antes), default=None)
+    # PATCH 177: o calendário acadêmico tem 3 fases por ordem — 1) gerenciamento
+    # (tutor), 2) agendamento (alunos), 3) prática. 'inicio' do config é a fase 3.
+    # A porta "ordem futura" passa a ser o início do GERENCIAMENTO ('ger_inicio',
+    # ex: Ordem 4 = 17/09), quando o config trouxer; senão cai no fallback antigo.
+    _ger_inicio_por_ordem = {}
+    for _ord_nome, _cfg in (periodos or {}).items():
+        _gi = _parse_data_br_ou_iso(_cfg.get('ger_inicio', ''))
+        if _gi: _ger_inicio_por_ordem[_ord_nome] = _gi
     _hoje = _dt_ord.date.today()
 
     for o in ofertas:
@@ -4649,7 +4657,11 @@ def _detectar_gerenciamento_fora_ordem(ofertas, periodos):
         # esperado; gerenciar Ordem 4 (anterior = Ordem 3, práticas só 21/09)
         # ainda é adiantado demais.
         _ini_anterior = _inicio_ordem_anterior.get(_ordem_propria)
-        if _ini_anterior is None:
+        _ini_ger = _ger_inicio_por_ordem.get(_ordem_propria)
+        if _ini_ger is not None:
+            if _hoje < _ini_ger:
+                o['_anomalia_ordem_futura'] = True
+        elif _ini_anterior is None:
             _ini_propria = _inicio_por_ordem.get(_ordem_propria)  # Ordem 1: sem anterior
             if _ini_propria and _hoje < _ini_propria:
                 o['_anomalia_ordem_futura'] = True
