@@ -440,9 +440,19 @@ def verificar_e_localizar():
     else:  print(f"  [INFO] LOTACAO_TUTORES não encontrada (.xlsx/.xlsm)")
     # ── CSV de alunos por hub (igual aos outros arquivos: URL no Secret/env) ──
     p5 = None
+    # 0. Caso pontual, exclusivo do semestre 2026/1: o Leo colocou
+    # Alunos_por_hub_2026_01.csv (esquema próprio, ver carregar_alunos_hub)
+    # direto em planilhas/ — é a fonte de verdade de matrículas pra esse
+    # semestre, então tem prioridade sobre o Relatorio_alunos_por_hub.csv
+    # legado, sem precisar baixar nada. Não generalizar pra outros nomes de
+    # data — é um arquivo específico, decisão confirmada com o Leo.
+    p5_2026_01 = os.path.join(pasta_planilhas, "Alunos_por_hub_2026_01.csv")
+    if os.path.isfile(p5_2026_01):
+        p5 = p5_2026_01
+        print(f"  [OK] {os.path.basename(p5)} (fonte de matrículas 2026/1)")
     # 1. Tentar achar na pasta planilhas/ (já baixado anteriormente)
-    p5 = achar_arquivo(SCRIPT_DIR, "Relatorio_alunos_por_hub.csv")
-    if p5:
+    elif achar_arquivo(SCRIPT_DIR, "Relatorio_alunos_por_hub.csv"):
+        p5 = achar_arquivo(SCRIPT_DIR, "Relatorio_alunos_por_hub.csv")
         print(f"  [OK] {os.path.basename(p5)}")
     else:
         # 2. Tentar baixar via variável de ambiente URL_ALUNOS_HUB (Secret GitHub)
@@ -5175,14 +5185,20 @@ def carregar_alunos_hub(path_csv):
     Lê o relatório de alunos (matrículas) e retorna dict com matrículas distintas
     por polo e por categoria — substitui a contagem inflacionada do GIOCONDA.
 
-    PATCH 43: detecta automaticamente entre dois esquemas de coluna diferentes
-    que já circularam com esse mesmo nome de arquivo:
+    PATCH 43: detecta automaticamente entre esquemas de coluna diferentes que
+    já circularam com esse mesmo papel (arquivo apontado por p5):
       - Esquema ANTIGO: POLO_HUB, GRUPO_HUB, TUTOR_PRATICA, SITUACAO_SEMESTRE
         (granularidade: 1 linha por matrícula no semestre)
       - Esquema NOVO: POLO, CATEGORIA_LABORATORIO, TUTOR, SITUACAO_OFERTA
         (granularidade: 1 linha por aluno × experimento/prática — o mesmo aluno
         aparece várias vezes, uma por prática; dedup por MATRICULA continua
         sendo o jeito certo de contar "alunos distintos")
+      - Esquema 2026/01 (`Alunos_por_hub_2026_01.csv`, exclusivo desse
+        semestre): POLO_HUB, CATEGORIA (não GRUPO_HUB), TUTOR_PRATICA,
+        SITUACAO_SEMESTRE — parecido com o ANTIGO, mas a coluna de
+        categoria/grupo se chama CATEGORIA em vez de GRUPO_HUB. Passa a ser a
+        fonte de verdade de matrículas confirmadas em 2026/1 (base real, não
+        um proxy de agendamento) — decisão confirmada com o Leo em 2026-09-22.
     """
     import unicodedata as _ud, re as _re
     if not path_csv or not os.path.isfile(path_csv):
@@ -5210,9 +5226,20 @@ def carregar_alunos_hub(path_csv):
 
     # PATCH 43: detectar esquema de colunas
     esquema_novo = 'POLO' in df.columns and 'CATEGORIA_LABORATORIO' in df.columns and 'POLO_HUB' not in df.columns
+    # Esquema exclusivo de `Alunos_por_hub_2026_01.csv`: parecido com o
+    # ANTIGO (POLO_HUB/SITUACAO_SEMESTRE/TUTOR_PRATICA), mas a coluna de
+    # categoria/grupo se chama CATEGORIA, não GRUPO_HUB.
+    esquema_2026_01 = (
+        not esquema_novo
+        and 'POLO_HUB' in df.columns and 'CATEGORIA' in df.columns
+        and 'GRUPO_HUB' not in df.columns and 'POLO' not in df.columns
+    )
     if esquema_novo:
         col_polo, col_grupo, col_tutor_pratica = 'POLO', 'CATEGORIA_LABORATORIO', 'TUTOR'
         print(f"[{ts()}] Alunos hub: esquema NOVO detectado (POLO/CATEGORIA_LABORATORIO/TUTOR)")
+    elif esquema_2026_01:
+        col_polo, col_grupo, col_tutor_pratica = 'POLO_HUB', 'CATEGORIA', 'TUTOR_PRATICA'
+        print(f"[{ts()}] Alunos hub: esquema 2026/01 detectado (POLO_HUB/CATEGORIA/TUTOR_PRATICA)")
     else:
         col_polo, col_grupo, col_tutor_pratica = 'POLO_HUB', 'GRUPO_HUB', 'TUTOR_PRATICA'
         print(f"[{ts()}] Alunos hub: esquema ANTIGO detectado (POLO_HUB/GRUPO_HUB/TUTOR_PRATICA)")
