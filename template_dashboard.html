@@ -3017,15 +3017,21 @@ function exportarSemGer(){
 }
 function openAlunosCursoModal(){
   // Calcular alunos das práticas enviadas por categoria (não da lotação)
+  // Precisa usar a MESMA base do card "Alunos nas Práticas" (semestre ativo,
+  // só tutor com te>0, campo t.al já resolvido) -- antes somava t.hist
+  // inteiro (todos os semestres, sem checar te), o que inflava o total do
+  // modal muito além do número mostrado no card que abre ele.
   const _nc=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;
   const _CAT_BLACKLIST=new Set(['Aviso de Portfólio','nan','NaT','None','']);
   const catMap={};
-  (DB.tutores||[]).forEach(t=>{
+  const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);
+  _ts.forEach(t=>{
     if(t._anonimo)return;
+    if(!((t.te||0)>0))return;
     if(t.c==null||_CAT_BLACKLIST.has(t.c))return;
     const cat=_nc(t.c||'Outro');
     if(!catMap[cat])catMap[cat]=0;
-    (t.hist||[]).forEach(h=>{ catMap[cat]+=(h.a||0); });
+    catMap[cat]+=(t.al||0);
   });
   const cursos=Object.entries(catMap)
     .map(([cat,alunos])=>({cat,alunos}))
