@@ -389,18 +389,19 @@ function renderGestorKPIs(){
 // alunos AGENDADOS / alunos MATRICULADOS, só dentro das ofertas que JÁ têm
 // agenda registrada (o._getOfertasAgenda filtra por tem_agenda). Reaproveita
 // literalmente a função de dedup do dashboard (_dedupAlunos) — sem ela o
-// número fica inflado, porque cada prática de um mesmo polo+categoria repete
-// o valor de alunos_mat/alunos_agend da origem (ver comentário completo no
-// dashboard). Usa DB.ger_ofertas (raiz) — no dashboard isso é "GER_DB", que
-// aponta pro semestre ATIVO por padrão (sem seletor de semestre no Gestor,
-// não faz sentido oferecer "Ambos" aqui); DB.ger_ofertas já É o semestre
-// ativo (dados.update(ger_dados) no processar.py). Validado: bate 1:1 com o
-// que aparece no dashboard completo (40,1% / 2.454 de 6.125, rodada de
-// referência 2026-09-14).
+// número fica inflado. A premissa original (PATCH 48) de que toda linha de um
+// mesmo polo+categoria repetia o mesmo valor era falsa (auditoria 22/09:
+// práticas diferentes no mesmo polo+categoria têm matrículas diferentes e
+// legítimas) — a chave de agrupamento agora inclui o.pratica também, ver
+// comentário completo e correto na função _dedupAlunos do dashboard. Usa
+// DB.ger_ofertas (raiz) — no dashboard isso é "GER_DB", que aponta pro
+// semestre ATIVO por padrão (sem seletor de semestre no Gestor, não faz
+// sentido oferecer "Ambos" aqui); DB.ger_ofertas já É o semestre ativo
+// (dados.update(ger_dados) no processar.py).
 function _dedupAlunosGestor(ofertas, campo){
   const porGrupo = {};
   ofertas.forEach(o => {
-    const k = (o._semOrigem||'') + '|||' + (o.polo||'') + '|||' + (o.categoria||'');
+    const k = (o._semOrigem||'') + '|||' + (o.polo||'') + '|||' + (o.categoria||'') + '|||' + (o.pratica||'');
     const v = o[campo] || 0;
     if (!(k in porGrupo) || v > porGrupo[k]) porGrupo[k] = v;
   });
