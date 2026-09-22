@@ -1217,7 +1217,12 @@ def processar(p1, p2):
     for _, t in df_at.iterrows():
         polo = str(t.get(col_polo, '') or '').strip()
         cursos = str(t.get(col_cur, '') or '').strip()
-        cat_raw = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
+        # BUG 3 (2026-09-22): célula NaN (float, não None) faz `nan or ''`
+        # manter `nan` (NaN é truthy) → str(nan) == 'nan' literal. Mesma
+        # guarda de `_interpretar_data_contratacao` (~L784).
+        _cat_raw_s = str(t.get(col_cat, '') or '').strip()
+        if _cat_raw_s in ('nan', 'NaT', 'None'): _cat_raw_s = ''
+        cat_raw = _normaliza_categoria_bio_duplicado(_cat_raw_s) if col_cat else ''
         cf = CAT_MAP.get(cat_raw, cat_raw)
         chave = polo + cursos
         if chave and cat_raw:
@@ -1644,7 +1649,11 @@ def processar(p1, p2):
     _hist_pre_admissao = 0
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
-        cat_raw  = _normaliza_categoria_bio_duplicado(str(t.get(col_cat, '') or '').strip()) if col_cat else ''
+        # BUG 3 (2026-09-22): mesma guarda de `_interpretar_data_contratacao`
+        # (~L784) — célula NaN vira 'nan' literal sem isso.
+        _cat_raw_s2 = str(t.get(col_cat, '') or '').strip()
+        if _cat_raw_s2 in ('nan', 'NaT', 'None'): _cat_raw_s2 = ''
+        cat_raw  = _normaliza_categoria_bio_duplicado(_cat_raw_s2) if col_cat else ''
         cat_form = CAT_MAP.get(cat_raw, cat_raw)
         polo_str = str(t.get(col_polo, '') or '').strip()
         cursos_t = str(t.get(col_cur, '') or '').strip()
@@ -5286,18 +5295,45 @@ def carregar_alunos_hub(path_csv):
     total_distintos = df['MATRICULA'].nunique()
     print(f"[{ts()}] Matrículas DISTINTAS (ativos): {total_distintos:,} (de {len(df):,} linhas)")
 
-    # Por polo (chave normalizada)
+    # Por polo (chave normalizada) — cada matrícula pode ter várias linhas em
+    # POLOS diferentes ao longo do semestre (raro, mas acontece), mas dedup
+    # por polo aqui é intencional/aceitável (não é o campo que quebrou o
+    # modal — ver BUG 2 abaixo, restrito a categoria/polo×categoria).
     por_polo = (df.groupby('_POLO_NORM')['MATRICULA']
                   .nunique().to_dict())
 
-    # Por polo × categoria
-    por_polo_cat = {}
-    for (polo, cat), grp in df.groupby(['_POLO_NORM', '_CAT']):
-        por_polo_cat[f"{polo}||{cat}"] = int(grp['MATRICULA'].nunique())
+    # BUG 2 (2026-09-22): por_cat/por_polo_cat contavam a MESMA matrícula em
+    # CADA categoria que ela tocasse (groupby/nunique sobre o DataFrame cru,
+    # não mutuamente exclusivo) — com o CSV 2026/01, 6.412 matrículas têm >1
+    # categoria, e a soma por categoria (81.046) passou a não bater com
+    # total_distintos (74.636), quebrando o modal "Alunos Matriculados por
+    # Categoria". Correção: resolve 1 categoria por MATRICULA pela categoria
+    # MAIS FREQUENTE entre as linhas daquela matrícula (moda via
+    # Counter.most_common(1), mesmo padrão de `_votos_cf_polo`,
+    # processar.py ~L1785). Só depois disso agrupa — assim
+    # sum(por_cat.values()) == total_distintos sempre, exatamente.
+    from collections import Counter as _Counter_ahub
 
-    # Por categoria (totais)
-    por_cat = (df.groupby('_CAT')['MATRICULA']
-                 .nunique().to_dict())
+    def _moda(serie):
+        return _Counter_ahub(serie).most_common(1)[0][0]
+
+    _cat_por_matricula = df.groupby('MATRICULA')['_CAT'].agg(_moda)
+
+    # Por categoria (totais) — 1 matrícula conta em exatamente 1 categoria.
+    por_cat = _cat_por_matricula.value_counts().to_dict()
+
+    # Por polo × categoria: usa a MESMA categoria resolvida acima por
+    # matrícula; o polo é a moda das linhas daquela matrícula QUE JÁ
+    # pertencem à categoria resolvida (ou seja, 1 matrícula → 1 par
+    # (polo, categoria) resolvido, sem dupla contagem).
+    df['_CAT_RESOLVIDA'] = df['MATRICULA'].map(_cat_por_matricula)
+    _linhas_da_cat_resolvida = df[df['_CAT'] == df['_CAT_RESOLVIDA']]
+    _polo_por_matricula = _linhas_da_cat_resolvida.groupby('MATRICULA')['_POLO_NORM'].agg(_moda)
+    _pares_polo_cat = _polo_por_matricula.to_frame('polo').join(_cat_por_matricula.rename('cat'))
+
+    por_polo_cat = {}
+    for (polo, cat), grp in _pares_polo_cat.groupby(['polo', 'cat']):
+        por_polo_cat[f"{polo}||{cat}"] = int(len(grp))
 
     # ── Mapear TUTOR_PRATICA/TUTOR → subcurso para Multi 3 ──────────────
     tutor_subcurso = {}  # nome_norm → 'Fisio'/'T.Oc'/'Est'
@@ -6120,14 +6156,38 @@ if __name__ == '__main__':
                 alunos_hub = carregar_alunos_hub(p5)
             if alunos_hub:
                 dados['alunos_hub'] = alunos_hub
-                # Sobrescrever total_alunos_matriculados nos ger_kpis
-                if 'ger_kpis' in dados:
-                    dados['ger_kpis']['total_alunos_matriculados'] = alunos_hub['total_distintos']
-                    dados['ger_kpis']['alunos_mat_fonte'] = 'hub_csv'
-                    # Atualizar também DB.kpis.total_alunos com o valor correto do hub
-                    if 'kpis' in dados:
-                        dados['kpis']['total_alunos'] = alunos_hub['total_distintos']
-                    print(f"[{ts()}] KPI alunos substituído: {alunos_hub['total_distintos']:,} (matrículas distintas)")
+                # Sobrescrever total_alunos_matriculados nos ger_kpis.
+                # BUG 1 (2026-09-22): este hub CSV (Alunos_por_hub_2026_01.csv,
+                # estático ou dinâmico) é EXCLUSIVO do semestre 2026/1. Como
+                # `dados['ger_kpis']` (raiz) é uma REFERÊNCIA a
+                # `dados['gerenciamento_por_semestre'][SEMESTRE_ATUAL]['ger_kpis']`
+                # (via dados.update(ger_dados), ver ~L5751), escrever direto na
+                # raiz aqui contamina o SEMESTRE_ATUAL de verdade quando ele for
+                # diferente de '2026/1' (hoje é '2026/2') — e o ger_kpis de
+                # 2026/1 de fato (o que o frontend lê ao selecionar "2026/1" no
+                # dropdown do Gerenciamento) nunca recebia o patch. Correção:
+                # aplicar o patch especificamente em
+                # gerenciamento_por_semestre['2026/1'].ger_kpis; só tocar na
+                # raiz quando SEMESTRE_ATUAL já for '2026/1' (nesse caso raiz e
+                # a entrada por-semestre são o mesmo objeto, então nada muda).
+                _ger_sem = dados.get('gerenciamento_por_semestre', {})
+                _alvo_ger_kpis = None
+                if SEMESTRE_ATUAL == '2026/1':
+                    if 'ger_kpis' in dados:
+                        _alvo_ger_kpis = dados['ger_kpis']
+                elif '2026/1' in _ger_sem and 'ger_kpis' in _ger_sem['2026/1']:
+                    _alvo_ger_kpis = _ger_sem['2026/1']['ger_kpis']
+                if _alvo_ger_kpis is not None:
+                    _alvo_ger_kpis['total_alunos_matriculados'] = alunos_hub['total_distintos']
+                    _alvo_ger_kpis['alunos_mat_fonte'] = 'hub_csv'
+                    print(f"[{ts()}] KPI alunos substituído (2026/1): {alunos_hub['total_distintos']:,} (matrículas distintas)")
+                else:
+                    print(f"[{ts()}] AVISO: alunos_hub disponível mas gerenciamento_por_semestre['2026/1'] não encontrado — KPI alunos NÃO aplicado")
+                # DB.kpis.total_alunos é o KPI GLOBAL da Visão Geral (não é
+                # por-semestre no Gerenciamento) — continua sendo sobrescrito
+                # incondicionalmente.
+                if 'kpis' in dados:
+                    dados['kpis']['total_alunos'] = alunos_hub['total_distintos']
 
                 # PATCH 135: o hub CSV já calcula qual sub-área de
                 # Multidisciplinar III (Fisioterapia/T.Ocupacional/Estética)
