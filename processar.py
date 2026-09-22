@@ -6094,9 +6094,30 @@ if __name__ == '__main__':
     else:
         dados['tem_gerenciamento'] = False
     # ── ALUNOS HUB: matrículas distintas ──────────────────────────────────────
-    if p5:
+    # Dado ESTÁTICO congelado pro semestre 2026/1 (decisão do Leo, 2026-09-22):
+    # o secret URL_ALUNOS_HUB do GitHub Actions não foi atualizado pro CSV novo
+    # (Alunos_por_hub_2026_01.csv, esquema exclusivo desse semestre) e o Leo
+    # decidiu não atualizar o secret — em vez disso, o número já validado
+    # (74.636 matrículas distintas) fica congelado num JSON estático
+    # (alunos_hub_2026_01_estatico.json), no mesmo padrão de
+    # laboratorios_data.json/labs_pendencias.json/contatos_por_polo.json (ver
+    # MAPA_DO_CODIGO.md §4: JSONs comitados no repo, carregados direto do
+    # disco, sem depender de planilha/secret externo). Se esse arquivo
+    # existir, ele tem prioridade total e a leitura dinâmica via p5/
+    # carregar_alunos_hub nem é tentada. QUANDO O SEMESTRE VIRAR (2026/2):
+    # revisar esta decisão — ou gerar um novo estático pro semestre novo, ou
+    # apagar este arquivo pra voltar ao fluxo dinâmico (secret/CSV) sem
+    # precisar tocar em mais nada aqui.
+    _alunos_hub_estatico_path = os.path.join(SCRIPT_DIR, 'alunos_hub_2026_01_estatico.json')
+    _usar_estatico_alunos_hub = os.path.isfile(_alunos_hub_estatico_path)
+    if _usar_estatico_alunos_hub or p5:
         try:
-            alunos_hub = carregar_alunos_hub(p5)
+            if _usar_estatico_alunos_hub:
+                with open(_alunos_hub_estatico_path, encoding='utf-8') as _f_ahub:
+                    alunos_hub = json.load(_f_ahub)
+                print(f"[{ts()}] Alunos hub: usando snapshot ESTÁTICO 2026/1 (alunos_hub_2026_01_estatico.json) — {alunos_hub['total_distintos']:,} matrículas")
+            else:
+                alunos_hub = carregar_alunos_hub(p5)
             if alunos_hub:
                 dados['alunos_hub'] = alunos_hub
                 # Sobrescrever total_alunos_matriculados nos ger_kpis
