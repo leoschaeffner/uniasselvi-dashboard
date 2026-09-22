@@ -3317,8 +3317,8 @@ function renderAgendasEstudo(){
       <div style="font-size:22px;font-weight:800;color:var(--ok)">${fmtNum(geridas.length)} <span style="font-size:13px;font-weight:700">(${pctGeridas}%)</span></div>
       <div style="font-size:10px;color:var(--muted)">do total disponível</div>
     </div>
-    <div style="background:var(--bg);border-radius:8px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--muted)">Alunos Matriculados (com e sem tutor)</div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px 14px" title="Um mesmo polo+categoria pode ter práticas com e sem tutor ao mesmo tempo; nesse caso ele é contado no total acima E nos dois recortes abaixo. Por isso 'com tutor' + 'sem tutor' pode ser maior que o total — os três valores estão corretos, cada um pela sua própria definição">
+      <div style="font-size:11px;color:var(--muted)">Alunos Matriculados (com e sem tutor) ⓘ</div>
       <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(matTotal)}</div>
       <div style="font-size:10px;color:var(--muted)">${fmtNum(matComTutor)} com tutor · ${fmtNum(matSemTutor)} sem tutor</div>
     </div>
