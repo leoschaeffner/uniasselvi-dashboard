@@ -950,7 +950,8 @@ function renderCatOverview(){
   // por isso a soma das categorias podia passar do "Total Tutores" lá em
   // cima. Aplica o mesmo filtro aqui pra bater certinho com o resto da tela.
   const el=document.getElementById('pv-cats');const cats={};
-  (_getSemTutores()||DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=='Aviso de Portfólio').forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
+  const _pvCatBlacklist=new Set(['Aviso de Portfólio','nan','NaT','None','']);
+  (_getSemTutores()||DB.tutores||[]).filter(t=>!t._anonimo&&t.c!=null&&!_pvCatBlacklist.has(t.c)).forEach(t=>{const c=t.c||'Outro';if(!cats[c])cats[c]={t:0,e:0,al:0};cats[c].t++;if(t.te>0)cats[c].e++;cats[c].al+=(t.al||0)});
   window._pvCats=cats;
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v],i)=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
@@ -2727,9 +2728,10 @@ function populateFilters(){
     'Química e Física - Agronomia':'QUÍMICA E FÍSICA',
   };
   function _normCat(c){return _CAT_NORM_MAP[c]||c;}
-  const tutorCats=[...new Set((DB.tutores||[]).map(t=>_normCat(t.c||'')).filter(Boolean))].sort();
+  const _catSelBlacklist=new Set(['Aviso de Portfólio','nan','NaT','None','']);
+  const tutorCats=[...new Set((DB.tutores||[]).map(t=>_normCat(t.c||'')).filter(c=>c&&!_catSelBlacklist.has(c)))].sort();
   const tSel=document.getElementById('tutor-cat-sel');if(tSel)tutorCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;tSel.appendChild(o)});
-  const pracCats=[...new Set(getPraticas().map(p=>_normCat(p.c||'')).filter(Boolean))].sort();
+  const pracCats=[...new Set(getPraticas().map(p=>_normCat(p.c||'')).filter(c=>c&&!_catSelBlacklist.has(c)))].sort();
   const pSel=document.getElementById('prac-cat-sel');if(pSel)pracCats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;pSel.appendChild(o)});
   // PATCH 109: popula o filtro de curso específico (Biomedicina, Farmácia,
   // Enfermagem, etc.) usando o campo "cursos" que cada prática agora carrega.
@@ -2900,11 +2902,13 @@ function openAlunosCursoModal(){
   // inteiro (todos os semestres, sem checar te), o que inflava o total do
   // modal muito além do número mostrado no card que abre ele.
   const _nc=c=>window._CAT_NORM_MAP&&window._CAT_NORM_MAP[c]?window._CAT_NORM_MAP[c]:c;
+  const _CAT_BLACKLIST=new Set(['Aviso de Portfólio','nan','NaT','None','']);
   const catMap={};
   const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);
   _ts.forEach(t=>{
     if(t._anonimo)return;
     if(!((t.te||0)>0))return;
+    if(t.c==null||_CAT_BLACKLIST.has(t.c))return;
     const cat=_nc(t.c||'Outro');
     if(!catMap[cat])catMap[cat]=0;
     catMap[cat]+=(t.al||0);
@@ -4565,7 +4569,8 @@ function renderTutoresMec() {
       // "duplicadas" na lista. As outras telas (tutor-cat-sel, prac-cat-sel,
       // ordem-cat-sel) já normalizavam; esta ficou de fora.
       const _normC = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
-      const _cats = [...new Set((DB.tutores||[]).filter(t=>!t._anonimo && t.c!=='Aviso de Portfólio').map(t=>_normC(t.c||'')).filter(Boolean))].sort();
+      const _catSelBlacklist2 = new Set(['Aviso de Portfólio','nan','NaT','None','']);
+      const _cats = [...new Set((DB.tutores||[]).filter(t=>!t._anonimo && !_catSelBlacklist2.has(t.c)).map(t=>_normC(t.c||'')).filter(c=>c&&!_catSelBlacklist2.has(c)))].sort();
       // PATCH 91: adiciona os grupos combinados (os mesmos 5 do Detalhe, tipo
       // "Biomedicina, Farmácia e Estética/Cosmética") ANTES das categorias
       // brutas individuais — sem isso, não tinha como filtrar/exportar Bio-Far
