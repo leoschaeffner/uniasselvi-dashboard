@@ -3168,11 +3168,12 @@ function openDiaSemanaModal(dia){
     if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,_grupos:{}};
     const p=porHorario[key];
     p.qtd++;
-    // PATCH 114: mesma deduplicação por polo+categoria do openTurnoModal —
-    // ver comentário lá pra detalhe do porquê (evita inflar matriculados/
-    // agendados quando mais de uma prática do mesmo polo+categoria cai no
-    // mesmo dia+horário+turno).
-    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
+    // PATCH 114 (revisado): mesma deduplicação do openTurnoModal — ver
+    // comentário lá pra detalhe do porquê. A chave inclui o.pratica: práticas
+    // diferentes do mesmo polo+categoria têm matrículas legítimas e distintas
+    // (não duplicatas) e precisam ser somadas, cada uma com seu próprio MAX
+    // (ver _dedupAlunos, mesma correção).
+    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'')+'|||'+(o.pratica||'');
     if(!p._grupos[chaveGrupo]) p._grupos[chaveGrupo]={mat:0,agend:0};
     const g=p._grupos[chaveGrupo];
     g.mat=Math.max(g.mat,o.alunos_mat||0);
@@ -3245,13 +3246,13 @@ function openTurnoModal(turno){
     if(!porHorario[h]) porHorario[h]={horario:h,qtd:0,_grupos:{}};
     const p=porHorario[h];
     p.qtd++;
-    // PATCH 114: mesma regra do _dedupAlunos — cada prática de um mesmo
-    // polo+categoria repete o valor de alunos_mat/alunos_agend da origem, então
-    // somar linha a linha (como este modal fazia antes) inflava o total quando
-    // mais de uma prática do mesmo polo+categoria caía no mesmo horário. Agrupa
-    // por polo+categoria e pega o maior valor (não soma), igual ao resto do
-    // dashboard já faz pros KPIs principais.
-    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
+    // PATCH 114 (revisado): mesma regra do _dedupAlunos — a chave inclui
+    // o.pratica, porque práticas diferentes de um mesmo polo+categoria têm
+    // matrículas legítimas e distintas (não duplicatas) e precisam ser
+    // somadas, não colapsadas num único MAX. Só linhas da MESMA prática (que
+    // se repetem por expansão de _PESO_OFERTA no backend) usam MAX entre si —
+    // ver comentário completo em _dedupAlunos.
+    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'')+'|||'+(o.pratica||'');
     if(!p._grupos[chaveGrupo]) p._grupos[chaveGrupo]={mat:0,agend:0};
     const g=p._grupos[chaveGrupo];
     g.mat=Math.max(g.mat,o.alunos_mat||0);
