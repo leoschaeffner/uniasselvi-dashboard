@@ -894,7 +894,7 @@ function renderKPIs(){
     <div class="kpi kpi-yellow kpi-link" onclick="openListModal('atrasados')"><div class="kpi-label">Atrasados</div><div class="kpi-value">${k.atrasados}</div><div class="kpi-hint">clique para ver lista</div></div>
     <div class="kpi kpi-teal kpi-link" onclick="openAlunosCursoModal()" title="Alunos das práticas cujo TUTOR já enviou portfólio (subconjunto do total de matriculados no hub — não é o universo completo, só quem já tem envio registrado)."><div class="kpi-label">Alunos nas Práticas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${(()=>{const _ts=(_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_getSemTutores():(DB.tutores||[]);return fmtNum(_ts.filter(t=>!t._anonimo&&(t.te||0)>0).reduce((s,t)=>s+(t.al||0),0));})()}</div><div class="kpi-detail" style="color:var(--yellow)">↪ clique p/ ver por curso</div></div>
     <div class="kpi kpi-teal" title="Alunos distintos registrados nos envios de portfólio (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Registrados no Portfólio</div><div class="kpi-value">${fmtNum(_getSemPortfolioAlunos().geral||0)}</div><div class="kpi-detail" style="color:var(--muted)">deduplicado por turma</div></div>
-    <div class="kpi kpi-teal" title="Alunos agendados no GIOCONDA (deduplicado por polo+categoria)"><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(((typeof GER_DB!=='undefined'&&GER_DB?GER_DB:DB).ger_kpis||{}).total_alunos_agendados||0)}</div><div class="kpi-detail" style="color:var(--muted)">via GIOCONDA</div></div>
+    <div class="kpi kpi-teal" title="Soma bruta de alunos agendados em todas as ofertas do GIOCONDA (pode contar o mesmo aluno mais de uma vez se ele tiver mais de uma prática agendada no mesmo polo+categoria)."><div class="kpi-label">Alunos Agendados</div><div class="kpi-value">${fmtNum(((typeof GER_DB!=='undefined'&&GER_DB?GER_DB:DB).ger_kpis||{}).total_alunos_agendados||0)}</div><div class="kpi-detail" style="color:var(--muted)">via GIOCONDA</div></div>
     <div class="kpi kpi-green kpi-link" onclick="openListModal('polos')"><div class="kpi-label">Polos</div><div class="kpi-value">${k.total_polos}</div><div class="kpi-hint">clique para ver lista</div></div>`;
   // renderCruzamentoPortfolioAgendado(); // oculto temporariamente -- numero "Agendado" desse card inconsistente com "Alunos Agendados" acima, revisar
 }
@@ -1262,7 +1262,7 @@ function renderGerenciamento(){
     <div class="kpi kpi-ok" title="Ofertas com agenda configurada no GIOCONDA: datas, capacidade e locais definidos"><div class="kpi-label">Gerenciadas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_gerenciadas)}</div><div class="kpi-detail">${k.pct_gerenciado}% do total</div></div>
     <div class="kpi kpi-red" title="Polos/labs sem nenhum tutor alocado — bloqueante total para gerenciamento"><div class="kpi-label">Sem Tutor <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_sem_tutor)}</div></div>
     <div class="kpi kpi-teal" style="cursor:pointer" onclick="openAlunosModal()" title="${k.alunos_mat_fonte==='hub_csv'?'Total de matrículas confirmadas no hub para 2026/1 — é o universo completo de alunos. Os cards \'Alunos Matriculados (com e sem tutor)\' (Horários e Engajamento) e \'Alunos nas Práticas\' (Portfólios) mostram subconjuntos menores: só quem já tem oferta registrada no GIOCONDA, ou só quem já teve portfólio enviado pelo tutor. Clique para ver detalhes por categoria.':'Estimativa via GIOCONDA (soma de alunos matriculados por oferta, não deduplicado globalmente) — ainda não há uma base de matrículas confirmada do hub pra esse semestre. Os cards \'Alunos Matriculados (com e sem tutor)\' e \'Alunos nas Práticas\' também são estimativas de subconjuntos diferentes. Clique para ver detalhes por categoria.'}"><div class="kpi-label">Alunos Mat. <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div><div class="kpi-detail" style="color:var(--teal);font-size:9px">${k.alunos_mat_fonte==='hub_csv'?'✓ matrículas únicas':'estimativa · clique p/ detalhar'}</div></div>
-    <div class="kpi kpi-yellow" title="Alunos com prática agendada (práticas gerenciadas × capacidade estimada por ordem)"><div class="kpi-label">Alunos Agendados <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>`;
+    <div class="kpi kpi-yellow" title="Soma bruta de alunos agendados em todas as ofertas do GIOCONDA (pode contar o mesmo aluno mais de uma vez se ele tiver mais de uma prática agendada no mesmo polo+categoria)."><div class="kpi-label">Alunos Agendados <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>`;
     // PATCH 163: card "Ocupação" removido (mostrava "0%" fixo — capacidade nunca calculada).
   const catColors=['#006B5E','#00A88F','#00C9A7','#FFD100','#E5BC00','#dc2626'];
   document.getElementById('gv-cat-cards').innerHTML=(GER_DB.ger_cat||[]).map((c,i)=>{const cor=catColors[i%catColors.length];return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:${cor}08;border-left:4px solid ${cor}"><div style="font-size:13px;font-weight:700;margin-bottom:6px">${c.categoria}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700;font-size:15px">${fmtNum(c.total_ofertas)}</div></div><div><span style="color:var(--muted)">Gerenciadas</span><div style="font-weight:700;font-size:15px;color:var(--ok)">${c.pct_gerenciado}%</div></div><div><span style="color:var(--muted)">Sem tutor</span><div style="font-weight:700;font-size:15px;color:${c.sem_tutor>0?'var(--red)':'var(--ok)'}">-${fmtNum(c.sem_tutor)}</div></div></div></div>`;}).join('');
@@ -3162,21 +3162,22 @@ function _regiaoDoPolo(polo){
   return _UF_PARA_REGIAO[m[1]] || 'Não identificado';
 }
 function _dedupAlunos(ofertas, campo){
-  // PATCH 48: mesma regra do PATCH 38 (backend) — cada prática de um mesmo
-  // polo+categoria repete o valor de ALUNOS_MATRICULADOS/ALUNOS_AGENDADOS da
-  // origem, então somar linha a linha infla o total (o card "Alunos
-  // Matriculados" desta página mostrava 42.288 — o mesmo número inflado que já
-  // tinha sido corrigido em outros lugares do dashboard — enquanto a "Taxa de
-  // Engajamento" logo abaixo, calculada só sobre o subconjunto com agenda,
-  // mostrava 13.169: dois números MUITO diferentes na mesma tela porque nenhum
-  // dos dois deduplicava, e cada um somava um subconjunto de linhas distinto).
-  // Inclui o._semOrigem na chave quando presente (visão "Ambos") — sem isso,
-  // uma mesma combinação polo+categoria em 2026/1 E 2026/2 (matrículas
-  // DIFERENTES e legítimas em cada semestre) colapsaria pro maior dos dois
-  // valores em vez de somar os dois.
+  // PATCH 48 (revisado): a premissa original era que TODA linha de um mesmo
+  // polo+categoria repetia o mesmo valor de ALUNOS_MATRICULADOS/AGENDADOS
+  // (linhas duplicadas da mesma oferta) — auditoria de 22/09 contra dado real
+  // mostrou que isso é falso: 254 de 442 grupos polo+categoria têm PRÁTICAS
+  // diferentes com valores diferentes (matrículas legítimas e distintas, não
+  // duplicatas), e o dedup por MAX descartava quase tudo, subcontando pesado
+  // (ex.: "Agendamentos" caía pra ~2.900 quando o valor real deduplicado é
+  // ~19.800, de um bruto de ~29.200). A chave agora inclui o._semOrigem (visão
+  // "Ambos" não colapsa 2026/1 com 2026/2) E o.pratica — só linhas que são de
+  // fato a MESMA prática, no mesmo polo+categoria+semestre, repetem valor por
+  // expansão de _PESO_OFERTA no backend; práticas diferentes somam, cada uma
+  // com seu próprio MAX (que ainda protege contra a duplicação real que
+  // continua existindo dentro de uma mesma prática).
   var porGrupo={};
   ofertas.forEach(function(o){
-    var k=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'');
+    var k=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'')+'|||'+(o.pratica||'');
     var v=o[campo]||0;
     if(!(k in porGrupo) || v>porGrupo[k]) porGrupo[k]=v;
   });
