@@ -535,7 +535,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th style="text-align:right" onclick="sortTable('ae-cat-tbody','tot','num')">Ofertas c/ Agenda<span class="sort-ind"></span></th>
       <th style="text-align:right" onclick="sortTable('ae-cat-tbody','inc','num')">Horários Incomuns<span class="sort-ind"></span></th>
       <th style="text-align:right" onclick="sortTable('ae-cat-tbody','sa','num')">Sem Aluno<span class="sort-ind"></span></th>
-      <th onclick="sortTable('ae-cat-tbody','eng','num')">Engajamento<span class="sort-ind"></span></th>
+      <th onclick="sortTable('ae-cat-tbody','eng','num')" title="Matriculados/Agendados deduplicados por semestre+polo+categoria+prática (MAX por grupo, não soma bruta) — mesma regra do _dedupAlunos usada no restante do painel">Engajamento<span class="sort-ind"></span></th>
     </tr></thead><tbody id="ae-cat-tbody"></tbody></table></div>
   </div>
   <div class="card" style="margin-bottom:16px">
@@ -1074,7 +1074,7 @@ function renderCatOverview(){
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v],i)=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
     return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" data-cat="'+i+'" onclick="openCatModal('+i+')">'
-      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+c+'</div><div style="font-size:10px;color:var(--muted)">'+v.t+' tutores · '+v.e+' enviaram · '+fmtNum(v.al)+' alunos</div></div>'+progCell(pct)+'<span style="font-size:11px;color:var(--muted)">↗</span></div>';
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+c+'</div><div style="font-size:10px;color:var(--muted)">'+v.t+' tutores · '+v.e+' enviaram · <span title="Soma bruta de alunos autodeclarados nas submissões de portfólio — pode diferir do número da aba Práticas, que usa a base do hub (GIOCONDA)">'+fmtNum(v.al)+' alunos</span></div></div>'+progCell(pct)+'<span style="font-size:11px;color:var(--muted)">↗</span></div>';
   }).join('');
 }
 
@@ -1283,7 +1283,7 @@ function openPoloModal(nome){
   const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,pend:tutores.filter(t=>t.te===0).length,
     alunos:poloStats.a||poloStats.alunos||tutores.reduce((s,t)=>s+(t.al||0),0)};
   document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
-  let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div>`;
+  let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal" title="Alunos das práticas cujo tutor enviou portfólio nesse polo (não é o mesmo escopo da tabela de Ofertas em Gerenciamento, que usa dedup do GIOCONDA)"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div>`;
   const contatos = poloStats.contatos || [];
   if(contatos.length){
     html += `<div class="sec-label">📞 Contatos do Polo</div><div style="display:grid;gap:8px;margin-bottom:16px">`;
@@ -3112,20 +3112,34 @@ function openCategoriaHorariosModal(categoria){
     const h=o.hr_agenda||'(sem horário registrado)';
     const turno=o.turno||'—';
     const key=turno+'|||'+h;
-    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,mat:0,agend:0};
+    if(!porHorario[key]) porHorario[key]={turno,horario:h,qtd:0,_grupos:{}};
     const p=porHorario[key];
-    p.qtd++; p.mat+=(o.alunos_mat||0); p.agend+=(o.alunos_agend||0);
+    p.qtd++;
+    // PATCH 114 (revisado): mesma deduplicação do openTurnoModal/openDiaSemanaModal
+    // — ver comentário lá pra detalhe do porquê. Ficou de fora do PR #16 original
+    // (a tabela "por Categoria/Lab" e este modal somavam alunos_mat/alunos_agend
+    // linha a linha, sem dedup, inflando o total em 32%-140% conforme a categoria).
+    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'')+'|||'+(o.pratica||'');
+    if(!p._grupos[chaveGrupo]) p._grupos[chaveGrupo]={mat:0,agend:0};
+    const g=p._grupos[chaveGrupo];
+    g.mat=Math.max(g.mat,o.alunos_mat||0);
+    g.agend=Math.max(g.agend,o.alunos_agend||0);
   });
   // Ordena por turno (ordem cronológica do dia) e depois por horário dentro do turno
   const _turnoOrdem={'Manhã':0,'Tarde':1,'Noite':2,'Madrugada':3};
-  const rows=Object.values(porHorario).sort((a,b)=>{
+  const rows=Object.values(porHorario).map(p=>{
+    const grupos=Object.values(p._grupos);
+    p.mat=grupos.reduce((s,g)=>s+g.mat,0);
+    p.agend=grupos.reduce((s,g)=>s+g.agend,0);
+    return p;
+  }).sort((a,b)=>{
     const ta=_turnoOrdem[a.turno]??9, tb=_turnoOrdem[b.turno]??9;
     if(ta!==tb) return ta-tb;
     return a.horario.localeCompare(b.horario,'pt-BR',{numeric:true});
   });
   const max=Math.max(...rows.map(r=>r.qtd),1);
   document.getElementById('m-title').textContent='Horários — '+catParaCurso(categoria);
-  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste lab/curso · horários agrupados por turno`;
+  document.getElementById('m-sub').textContent=`${fmtNum(ofertas.length)} ofertas gerenciadas neste lab/curso · horários agrupados por turno · alunos deduplicados por prática`;
   let html='';
   if(rows.length){
     let turnoAtual=null;
@@ -3596,10 +3610,22 @@ function renderAgendasEstudo(){
   const porCat={};
   ofertas.forEach(o=>{
     const cat=o.categoria||'—';
-    if(!porCat[cat]) porCat[cat]={cat, tot:0, inc:0, sa:0, mat:0, agend:0};
+    if(!porCat[cat]) porCat[cat]={cat, tot:0, inc:0, sa:0, mat:0, agend:0, _grupos:{}};
     const c=porCat[cat];
     c.tot++; if(o.horario_incomum) c.inc++; if(o.sem_alunos) c.sa++;
-    c.mat+=(o.alunos_mat||0); c.agend+=(o.alunos_agend||0);
+    // PATCH 114 (revisado): mesma deduplicação do openTurnoModal/openDiaSemanaModal
+    // — ficou de fora do PR #16 original (somava alunos_mat/alunos_agend linha a
+    // linha, sem dedup, inflando o total em 32%-140% conforme a categoria).
+    const chaveGrupo=(o._semOrigem||'')+'|||'+(o.polo||'')+'|||'+(o.categoria||'')+'|||'+(o.pratica||'');
+    if(!c._grupos[chaveGrupo]) c._grupos[chaveGrupo]={mat:0,agend:0};
+    const g=c._grupos[chaveGrupo];
+    g.mat=Math.max(g.mat,o.alunos_mat||0);
+    g.agend=Math.max(g.agend,o.alunos_agend||0);
+  });
+  Object.values(porCat).forEach(c=>{
+    const grupos=Object.values(c._grupos);
+    c.mat=grupos.reduce((s,g)=>s+g.mat,0);
+    c.agend=grupos.reduce((s,g)=>s+g.agend,0);
   });
   const catRows=Object.values(porCat).sort((a,b)=>b.tot-a.tot);
   document.getElementById('ae-cat-tbody').innerHTML=catRows.map(c=>{
