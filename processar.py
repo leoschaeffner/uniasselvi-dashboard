@@ -750,6 +750,159 @@ def _ler_arquivo_gerenciamento(path):
     return ler_excel(path)
 
 
+# PATCH 158/162: fantasmas (balde "Tutor desligado" / "Aviso de Portfólio") não contam como
+# headcount. Movida de processar() pro nível de módulo (sem mudar o corpo) pra ser
+# reutilizada por _dados_sem_categoria (ocultação temporária de categoria no dashboard).
+def _eh_tutor_fantasma(t):
+    return bool(t.get('_anonimo')) or t.get('c') == 'Aviso de Portfólio' or t.get('n') == 'Tutor desligado'
+
+
+# Movida de processar() (mecanicamente, corpo idêntico) pro nível de módulo: usa só
+# ALL_SEMESTRES (global) e _eh_tutor_fantasma (acima).
+def _stats_semestre(sem_key, tutores_list, catalogo_dict, prazos_dict, periodos_dict):
+    """Gera o mesmo bloco de dados que processar() retorna, mas filtrado por semestre."""
+    from datetime import datetime as _dt2
+    _hoje = datetime.now()
+    _status_ord = {}
+    for _o, _pz in prazos_dict.items():
+        try:
+            _pz_d = _dt2.strptime(_pz, '%d/%m/%Y')
+            _ini  = _dt2.strptime(periodos_dict.get(_o,{}).get('inicio',_pz), '%d/%m/%Y')
+            if _hoje > _pz_d: _status_ord[_o] = 'VENCIDO'
+            elif _hoje >= _ini: _status_ord[_o] = 'ABERTA'
+            else: _status_ord[_o] = 'FUTURA'
+        except: _status_ord[_o] = 'FUTURA'
+
+    _por_ordem = {}; _alunos_por_ordem = {}
+    _polo_map = {}; _cat_stats = {}
+    _ps_sem = {}  # PATCH 108
+
+    for _t in tutores_list:
+        _sem_antigo = sorted(ALL_SEMESTRES.keys())[0]
+        _hist_sem = [h for h in _t.get('hist', []) if h.get('s', _sem_antigo) == sem_key]
+        _reais_sem = set(h['p'] for h in _hist_sem)
+        _te_sem = len(_reais_sem)
+        _tp = _t.get('tp', 0)
+        _pct_sem = round(_te_sem / _tp * 100, 1) if _tp else 0
+
+        # PATCH 108: tally de práticas por semestre -- usa o catálogo
+        # COMPLETO do tutor (t['real'] + t['pend'], que juntos representam
+        # tudo que ele já teve atribuído, em qualquer semestre) como
+        # universo, e classifica cada prática como "enviada" ou "pendente"
+        # DENTRO DESTE semestre específico -- sem isso, a página de
+        # Práticas mostrava sempre o mesmo dado (global/todos os tempos),
+        # ignorando completamente o seletor de semestre no Vinci.
+        _catalogo_tutor = set(_t.get('real', [])) | set(_t.get('pend', []))
+        for _p_nome in _catalogo_tutor:
+            if _p_nome not in _ps_sem:
+                _ps_sem[_p_nome] = {'enviou': 0, 'nao_enviou': 0, 'categoria': _t.get('cf', '')}
+            if _p_nome in _reais_sem:
+                _ps_sem[_p_nome]['enviou'] += 1
+            else:
+                _ps_sem[_p_nome]['nao_enviou'] += 1
+
+        # por_ordem deste semestre
+        _po = {}
+        for _h in _hist_sem:
+            _o = _h.get('o','Ordem 1') or 'Ordem 1'
+            _po[_o] = _po.get(_o, 0) + 1
+            _por_ordem[_o] = _por_ordem.get(_o, 0) + 1
+            _alunos_por_ordem[_o] = _alunos_por_ordem.get(_o, 0) + _h.get('a', 0)
+
+        # situação neste semestre
+        _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
+        if not _orv: _sit = 'ok' if _te_sem > 0 else 'atrasado'
+        elif all(_po.get(_o,0) > 0 for _o in _orv): _sit = 'ok'
+        elif any(_po.get(_o,0) > 0 for _o in _orv): _sit = 'atrasado'
+        else: _sit = 'urgente'
+
+        # polo — PATCH 162: contagem de tutor por polo só de tutores reais
+        # (pratica_stats/cat_stats acima seguem com o universo completo).
+        _p = _t.get('p','')
+        _fant = _eh_tutor_fantasma(_t)
+        if not _fant:
+            if _p not in _polo_map:
+                _polo_map[_p] = {'n':_p,'polo':_p,'POLO':_p,'total':0,'enviaram':0,'atrasados':0,'alunos':0,'pend':0,'pct':0,'envios':0,'t':0,'e':0,'a':0}
+            _polo_map[_p]['total'] += 1; _polo_map[_p]['t'] += 1
+            if _te_sem > 0: _polo_map[_p]['enviaram'] += 1; _polo_map[_p]['e'] += 1
+            if _sit == 'atrasado': _polo_map[_p]['atrasados'] += 1
+        if _p in _polo_map:
+            _polo_map[_p]['alunos'] += sum(h.get('a',0) for h in _hist_sem)
+            _polo_map[_p]['a'] = _polo_map[_p]['alunos']
+
+        # cat_stats
+        _cf = _t.get('cf','')
+        if _cf not in _cat_stats:
+            _cat_stats[_cf] = {'total_tutores':0,'com_100pct':0,'total_previstas':0,'total_enviadas':0}
+        if _tp:
+            _cat_stats[_cf]['total_tutores'] += 1
+            if _pct_sem == 100: _cat_stats[_cf]['com_100pct'] += 1
+            _cat_stats[_cf]['total_previstas'] += _tp
+            _cat_stats[_cf]['total_enviadas'] += _te_sem
+
+    # Calcular pct e pend nos polos
+    for _ps in _polo_map.values():
+        _ps['pend'] = _ps['total'] - _ps['enviaram']
+        _ps['pct']  = round(_ps['enviaram']/_ps['total']*100) if _ps['total'] else 0
+
+    # PATCH 108: monta pratica_stats/praticas deste semestre, no mesmo
+    # formato que a versão global (ps_all/praticas_template) usa --
+    # assim o frontend pode ler direto sem precisar de tratamento especial.
+    _ps_sem_all = sorted([{'nome': k, **v} for k, v in _ps_sem.items()], key=lambda x: -x['nao_enviou'])
+    _praticas_sem_template = []
+    for _p in _ps_sem_all:
+        _total_p = _p['enviou'] + _p['nao_enviou']
+        _praticas_sem_template.append({
+            'n': _p['nome'], 'c': _p['categoria'],
+            'env_n': _p['enviou'], 'pend_n': _p['nao_enviou'],
+            'pct': round(_p['enviou'] / _total_p * 100, 1) if _total_p else 0,
+            'nome': _p['nome'], 'enviou': _p['enviou'], 'nao_enviou': _p['nao_enviou'], 'categoria': _p['categoria'],
+        })
+
+    # PATCH 158: mesmo ajuste do headcount global — o KPI por semestre não
+    # pode contar os registros-fantasma (Aviso de Portfólio / balde 'Tutor
+    # desligado'). pratica_stats/cat_stats/por_ordem abaixo seguem usando
+    # tutores_list inteiro (a atividade de portfólio órfã é real).
+    _reais_list = [_t for _t in tutores_list if not _eh_tutor_fantasma(_t)]
+    _total = len(_reais_list)
+    _sem_ant = sorted(ALL_SEMESTRES.keys())[0]
+    _enviaram = sum(1 for _t in _reais_list if any(h.get('s',_sem_ant)==sem_key and h.get('p') for h in _t.get('hist',[])))
+    # Calcular urgentes e atrasados corretamente
+    _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
+    _urgentes = 0; _atrasados = 0
+    for _t in _reais_list:
+        _sem_ant2 = sorted(ALL_SEMESTRES.keys())[0]
+        _h = [h for h in _t.get('hist', []) if h.get('s', _sem_ant2) == sem_key]
+        _po = {}
+        for _hh in _h:
+            _o = _hh.get('o', 'Ordem 1') or 'Ordem 1'
+            _po[_o] = _po.get(_o, 0) + 1
+        if _orv:
+            _venc_ok = [_o for _o in _orv if _po.get(_o, 0) > 0]
+            if len(_venc_ok) == 0:
+                _urgentes += 1
+            elif len(_venc_ok) < len(_orv):
+                _atrasados += 1
+
+    return {
+        'semestre': sem_key,
+        'kpis': {
+            'total': _total, 'enviaram': _enviaram, 'pendentes': _total - _enviaram,
+            'urgentes': _urgentes, 'atrasados': _atrasados,
+            'total_polos': len(_polo_map),
+            'polos_ok': sum(1 for _ps in _polo_map.values() if _ps['pend']==0),
+        },
+        'polo_stats': sorted(_polo_map.values(), key=lambda x: -x.get('pend',0)),
+        'por_ordem': _por_ordem,
+        'alunos_por_ordem': _alunos_por_ordem,
+        'status_ordem': _status_ord,
+        'prazos': prazos_dict,
+        'periodos': periodos_dict,
+        'cat_stats': [{'categoria':k,**v} for k,v in _cat_stats.items()],
+        'pratica_stats': _ps_sem_all[:30], 'praticas': _praticas_sem_template,  # PATCH 108
+    }
+
+
 def processar(p1, p2):
     # PATCH 155: helper compartilhado — ver comentário completo mais abaixo,
     # onde é usado pra data de contratação/admissão do tutor. Resolve datas
@@ -2073,8 +2226,6 @@ def processar(p1, p2):
     # 09/2026 — 391 no KPI vs ~346 tutores reais). Os fantasmas CONTINUAM em
     # tutores_out (a seção "Aviso de Portfólio", os agregados por prática e por
     # polo dependem deles) — só deixam de contar como headcount de tutor.
-    def _eh_tutor_fantasma(t):
-        return bool(t.get('_anonimo')) or t.get('c') == 'Aviso de Portfólio' or t.get('n') == 'Tutor desligado'
     _tut_reais = [t for t in tutores_out if not _eh_tutor_fantasma(t)]
 
     total     = len(_tut_reais)
@@ -2173,149 +2324,6 @@ def processar(p1, p2):
             'nome': p['nome'], 'enviou': p['enviou'], 'nao_enviou': p['nao_enviou'], 'categoria': p['categoria'],
         })
     # ── Estatísticas por semestre ────────────────────────────────────────────
-    def _stats_semestre(sem_key, tutores_list, catalogo_dict, prazos_dict, periodos_dict):
-        """Gera o mesmo bloco de dados que processar() retorna, mas filtrado por semestre."""
-        from datetime import datetime as _dt2
-        _hoje = datetime.now()
-        _status_ord = {}
-        for _o, _pz in prazos_dict.items():
-            try:
-                _pz_d = _dt2.strptime(_pz, '%d/%m/%Y')
-                _ini  = _dt2.strptime(periodos_dict.get(_o,{}).get('inicio',_pz), '%d/%m/%Y')
-                if _hoje > _pz_d: _status_ord[_o] = 'VENCIDO'
-                elif _hoje >= _ini: _status_ord[_o] = 'ABERTA'
-                else: _status_ord[_o] = 'FUTURA'
-            except: _status_ord[_o] = 'FUTURA'
-
-        _por_ordem = {}; _alunos_por_ordem = {}
-        _polo_map = {}; _cat_stats = {}
-        _ps_sem = {}  # PATCH 108
-
-        for _t in tutores_list:
-            _sem_antigo = sorted(ALL_SEMESTRES.keys())[0]
-            _hist_sem = [h for h in _t.get('hist', []) if h.get('s', _sem_antigo) == sem_key]
-            _reais_sem = set(h['p'] for h in _hist_sem)
-            _te_sem = len(_reais_sem)
-            _tp = _t.get('tp', 0)
-            _pct_sem = round(_te_sem / _tp * 100, 1) if _tp else 0
-
-            # PATCH 108: tally de práticas por semestre -- usa o catálogo
-            # COMPLETO do tutor (t['real'] + t['pend'], que juntos representam
-            # tudo que ele já teve atribuído, em qualquer semestre) como
-            # universo, e classifica cada prática como "enviada" ou "pendente"
-            # DENTRO DESTE semestre específico -- sem isso, a página de
-            # Práticas mostrava sempre o mesmo dado (global/todos os tempos),
-            # ignorando completamente o seletor de semestre no Vinci.
-            _catalogo_tutor = set(_t.get('real', [])) | set(_t.get('pend', []))
-            for _p_nome in _catalogo_tutor:
-                if _p_nome not in _ps_sem:
-                    _ps_sem[_p_nome] = {'enviou': 0, 'nao_enviou': 0, 'categoria': _t.get('cf', '')}
-                if _p_nome in _reais_sem:
-                    _ps_sem[_p_nome]['enviou'] += 1
-                else:
-                    _ps_sem[_p_nome]['nao_enviou'] += 1
-
-            # por_ordem deste semestre
-            _po = {}
-            for _h in _hist_sem:
-                _o = _h.get('o','Ordem 1') or 'Ordem 1'
-                _po[_o] = _po.get(_o, 0) + 1
-                _por_ordem[_o] = _por_ordem.get(_o, 0) + 1
-                _alunos_por_ordem[_o] = _alunos_por_ordem.get(_o, 0) + _h.get('a', 0)
-
-            # situação neste semestre
-            _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
-            if not _orv: _sit = 'ok' if _te_sem > 0 else 'atrasado'
-            elif all(_po.get(_o,0) > 0 for _o in _orv): _sit = 'ok'
-            elif any(_po.get(_o,0) > 0 for _o in _orv): _sit = 'atrasado'
-            else: _sit = 'urgente'
-
-            # polo — PATCH 162: contagem de tutor por polo só de tutores reais
-            # (pratica_stats/cat_stats acima seguem com o universo completo).
-            _p = _t.get('p','')
-            _fant = _eh_tutor_fantasma(_t)
-            if not _fant:
-                if _p not in _polo_map:
-                    _polo_map[_p] = {'n':_p,'polo':_p,'POLO':_p,'total':0,'enviaram':0,'atrasados':0,'alunos':0,'pend':0,'pct':0,'envios':0,'t':0,'e':0,'a':0}
-                _polo_map[_p]['total'] += 1; _polo_map[_p]['t'] += 1
-                if _te_sem > 0: _polo_map[_p]['enviaram'] += 1; _polo_map[_p]['e'] += 1
-                if _sit == 'atrasado': _polo_map[_p]['atrasados'] += 1
-            if _p in _polo_map:
-                _polo_map[_p]['alunos'] += sum(h.get('a',0) for h in _hist_sem)
-                _polo_map[_p]['a'] = _polo_map[_p]['alunos']
-
-            # cat_stats
-            _cf = _t.get('cf','')
-            if _cf not in _cat_stats:
-                _cat_stats[_cf] = {'total_tutores':0,'com_100pct':0,'total_previstas':0,'total_enviadas':0}
-            if _tp:
-                _cat_stats[_cf]['total_tutores'] += 1
-                if _pct_sem == 100: _cat_stats[_cf]['com_100pct'] += 1
-                _cat_stats[_cf]['total_previstas'] += _tp
-                _cat_stats[_cf]['total_enviadas'] += _te_sem
-
-        # Calcular pct e pend nos polos
-        for _ps in _polo_map.values():
-            _ps['pend'] = _ps['total'] - _ps['enviaram']
-            _ps['pct']  = round(_ps['enviaram']/_ps['total']*100) if _ps['total'] else 0
-
-        # PATCH 108: monta pratica_stats/praticas deste semestre, no mesmo
-        # formato que a versão global (ps_all/praticas_template) usa --
-        # assim o frontend pode ler direto sem precisar de tratamento especial.
-        _ps_sem_all = sorted([{'nome': k, **v} for k, v in _ps_sem.items()], key=lambda x: -x['nao_enviou'])
-        _praticas_sem_template = []
-        for _p in _ps_sem_all:
-            _total_p = _p['enviou'] + _p['nao_enviou']
-            _praticas_sem_template.append({
-                'n': _p['nome'], 'c': _p['categoria'],
-                'env_n': _p['enviou'], 'pend_n': _p['nao_enviou'],
-                'pct': round(_p['enviou'] / _total_p * 100, 1) if _total_p else 0,
-                'nome': _p['nome'], 'enviou': _p['enviou'], 'nao_enviou': _p['nao_enviou'], 'categoria': _p['categoria'],
-            })
-
-        # PATCH 158: mesmo ajuste do headcount global — o KPI por semestre não
-        # pode contar os registros-fantasma (Aviso de Portfólio / balde 'Tutor
-        # desligado'). pratica_stats/cat_stats/por_ordem abaixo seguem usando
-        # tutores_list inteiro (a atividade de portfólio órfã é real).
-        _reais_list = [_t for _t in tutores_list if not _eh_tutor_fantasma(_t)]
-        _total = len(_reais_list)
-        _sem_ant = sorted(ALL_SEMESTRES.keys())[0]
-        _enviaram = sum(1 for _t in _reais_list if any(h.get('s',_sem_ant)==sem_key and h.get('p') for h in _t.get('hist',[])))
-        # Calcular urgentes e atrasados corretamente
-        _orv = [_o for _o, _s in _status_ord.items() if _s == 'VENCIDO']
-        _urgentes = 0; _atrasados = 0
-        for _t in _reais_list:
-            _sem_ant2 = sorted(ALL_SEMESTRES.keys())[0]
-            _h = [h for h in _t.get('hist', []) if h.get('s', _sem_ant2) == sem_key]
-            _po = {}
-            for _hh in _h:
-                _o = _hh.get('o', 'Ordem 1') or 'Ordem 1'
-                _po[_o] = _po.get(_o, 0) + 1
-            if _orv:
-                _venc_ok = [_o for _o in _orv if _po.get(_o, 0) > 0]
-                if len(_venc_ok) == 0:
-                    _urgentes += 1
-                elif len(_venc_ok) < len(_orv):
-                    _atrasados += 1
-
-        return {
-            'semestre': sem_key,
-            'kpis': {
-                'total': _total, 'enviaram': _enviaram, 'pendentes': _total - _enviaram,
-                'urgentes': _urgentes, 'atrasados': _atrasados,
-                'total_polos': len(_polo_map),
-                'polos_ok': sum(1 for _ps in _polo_map.values() if _ps['pend']==0),
-            },
-            'polo_stats': sorted(_polo_map.values(), key=lambda x: -x.get('pend',0)),
-            'por_ordem': _por_ordem,
-            'alunos_por_ordem': _alunos_por_ordem,
-            'status_ordem': _status_ord,
-            'prazos': prazos_dict,
-            'periodos': periodos_dict,
-            'cat_stats': [{'categoria':k,**v} for k,v in _cat_stats.items()],
-            'pratica_stats': _ps_sem_all[:30], 'praticas': _praticas_sem_template,  # PATCH 108
-        }
-
     _dados_por_semestre = {}
     for _sem_k, _sem_cfg in ALL_SEMESTRES.items():
         _dados_por_semestre[_sem_k] = _stats_semestre(
@@ -2630,6 +2638,22 @@ def carregar_lotacao(p4):
 # IMPORTANTE: por decisão explícita do Leo, NENHUM dado financeiro é lido ou
 # exposto aqui — a coluna "Salário Phill" e a aba "Controle Orçamento" ficam
 # de fora por completo, mesmo que estejam na mesma planilha-fonte.
+def _kpis_vagas_lotacao(vagas):
+    """KPIs das vagas da Lotacao (extraida mecanicamente de processar_vagas pra
+    ser reutilizada por _dados_sem_categoria)."""
+    return {
+        'total_vagas': len(vagas),
+        'aumento_quadro': sum(1 for v in vagas if v['status'] == 'Aumento de Quadro'),
+        'substituicao': sum(1 for v in vagas if v['status'] == 'Substituição'),
+        'com_previsao': sum(1 for v in vagas if 'Com previsão' in v['contratacao']),
+        'sem_previsao': sum(1 for v in vagas if 'Sem previsão' in v['contratacao']),
+        'nao_liberada': sum(1 for v in vagas if 'liberada' in v['contratacao'].lower()),
+        'autorizadas': sum(1 for v in vagas if v['autorizado'].startswith('Autorizado')),
+        'prioridade_alta': sum(1 for v in vagas if v['prioridade'] == 'Alta'),
+        'com_chamado_aberto': sum(1 for v in vagas if v['chamado_sydle']),
+    }
+
+
 def processar_vagas(p4):
     print(f"[{ts()}] Lendo vagas (Lotação)...")
     _rows = None
@@ -2692,17 +2716,7 @@ def processar_vagas(p4):
         })
 
     total = len(vagas)
-    kpis = {
-        'total_vagas': total,
-        'aumento_quadro': sum(1 for v in vagas if v['status'] == 'Aumento de Quadro'),
-        'substituicao': sum(1 for v in vagas if v['status'] == 'Substituição'),
-        'com_previsao': sum(1 for v in vagas if 'Com previsão' in v['contratacao']),
-        'sem_previsao': sum(1 for v in vagas if 'Sem previsão' in v['contratacao']),
-        'nao_liberada': sum(1 for v in vagas if 'liberada' in v['contratacao'].lower()),
-        'autorizadas': sum(1 for v in vagas if v['autorizado'].startswith('Autorizado')),
-        'prioridade_alta': sum(1 for v in vagas if v['prioridade'] == 'Alta'),
-        'com_chamado_aberto': sum(1 for v in vagas if v['chamado_sydle']),
-    }
+    kpis = _kpis_vagas_lotacao(vagas)
     print(f"[{ts()}] Vagas: {total} pendentes ({kpis['aumento_quadro']} aumento de quadro, {kpis['substituicao']} substituição, {kpis['com_previsao']} com previsão)")
     return {'vagas': vagas, 'kpis': kpis}
 
@@ -2846,6 +2860,28 @@ def _vrh_cidade_uf(txt):
     if m:
         return m.group(1).strip(' -/'), m.group(2).upper()
     return txt, ''
+
+
+def _resumo_reqs_rh(reqs):
+    """kpis reqs_* e salarios_vagas_abertas a partir das reqs do INHIRE (extraida
+    mecanicamente de processar_vagas_rh pra ser reutilizada por
+    _dados_sem_categoria). Devolve (kpis_reqs, salarios_vagas_abertas)."""
+    from collections import Counter as _Counter
+    _abertas = [r for r in reqs if r['situacao'] == 'aberta']
+    def _sal_label(v):
+        if v is None:
+            return 'não informado'
+        return ('R$ %s' % ('{:,.2f}'.format(v).replace(',', 'X').replace('.', ',').replace('X', '.')))
+    _sal_ct = _Counter(_sal_label(r.get('remuneracao_valor')) for r in _abertas)
+    kpis = {
+        'reqs_total': len(reqs),
+        'reqs_abertas': len(_abertas),
+        'reqs_fechadas': sum(1 for r in reqs if r['situacao'] == 'fechada'),
+        'reqs_congeladas': sum(1 for r in reqs if r['situacao'] == 'congelada'),
+        'reqs_canceladas': sum(1 for r in reqs if r['situacao'] == 'cancelada'),
+        'reqs_travadas': sum(1 for r in reqs if r.get('travada')),
+    }
+    return kpis, [{'valor': v, 'n': n} for v, n in _sal_ct.most_common()]
 
 
 def processar_vagas_rh(p7):
@@ -3060,20 +3096,7 @@ def processar_vagas_rh(p7):
     else:
         print(f"[{ts()}] Vagas RH: aba 'Agendamento de entrevista' ausente ou vazia")
 
-    _abertas = [r for r in reqs if r['situacao'] == 'aberta']
-    def _sal_label(v):
-        if v is None:
-            return 'não informado'
-        return ('R$ %s' % ('{:,.2f}'.format(v).replace(',', 'X').replace('.', ',').replace('X', '.')))
-    _sal_ct = _Counter(_sal_label(r.get('remuneracao_valor')) for r in _abertas)
-    kpis = {
-        'reqs_total': len(reqs),
-        'reqs_abertas': len(_abertas),
-        'reqs_fechadas': sum(1 for r in reqs if r['situacao'] == 'fechada'),
-        'reqs_congeladas': sum(1 for r in reqs if r['situacao'] == 'congelada'),
-        'reqs_canceladas': sum(1 for r in reqs if r['situacao'] == 'cancelada'),
-        'reqs_travadas': sum(1 for r in reqs if r.get('travada')),
-    }
+    kpis, _salarios_abertas = _resumo_reqs_rh(reqs)
     kpis.update(kpis_funil)
     print(f"[{ts()}] Vagas RH: {len(reqs)} vagas INHIRE ({kpis['reqs_abertas']} abertas, "
           f"{kpis['reqs_congeladas']} congeladas, {kpis['reqs_travadas']} travadas), "
@@ -3081,7 +3104,7 @@ def processar_vagas_rh(p7):
           f"ciclo mediano {funil.get('ciclo_mediano_dias')}d")
     return {
         'reqs': reqs, 'funil': funil, 'kpis': kpis, 'ref_salario': _VRH_REF_SALARIO,
-        'salarios_vagas_abertas': [{'valor': v, 'n': n} for v, n in _sal_ct.most_common()],
+        'salarios_vagas_abertas': _salarios_abertas,
     }
 
 
@@ -5251,6 +5274,47 @@ def _norm_polo_front(s):
     return _re.sub(r'\s+', ' ', s).strip()
 
 
+def _aplicar_hub_polos_vagas(dados, alunos_hub):
+    """Aplica o hub (por_polo, com alias por codigo de polo ja em
+    alunos_hub['alias_polo']) em polo_stats (so polos com alunos == 0) e no
+    alunos_polo de cada vaga da Lotacao (PATCH 126). Extraida mecanicamente do
+    bloco ALUNOS HUB de __main__ pra ser reutilizada pela ocultacao temporaria
+    de categoria (_dados_sem_categoria). Devolve (polos_enriquecidos, vagas_enriquecidas)."""
+    _alias_polo_main = alunos_hub['alias_polo']
+    def _norm_polo_hub_main(s):
+        # simetrico ao _normPoloAl do frontend + alias por codigo
+        n = _norm_polo_front(s)
+        return _alias_polo_main.get(n, n)
+    # por_polo do hub re-chaveado na mesma normalizacao (sem parenteses)
+    _hub_por_polo = {}
+    for _k, _v in alunos_hub.get('por_polo', {}).items():
+        _kf = _norm_polo_front(_k)
+        _hub_por_polo[_kf] = _hub_por_polo.get(_kf, 0) + _v
+    _enr_polo = 0
+    for _ps in dados.get('polo_stats', []):
+        if _ps.get('a', _ps.get('alunos', 0)) == 0:
+            _pn = _norm_polo_hub_main(_ps.get('n', _ps.get('polo', _ps.get('POLO', ''))))
+            _al_hub = _hub_por_polo.get(_pn, 0)
+            if _al_hub:
+                _ps['a'] = int(_al_hub)
+                _ps['alunos'] = int(_al_hub)
+                _enr_polo += 1
+
+    # PATCH 126: base de alunos do polo em cada vaga — pedido pelo
+    # Leo pra dar contexto de prioridade (vaga aberta num polo com
+    # muitos alunos pesa mais que num polo pequeno). Mesma fonte
+    # autoritativa (matrículas distintas do hub), mesma normalização
+    # de nome de polo já usada acima.
+    _enr_vaga = 0
+    for _v in dados.get('vagas', {}).get('vagas', []):
+        _pn_v = _norm_polo_hub_main(_v.get('polo', ''))
+        _al_v = _hub_por_polo.get(_pn_v, 0)
+        _v['alunos_polo'] = int(_al_v) if _al_v else 0
+        if _al_v: _enr_vaga += 1
+    return _enr_polo, _enr_vaga
+
+
+
 def _gerar_alias_polo(cod_por_polo_hub, cod_por_polo_ger):
     """PATCH: liga por CODIGO polos com nomes diferentes no hub e no GIOCONDA
     (ex: 'Maringa/PR - Terminal Urbano' = 'LAP - Maringa/PR - Zona 01').
@@ -5476,6 +5540,352 @@ def carregar_alunos_hub(path_csv):
 # Senha de acesso ao dashboard (mesma da tela de login)
 SENHA_DASHBOARD = "uniasselvi2026"
 
+# ── OCULTAÇÃO TEMPORÁRIA DE CATEGORIA NO DASHBOARD (config_ocultar.json) ────
+# Pedido do Leo (24/09/2026): esconder TODOS os dados de Nutrição do dashboard
+# normal do Vinci até 25/09 14:10 BRT, sem tocar em coordenadores/gestor/lookup.
+# VERSÃO MÍNIMA: tutores, polos, KPIs, ofertas/GIOCONDA, hub e vagas da Lotação.
+# NÃO cobre (vazamentos conhecidos): funil do RH (vagas.funil por_status/por_mes/
+# por_uf/pcd/ciclo_mediano) e alunos-por-polo do portfólio
+# (portfolio_alunos_dedup*.por_polo/geral e cruzamento_portfolio_agendado*.por_polo/geral).
+# Abordagem: pós-processamento numa CÓPIA do `dados` final, imediatamente antes de
+# gerar_html; coordenadores/gestor seguem recebendo o `dados` ORIGINAL.
+# Regra de ouro: _dados_sem_categoria(dados, predicado_que_nunca_casa) == dados.
+BRT = timezone(timedelta(hours=-3))
+CONFIG_OCULTAR_ARQ = 'config_ocultar.json'
+
+
+def _norm_ocultar(s):
+    s = unicodedata.normalize('NFD', str(s or '').lower())
+    return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+
+
+def _eh_nutricao(s):
+    """Predicado de Nutrição sobre UM texto de categoria/curso/perfil: contém
+    'nutri' (sem acento/caixa) ou é exatamente o código de curso NTR. Nunca use
+    em graduação/titulação nem em nome de prática (há práticas de Enfermagem/
+    Estética com 'nutrição' no nome)."""
+    if not isinstance(s, str):
+        return False
+    return 'nutri' in _norm_ocultar(s) or s.strip() == 'NTR'
+
+
+def _partes_todas(s, pred, sep):
+    """True se o texto composto (separado por `sep`) tem partes e TODAS casam pred."""
+    partes = [p.strip() for p in re.split(sep, s) if p and p.strip()]
+    return bool(partes) and all(pred(p) for p in partes)
+
+
+def _cat_casa(s, pred):
+    """Categoria (possivelmente composta com + ou |): só casa se TODAS as partes casam."""
+    return isinstance(s, str) and bool(s.strip()) and _partes_todas(s, pred, r'\s*[+|]\s*')
+
+
+def _cursos_casa(s, pred):
+    """Lista de códigos de curso (separados por - espaço , ; | +): só casa se TODOS casam."""
+    return isinstance(s, str) and bool(s.strip()) and _partes_todas(s, pred, r'[\s,;|+/-]+')
+
+
+def _tutor_casa(t, pred):
+    for k in ('c', 'cf', 'cat', 'c_exibicao', 'categoria_ex_tutor', 'perfil'):
+        if _cat_casa(t.get(k), pred):
+            return True
+    for k in ('cursos', 'lab'):
+        if _cursos_casa(t.get(k), pred):
+            return True
+    return False
+
+
+def _oferta_casa(o, pred):
+    return (_cat_casa(o.get('categoria'), pred) or _cat_casa(o.get('subcurso'), pred)
+            or _cursos_casa(o.get('curso'), pred))
+
+
+def _vaga_casa(v, pred):
+    cur = v.get('cursos')
+    if isinstance(cur, str) and cur.strip():
+        return _cursos_casa(cur, pred)
+    return _cat_casa(v.get('perfil'), pred)
+
+
+def _aviso_casa(a, pred):
+    ch = a.get('chave')
+    return isinstance(ch, str) and len(ch) >= 3 and bool(pred(ch[-3:]))
+
+
+def _tutor_do_agregado(t):
+    """True se o tutor já existia quando processar() calculou os agregados raiz e
+    por semestre. Os pseudo-tutores 'Aviso de Portfólio' e as correções manuais são
+    anexados DEPOIS (enriquecer_tutores) e nunca entram nesses agregados."""
+    return 'aviso_tipo' not in t and not t.get('correcao_manual')
+
+
+def _recalcular_raiz_de_tutores(dados, tutores):
+    """Espelha (mecanicamente) o bloco de agregados raiz de processar(): kpis,
+    polo_stats, por_ordem*, alunos_por_ordem, por_mes -- a partir da lista de
+    tutores (todos os semestres, incluindo fantasmas)."""
+    prazos = dados.get('prazos') or {}
+    reais = [t for t in tutores if not _eh_tutor_fantasma(t)]
+    total = len(reais)
+    enviaram = sum(1 for t in reais if t['te'] > 0)
+    atrasados = sum(1 for t in reais if t['situacao'] == 'atrasado')
+    urgentes = sum(1 for t in reais if t['situacao'] == 'urgente')
+    total_alunos = sum(h['a'] for t in tutores for h in t['hist'])
+    contatos = {p.get('POLO'): p.get('contatos') for p in dados.get('polo_stats', [])}
+    polo_map = {}
+    for t in reais:
+        p = t['polo']
+        if p not in polo_map:
+            polo_map[p] = {'POLO': p, 'polo': p, 'n': p, 'total': 0, 'enviaram': 0, 'atrasados': 0, 'alunos': 0}
+        polo_map[p]['total'] += 1
+        if t['te'] > 0: polo_map[p]['enviaram'] += 1
+        if t['situacao'] == 'atrasado': polo_map[p]['atrasados'] += 1
+        polo_map[p]['alunos'] += sum(h['a'] for h in t['hist'])
+    for t in tutores:
+        if _eh_tutor_fantasma(t) and t['polo'] in polo_map:
+            polo_map[t['polo']]['alunos'] += sum(h['a'] for h in t['hist'])
+    polo_envios = {}
+    for t in tutores:
+        if _eh_tutor_fantasma(t) and t['polo'] not in polo_map:
+            continue
+        p = t['polo']
+        polo_envios[p] = polo_envios.get(p, 0) + len(t.get('hist', []))
+    polo_stats = sorted(polo_map.values(), key=lambda x: -x['atrasados'])
+    for p in polo_stats:
+        p['n'] = p.get('polo', p.get('POLO', ''))
+        p['t'] = p['total']; p['e'] = p['enviaram']; p['a'] = p['alunos']
+        p['pend'] = p['total'] - p['enviaram']
+        p['pct'] = round(p['enviaram'] / p['total'] * 100) if p['total'] else 0
+        p['envios'] = polo_envios.get(p['POLO'], 0)
+        p['contatos'] = contatos.get(p['POLO']) or []
+    ordem_map = {o: {'envios': 0, 'alunos': 0} for o in prazos}
+    for t in tutores:
+        for h in t['hist']:
+            o = h.get('o', 'Ordem 1') or 'Ordem 1'
+            if o in ordem_map: ordem_map[o]['envios'] += 1; ordem_map[o]['alunos'] += h['a']
+    por_ordem_lista = [
+        {'ordem': o, 'prazo': prazos[o], 'status': (dados.get('status_ordem') or {}).get(o),
+         'envios': ordem_map[o]['envios'], 'alunos': ordem_map[o]['alunos']}
+        for o in prazos
+    ]
+    mes_map = {}
+    for t in tutores:
+        for h in t['hist']:
+            d = h.get('d') or ''
+            mes = d[:7] if d and len(d) >= 7 else 'Sem data'
+            if mes not in mes_map: mes_map[mes] = {'MES': mes, 'mes': mes, 'envios': 0, 'alunos': 0}
+            mes_map[mes]['envios'] += 1; mes_map[mes]['alunos'] += h.get('a', 0)
+    dados['kpis'] = {
+        'total': total, 'enviaram': enviaram, 'pendentes': total - enviaram,
+        'atrasados': atrasados, 'urgentes': urgentes,
+        'total_alunos': total_alunos, 'total_polos': len(polo_map),
+        'polos_ok': sum(1 for p in polo_stats if p['enviaram'] > 0),
+    }
+    dados['polo_stats'] = polo_stats
+    dados['por_ordem'] = {o: ordem_map[o]['envios'] for o in prazos}
+    dados['por_ordem_lista'] = por_ordem_lista
+    dados['alunos_por_ordem'] = {o: ordem_map[o]['alunos'] for o in prazos}
+    dados['por_mes'] = sorted(mes_map.values(), key=lambda x: x['mes'])
+
+
+def _dados_sem_categoria(dados, pred):
+    """Devolve uma COPIA de `dados` sem a categoria que `pred` reconhece (ver bloco
+    acima). Não muta `dados`. Com pred que nunca casa, o resultado é JSON-idêntico
+    a `dados` (invariante testado)."""
+    d = json.loads(json.dumps(dados))
+    rm = lambda cat: _cat_casa(cat, pred)
+
+    # ── tutores / desligados / avisos ────────────────────────────────────────
+    tutores = [t for t in d.get('tutores', []) if not _tutor_casa(t, pred)]
+    d['tutores'] = tutores
+    tutores_agr = [t for t in tutores if _tutor_do_agregado(t)]  # base dos agregados (ver _tutor_do_agregado)
+    if 'tutores_desligados' in d:
+        d['tutores_desligados'] = [t for t in d['tutores_desligados']
+                                   if not (rm(t.get('c')) or _cursos_casa(t.get('cursos'), pred))]
+    if 'avisos_portfolio' in d:
+        d['avisos_portfolio'] = [a for a in d['avisos_portfolio'] if not _aviso_casa(a, pred)]
+
+    # ── agregados raiz que dependem dos tutores ─────────────────────────────
+    _recalcular_raiz_de_tutores(d, tutores_agr)
+    if 'catalogo' in d:
+        d['catalogo'] = {k: v for k, v in d['catalogo'].items() if not rm(k)}
+    if 'cat_stats' in d:
+        d['cat_stats'] = [c for c in d['cat_stats'] if not rm(c.get('categoria'))]
+    if 'praticas' in d:
+        d['praticas'] = [p for p in d['praticas'] if not rm(p.get('categoria'))]
+        # pratica_stats raiz = topo (30) das praticas, mesma ordem/campos
+        d['pratica_stats'] = [{'categoria': p['categoria'], 'enviou': p['enviou'],
+                               'nao_enviou': p['nao_enviou'], 'nome': p['nome']}
+                              for p in d['praticas']][:30]
+
+    # ── por semestre (mesma função do pipeline) ─────────────────────────────
+    for sem, blk in list((d.get('dados_por_semestre') or {}).items()):
+        d['dados_por_semestre'][sem] = _stats_semestre(
+            sem, tutores_agr, d.get('catalogo'), blk.get('prazos') or {}, blk.get('periodos') or {})
+
+    # ── hub: SUBTRAÇÃO exata (por_cat é mutuamente exclusivo) ───────────────
+    hub = d.get('alunos_hub')
+    if hub:
+        for k in [k for k in list(hub.get('por_cat', {})) if rm(k)]:
+            hub['total_distintos'] -= hub['por_cat'].pop(k)
+        for k in [k for k in list(hub.get('por_polo_cat', {})) if rm(k.split('||', 1)[-1])]:
+            polo = k.split('||', 1)[0]
+            v = hub['por_polo_cat'].pop(k)
+            if polo in hub.get('por_polo', {}):
+                hub['por_polo'][polo] -= v
+                if hub['por_polo'][polo] <= 0:
+                    del hub['por_polo'][polo]
+    if 'alunos_por_curso' in d:
+        d['alunos_por_curso'] = [a for a in d['alunos_por_curso']
+                                 if not (rm(a.get('sigla')) or rm(a.get('curso')))]
+    if 'kpis' in d and hub:
+        d['kpis']['total_alunos'] = hub['total_distintos']
+
+    # ── gerenciamento (GIOCONDA) ────────────────────────────────────────────
+    ger = d.get('gerenciamento_por_semestre')
+    if ger:
+        for sem, blk in list(ger.items()):
+            fonte_hub = (blk.get('ger_kpis') or {}).get('alunos_mat_fonte') == 'hub_csv'
+            ofertas = [o for o in blk.get('ger_ofertas', []) if not _oferta_casa(o, pred)]
+            novo = dict(blk)
+            novo.update(_recalcular_agregados_de_ofertas(ofertas))
+            if 'ger_anomalias_ordem' in blk:
+                novo['ger_anomalias_ordem'] = [o for o in blk['ger_anomalias_ordem'] if not _oferta_casa(o, pred)]
+            if fonte_hub and hub:
+                novo['ger_kpis']['total_alunos_matriculados'] = hub['total_distintos']
+                novo['ger_kpis']['alunos_mat_fonte'] = 'hub_csv'
+            ger[sem] = novo
+        # raiz ger_* = semestre ativo (mesma referência no pipeline)
+        sem_raiz = SEMESTRE_ATUAL if SEMESTRE_ATUAL in ger else next(iter(ger))
+        for k in ('ger_ofertas', 'ger_kpis', 'ger_polo', 'ger_cat', 'ger_ordem',
+                  'ger_contratacao', 'ger_agendas', 'ger_anomalias_ordem'):
+            if k in d and k in ger[sem_raiz]:
+                d[k] = ger[sem_raiz][k]
+
+    # ── cruzamento portfólio x agendado: só remove a linha da categoria ─────
+    def _filtra_cruz(c):
+        if isinstance(c, dict) and 'por_categoria' in c:
+            c['por_categoria'] = [x for x in c['por_categoria'] if not rm(x.get('categoria'))]
+    _filtra_cruz(d.get('cruzamento_portfolio_agendado'))
+    for c in (d.get('cruzamento_portfolio_agendado_por_semestre') or {}).values():
+        _filtra_cruz(c)
+
+    def _filtra_port(p):
+        if isinstance(p, dict) and isinstance(p.get('por_categoria'), dict):
+            p['por_categoria'] = {k: v for k, v in p['por_categoria'].items() if not rm(k)}
+    _filtra_port(d.get('portfolio_alunos_dedup'))
+    for p in (d.get('portfolio_alunos_dedup_por_semestre') or {}).values():
+        _filtra_port(p)
+
+    # ── vagas (Lotação + INHIRE) ────────────────────────────────────────────
+    vg = d.get('vagas')
+    if isinstance(vg, dict):
+        vg['vagas'] = [v for v in vg.get('vagas', []) if not _vaga_casa(v, pred)]
+        vg.setdefault('kpis', {}).update(_kpis_vagas_lotacao(vg['vagas']))
+        rec = vg.get('recrutamento')
+        if rec:
+            rec['reqs'] = [r for r in rec.get('reqs', [])
+                           if not (rm(r.get('curso')) or rm(r.get('curso_canon')))]
+            kpis_r, sal = _resumo_reqs_rh(rec['reqs'])
+            vg['kpis'].update(kpis_r)
+            rec['salarios_vagas_abertas'] = sal
+        fun = vg.get('funil')
+        if fun:  # só as linhas por curso; o resto do funil é vazamento conhecido
+            if 'por_curso' in fun:
+                fun['por_curso'] = [c for c in fun['por_curso'] if not rm(c.get('curso'))]
+            if 'por_curso_status' in fun:
+                fun['por_curso_status'] = {k: v for k, v in fun['por_curso_status'].items() if not rm(k)}
+        if hub and 'alias_polo' in hub:
+            _aplicar_hub_polos_vagas(d, hub)
+        if 'criticas' in vg:
+            an = _analisar_vagas_criticas(vg['vagas'], fun)
+            vg['criticas'] = an['criticas']
+            vg['polos_dificeis'] = an['polos_dificeis']
+            vg['dificuldade_por_curso'] = an['dificuldade_por_curso']
+            vg['kpis'].update(an['kpis'])
+    elif hub and 'alias_polo' in hub:
+        _aplicar_hub_polos_vagas(d, hub)
+
+    return d
+
+
+def _dados_dashboard_oculto(dados, pred):
+    """Versão do dados para o dashboard com a categoria oculta: _dados_sem_categoria
+    + remove os blocos que o dashboard NÃO lê (template_dashboard.html não referencia
+    laboratorios/ocorrencias/turnover/gerenciamento_engajamento; carregam dado de
+    Nutrição sem serem necessários lá)."""
+    d = _dados_sem_categoria(dados, pred)
+    for k in ('laboratorios', 'ocorrencias', 'turnover', 'gerenciamento_engajamento'):
+        d.pop(k, None)
+    return d
+
+
+# categoria (no config) -> (nome de exibição, predicado de texto)
+_OCULTAR_CATEGORIAS = {'nutricao': ('Nutrição', _eh_nutricao)}
+
+
+def _agora_utc_ocultar():
+    """Relógio da decisão. VINCI_NOW_UTC=<iso> simula o horário (testes)."""
+    env = (os.environ.get('VINCI_NOW_UTC') or '').strip()
+    if env:
+        dt = datetime.fromisoformat(env)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    return datetime.now(timezone.utc)
+
+
+def _resolver_ocultacao(portal='dashboard', caminho=None, agora=None):
+    """Lê config_ocultar.json (uma vez por execução) e devolve (preds, msgs).
+    preds = lista de (nome_exibicao, predicado) a OCULTAR agora neste portal.
+    FAIL-OPEN: env VINCI_OCULTAR=off, arquivo ausente, JSON inválido, `ate`
+    ausente/inválido (offset obrigatório), categoria desconhecida ou já vencido
+    => NÃO oculta (com aviso no log). Nunca levanta exceção."""
+    msgs = []
+    if (os.environ.get('VINCI_OCULTAR') or '').strip().lower() == 'off':
+        return [], ['Nutrição visível (VINCI_OCULTAR=off)']
+    caminho = caminho or os.path.join(SCRIPT_DIR, CONFIG_OCULTAR_ARQ)
+    try:
+        agora = agora or _agora_utc_ocultar()
+    except Exception as e:
+        return [], [f'Nutrição visível (AVISO: VINCI_NOW_UTC inválido: {e})']
+    if not os.path.isfile(caminho):
+        return [], [f'Nutrição visível (AVISO: {CONFIG_OCULTAR_ARQ} ausente)']
+    try:
+        with open(caminho, encoding='utf-8') as f:
+            cfg = json.load(f)
+        itens = cfg['ocultar']
+        if not isinstance(itens, list):
+            raise ValueError("'ocultar' não é lista")
+    except Exception as e:
+        return [], [f'Nutrição visível (AVISO: {CONFIG_OCULTAR_ARQ} inválido: {e})']
+    preds = []
+    for it in itens:
+        try:
+            cat = str(it.get('categoria') or '').strip().lower()
+            if portal not in (it.get('portais') or []):
+                continue
+            if cat not in _OCULTAR_CATEGORIAS:
+                msgs.append(f"AVISO: categoria '{cat}' desconhecida em {CONFIG_OCULTAR_ARQ} (ignorada)")
+                continue
+            nome, pred = _OCULTAR_CATEGORIAS[cat]
+            ate = datetime.fromisoformat(str(it.get('ate')))
+            if ate.tzinfo is None:
+                msgs.append(f"{nome} visível (AVISO: 'ate' sem offset de fuso é inválido: {it.get('ate')})")
+                continue
+            if agora < ate:
+                preds.append((nome, pred))
+                msgs.append(f"{nome} OCULTA no {portal} até {ate.astimezone(BRT).strftime('%d/%m %H:%M')} BRT "
+                            f"(agora: {agora.astimezone(BRT).strftime('%d/%m %H:%M')} BRT)")
+            else:
+                msgs.append(f"{nome} visível (corte {ate.astimezone(BRT).strftime('%d/%m %H:%M')} BRT já passou; "
+                            f"agora: {agora.astimezone(BRT).strftime('%d/%m %H:%M')} BRT)")
+        except Exception as e:
+            msgs.append(f"Nutrição visível (AVISO: entrada inválida em {CONFIG_OCULTAR_ARQ}: {e})")
+    if not msgs:
+        msgs.append(f'Nutrição visível (nenhuma regra para o {portal} em {CONFIG_OCULTAR_ARQ})')
+    return preds, msgs
+
+
 # PATCH 8: cifra o JSON antes de injetar no HTML — sem isso, dava pra ver
 # tudo no Ctrl+U mesmo sem digitar a senha
 def cifrar_dados(dados_json_str, senha):
@@ -5536,7 +5946,10 @@ def gerar_html_gestor(dados):
     with open(output, 'w', encoding='utf-8') as f: f.write(html)
     print(f"[{ts()}] Salvo: {output} (Painel do Gestor, senha própria, cifra AES-256-GCM)")
 
-def gerar_html(dados):
+def gerar_html(dados, dados_lookup=None):
+    # dados_lookup: fonte do lookup.json (autopreenchimento do formulario de
+    # portfolio). Default = dados. Com a ocultacao temporaria, o dashboard recebe
+    # a copia filtrada mas o lookup segue completo.
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
     output = os.path.join(saida, "dashboard.html")
@@ -5553,7 +5966,7 @@ def gerar_html(dados):
     # pro portfolio_form.html autopreencher sem precisar da senha do dashboard
     lookup = [
         {'email': t.get('email',''), 'n': t.get('n',''), 'p': t.get('p',''), 'c': t.get('c','')}
-        for t in dados.get('tutores', [])
+        for t in (dados if dados_lookup is None else dados_lookup).get('tutores', [])
         if t.get('email') and not t.get('_anonimo') and t.get('c') != 'Aviso de Portfólio'
     ]
     lookup_path = os.path.join(saida, "lookup.json")
@@ -6325,38 +6738,8 @@ if __name__ == '__main__':
                 _cod_ger_hub = _GER_COD_POR_POLO.get('2026/1') or {}
                 alunos_hub['alias_polo'] = _gerar_alias_polo(alunos_hub.get('cod_por_polo', {}), _cod_ger_hub)
                 print(f"[{ts()}] Alias de polo por COD (GIOCONDA -> hub): {len(alunos_hub['alias_polo'])}")
-                _alias_polo_main = alunos_hub['alias_polo']
-                def _norm_polo_hub_main(s):
-                    # simetrico ao _normPoloAl do frontend + alias por codigo
-                    n = _norm_polo_front(s)
-                    return _alias_polo_main.get(n, n)
-                # por_polo do hub re-chaveado na mesma normalizacao (sem parenteses)
-                _hub_por_polo = {}
-                for _k, _v in alunos_hub.get('por_polo', {}).items():
-                    _kf = _norm_polo_front(_k)
-                    _hub_por_polo[_kf] = _hub_por_polo.get(_kf, 0) + _v
-                _enr_polo = 0
-                for _ps in dados.get('polo_stats', []):
-                    if _ps.get('a', _ps.get('alunos', 0)) == 0:
-                        _pn = _norm_polo_hub_main(_ps.get('n', _ps.get('polo', _ps.get('POLO', ''))))
-                        _al_hub = _hub_por_polo.get(_pn, 0)
-                        if _al_hub:
-                            _ps['a'] = int(_al_hub)
-                            _ps['alunos'] = int(_al_hub)
-                            _enr_polo += 1
+                _enr_polo, _enr_vaga = _aplicar_hub_polos_vagas(dados, alunos_hub)
                 print(f"[{ts()}] Polos enriquecidos com alunos (hub CSV): {_enr_polo}")
-
-                # PATCH 126: base de alunos do polo em cada vaga — pedido pelo
-                # Leo pra dar contexto de prioridade (vaga aberta num polo com
-                # muitos alunos pesa mais que num polo pequeno). Mesma fonte
-                # autoritativa (matrículas distintas do hub), mesma normalização
-                # de nome de polo já usada acima.
-                _enr_vaga = 0
-                for _v in dados.get('vagas', {}).get('vagas', []):
-                    _pn_v = _norm_polo_hub_main(_v.get('polo', ''))
-                    _al_v = _hub_por_polo.get(_pn_v, 0)
-                    _v['alunos_polo'] = int(_al_v) if _al_v else 0
-                    if _al_v: _enr_vaga += 1
                 print(f"[{ts()}] Vagas enriquecidas com base de alunos do polo: {_enr_vaga}/{len(dados.get('vagas', {}).get('vagas', []))}")
         except Exception as e:
             print(f"[{ts()}] AVISO: erro ao ler alunos hub: {e}")
@@ -6408,7 +6791,22 @@ if __name__ == '__main__':
             print(f"[{ts()}] AVISO: erro na análise de vagas críticas: {e}")
     dados.pop('_vrh_funil_ref', None)
 
-    html = gerar_html(dados)
+    # Ocultacao temporaria de categoria SO no dashboard (config_ocultar.json).
+    # Decidida aqui, no fim da rodada. Coordenadores/gestor/lookup usam o `dados`
+    # ORIGINAL. Depois do corte, dados_dash is dados (sem copia).
+    dados_dash = dados
+    _preds_ocultar, _msgs_ocultar = _resolver_ocultacao('dashboard')
+    for _m in _msgs_ocultar:
+        print(f"[{ts()}] {_m}")
+    if _preds_ocultar:
+        try:
+            dados_dash = _dados_dashboard_oculto(dados, lambda _s: any(_p(_s) for _, _p in _preds_ocultar))
+        except Exception as e:
+            # fail-open: se o filtro falhar, publica completo em vez de quebrar o dashboard
+            print(f"[{ts()}] AVISO: erro ao ocultar categoria no dashboard ({e}) -- publicando COMPLETO")
+            import traceback; traceback.print_exc()
+            dados_dash = dados
+    html = gerar_html(dados_dash, dados_lookup=dados)
     try:
         gerar_html_coordenadores(dados)
     except Exception as e:
