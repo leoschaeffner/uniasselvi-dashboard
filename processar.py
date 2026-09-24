@@ -4792,6 +4792,11 @@ def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
 
     ofertas = list(ger_dados.get('ger_ofertas', []))
     polo_cat_existentes = set((_norm_polo_inj(o['polo']), o['categoria']) for o in ofertas)
+    # Nome canonico do polo = o ja usado nas ofertas reais do GIOCONDA (evita
+    # 'LAP - X' e 'X' virarem 2 linhas em ger_polo, que agrupa por string exata).
+    _polo_canonico_inj = {}
+    for _o in ofertas:
+        _polo_canonico_inj.setdefault(_norm_polo_inj(_o['polo']), _o['polo'])
 
     # PATCH 75: a checagem acima (polo, categoria) deveria ter bastado — mas na
     # prática, um tutor real (ex: "Cicero Rosendo da Silva Filho" no GIOCONDA)
@@ -4883,7 +4888,7 @@ def _injetar_tutores_sem_oferta(ger_dados, tutores_ativos):
                 'EMF-ISN': 'Enfermagem/Instrumentação', 'NTR': 'Nutrição',
             }
             ofertas.append({
-                'polo': t['p'], 'categoria': cat_valida, 'ordem': '',
+                'polo': _polo_canonico_inj.get(_norm_polo_inj(t['p']), t['p']), 'categoria': cat_valida, 'ordem': '',
                 'pratica': 'Sem oferta cadastrada no GIOCONDA', 'tutor': t['n'],
                 'tem_tutor': True, 'tem_agenda': False, 'gerenciado': False,
                 'alunos_mat': 0, 'alunos_agend': 0, 'dt_agenda': '', 'hr_agenda': '',
@@ -5011,6 +5016,15 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
         for sem, grp in df_all.groupby('_SEM_ROW'):
             grp2 = grp.drop(columns=['_SEM_ROW'])
             print(f"[{ts()}] Gerenciamento {sem}: {len(grp2)} linhas")
+            _c_cod = next((c for c in grp2.columns if str(c).upper() == 'POLO'), None)
+            _c_lab = next((c for c in grp2.columns if str(c).upper() == 'LABORATORIO'), None)
+            if _c_cod and _c_lab:
+                _m_cod = {}
+                for _lab, _cod in zip(grp2[_c_lab], grp2[_c_cod]):
+                    _cod = str(_cod).strip()
+                    if _cod and _cod.lower() != 'nan':
+                        _m_cod.setdefault(_norm_polo_front(_lab), set()).add(_cod)
+                _GER_COD_POR_POLO[sem] = {k: next(iter(v)) for k, v in _m_cod.items() if len(v) == 1}
             resultado[sem] = _processar_gerenciamento_novo(grp2, sem)
     return resultado
 
@@ -5220,6 +5234,41 @@ def processar_gerenciamento(p3):
 
 
 
+# Mapa {nome_normalizado_GIOCONDA: COD_POLO} por semestre, preenchido por
+# processar_gerenciamento_semestres (coluna POLO do GIOCONDA = codigo do polo;
+# o nome fica em LABORATORIO). Usado so para ligar polos pelo CODIGO ao hub.
+_GER_COD_POR_POLO = {}
+
+
+def _norm_polo_front(s):
+    """Mesma normalizacao de _normPoloAl (frontend): sem acento, UPPER, sem
+    parenteses, sem 'LAP -' inicial, espacos colapsados."""
+    import unicodedata as _ud, re as _re
+    s = _ud.normalize('NFD', str(s or ''))
+    s = ''.join(c for c in s if _ud.category(c) != 'Mn').upper()
+    s = _re.sub(r'\([^)]*\)', ' ', s)
+    s = _re.sub(r'^\s*LAP\s*[-–]\s*', '', s)
+    return _re.sub(r'\s+', ' ', s).strip()
+
+
+def _gerar_alias_polo(cod_por_polo_hub, cod_por_polo_ger):
+    """PATCH: liga por CODIGO polos com nomes diferentes no hub e no GIOCONDA
+    (ex: 'Maringa/PR - Terminal Urbano' = 'LAP - Maringa/PR - Zona 01').
+    cod_por_polo_hub: {nome_hub_norm: COD}; cod_por_polo_ger: {nome_gio_norm_front: COD}.
+    Devolve {nome_gio_norm_front: nome_hub_norm_front}, so onde o COD e o mesmo e o
+    nome normalizado (front) difere. Nunca funde polos de codigos diferentes."""
+    hub_por_cod = {}
+    for nome, cod in (cod_por_polo_hub or {}).items():
+        if cod: hub_por_cod.setdefault(str(cod).strip(), set()).add(_norm_polo_front(nome))
+    alias = {}
+    for nome_g, cod in (cod_por_polo_ger or {}).items():
+        nomes_h = hub_por_cod.get(str(cod).strip(), set())
+        if nome_g in nomes_h or len(nomes_h) != 1:
+            continue  # ja casa, ou sem par / ambiguo (nao escolher em silencio)
+        alias[nome_g] = next(iter(nomes_h))
+    return alias
+
+
 def carregar_alunos_hub(path_csv):
     """
     Lê o relatório de alunos (matrículas) e retorna dict com matrículas distintas
@@ -5405,8 +5454,19 @@ def carregar_alunos_hub(path_csv):
                         tutor_subcurso[fl] = tutor_subcurso[tutor_lower]
         print(f"[{ts()}] Subcursos Multi 3 mapeados: {len(tutor_subcurso)} tutores")
 
+    # COD do polo por nome normalizado (mesma chave de por_polo) — so existe no
+    # esquema 2026/01 (COD_POLO_HUB); serve para ligar por codigo ao GIOCONDA.
+    cod_por_polo = {}
+    if 'COD_POLO_HUB' in df.columns:
+        for _n, _grp in df.groupby('_POLO_NORM'):
+            _cods = sorted(set(_grp['COD_POLO_HUB'].astype(str).str.strip()) - {'', 'nan'})
+            if len(_cods) > 1:
+                print(f"[{ts()}] AVISO: polo '{_n}' com mais de um COD no hub: {_cods} — sem alias")
+            elif _cods:
+                cod_por_polo[_n] = _cods[0]
     return {
         'total_distintos': int(total_distintos),
+        'cod_por_polo': cod_por_polo,
         'por_polo': {k: int(v) for k, v in por_polo.items()},
         'por_polo_cat': por_polo_cat,
         'por_cat': {k: int(v) for k, v in por_cat.items()},
@@ -6259,13 +6319,22 @@ if __name__ == '__main__':
                     print(f"[{ts()}] Tutores enriquecidos com subcurso Multi III (Fisio/T.Oc/Est): {_enr_sub}")
                 # BUG 3 FIX: enriquecer alunos por polo usando hub CSV (por_polo normalizado)
                 # Cobre polos com alunos=0 porque TOTAL_ALUNOS está zerado na lotação 2026_2
-                import unicodedata as _ud3, re as _re4
+                # Alias por CODIGO de polo (hub x GIOCONDA com nomes diferentes).
+                # cod_por_polo do hub vem do snapshot/CSV; o do GIOCONDA, do
+                # gerenciamento de 2026/1 (o hub e desse semestre).
+                _cod_ger_hub = _GER_COD_POR_POLO.get('2026/1') or {}
+                alunos_hub['alias_polo'] = _gerar_alias_polo(alunos_hub.get('cod_por_polo', {}), _cod_ger_hub)
+                print(f"[{ts()}] Alias de polo por COD (GIOCONDA -> hub): {len(alunos_hub['alias_polo'])}")
+                _alias_polo_main = alunos_hub['alias_polo']
                 def _norm_polo_hub_main(s):
-                    s = _ud3.normalize('NFD', str(s or '').upper().strip())
-                    s = ''.join(c for c in s if _ud3.category(c) != 'Mn')
-                    s = _re4.sub(r'^LAP\s*[-–]\s*', '', s).strip()
-                    return _re4.sub(r'\s+', ' ', s)
-                _hub_por_polo = alunos_hub.get('por_polo', {})
+                    # simetrico ao _normPoloAl do frontend + alias por codigo
+                    n = _norm_polo_front(s)
+                    return _alias_polo_main.get(n, n)
+                # por_polo do hub re-chaveado na mesma normalizacao (sem parenteses)
+                _hub_por_polo = {}
+                for _k, _v in alunos_hub.get('por_polo', {}).items():
+                    _kf = _norm_polo_front(_k)
+                    _hub_por_polo[_kf] = _hub_por_polo.get(_kf, 0) + _v
                 _enr_polo = 0
                 for _ps in dados.get('polo_stats', []):
                     if _ps.get('a', _ps.get('alunos', 0)) == 0:
