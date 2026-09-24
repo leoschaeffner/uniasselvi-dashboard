@@ -328,8 +328,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
   <div class="ph"><div class="ph-title">Gerenciamento — Visão Geral</div><div class="ph-sub" id="gv-sub">—</div></div>
   <div class="kpi-row" id="gv-kpis"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card"><div class="card-hdr"><div class="card-title" title="Em 2026/1 as categorias somam 109.936 alunos por prática (dedup GIOCONDA), enquanto o card Alunos Mat. usa a base do hub (74.636, alunos únicos) — os dois não precisam bater. Um aluno com mais de uma prática conta em cada uma.">📊 Por Categoria</div></div><div class="card-body" id="gv-cat-cards"></div></div>
-    <div class="card"><div class="card-hdr"><div class="card-title" title="A mesma prática pode aparecer em mais de uma ordem, então a soma de Al. Mat./Agendados por ordem pode passar do total do semestre (ex.: 2026/1 soma por ordem 135.899 vs total 109.936 por prática).">📅 Por Ordem</div></div><div class="card-body" id="gv-ordem-cards"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title" title="Ofertas, % gerenciado e ofertas sem tutor por categoria. Esta visão não exibe contagem de matrículas: o total de matrículas do semestre está no card Alunos Mat. (em 2026/1, alunos únicos do hub; nos demais semestres, estimativa por prática do GIOCONDA) e o detalhe por categoria abre ao clicar nele.">📊 Por Categoria</div></div><div class="card-body" id="gv-cat-cards"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title" title="Uma mesma prática pode aparecer em mais de uma ordem, então a soma por ordem pode passar do total do semestre. Em 2026/1 a matrícula é a de alunos únicos do hub, que não é separada por ordem — por isso Al. Mat. só aparece nos demais semestres (estimativa GIOCONDA, dedup por prática). Agendados vem do GIOCONDA, dedup por prática.">📅 Por Ordem</div></div><div class="card-body" id="gv-ordem-cards"></div></div>
     <div class="card"><div class="card-hdr"><div class="card-title">👥 Tutores Gerenciaram, por Ordem</div></div><div class="card-body" id="gv-ordem-tutores-chart" style="padding:6px 0"></div></div>
     <div class="card" id="gv-anomalia-ordem-card" style="display:none">
       <div class="card-hdr"><div class="card-title">⚠️ Gerenciamento Fora do Período da Ordem</div></div>
@@ -383,7 +383,7 @@ body.dark .search,body.dark .sel{background:var(--surface)}
           <th style="text-align:right" onclick="sortTable('gv-estados-tbody','ger','num')">Ger.</th>
           <th onclick="sortTable('gv-estados-tbody','pct','num')">%</th>
           <th style="text-align:right;color:var(--red)" onclick="sortTable('gv-estados-tbody','st','num')">-Tutor</th>
-          <th style="text-align:right;color:var(--muted)" onclick="sortTable('gv-estados-tbody','mat','num')">Al. Mat.</th>
+          <th style="text-align:right;color:var(--muted)" onclick="sortTable('gv-estados-tbody','mat','num')" title="Alunos matriculados por UF. 2026/1: alunos únicos do hub (soma por polo e categoria, fecha o total do card Alunos Mat.). Demais semestres: estimativa GIOCONDA, dedup por prática.">Al. Mat.</th>
         </tr></thead><tbody id="gv-estados-tbody"></tbody></table></div>
       </div>
 
@@ -414,8 +414,8 @@ body.dark .search,body.dark .sel{background:var(--surface)}
       <th data-sort-table="ger-polo-tbody" data-sort-col="pct" onclick="sortTable('ger-polo-tbody','pct','num')">% Ger.<span class="sort-ind"></span></th>
       <th data-sort-table="ger-polo-tbody" data-sort-col="ct" style="text-align:right" onclick="sortTable('ger-polo-tbody','ct','num')">Com Tutor<span class="sort-ind"></span></th>
       <th data-sort-table="ger-polo-tbody" data-sort-col="st" style="text-align:right" onclick="sortTable('ger-polo-tbody','st','num')">Sem Tutor<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="mat" style="text-align:right" onclick="sortTable('ger-polo-tbody','mat','num')" title="Alunos Matriculados — total de alunos com oferta de laboratório">Al. Mat.<span class="sort-ind"></span></th>
-      <th data-sort-table="ger-polo-tbody" data-sort-col="ag" style="text-align:right" onclick="sortTable('ger-polo-tbody','ag','num')" title="Alunos com data de agendamento confirmada">Al. Agend.<span class="sort-ind"></span></th>
+      <th data-sort-table="ger-polo-tbody" data-sort-col="mat" style="text-align:right" onclick="sortTable('ger-polo-tbody','mat','num')" title="Alunos Matriculados. 2026/1: alunos únicos do hub (soma por polo e categoria); polos sem casamento com o hub (ou com grafia duplicada de outro polo) mostram —. Demais semestres: estimativa GIOCONDA, dedup por prática (polo+categoria+prática).">Al. Mat.<span class="sort-ind"></span></th>
+      <th data-sort-table="ger-polo-tbody" data-sort-col="ag" style="text-align:right" onclick="sortTable('ger-polo-tbody','ag','num')" title="Alunos com data de agendamento confirmada (GIOCONDA, dedup por prática)">Al. Agend.<span class="sort-ind"></span></th>
     </tr></thead><tbody id="ger-polo-tbody"></tbody></table></div>
   </div>
 </div></div>
@@ -972,7 +972,7 @@ function renderCatOverview(){
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v],i)=>{
     const pct=v.t?Math.round(v.e/v.t*100):0;
     return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" data-cat="'+i+'" onclick="openCatModal('+i+')">'
-      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+c+'</div><div style="font-size:10px;color:var(--muted)">'+v.t+' tutores · '+v.e+' enviaram · <span title="Soma bruta de alunos autodeclarados nas submissões de portfólio — pode diferir do número da aba Práticas, que usa a base do hub (GIOCONDA)">'+fmtNum(v.al)+' alunos</span></div></div>'+progCell(pct)+'<span style="font-size:11px;color:var(--muted)">↗</span></div>';
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+c+'</div><div style="font-size:10px;color:var(--muted)">'+v.t+' tutores · '+v.e+' enviaram · <span title="Soma bruta de alunos autodeclarados nas submissões de portfólio — não é a matrícula do polo/categoria (essa está em Gerenciamento)">'+fmtNum(v.al)+' alunos nas práticas enviadas</span></div></div>'+progCell(pct)+'<span style="font-size:11px;color:var(--muted)">↗</span></div>';
   }).join('');
 }
 
@@ -985,7 +985,7 @@ function renderOrdens(){
   // batia com aquela data, quando "2026/1" estava selecionado. Agora os dois
   // vêm da mesma fonte, sempre o semestre selecionado no momento.
   const ordens=Object.entries(_getSemPrazos()||{}).sort((a,b)=>ordemNum(a[0])-ordemNum(b[0]));
-  el.innerHTML=`<div class="kpi-row">`+ordens.map(([o,prazo])=>{const s=getOS(o);const corS=s==='VENCIDO'?'var(--red)':s==='ABERTA'?'var(--ok)':'var(--muted)';return `<div class="kpi kpi-green"><div class="kpi-label">${o}</div><div class="kpi-value" style="font-size:20px">${getOE(o)} <small style="font-size:11px;color:var(--muted)">envios</small></div><div class="kpi-detail">${fmtNum(getOA(o))} alunos · Prazo: ${prazo}</div><div style="margin-top:4px"><span class="badge" style="background:${corS}20;color:${corS}">${s||'—'}</span></div></div>`;}).join('')+'</div>';
+  el.innerHTML=`<div class="kpi-row">`+ordens.map(([o,prazo])=>{const s=getOS(o);const corS=s==='VENCIDO'?'var(--red)':s==='ABERTA'?'var(--ok)':'var(--muted)';return `<div class="kpi kpi-green"><div class="kpi-label">${o}</div><div class="kpi-value" style="font-size:20px">${getOE(o)} <small style="font-size:11px;color:var(--muted)">envios</small></div><div class="kpi-detail">${fmtNum(getOA(o))} <span title="Alunos informados nos portfólios enviados nesta ordem — não é a matrícula do semestre">alunos nas práticas enviadas</span> · Prazo: ${prazo}</div><div style="margin-top:4px"><span class="badge" style="background:${corS}20;color:${corS}">${s||'—'}</span></div></div>`;}).join('')+'</div>';
   const sel=document.getElementById('ordem-sel');
   if(sel.options.length<=1) ordens.forEach(([o])=>{const op=document.createElement('option');op.value=o;op.textContent=o;sel.appendChild(op)});
 }
@@ -1082,6 +1082,26 @@ function _alunosPoloSemMap(){
   if(_hubAtivo()){fonte='hub';var h=((DB.alunos_hub||{}).por_polo)||{};Object.keys(h).forEach(function(k){var n=_normPoloAl(k);m[n]=(m[n]||0)+(+h[k]||0)})}
   else{fonte='gio';var G=(typeof GER_DB!=='undefined'&&GER_DB)||DB;(G.ger_polo||[]).forEach(function(p){var n=_normPoloAl(p.polo||p.n);m[n]=(m[n]||0)+(+p.alunos_matriculados||0)})}
   return {map:m,fonte:fonte};
+}
+// Matriculas UNICAS do hub (2026/1) somando por_polo_cat (aditivo, fecha total_distintos):
+// {polo:{polo_normalizado:n}, uf:{UF:n}}. Chave de por_polo_cat: "POLO_NORM||CATEGORIA".
+function _alunosPoloCatMap(){
+  var m={},uf={},h=((DB.alunos_hub||{}).por_polo_cat)||{};
+  Object.keys(h).forEach(function(k){var p=k.split('||')[0],v=+h[k]||0,n=_normPoloAl(p);m[n]=(m[n]||0)+v;var mm=p.match(/\/([A-Z]{2})(?:\s*-|$)/),u=mm?mm[1]:'sem UF';uf[u]=(uf[u]||0)+v});
+  return {polo:m,uf:uf};
+}
+// "Al. Mat." de um polo na tabela/modal de Ofertas: 2026/1 = hub (unico, por_polo_cat); demais = estimativa GIOCONDA. null = sem casamento.
+function _gerPoloMat(p){
+  if(_hubAtivo()){
+    var m=_alunosPoloCatMap().polo,k=_normPoloAl(p.polo||p.n);
+    if(!Object.prototype.hasOwnProperty.call(m,k))return null;
+    // O mesmo polo pode aparecer em ger_polo com duas grafias ("LAP - X" e "X") que normalizam igual:
+    // o valor do hub vai so para a linha com mais ofertas (as outras mostram —), senao somaria em dobro.
+    var G=(typeof GER_DB!=='undefined'&&GER_DB)||{},c=window._gpmOwner;
+    if(!c||c.g!==G){c={g:G,o:{}};(G.ger_polo||[]).forEach(function(q){var kk=_normPoloAl(q.polo||q.n);if(!c.o[kk]||(q.total_ofertas||0)>(c.o[kk].total_ofertas||0))c.o[kk]=q});window._gpmOwner=c}
+    return (c.o[k]&&c.o[k]!==p)?null:m[k];
+  }
+  return p.alunos_matriculados==null?null:+p.alunos_matriculados;
 }
 function _comAlunosSem(arr){
   var r=_alunosPoloSemMap();
@@ -1193,9 +1213,9 @@ function openPoloModal(nome){
   const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
   const poloStats=(DB.polo_stats||[]).find(p=>(p.n||p.polo||p.POLO||'')==nome)||{};
   const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,pend:tutores.filter(t=>t.te===0).length,
-    alunos:poloStats.a||poloStats.alunos||tutores.reduce((s,t)=>s+(t.al||0),0)};
+    alunos:(function(){var r=_alunosPoloSemMap().map,k=_normPoloAl(nome);return Object.prototype.hasOwnProperty.call(r,k)?r[k]:null})()};
   document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
-  let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal" title="Alunos das práticas cujo tutor enviou portfólio nesse polo (não é o mesmo escopo da tabela de Ofertas em Gerenciamento, que usa dedup do GIOCONDA)"><div class="kpi-label">Alunos</div><div class="kpi-value">${fmtNum(p.alunos)}</div></div></div>`;
+  let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal" title="Alunos matriculados no polo no semestre selecionado — mesmo valor da coluna Alunos da tabela de Polos (2026/1: alunos únicos do hub; demais semestres: estimativa GIOCONDA, dedup por prática). Não é o total de alunos das práticas enviadas pelos tutores."><div class="kpi-label">Alunos</div><div class="kpi-value">${p.alunos==null?'—':fmtNum(p.alunos)}</div></div></div>`;
   const contatos = poloStats.contatos || [];
   if(contatos.length){
     html += `<div class="sec-label">📞 Contatos do Polo</div><div style="display:grid;gap:8px;margin-bottom:16px">`;
@@ -1291,12 +1311,12 @@ function renderGerenciamento(){
     <div class="kpi kpi-green" title="Total de combinações tutor × laboratório × ordem no GIOCONDA"><div class="kpi-label">Total Ofertas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_ofertas)}</div></div>
     <div class="kpi kpi-ok" title="Ofertas com agenda configurada no GIOCONDA: datas, capacidade e locais definidos"><div class="kpi-label">Gerenciadas <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_gerenciadas)}</div><div class="kpi-detail">${k.pct_gerenciado}% do total</div></div>
     <div class="kpi kpi-red" title="Polos/labs sem nenhum tutor alocado — bloqueante total para gerenciamento"><div class="kpi-label">Sem Tutor <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.ofertas_sem_tutor)}</div></div>
-    <div class="kpi kpi-teal" style="cursor:pointer" onclick="openAlunosModal()" title="${k.alunos_mat_fonte==='hub_csv'?'Total de matrículas confirmadas no hub para 2026/1 — é a contagem de ALUNOS ÚNICOS. O card \'Alunos Matriculados (com e sem tutor)\' (Horários e Engajamento) mede outra coisa: MATRÍCULA-EM-PRÁTICA via GIOCONDA — um mesmo aluno que faz várias práticas no semestre é contado uma vez por prática, então esse número pode ficar MAIOR que este total, não é um recorte dele. Já \'Alunos nas Práticas\' (Portfólios) continua sendo um subconjunto menor: só quem já teve portfólio enviado pelo tutor. Clique para ver detalhes por categoria.':'Estimativa de matrícula-em-prática via GIOCONDA, deduplicada por prática (mesmo polo+categoria+prática conta uma vez) — bate com o card \'Alunos Matriculados (com e sem tutor)\' em Horários e Engajamento. Só 2026/1 tem contagem de alunos únicos (base do hub); um aluno com várias práticas conta em cada uma. Já \'Alunos nas Práticas\' (Portfólios) é um subconjunto menor: só quem já teve portfólio enviado pelo tutor. Clique para ver detalhes por categoria.'}"><div class="kpi-label">Alunos Mat. <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div><div class="kpi-detail" style="color:var(--teal);font-size:9px">${k.alunos_mat_fonte==='hub_csv'?'✓ matrículas únicas':'estimativa · clique p/ detalhar'}</div></div>
+    <div class="kpi kpi-teal" style="cursor:pointer" onclick="openAlunosModal()" title="${k.alunos_mat_fonte==='hub_csv'?'Total de matrículas confirmadas no hub para 2026/1 — é a contagem de ALUNOS ÚNICOS. O card \'Matrículas em prática (com e sem tutor)\' (Horários e Engajamento) mede outra coisa: MATRÍCULA-EM-PRÁTICA via GIOCONDA — um mesmo aluno que faz várias práticas no semestre é contado uma vez por prática, então esse número pode ficar MAIOR que este total, não é um recorte dele. Já \'Alunos nas Práticas\' (Portfólios) continua sendo um subconjunto menor: só quem já teve portfólio enviado pelo tutor. Clique para ver detalhes por categoria.':'Estimativa de matrícula-em-prática via GIOCONDA, deduplicada por prática (mesmo polo+categoria+prática conta uma vez) — bate com o card \'Matrículas em prática (com e sem tutor)\' em Horários e Engajamento. Só 2026/1 tem contagem de alunos únicos (base do hub); um aluno com várias práticas conta em cada uma. Já \'Alunos nas Práticas\' (Portfólios) é um subconjunto menor: só quem já teve portfólio enviado pelo tutor. Clique para ver detalhes por categoria.'}"><div class="kpi-label">Alunos Mat. <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_matriculados)}</div><div class="kpi-detail" style="color:var(--teal);font-size:9px">${k.alunos_mat_fonte==='hub_csv'?'✓ matrículas únicas':'estimativa · clique p/ detalhar'}</div></div>
     <div class="kpi kpi-yellow" title="Alunos agendados no GIOCONDA, deduplicados por prática (mesmo polo+categoria+prática conta uma vez). Um mesmo aluno com mais de uma prática agendada ainda conta em cada uma."><div class="kpi-label">Alunos Agendados <span style='font-size:10px;opacity:.6'>ℹ</span></div><div class="kpi-value">${fmtNum(k.total_alunos_agendados)}</div></div>`;
     // PATCH 163: card "Ocupação" removido (mostrava "0%" fixo — capacidade nunca calculada).
   const catColors=['#006B5E','#00A88F','#00C9A7','#FFD100','#E5BC00','#dc2626'];
   document.getElementById('gv-cat-cards').innerHTML=(GER_DB.ger_cat||[]).map((c,i)=>{const cor=catColors[i%catColors.length];return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:${cor}08;border-left:4px solid ${cor}"><div style="font-size:13px;font-weight:700;margin-bottom:6px">${c.categoria}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700;font-size:15px">${fmtNum(c.total_ofertas)}</div></div><div><span style="color:var(--muted)">Gerenciadas</span><div style="font-weight:700;font-size:15px;color:var(--ok)">${c.pct_gerenciado}%</div></div><div><span style="color:var(--muted)">Sem tutor</span><div style="font-weight:700;font-size:15px;color:${c.sem_tutor>0?'var(--red)':'var(--ok)'}">-${fmtNum(c.sem_tutor)}</div></div></div></div>`;}).join('');
-  document.getElementById('gv-ordem-cards').innerHTML=(GER_DB.ger_ordem||[]).map(o=>{const pct=o.pct_gerenciado;return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:14px;font-weight:700">${o.ordem}</div><span style="font-size:10px;color:var(--muted)">${o.dt_inicio||''}${o.dt_inicio?' → ':''}${o.dt_fim||''}</span></div>${progCell(pct)}<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;font-size:10px;margin-top:6px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700">${fmtNum(o.total_ofertas)}</div></div><div><span style="color:var(--muted)" title="A mesma prática pode aparecer em mais de uma ordem, então a soma de Al. Mat./Agendados por ordem pode passar do total do semestre (ex.: 2026/1 soma por ordem 135.899 vs total 109.936 por prática).">Al. Mat.</span><div style="font-weight:700">${fmtNum(o.alunos_matriculados)}</div></div><div><span style="color:var(--muted)">Agendados</span><div style="font-weight:700">${fmtNum(o.alunos_agendados)}</div></div><div><span style="color:var(--muted)">Tutores Gerenciaram ⓘ</span><div style="font-weight:700;color:var(--teal)" title="Tutores distintos que gerenciaram QUALQUER prática nesta ordem — acumula à parte pra cada ordem, sem misturar com as outras">${fmtNum(o.tutores_gerenciaram||0)}</div></div></div></div>`;}).join('');
+  document.getElementById('gv-ordem-cards').innerHTML=(GER_DB.ger_ordem||[]).map(o=>{const pct=o.pct_gerenciado;return `<div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--bg)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:14px;font-weight:700">${o.ordem}</div><span style="font-size:10px;color:var(--muted)">${o.dt_inicio||''}${o.dt_inicio?' → ':''}${o.dt_fim||''}</span></div>${progCell(pct)}<div style="display:grid;grid-template-columns:${_hubAtivo()?'1fr 1fr 1fr':'1fr 1fr 1fr 1fr'};gap:6px;font-size:10px;margin-top:6px"><div><span style="color:var(--muted)">Ofertas</span><div style="font-weight:700">${fmtNum(o.total_ofertas)}</div></div>${_hubAtivo()?'':`<div><span style="color:var(--muted)" title="Estimativa GIOCONDA, dedup por prática. Uma mesma prática pode aparecer em mais de uma ordem, então a soma por ordem pode passar do total do semestre.">Al. Mat.</span><div style="font-weight:700">${fmtNum(o.alunos_matriculados)}</div></div>`}<div><span style="color:var(--muted)" title="Alunos agendados no GIOCONDA, dedup por prática">Agendados</span><div style="font-weight:700">${fmtNum(o.alunos_agendados)}</div></div><div><span style="color:var(--muted)">Tutores Gerenciaram ⓘ</span><div style="font-weight:700;color:var(--teal)" title="Tutores distintos que gerenciaram QUALQUER prática nesta ordem — acumula à parte pra cada ordem, sem misturar com as outras">${fmtNum(o.tutores_gerenciaram||0)}</div></div></div></div>`;}).join('');
   // PATCH 86 (P6): gráfico comparando "tutores gerenciaram" entre as ordens —
   // cada ordem conta separada, atualizando sozinha conforme ela acontece (não
   // soma com as anteriores, não é afetada pelas seguintes ainda não iniciadas).
@@ -1514,7 +1534,7 @@ function openGerPoloModal(polo){
     }else{
       const pct=pd.total_ofertas?Math.round(pd.gerenciadas/pd.total_ofertas*100):0;
       document.getElementById('m-sub').textContent=`${fmtNum(pd.total_ofertas)} ofertas · ${fmtNum(pd.gerenciadas)} gerenciadas · ${pct}%`;
-      document.getElementById('m-body').innerHTML=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">${fmtNum(pd.total_ofertas)}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">${fmtNum(pd.gerenciadas)}</div></div><div class="kpi kpi-red"><div class="kpi-label">Sem Tutor</div><div class="kpi-value">${fmtNum(pd.sem_tutor)}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Al. Matriculados</div><div class="kpi-value">${fmtNum(pd.alunos_matriculados)}</div></div></div>${progCell(pct)}<div style="font-size:11px;color:var(--muted);margin-top:14px;padding:10px 12px;background:var(--yellow-dim);border-radius:6px;border-left:3px solid var(--yellow-d)">ℹ️ Detalhes por categoria não disponíveis. Os dados acima vêm do resumo geral do GIOCONDA.</div>`;
+      document.getElementById('m-body').innerHTML=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Total Ofertas</div><div class="kpi-value">${fmtNum(pd.total_ofertas)}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">${fmtNum(pd.gerenciadas)}</div></div><div class="kpi kpi-red"><div class="kpi-label">Sem Tutor</div><div class="kpi-value">${fmtNum(pd.sem_tutor)}</div></div><div class="kpi kpi-teal"><div class="kpi-label">Al. Matriculados</div><div class="kpi-value">${_gerPoloMat(pd)==null?'—':fmtNum(_gerPoloMat(pd))}</div></div></div>${progCell(pct)}<div style="font-size:11px;color:var(--muted);margin-top:14px;padding:10px 12px;background:var(--yellow-dim);border-radius:6px;border-left:3px solid var(--yellow-d)">ℹ️ Detalhes por categoria não disponíveis. Os dados acima vêm do resumo geral do GIOCONDA.</div>`;
     }
     document.getElementById('modal-overlay').classList.add('show');
     return;
@@ -1526,7 +1546,7 @@ function openGerPoloModal(polo){
   bodyHtml+='</tbody></table>';document.getElementById('m-body').innerHTML=bodyHtml;document.getElementById('modal-overlay').classList.add('show');
 }
 function renderGerPoloTbl(data){
-  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr class="sort-row" style="cursor:pointer" data-vpolo="${esc(p.polo)}" data-vtot="${p.total_ofertas}" data-vger="${p.gerenciadas}" data-vpct="${p.pct_gerenciado}" data-vct="${p.com_tutor}" data-vst="${p.sem_tutor}" data-vmat="${p.alunos_matriculados}" data-vag="${p.alunos_agendados}" onclick="openGerPoloModal('${esc(p.polo)}')"><td><strong>${p.polo}</strong></td><td style="text-align:right">${fmtNum(p.total_ofertas)}</td><td style="text-align:right">${fmtNum(p.gerenciadas)}</td><td>${progCell(p.pct_gerenciado)}</td><td style="text-align:right">${fmtNum(p.com_tutor)}</td><td style="text-align:right;color:${p.sem_tutor>0?'var(--red)':'var(--ok)'}">${fmtNum(p.sem_tutor)}</td><td style="text-align:right">${fmtNum(p.alunos_matriculados)}</td><td style="text-align:right">${fmtNum(p.alunos_agendados)}</td></tr>`).join('');
+  document.getElementById('ger-polo-tbody').innerHTML=data.map(p=>`<tr class="sort-row" style="cursor:pointer" data-vpolo="${esc(p.polo)}" data-vtot="${p.total_ofertas}" data-vger="${p.gerenciadas}" data-vpct="${p.pct_gerenciado}" data-vct="${p.com_tutor}" data-vst="${p.sem_tutor}" data-vmat="${_gerPoloMat(p)==null?-1:_gerPoloMat(p)}" data-vag="${p.alunos_agendados}" onclick="openGerPoloModal('${esc(p.polo)}')"><td><strong>${p.polo}</strong></td><td style="text-align:right">${fmtNum(p.total_ofertas)}</td><td style="text-align:right">${fmtNum(p.gerenciadas)}</td><td>${progCell(p.pct_gerenciado)}</td><td style="text-align:right">${fmtNum(p.com_tutor)}</td><td style="text-align:right;color:${p.sem_tutor>0?'var(--red)':'var(--ok)'}">${fmtNum(p.sem_tutor)}</td><td style="text-align:right">${_gerPoloMat(p)==null?'—':fmtNum(_gerPoloMat(p))}</td><td style="text-align:right">${fmtNum(p.alunos_agendados)}</td></tr>`).join('');
   document.getElementById('ger-polo-count').textContent=data.length+' polo'+(data.length!==1?'s':'')+' (clique para detalhar)';if(!data.length)document.getElementById('ger-polo-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Nenhum polo encontrado.</td></tr>';
 }
 function filterGerPolo(q){q=q.toLowerCase();renderGerPoloTbl(q?gerPoloData.filter(p=>p.polo.toLowerCase().includes(q)):gerPoloData)}
@@ -2355,7 +2375,7 @@ function _openDetTutorModal(t,allTutores){
   var ordemOrder={'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
   var normM=function(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();};var dbTM=(DB.tutores||[]).find(function(x){return x.n&&t.tutor&&normM(x.n)===normM(t.tutor);});var chSemM=dbTM&&dbTM.ch_semanal?dbTM.ch_semanal:null;var padCHM=[4,8,12,20,24];var chContM=!chSemM?null:padCHM.reduce(function(a,b){return Math.abs(b-chSemM)<Math.abs(a-chSemM)?b:a;});var pracSemM=chContM?Math.floor((chContM-_horasAdminPorCH(chContM))/1.5):null;var capOrdM=pracSemM?pracSemM*4:null;var nOrdM=Object.keys(t.ordens).length||1;var capTotM=capOrdM?capOrdM*nOrdM:null;var chGer=t.totalGer*1.5;var pracRestM=capTotM!==null?Math.max(0,capTotM-t.totalGer):null;var chRest=pracRestM!==null?pracRestM*1.5:null;
   document.getElementById('m-title').innerHTML=(t.tutor?t.tutor:'Sem tutor')+(t.tutor?_badgeTreinamento(t.tutor, t.totalGer>0)+_badgeLabPendencia(t.tutor):'');document.getElementById('m-sub').textContent=t.polo+' · '+catParaCurso(t.categoria);
-  var kpiHtml='<div class="kpi-row"><div class="kpi kpi-green"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">'+t.totalGer+'</div><div class="kpi-detail">'+chGer.toFixed(1)+'h realizadas</div></div>'+(chContM?'<div class="kpi kpi-teal"><div class="kpi-label">CH Contratada</div><div class="kpi-value">'+chContM+'h</div><div class="kpi-detail">'+pracSemM+' práticas/sem · '+capOrdM+'/ordem</div></div>':'')+(chRest!==null?'<div class="kpi kpi-'+(chRest>0?'red':'ok')+'"><div class="kpi-label">CH Restante</div><div class="kpi-value">'+chRest.toFixed(1)+'h</div></div>':'')+'<div class="kpi kpi-yellow"><div class="kpi-label">Al. Matriculados</div><div class="kpi-value">'+fmtNum(t.totalMat)+'</div></div>'+(dbTM&&dbTM.inicio?'<div class="kpi kpi-teal"><div class="kpi-label">Admissão</div><div class="kpi-value" style="font-size:16px">'+dbTM.inicio+'</div></div>':'')+'</div>';
+  var kpiHtml='<div class="kpi-row"><div class="kpi kpi-green"><div class="kpi-label">Gerenciadas</div><div class="kpi-value">'+t.totalGer+'</div><div class="kpi-detail">'+chGer.toFixed(1)+'h realizadas</div></div>'+(chContM?'<div class="kpi kpi-teal"><div class="kpi-label">CH Contratada</div><div class="kpi-value">'+chContM+'h</div><div class="kpi-detail">'+pracSemM+' práticas/sem · '+capOrdM+'/ordem</div></div>':'')+(chRest!==null?'<div class="kpi kpi-'+(chRest>0?'red':'ok')+'"><div class="kpi-label">CH Restante</div><div class="kpi-value">'+chRest.toFixed(1)+'h</div></div>':'')+(_hubAtivo()?'':'<div class="kpi kpi-yellow" title="Soma por oferta do tutor — pode repetir o mesmo aluno em mais de uma oferta (não é contagem de alunos únicos)"><div class="kpi-label">Al. Matriculados (soma por oferta)</div><div class="kpi-value">'+fmtNum(t.totalMat)+'</div></div>')+(dbTM&&dbTM.inicio?'<div class="kpi kpi-teal"><div class="kpi-label">Admissão</div><div class="kpi-value" style="font-size:16px">'+dbTM.inicio+'</div></div>':'')+'</div>';
   var ordensHtml='';
   var _chavesOrdens=Object.keys(t.ordens);
   // PATCH 73: quando o tutor tem ativa mas NENHUMA oferta real no GIOCONDA, o
@@ -2384,7 +2404,8 @@ function toggleDetGrp(hdr,gid){hdr.classList.toggle('open');document.querySelect
 var UF_NOMES={'AC':'Acre','AL':'Alagoas','AP':'Amapá','AM':'Amazonas','BA':'Bahia','CE':'Ceará','DF':'Distrito Federal','ES':'Espírito Santo','GO':'Goiás','MA':'Maranhão','MT':'Mato Grosso','MS':'Mato Grosso do Sul','MG':'Minas Gerais','PA':'Pará','PB':'Paraíba','PR':'Paraná','PE':'Pernambuco','PI':'Piauí','RJ':'Rio de Janeiro','RN':'Rio Grande do Norte','RS':'Rio Grande do Sul','RO':'Rondônia','RR':'Roraima','SC':'Santa Catarina','SP':'São Paulo','SE':'Sergipe','TO':'Tocantins'};
 function extrairUF(polo){var m=polo.match(/\/([A-Z]{2})(?:\s*-|$)/);return m?m[1]:'??';}
 function agruparPorEstado(poloData){var estados={};poloData.forEach(function(p){var uf=extrairUF(p.polo||p.n||'');if(!uf||uf==='??'||!UF_NOMES[uf])return;// ignorar polos sem UF válido
-if(!estados[uf])estados[uf]={uf:uf,nome:UF_NOMES[uf],polos:0,ofertas:0,gerenciadas:0,sem_tutor:0,mat:0,agend:0};var e=estados[uf];e.polos++;e.ofertas+=p.total_ofertas||0;e.gerenciadas+=p.gerenciadas||0;e.sem_tutor+=p.sem_tutor||0;e.mat+=p.alunos_matriculados||0;e.agend+=p.alunos_agendados||0;});return Object.values(estados).sort(function(a,b){return b.ofertas-a.ofertas;});}
+if(!estados[uf])estados[uf]={uf:uf,nome:UF_NOMES[uf],polos:0,ofertas:0,gerenciadas:0,sem_tutor:0,mat:0,agend:0};var e=estados[uf];e.polos++;e.ofertas+=p.total_ofertas||0;e.gerenciadas+=p.gerenciadas||0;e.sem_tutor+=p.sem_tutor||0;e.mat+=p.alunos_matriculados||0;e.agend+=p.alunos_agendados||0;});if(_hubAtivo()){var _uf=_alunosPoloCatMap().uf;Object.keys(estados).forEach(function(k){estados[k].mat=_uf[k]||0});}
+  return Object.values(estados).sort(function(a,b){return b.ofertas-a.ofertas;});}
 function renderEstadosInline(estadoData){
   var el=document.getElementById('gv-estados-tbody');if(!el)return;
   el.innerHTML=estadoData.map(function(e){var pct=e.ofertas?Math.round(e.gerenciadas/e.ofertas*100):0;return '<tr class="sort-row" style="cursor:pointer" data-estado-uf="'+e.uf+'" data-vuf="'+e.uf+'" data-vpolos="'+e.polos+'" data-vofertas="'+e.ofertas+'" data-vger="'+e.gerenciadas+'" data-vpct="'+pct+'" data-vst="'+e.sem_tutor+'" data-vmat="'+e.mat+'"><td><strong>'+e.uf+'</strong> <span style="color:var(--muted);font-size:11px">'+e.nome+'</span></td><td style="text-align:right">'+e.polos+'</td><td style="text-align:right">'+fmtNum(e.ofertas)+'</td><td style="text-align:right">'+fmtNum(e.gerenciadas)+'</td><td>'+progCell(pct)+'</td><td style="text-align:right;color:var(--red)">'+fmtNum(e.sem_tutor)+'</td><td style="text-align:right">'+fmtNum(e.mat)+'</td></tr>';}).join('');
@@ -3392,7 +3413,7 @@ function renderAgendasEstudo(){
       <div style="font-size:10px;color:var(--muted)">do total disponível</div>
     </div>
     <div style="background:var(--bg);border-radius:8px;padding:12px 14px" title="Este total conta MATRÍCULA-EM-PRÁTICA (via GIOCONDA), não alunos únicos — se um aluno faz várias práticas diferentes no semestre, ele é contado uma vez em cada uma. Por isso pode ficar maior que o total de alunos únicos do hub ('Alunos Mat.' na Visão Geral). Além disso, um mesmo polo+categoria pode ter práticas com e sem tutor ao mesmo tempo; nesse caso ele é contado no total acima E nos dois recortes abaixo. Por isso 'com tutor' + 'sem tutor' pode ser maior que o total — os três valores estão corretos, cada um pela sua própria definição">
-      <div style="font-size:11px;color:var(--muted)">Alunos Matriculados (com e sem tutor) ⓘ</div>
+      <div style="font-size:11px;color:var(--muted)">Matrículas em prática (com e sem tutor) ⓘ</div>
       <div style="font-size:22px;font-weight:800;color:var(--text)">${fmtNum(matTotal)}</div>
       <div style="font-size:10px;color:var(--muted)">${fmtNum(matComTutor)} com tutor · ${fmtNum(matSemTutor)} sem tutor</div>
     </div>
@@ -5176,6 +5197,20 @@ function _filtrarDBPorCursos(cursos){
     return a === b || (_ALIAS_SUBCURSO[a] || a) === b;
   };
 
+  // Matricula UNICA do hub (2026/1) sob filtro de curso: so e derivavel quando o filtro
+  // seleciona categorias INTEIRAS. O hub agrega por categoria (nao separa subarea), entao
+  // se alguma categoria com subcurso confiavel (Multi I: Biomedicina/Farmacia; Multi III:
+  // Fisioterapia/T.Ocupacional/Estetica) fica so parcialmente selecionada, a contagem unica
+  // nao e derivavel e o card cai na estimativa rotulada (alunos_mat_fonte ausente).
+  const _subareaParcial = categorias.some(cat =>
+    _CATEGORIAS_COM_SUBCURSO_CONFIAVEL.has(cat) &&
+    Object.keys(CURSO_PARA_CATEGORIA).some(c => CURSO_PARA_CATEGORIA[c] === cat && !cursos.includes(c)));
+  window._filtroSubareaParcial = _subareaParcial;
+  const _normHubF = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
+  const _hubPorCatOrig = (DB.alunos_hub && DB.alunos_hub.por_cat) ? Object.assign({}, DB.alunos_hub.por_cat) : null;
+  const _somaHubFiltrada = _hubPorCatOrig
+    ? Object.entries(_hubPorCatOrig).reduce((a, [k, v]) => a + (bateQualquerCategoria(_normHubF(k)) ? v : 0), 0) : null;
+
   if (Array.isArray(DB.tutores)) {
     DB.tutores = DB.tutores.filter(t => {
       if (!bateQualquerCategoria(t.c)) return false;
@@ -5213,8 +5248,14 @@ function _filtrarDBPorCursos(cursos){
         // _gerAggregateFromOfertas já existe e recalcula tudo de uma vez a
         // partir do array de ofertas -- reaproveita em vez de corrigir campo
         // por campo.
+        const _fonteOrig = s.ger_kpis && s.ger_kpis.alunos_mat_fonte;
         if (typeof _gerAggregateFromOfertas === 'function') {
           Object.assign(s, _gerAggregateFromOfertas(s.ger_ofertas));
+          // 2026/1 (hub) com categorias inteiras: mantem a matricula unica do hub
+          if (_fonteOrig === 'hub_csv' && !_subareaParcial && _somaHubFiltrada != null && s.ger_kpis) {
+            s.ger_kpis.total_alunos_matriculados = _somaHubFiltrada;
+            s.ger_kpis.alunos_mat_fonte = 'hub_csv';
+          }
         } else if (s.ger_kpis) {
           s.ger_kpis.total_alunos_agendados = _dedupAlunos(s.ger_ofertas, 'alunos_agend');
           s.ger_kpis.total_alunos_matriculados = _dedupAlunos(s.ger_ofertas, 'alunos_mat');
@@ -5390,6 +5431,17 @@ function _filtrarDBPorCursos(cursos){
     });
     DB.alunos_hub.por_cat = novoPorCat;
     DB.alunos_hub.total_distintos = novoTotal;
+    // por_polo_cat (chave "POLO||CATEGORIA") e por_polo tambem vazavam todos os cursos:
+    // com o hub ativo sob filtro, tabelas de polo/estado leem esses mapas.
+    if (DB.alunos_hub.por_polo_cat) {
+      const novoPPC = {}, novoPP = {};
+      Object.entries(DB.alunos_hub.por_polo_cat).forEach(([k, v]) => {
+        const i = k.indexOf('||'); const polo = k.slice(0, i), cat = k.slice(i + 2);
+        if (bateQualquerCategoria(_normHub(cat))) { novoPPC[k] = v; novoPP[polo] = (novoPP[polo] || 0) + v; }
+      });
+      DB.alunos_hub.por_polo_cat = novoPPC;
+      DB.alunos_hub.por_polo = novoPP;
+    }
   }
   // alunos_por_curso (linha "Alunos matriculados" do Engajamento por Ordem) tambem
   // vinha inteiro -- vazava o total de todos os cursos. Mesmo criterio do por_cat.
