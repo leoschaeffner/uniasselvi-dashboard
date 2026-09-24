@@ -3614,7 +3614,17 @@ def _analisar_vagas_criticas(vagas, funil, min_alunos=200):
                   if v.get('status') == 'Aumento de Quadro'
                   and not (v.get('tutor_atual') or '').strip()
                   and v.get('rec_situacao') != 'fechada']
-    alunos_sem_tutor = sum(int(v.get('alunos_polo') or 0) for v in _sem_tutor)
+    # Cada polo conta UMA vez (alunos_polo e' do polo, nao da vaga): um polo com
+    # N vagas sem tutor antes era somado N vezes (123.795 > total do hub).
+    import unicodedata as _ud
+    def _chave_polo_sem_tutor(p):
+        p = _ud.normalize('NFKD', str(p or '')).encode('ascii', 'ignore').decode('ascii')
+        return ' '.join(p.lower().split())
+    _al_por_polo = {}
+    for v in _sem_tutor:
+        _k = _chave_polo_sem_tutor(v.get('polo'))
+        _al_por_polo[_k] = max(_al_por_polo.get(_k, 0), int(v.get('alunos_polo') or 0))
+    alunos_sem_tutor = sum(_al_por_polo.values())
     polos_sem_tutor = len({v.get('polo') for v in _sem_tutor})
 
     def _peso(v):
@@ -4508,6 +4518,19 @@ def _processar_gerenciamento_novo(df_g, semestre=None):
 # JÁ existente) — se a oferta nem existisse, o tutor simplesmente não aparecia
 # em lugar nenhum do gerenciamento, mesmo estando ativo em todo o resto do
 # VinciLab (Ficha dos Tutores, Portfólios etc.).
+def _dedup_alunos_pratica(ofertas, campo):
+    """Espelha _dedupAlunos do frontend: chave polo|categoria|pratica, MAX por
+    grupo, soma dos grupos (a chave do frontend tambem tem o semestre; aqui as
+    ofertas ja sao de um unico semestre). Ver PATCH 48 / PRs #15/#16/#18/#20."""
+    grupos = {}
+    for o in ofertas:
+        k = (o.get('polo') or '', o.get('categoria') or '', o.get('pratica') or '')
+        v = o.get(campo, 0) or 0
+        if k not in grupos or v > grupos[k]:
+            grupos[k] = v
+    return sum(grupos.values())
+
+
 def _recalcular_agregados_de_ofertas(ofertas):
     """Recalcula ger_kpis/ger_polo/ger_cat/ger_ordem/ger_contratacao/ger_agendas
     a partir de uma lista de ofertas (dicts) — usado depois de injetar ofertas
@@ -4516,8 +4539,8 @@ def _recalcular_agregados_de_ofertas(ofertas):
     com_tutor = sum(1 for o in ofertas if o['tem_tutor'])
     gerenciadas = sum(1 for o in ofertas if o['gerenciado'])
     com_agenda = sum(1 for o in ofertas if o['tem_agenda'])
-    tot_mat = sum(o.get('alunos_mat', 0) for o in ofertas)
-    tot_agend = sum(o.get('alunos_agend', 0) for o in ofertas)
+    tot_mat = _dedup_alunos_pratica(ofertas, 'alunos_mat')
+    tot_agend = _dedup_alunos_pratica(ofertas, 'alunos_agend')
     polos_set = set(o['polo'] for o in ofertas)
     polos_sem_tutor = set(o['polo'] for o in ofertas if not o['tem_tutor'])
 
@@ -4533,19 +4556,19 @@ def _recalcular_agregados_de_ofertas(ofertas):
     }
 
     polo_map = {}; cat_map = {}; ordem_map = {}; contr_map = {}; agenda_map = {}
+    _of_polo = {}; _of_cat = {}; _of_ordem = {}  # ofertas por grupo, p/ dedup por pratica
     for o in ofertas:
         p = o['polo'] or '—'
         if p not in polo_map:
             polo_map[p] = {'polo': p, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0, 'sem_tutor': 0,
                            'com_agenda': 0, 'alunos_matriculados': 0, 'alunos_agendados': 0, 'capacidade': 0, 'tutores_unicos': []}
         pm = polo_map[p]
+        _of_polo.setdefault(p, []).append(o)
         pm['total_ofertas'] += 1
         if o['gerenciado']: pm['gerenciadas'] += 1
         if o['tem_tutor']: pm['com_tutor'] += 1
         else: pm['sem_tutor'] += 1
         if o['tem_agenda']: pm['com_agenda'] += 1
-        pm['alunos_matriculados'] += o.get('alunos_mat', 0)
-        pm['alunos_agendados'] += o.get('alunos_agend', 0)
         if o.get('tutor') and o['tutor'] not in pm['tutores_unicos']:
             pm['tutores_unicos'].append(o['tutor'])
 
@@ -4554,12 +4577,11 @@ def _recalcular_agregados_de_ofertas(ofertas):
             cat_map[c] = {'categoria': c, 'total_ofertas': 0, 'gerenciadas': 0, 'com_tutor': 0, 'sem_tutor': 0,
                           'alunos_matriculados': 0, 'alunos_agendados': 0}
         cm = cat_map[c]
+        _of_cat.setdefault(c, []).append(o)
         cm['total_ofertas'] += 1
         if o['gerenciado']: cm['gerenciadas'] += 1
         if o['tem_tutor']: cm['com_tutor'] += 1
         else: cm['sem_tutor'] += 1
-        cm['alunos_matriculados'] += o.get('alunos_mat', 0)
-        cm['alunos_agendados'] += o.get('alunos_agend', 0)
 
         od = o.get('ordem') or ''
         if od:
@@ -4568,11 +4590,10 @@ def _recalcular_agregados_de_ofertas(ofertas):
                                   'alunos_matriculados': 0, 'alunos_agendados': 0, 'dt_inicio': '', 'dt_fim': PRAZOS_ORDENS.get(od, ''),
                                   '_tutores_ger_set': set()}
             omp = ordem_map[od]
+            _of_ordem.setdefault(od, []).append(o)
             omp['total_ofertas'] += 1
             if o['gerenciado']: omp['gerenciadas'] += 1
             if o['tem_tutor']: omp['com_tutor'] += 1
-            omp['alunos_matriculados'] += o.get('alunos_mat', 0)
-            omp['alunos_agendados'] += o.get('alunos_agend', 0)
             # PATCH 86 (P6): tutores distintos que gerenciaram QUALQUER coisa
             # nesta ordem específica — usado no gráfico "Tutores Gerenciaram
             # por Ordem". Essa função roda DEPOIS da injeção de ofertas
@@ -4608,6 +4629,16 @@ def _recalcular_agregados_de_ofertas(ofertas):
                     _entrada_cal = f"{o['tutor']} · {_hr_cal}"
                     if _entrada_cal not in am['datas_por_horario'][d]: am['datas_por_horario'][d].append(_entrada_cal)
 
+    # Dedup por pratica (mesma regra do total, particiona o total por grupo).
+    for _k, _pm in polo_map.items():
+        _pm['alunos_matriculados'] = _dedup_alunos_pratica(_of_polo[_k], 'alunos_mat')
+        _pm['alunos_agendados'] = _dedup_alunos_pratica(_of_polo[_k], 'alunos_agend')
+    for _k, _cm in cat_map.items():
+        _cm['alunos_matriculados'] = _dedup_alunos_pratica(_of_cat[_k], 'alunos_mat')
+        _cm['alunos_agendados'] = _dedup_alunos_pratica(_of_cat[_k], 'alunos_agend')
+    for _k, _om in ordem_map.items():
+        _om['alunos_matriculados'] = _dedup_alunos_pratica(_of_ordem[_k], 'alunos_mat')
+        _om['alunos_agendados'] = _dedup_alunos_pratica(_of_ordem[_k], 'alunos_agend')
     for pm in polo_map.values():
         pm['pct_gerenciado'] = round(pm['gerenciadas'] / pm['total_ofertas'] * 100, 1) if pm['total_ofertas'] else 0
     for cm in cat_map.values():
