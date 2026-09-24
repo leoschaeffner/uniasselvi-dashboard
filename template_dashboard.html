@@ -1195,6 +1195,22 @@ function _normPoloAl(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g
 // Coluna "Alunos" da tabela de Polos: matriculados do polo NO SEMESTRE selecionado.
 // Mesma fonte do card "Alunos Mat.": hub (2026/1) ou ger_polo do GER_DB (demais/Ambos, dedup por pratica).
 // Retorna {map:{polo_normalizado:n}, fonte:'hub'|'gio'}.
+// Alias de polo (DB.alunos_hub.alias_polo = {NOME_GIOCONDA:NOME_HUB}, casado por CODIGO de polo no backend).
+// Usado SO como fallback na BUSCA (nunca em _normPoloAl): 1o acerto direto; se nao houver, tenta o nome equivalente
+// nos dois sentidos (GIOCONDA->hub e hub->GIOCONDA). Assim a linha exibida segue com o nome do GIOCONDA, o hub
+// 2026/1 casa Maringa Zona 01 / Teresina Frei Serafim / Campos, e em 2026/2 (GIOCONDA x GIOCONDA) o alias so
+// entra quando o nome nao casa direto, sem trocar um nome que ja casava. Retorna undefined se nada casar.
+function _polosGet(m,k){
+  var has=Object.prototype.hasOwnProperty;
+  if(has.call(m,k))return m[k];
+  var al=(DB.alunos_hub||{}).alias_polo||{};
+  if(has.call(al,k)&&has.call(m,al[k]))return m[al[k]];
+  for(var g in al){if(al[g]===k&&has.call(m,g))return m[g]}
+  return undefined;
+}
+// Chave canonica de um polo (nome do hub quando ha alias): duas linhas de ger_polo que sao o mesmo polo por codigo
+// (ex.: 'LAP - Campos dos Goytacazes/RJ' e 'Campos dos Goytacazes/RJ - Pelinca') dividem um unico dono do valor do hub.
+function _polosCanon(k){var al=(DB.alunos_hub||{}).alias_polo||{};return Object.prototype.hasOwnProperty.call(al,k)?al[k]:k}
 function _alunosPoloSemMap(){
   var m={},fonte;
   if(_hubAtivo()){fonte='hub';var h=((DB.alunos_hub||{}).por_polo)||{};Object.keys(h).forEach(function(k){var n=_normPoloAl(k);m[n]=(m[n]||0)+(+h[k]||0)})}
@@ -1211,19 +1227,19 @@ function _alunosPoloCatMap(){
 // "Al. Mat." de um polo na tabela/modal de Ofertas: 2026/1 = hub (unico, por_polo_cat); demais = estimativa GIOCONDA. null = sem casamento.
 function _gerPoloMat(p){
   if(_hubAtivo()){
-    var m=_alunosPoloCatMap().polo,k=_normPoloAl(p.polo||p.n);
-    if(!Object.prototype.hasOwnProperty.call(m,k))return null;
+    var m=_alunosPoloCatMap().polo,k=_normPoloAl(p.polo||p.n),kc=_polosCanon(k);
+    if(_polosGet(m,k)===undefined)return null;
     // O mesmo polo pode aparecer em ger_polo com duas grafias ("LAP - X" e "X") que normalizam igual:
     // o valor do hub vai so para a linha com mais ofertas (as outras mostram —), senao somaria em dobro.
     var G=(typeof GER_DB!=='undefined'&&GER_DB)||{},c=window._gpmOwner;
-    if(!c||c.g!==G){c={g:G,o:{}};(G.ger_polo||[]).forEach(function(q){var kk=_normPoloAl(q.polo||q.n);if(!c.o[kk]||(q.total_ofertas||0)>(c.o[kk].total_ofertas||0))c.o[kk]=q});window._gpmOwner=c}
-    return (c.o[k]&&c.o[k]!==p)?null:m[k];
+    if(!c||c.g!==G){c={g:G,o:{}};(G.ger_polo||[]).forEach(function(q){var kk=_polosCanon(_normPoloAl(q.polo||q.n));if(!c.o[kk]||(q.total_ofertas||0)>(c.o[kk].total_ofertas||0))c.o[kk]=q});window._gpmOwner=c}
+    return (c.o[kc]&&c.o[kc]!==p)?null:_polosGet(m,k);
   }
   return p.alunos_matriculados==null?null:+p.alunos_matriculados;
 }
 function _comAlunosSem(arr){
   var r=_alunosPoloSemMap();
-  return arr.map(function(p){var k=_normPoloAl(gPN(p));var v=Object.prototype.hasOwnProperty.call(r.map,k)?r.map[k]:null;return Object.assign({},p,{_al:v,_alS:v==null?-1:v})});
+  return arr.map(function(p){var k=_normPoloAl(gPN(p));var v=_polosGet(r.map,k);if(v===undefined)v=null;return Object.assign({},p,{_al:v,_alS:v==null?-1:v})});
 }
 function filterPolos(q){q=q.toLowerCase();const st=document.getElementById('polo-status-sel').value;let d=_getSemPoloStats();if(q)d=d.filter(p=>gPN(p).toLowerCase().includes(q));if(st==='pend')d=d.filter(p=>p.pend>0);if(st==='ok')d=d.filter(p=>p.pend===0);d=_comAlunosSem(d);poloData=d;renderPoloTbl(d);}
 function sortPolo(k){if(poloSortK===k)poloSortA=!poloSortA;else{poloSortK=k;poloSortA=k==='n'}filterPolos(document.getElementById('polo-search').value)}
@@ -1331,7 +1347,7 @@ function openPoloModal(nome){
   const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
   const poloStats=(DB.polo_stats||[]).find(p=>(p.n||p.polo||p.POLO||'')==nome)||{};
   const p={n:nome,total:tutores.length,enviaram:tutores.filter(t=>t.te>0).length,pend:tutores.filter(t=>t.te===0).length,
-    alunos:(function(){var r=_alunosPoloSemMap().map,k=_normPoloAl(nome);return Object.prototype.hasOwnProperty.call(r,k)?r[k]:null})()};
+    alunos:(function(){var r=_alunosPoloSemMap().map,k=_normPoloAl(nome),v=_polosGet(r,k);return v===undefined?null:v})()};
   document.getElementById('m-title').textContent=nome;document.getElementById('m-sub').textContent=`${p.total} tutores · ${p.enviaram} enviaram · ${p.pend} pendentes`;
   let html=`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Tutores</div><div class="kpi-value">${p.total}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Enviaram</div><div class="kpi-value">${p.enviaram}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${p.pend}</div></div><div class="kpi kpi-teal" title="Alunos matriculados no polo no semestre selecionado — mesmo valor da coluna Alunos da tabela de Polos (2026/1: alunos únicos do hub; demais semestres: estimativa GIOCONDA, dedup por prática). Não é o total de alunos das práticas enviadas pelos tutores."><div class="kpi-label">Alunos</div><div class="kpi-value">${p.alunos==null?'—':fmtNum(p.alunos)}</div></div></div>`;
   const contatos = poloStats.contatos || [];
