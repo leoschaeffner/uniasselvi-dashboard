@@ -4274,39 +4274,30 @@ function _gerAggregateFromOfertas(ofertas) {
     polos_total: new Set(ofertas.map(o=>o.polo)).size,
     polos_sem_tutor: new Set(ofertas.filter(o=>!o.tem_tutor).map(o=>o.polo)).size,
   };
-  // PATCH 48: mesmo dedup do PATCH 38 (backend) — polo soma o MAIOR valor visto
-  // por categoria (não a soma bruta de todas as práticas daquele polo+categoria);
-  // categoria soma o maior valor visto por polo; ordem soma o maior valor visto
-  // por polo+categoria dentro dela. Sem isso, esta função (usada só na visão
-  // "Ambos") reintroduzia exatamente o bug de inflação que o PATCH 38 já tinha
-  // corrigido no backend pros outros semestres.
+  // polo/categoria/ordem usam a MESMA regra do total do card (_dedupAlunos:
+  // MAX por semestre|polo|categoria|prática) aplicada ao subconjunto de
+  // ofertas de cada grupo — assim soma das categorias == total do card.
   const poloMap = {}, catMap = {}, ordemMap = {}, contrMap = {};
   ofertas.forEach(o => {
     const pk = o.polo || '—';
-    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, _matPorCat:{}, _agendPorCat:{}, capacidade:0, tutores_unicos:[] };
+    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, _ofs:[], capacidade:0, tutores_unicos:[] };
     const p = poloMap[pk];
     p.total_ofertas++; if(o.gerenciado) p.gerenciadas++; if(o.tem_tutor) p.com_tutor++; else p.sem_tutor++;
     if(o.tem_agenda) p.com_agenda++;
-    const pCatKey=(o._semOrigem||'')+'|||'+(o.categoria||'—');
-    if(!(pCatKey in p._matPorCat) || (o.alunos_mat||0)>p._matPorCat[pCatKey]) p._matPorCat[pCatKey]=o.alunos_mat||0;
-    if(!(pCatKey in p._agendPorCat) || (o.alunos_agend||0)>p._agendPorCat[pCatKey]) p._agendPorCat[pCatKey]=o.alunos_agend||0;
+    p._ofs.push(o);
     if(o.tutor && !p.tutores_unicos.includes(o.tutor)) p.tutores_unicos.push(o.tutor);
 
     const ck = o.categoria || '—';
-    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, _matPorPolo:{}, _agendPorPolo:{} };
+    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, _ofs:[] };
     const c = catMap[ck];
     c.total_ofertas++; if(o.gerenciado) c.gerenciadas++; if(o.tem_tutor) c.com_tutor++; else c.sem_tutor++;
-    const cPoloKey=(o._semOrigem||'')+'|||'+(o.polo||'—');
-    if(!(cPoloKey in c._matPorPolo) || (o.alunos_mat||0)>c._matPorPolo[cPoloKey]) c._matPorPolo[cPoloKey]=o.alunos_mat||0;
-    if(!(cPoloKey in c._agendPorPolo) || (o.alunos_agend||0)>c._agendPorPolo[cPoloKey]) c._agendPorPolo[cPoloKey]=o.alunos_agend||0;
+    c._ofs.push(o);
 
     const ok = o.ordem || '—';
-    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, _matPorPoloCat:{}, _agendPorPoloCat:{}, dt_inicio:'', dt_fim:'' };
+    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, _ofs:[], dt_inicio:'', dt_fim:'' };
     const od = ordemMap[ok];
     od.total_ofertas++; if(o.gerenciado) od.gerenciadas++; if(o.tem_tutor) od.com_tutor++;
-    const oPoloCatKey=(o._semOrigem||'')+'|||'+(o.polo||'—')+'|||'+(o.categoria||'—');
-    if(!(oPoloCatKey in od._matPorPoloCat) || (o.alunos_mat||0)>od._matPorPoloCat[oPoloCatKey]) od._matPorPoloCat[oPoloCatKey]=o.alunos_mat||0;
-    if(!(oPoloCatKey in od._agendPorPoloCat) || (o.alunos_agend||0)>od._agendPorPoloCat[oPoloCatKey]) od._agendPorPoloCat[oPoloCatKey]=o.alunos_agend||0;
+    od._ofs.push(o);
 
     const trk = (o.polo||'')+'|'+(o.categoria||'');
     if (!contrMap[trk]) contrMap[trk] = { polo:o.polo, categoria:o.categoria, total_ofertas:0, tutores:[] };
@@ -4314,19 +4305,19 @@ function _gerAggregateFromOfertas(ofertas) {
     if (o.tutor && !contrMap[trk].tutores.includes(o.tutor)) contrMap[trk].tutores.push(o.tutor);
   });
   Object.values(poloMap).forEach(p => {
-    p.alunos_matriculados = Object.values(p._matPorCat).reduce((s,v)=>s+v,0);
-    p.alunos_agendados = Object.values(p._agendPorCat).reduce((s,v)=>s+v,0);
-    delete p._matPorCat; delete p._agendPorCat;
+    p.alunos_matriculados = _dedupAlunos(p._ofs,'alunos_mat');
+    p.alunos_agendados = _dedupAlunos(p._ofs,'alunos_agend');
+    delete p._ofs;
   });
   Object.values(catMap).forEach(c => {
-    c.alunos_matriculados = Object.values(c._matPorPolo).reduce((s,v)=>s+v,0);
-    c.alunos_agendados = Object.values(c._agendPorPolo).reduce((s,v)=>s+v,0);
-    delete c._matPorPolo; delete c._agendPorPolo;
+    c.alunos_matriculados = _dedupAlunos(c._ofs,'alunos_mat');
+    c.alunos_agendados = _dedupAlunos(c._ofs,'alunos_agend');
+    delete c._ofs;
   });
   Object.values(ordemMap).forEach(od => {
-    od.alunos_matriculados = Object.values(od._matPorPoloCat).reduce((s,v)=>s+v,0);
-    od.alunos_agendados = Object.values(od._agendPorPoloCat).reduce((s,v)=>s+v,0);
-    delete od._matPorPoloCat; delete od._agendPorPoloCat;
+    od.alunos_matriculados = _dedupAlunos(od._ofs,'alunos_mat');
+    od.alunos_agendados = _dedupAlunos(od._ofs,'alunos_agend');
+    delete od._ofs;
   });
   Object.values(poloMap).forEach(p => p.pct_gerenciado = p.total_ofertas ? Math.round(p.gerenciadas/p.total_ofertas*1000)/10 : 0);
   Object.values(catMap).forEach(c => c.pct_gerenciado = c.total_ofertas ? Math.round(c.gerenciadas/c.total_ofertas*1000)/10 : 0);
