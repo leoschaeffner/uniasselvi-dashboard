@@ -840,7 +840,23 @@ function _getSemPraticaStats(){
   return (sd && sd.pratica_stats) ? sd.pratica_stats : DB.pratica_stats;
 }
 function getOE(o){const _po=_getSemPorOrdem();if(_po&&!Array.isArray(_po))return _po[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
-function getOA(o){if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
+function getOA(o){var _pa=(typeof _SEM_ATUAL!=='undefined'&&_SEM_ATUAL&&_SEM_ATUAL!=='Ambos'&&typeof _SEM_DB!=='undefined'&&_SEM_DB)?_SEM_DB.alunos_por_ordem:null;if(_pa)return _pa[o]||0;if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
+// Hub (matriculas unicas) so vale pro semestre cuja fonte e hub_csv (hoje so 2026/1).
+// DB.alunos_hub/alunos_por_curso sao globais; decidir pelo semestre selecionado, igual ao card.
+function _hubAtivo(){return ((((typeof GER_DB!=='undefined'&&GER_DB)||{}).ger_kpis)||{}).alunos_mat_fonte==='hub_csv'}
+// {categoria:n} de alunos por categoria: hub no semestre com hub, senao estimativa ger_cat do semestre selecionado
+function _alunosPorCat(){
+  var m={};
+  if(_hubAtivo()){var h=(DB.alunos_hub||{}).por_cat||{};Object.keys(h).forEach(function(k){m[k]=h[k]});return m}
+  var G=(typeof GER_DB!=='undefined'&&GER_DB)||DB;
+  (G.ger_cat||[]).forEach(function(c){var n=c.alunos_matriculados||c.alunos_mat||0;if(n)m[c.categoria||c.cat]=n});
+  return m;
+}
+// [{sigla,alunos}] no formato de DB.alunos_por_curso
+function _alunosPorCursoSem(){
+  if(_hubAtivo())return DB.alunos_por_curso||[];
+  var m=_alunosPorCat();return Object.keys(m).map(function(k){return {sigla:k,curso:k,alunos:m[k]}});
+}
 function getOS(o){const _so=_getSemStatusOrdem();if(_so)return _so[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
 
 const pageTitles={
@@ -1008,7 +1024,7 @@ function renderCatPracBars(){
     cats[c].envN+=(p.env_n||0);
     cats[c].pendN+=(p.pend_n||0);
   });
-  const hubCat=((DB.alunos_hub||{}).por_cat)||{};
+  const hubCat=_alunosPorCat();
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
     const tot=v.envN+v.pendN;
     const pct=tot?Math.round(v.envN/tot*100):0;
@@ -1185,7 +1201,7 @@ function closeModal(){document.getElementById('modal-overlay').classList.remove(
 
 function openAlunosModal(){
   // Usar dados do CSV de alunos (DB.alunos_hub) se disponível, senão usar ger_kpis por categoria
-  var hub = DB.alunos_hub || null;
+  var hub = _hubAtivo() ? (DB.alunos_hub || null) : null;
   if(!GER_DB) GER_DB = DB;
   var kpis = GER_DB.ger_kpis || {};
   var cats = GER_DB.ger_cat || [];
@@ -1229,7 +1245,7 @@ function openAlunosModal(){
       <button onclick="document.getElementById('modal-alunos').style.display='none'" 
         style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px">✕ Fechar</button>
     </div>
-    ${!hub?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:11px;margin-bottom:12px">⚠ Sem o Relatório de Alunos por Hub — os valores abaixo são estimativas e podem ter contagem múltipla (mesmo aluno em mais de um curso).</div>':''}
+    ${!hub?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:11px;margin-bottom:12px">⚠ Estimativa baseada no GIOCONDA para este semestre (ainda não há base de matrículas do hub para ele) — os valores podem ter contagem múltipla (mesmo aluno em mais de um curso).</div>':''}
     <table style="width:100%;border-collapse:collapse">
       <thead><tr style="background:var(--bg)">
         <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600">CATEGORIA</th>
@@ -3580,7 +3596,7 @@ function renderEngajamentoPorOrdem(){
 
   const matEl = document.getElementById('ae-ordem-matriculados');
   if(matEl){
-    const porCurso = DB.alunos_por_curso || [];
+    const porCurso = _alunosPorCursoSem();
     let matriculados = 0, rotulo = 'Alunos matriculados (todos os grupos)', aviso = '';
     if(grupo){
       const baseAlvo = (grupo.base||[]);
@@ -3594,6 +3610,7 @@ function renderEngajamentoPorOrdem(){
     } else {
       matriculados = porCurso.reduce((s,pc)=>s+(pc.alunos||0),0);
     }
+    if(!_hubAtivo()) aviso += ' <span style="opacity:.75">(estimativa GIOCONDA — este semestre ainda não tem a base de matrículas do hub)</span>';
     matEl.innerHTML = `🎓 <strong>${fmtNum(matriculados)}</strong> ${esc(rotulo)}${aviso}`;
   }
 
@@ -4257,39 +4274,30 @@ function _gerAggregateFromOfertas(ofertas) {
     polos_total: new Set(ofertas.map(o=>o.polo)).size,
     polos_sem_tutor: new Set(ofertas.filter(o=>!o.tem_tutor).map(o=>o.polo)).size,
   };
-  // PATCH 48: mesmo dedup do PATCH 38 (backend) — polo soma o MAIOR valor visto
-  // por categoria (não a soma bruta de todas as práticas daquele polo+categoria);
-  // categoria soma o maior valor visto por polo; ordem soma o maior valor visto
-  // por polo+categoria dentro dela. Sem isso, esta função (usada só na visão
-  // "Ambos") reintroduzia exatamente o bug de inflação que o PATCH 38 já tinha
-  // corrigido no backend pros outros semestres.
+  // polo/categoria/ordem usam a MESMA regra do total do card (_dedupAlunos:
+  // MAX por semestre|polo|categoria|prática) aplicada ao subconjunto de
+  // ofertas de cada grupo — assim soma das categorias == total do card.
   const poloMap = {}, catMap = {}, ordemMap = {}, contrMap = {};
   ofertas.forEach(o => {
     const pk = o.polo || '—';
-    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, _matPorCat:{}, _agendPorCat:{}, capacidade:0, tutores_unicos:[] };
+    if (!poloMap[pk]) poloMap[pk] = { polo: pk, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, com_agenda:0, _ofs:[], capacidade:0, tutores_unicos:[] };
     const p = poloMap[pk];
     p.total_ofertas++; if(o.gerenciado) p.gerenciadas++; if(o.tem_tutor) p.com_tutor++; else p.sem_tutor++;
     if(o.tem_agenda) p.com_agenda++;
-    const pCatKey=(o._semOrigem||'')+'|||'+(o.categoria||'—');
-    if(!(pCatKey in p._matPorCat) || (o.alunos_mat||0)>p._matPorCat[pCatKey]) p._matPorCat[pCatKey]=o.alunos_mat||0;
-    if(!(pCatKey in p._agendPorCat) || (o.alunos_agend||0)>p._agendPorCat[pCatKey]) p._agendPorCat[pCatKey]=o.alunos_agend||0;
+    p._ofs.push(o);
     if(o.tutor && !p.tutores_unicos.includes(o.tutor)) p.tutores_unicos.push(o.tutor);
 
     const ck = o.categoria || '—';
-    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, _matPorPolo:{}, _agendPorPolo:{} };
+    if (!catMap[ck]) catMap[ck] = { categoria: ck, total_ofertas:0, gerenciadas:0, com_tutor:0, sem_tutor:0, _ofs:[] };
     const c = catMap[ck];
     c.total_ofertas++; if(o.gerenciado) c.gerenciadas++; if(o.tem_tutor) c.com_tutor++; else c.sem_tutor++;
-    const cPoloKey=(o._semOrigem||'')+'|||'+(o.polo||'—');
-    if(!(cPoloKey in c._matPorPolo) || (o.alunos_mat||0)>c._matPorPolo[cPoloKey]) c._matPorPolo[cPoloKey]=o.alunos_mat||0;
-    if(!(cPoloKey in c._agendPorPolo) || (o.alunos_agend||0)>c._agendPorPolo[cPoloKey]) c._agendPorPolo[cPoloKey]=o.alunos_agend||0;
+    c._ofs.push(o);
 
     const ok = o.ordem || '—';
-    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, _matPorPoloCat:{}, _agendPorPoloCat:{}, dt_inicio:'', dt_fim:'' };
+    if (!ordemMap[ok]) ordemMap[ok] = { ordem: ok, total_ofertas:0, gerenciadas:0, com_tutor:0, _ofs:[], dt_inicio:'', dt_fim:'' };
     const od = ordemMap[ok];
     od.total_ofertas++; if(o.gerenciado) od.gerenciadas++; if(o.tem_tutor) od.com_tutor++;
-    const oPoloCatKey=(o._semOrigem||'')+'|||'+(o.polo||'—')+'|||'+(o.categoria||'—');
-    if(!(oPoloCatKey in od._matPorPoloCat) || (o.alunos_mat||0)>od._matPorPoloCat[oPoloCatKey]) od._matPorPoloCat[oPoloCatKey]=o.alunos_mat||0;
-    if(!(oPoloCatKey in od._agendPorPoloCat) || (o.alunos_agend||0)>od._agendPorPoloCat[oPoloCatKey]) od._agendPorPoloCat[oPoloCatKey]=o.alunos_agend||0;
+    od._ofs.push(o);
 
     const trk = (o.polo||'')+'|'+(o.categoria||'');
     if (!contrMap[trk]) contrMap[trk] = { polo:o.polo, categoria:o.categoria, total_ofertas:0, tutores:[] };
@@ -4297,19 +4305,19 @@ function _gerAggregateFromOfertas(ofertas) {
     if (o.tutor && !contrMap[trk].tutores.includes(o.tutor)) contrMap[trk].tutores.push(o.tutor);
   });
   Object.values(poloMap).forEach(p => {
-    p.alunos_matriculados = Object.values(p._matPorCat).reduce((s,v)=>s+v,0);
-    p.alunos_agendados = Object.values(p._agendPorCat).reduce((s,v)=>s+v,0);
-    delete p._matPorCat; delete p._agendPorCat;
+    p.alunos_matriculados = _dedupAlunos(p._ofs,'alunos_mat');
+    p.alunos_agendados = _dedupAlunos(p._ofs,'alunos_agend');
+    delete p._ofs;
   });
   Object.values(catMap).forEach(c => {
-    c.alunos_matriculados = Object.values(c._matPorPolo).reduce((s,v)=>s+v,0);
-    c.alunos_agendados = Object.values(c._agendPorPolo).reduce((s,v)=>s+v,0);
-    delete c._matPorPolo; delete c._agendPorPolo;
+    c.alunos_matriculados = _dedupAlunos(c._ofs,'alunos_mat');
+    c.alunos_agendados = _dedupAlunos(c._ofs,'alunos_agend');
+    delete c._ofs;
   });
   Object.values(ordemMap).forEach(od => {
-    od.alunos_matriculados = Object.values(od._matPorPoloCat).reduce((s,v)=>s+v,0);
-    od.alunos_agendados = Object.values(od._agendPorPoloCat).reduce((s,v)=>s+v,0);
-    delete od._matPorPoloCat; delete od._agendPorPoloCat;
+    od.alunos_matriculados = _dedupAlunos(od._ofs,'alunos_mat');
+    od.alunos_agendados = _dedupAlunos(od._ofs,'alunos_agend');
+    delete od._ofs;
   });
   Object.values(poloMap).forEach(p => p.pct_gerenciado = p.total_ofertas ? Math.round(p.gerenciadas/p.total_ofertas*1000)/10 : 0);
   Object.values(catMap).forEach(c => c.pct_gerenciado = c.total_ofertas ? Math.round(c.gerenciadas/c.total_ofertas*1000)/10 : 0);
@@ -5368,6 +5376,12 @@ function _filtrarDBPorCursos(cursos){
     });
     DB.alunos_hub.por_cat = novoPorCat;
     DB.alunos_hub.total_distintos = novoTotal;
+  }
+  // alunos_por_curso (linha "Alunos matriculados" do Engajamento por Ordem) tambem
+  // vinha inteiro -- vazava o total de todos os cursos. Mesmo criterio do por_cat.
+  if (Array.isArray(DB.alunos_por_curso)) {
+    const _normPc = c => (window._CAT_NORM_MAP && window._CAT_NORM_MAP[c]) ? window._CAT_NORM_MAP[c] : c;
+    DB.alunos_por_curso = DB.alunos_por_curso.filter(pc => bateQualquerCategoria(_normPc(pc.sigla)));
   }
 }
 // PATCH 135: recalcula {total, enviaram, urgentes, atrasados, pendentes} a
