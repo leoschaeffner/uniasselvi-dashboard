@@ -955,7 +955,23 @@ function _getSemPraticaStats(){
   return (sd && sd.pratica_stats) ? sd.pratica_stats : DB.pratica_stats;
 }
 function getOE(o){const _po=_getSemPorOrdem();if(_po&&!Array.isArray(_po))return _po[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.envios:0}return 0}
-function getOA(o){if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
+function getOA(o){var _pa=(typeof _SEM_ATUAL!=='undefined'&&_SEM_ATUAL&&_SEM_ATUAL!=='Ambos'&&typeof _SEM_DB!=='undefined'&&_SEM_DB)?_SEM_DB.alunos_por_ordem:null;if(_pa)return _pa[o]||0;if(DB.alunos_por_ordem)return DB.alunos_por_ordem[o]||0;var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.alunos:0}return 0}
+// Hub (matriculas unicas) so vale pro semestre cuja fonte e hub_csv (hoje so 2026/1).
+// DB.alunos_hub/alunos_por_curso sao globais; decidir pelo semestre selecionado, igual ao card.
+function _hubAtivo(){return ((((typeof GER_DB!=='undefined'&&GER_DB)||{}).ger_kpis)||{}).alunos_mat_fonte==='hub_csv'}
+// {categoria:n} de alunos por categoria: hub no semestre com hub, senao estimativa ger_cat do semestre selecionado
+function _alunosPorCat(){
+  var m={};
+  if(_hubAtivo()){var h=(DB.alunos_hub||{}).por_cat||{};Object.keys(h).forEach(function(k){m[k]=h[k]});return m}
+  var G=(typeof GER_DB!=='undefined'&&GER_DB)||DB;
+  (G.ger_cat||[]).forEach(function(c){var n=c.alunos_matriculados||c.alunos_mat||0;if(n)m[c.categoria||c.cat]=n});
+  return m;
+}
+// [{sigla,alunos}] no formato de DB.alunos_por_curso
+function _alunosPorCursoSem(){
+  if(_hubAtivo())return DB.alunos_por_curso||[];
+  var m=_alunosPorCat();return Object.keys(m).map(function(k){return {sigla:k,curso:k,alunos:m[k]}});
+}
 function getOS(o){const _so=_getSemStatusOrdem();if(_so)return _so[o]||"";var L=DB.por_ordem_lista||DB.por_ordem||[];if(Array.isArray(L)){var it=L.find(function(x){return x.ordem===o});return it?it.status:""}return ""}
 
 const pageTitles={
@@ -1126,7 +1142,7 @@ function renderCatPracBars(){
     cats[c].envN+=(p.env_n||0);
     cats[c].pendN+=(p.pend_n||0);
   });
-  const hubCat=((DB.alunos_hub||{}).por_cat)||{};
+  const hubCat=_alunosPorCat();
   el.innerHTML=Object.entries(cats).sort((a,b)=>b[1].t-a[1].t).map(([c,v])=>{
     const tot=v.envN+v.pendN;
     const pct=tot?Math.round(v.envN/tot*100):0;
@@ -1303,7 +1319,7 @@ function closeModal(){document.getElementById('modal-overlay').classList.remove(
 
 function openAlunosModal(){
   // Usar dados do CSV de alunos (DB.alunos_hub) se disponível, senão usar ger_kpis por categoria
-  var hub = DB.alunos_hub || null;
+  var hub = _hubAtivo() ? (DB.alunos_hub || null) : null;
   if(!GER_DB) GER_DB = DB;
   var kpis = GER_DB.ger_kpis || {};
   var cats = GER_DB.ger_cat || [];
@@ -1347,7 +1363,7 @@ function openAlunosModal(){
       <button onclick="document.getElementById('modal-alunos').style.display='none'" 
         style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px">✕ Fechar</button>
     </div>
-    ${!hub?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:11px;margin-bottom:12px">⚠ Sem o Relatório de Alunos por Hub — os valores abaixo são estimativas e podem ter contagem múltipla (mesmo aluno em mais de um curso).</div>':''}
+    ${!hub?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:11px;margin-bottom:12px">⚠ Estimativa baseada no GIOCONDA para este semestre (ainda não há base de matrículas do hub para ele) — os valores podem ter contagem múltipla (mesmo aluno em mais de um curso).</div>':''}
     <table style="width:100%;border-collapse:collapse">
       <thead><tr style="background:var(--bg)">
         <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);font-weight:600">CATEGORIA</th>
@@ -3792,7 +3808,7 @@ function renderEngajamentoPorOrdem(){
   // divergente da correta.
   const matEl = document.getElementById('ae-ordem-matriculados');
   if(matEl){
-    const porCurso = DB.alunos_por_curso || [];
+    const porCurso = _alunosPorCursoSem();
     let matriculados = 0, rotulo = 'Alunos matriculados (todos os grupos)', aviso = '';
     if(grupo){
       // "multi3" (Multidisciplinar III) cobre Fisioterapia/T.O. E Biomedicina
@@ -3809,6 +3825,7 @@ function renderEngajamentoPorOrdem(){
     } else {
       matriculados = porCurso.reduce((s,pc)=>s+(pc.alunos||0),0);
     }
+    if(!_hubAtivo()) aviso += ' <span style="opacity:.75">(estimativa GIOCONDA — este semestre ainda não tem a base de matrículas do hub)</span>';
     matEl.innerHTML = `🎓 <strong>${fmtNum(matriculados)}</strong> ${esc(rotulo)}${aviso}`;
   }
 
