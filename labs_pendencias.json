@@ -22,7 +22,7 @@
   {
     "polo_norm": "belo horizonte/mg - shopping estacao bh",
     "polo_original": "Belo Horizonte/MG - Shopping Estação BH",
-    "categoria": "NUTRI (Multidisciplinar IV)",
+    "categoria": "",
     "status": "Não Apto",
     "motivo": "Recebeu o lab e não implantou, estão vendo nova sala. No sistema já não consta mais como HUB Multi IV",
     "empresa": "PRÓPRIOS II",
@@ -234,7 +234,7 @@
     "polo_original": "Itaguaí/RJ - Edifício Manancial",
     "categoria": "BIO-FAR (Multidisciplinar I)",
     "status": "Não Apto",
-    "motivo": "VAI TER OBRA ATÉ 15/10(Bruno passou a informação pelo teams)",
+    "motivo": "VAI TER OBRA ATÉ 15/10(informação passada pelo Teams)",
     "empresa": "N P DE MELLO CURSOS TECNICOS",
     "total_alunos": 242,
     "tutor_contratado": true
