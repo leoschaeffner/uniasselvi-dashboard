@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 */2 * * *'
-    - cron: '10 17 25 9 *'   # 25/09 17:10 UTC (14:10 BRT): fim da ocultação temporária de Nutrição no dashboard (config_ocultar.json)
 
 concurrency:
   group: dashboard-deploy
@@ -151,7 +150,6 @@ jobs:
             --exclude='processar.py' --exclude='template_dashboard.html' \
             --exclude='template_coordenadores.html' \
             --exclude='template_gestor.html' \
-            --exclude='config_ocultar.json' \
             --exclude='*.md' --exclude='*.sh' \
             ./ _site/
           cp saida/dashboard.html      _site/index.html
