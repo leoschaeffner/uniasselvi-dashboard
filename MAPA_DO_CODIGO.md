@@ -173,7 +173,7 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 | `categoria_para_curso.json` / `id_to_perfil.json` / `nome_to_perfil.json` | Mapas de reconciliação prática↔curso (ver [Glossário](#12-glossário-de-convenções)). |
 | `mec_cache.json` | Cache de dados MEC/perfil por e-mail do tutor. |
 | `laboratorios_data.json` | Dados pré-processados da seção "Laboratórios" (gerados fora do `processar.py`). |
-| `labs_pendencias.json` | Laboratórios em obras / não aptos (ícone de "obras" nos tutores). |
+| `labs_pendencias.json` | Laboratórios em obras / não aptos (ícone de "obras" nos tutores). **Gerado** por `tests/tools/gerar_labs_pendencias.py` a partir da planilha mensal "PENDÊNCIAS DE IMPLANTAÇÃO" (`python tests/tools/gerar_labs_pendencias.py [planilha.xlsx] [--dry-run] [--saida X]`; default `planilhas/PEND*IMPLANTA*.xlsx`, gitignored). Falha em cabeçalho alterado ou HUB desconhecido (`HUB_PARA_CATEGORIA`). Além das 6 chaves originais grava `total_alunos` (int/null) e `tutor_contratado` (bool; nunca o nome). |
 | `contatos_por_polo.json` | Lista Oficial de Contatos por polo (anexada à ficha do tutor). |
 | `tutores_comunicacao.json` | Relatório manual de acompanhamento de comunicação com tutores. |
 | `insumos_estudo.json` | Estudo estático "Racional de Insumos por Experimento" (v10_FINAL). **Não é auto-atualizado** — substituir à mão se vier versão nova. NÃO está commitado no momento; a aba fica vazia se ausente. |
