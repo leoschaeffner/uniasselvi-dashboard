@@ -25,6 +25,19 @@ HUB_PARA_CATEGORIA = {
     'EXATAS': 'QUÍMICA E FÍSICA',
 }
 
+# Override de categoria (decisao do Leo, 25/09/2026). Chave: (polo_norm, HUB original da planilha).
+# BH Shopping Estacao: a planilha traz "Multi IV" com OBS "Recebeu o lab e nao implantou, estao vendo
+# nova sala. No sistema ja nao consta mais como HUB Multi IV" -> vale para o polo inteiro (categoria vazia),
+# como na base antiga, em vez de NUTRI (Multidisciplinar IV).
+CATEGORIA_OVERRIDE = {
+    ('belo horizonte/mg - shopping estacao bh', 'Multi IV'): '',
+}
+
+# Substituicoes de texto no motivo (anonimiza nome de terceiro), aplicadas apos o corte.
+SUBSTITUICOES_MOTIVO = [
+    ('Bruno passou a informação pelo teams', 'informação passada pelo Teams'),
+]
+
 
 def norm_polo(s):
     """Copia fiel de _norm_polo_labs (funcao aninhada em processar() de processar.py)."""
@@ -36,6 +49,8 @@ def norm_polo(s):
     return re.sub(r'\s+', ' ', s).strip().lower()
 
 
+CONTADORES = Counter()
+
 _RE_CORTE = re.compile(r'\s*[-–]*\s*[úu]ltima\s+atualiza[çc][ãa]o.*$', re.IGNORECASE | re.DOTALL)
 
 _RE_VISITA = re.compile(r'\s*-+\s*Visita sendo agendada pelo analista.*$', re.IGNORECASE | re.DOTALL)
@@ -45,6 +60,10 @@ def limpar_motivo(obs):
     s = str(obs or '').replace('\xa0', ' ').strip()
     s = _RE_CORTE.sub('', s).strip()
     s = _RE_VISITA.sub('', s).strip()
+    for de, para in SUBSTITUICOES_MOTIVO:
+        if de in s:
+            s = s.replace(de, para)
+            CONTADORES['substituicoes'] += 1
     return s
 
 
@@ -76,6 +95,11 @@ def gerar(df):
         if hub not in HUB_PARA_CATEGORIA:
             raise SystemExit(f'ERRO: HUB desconhecido {hub!r} (polo {polo!r}). Atualize HUB_PARA_CATEGORIA.')
         cat = HUB_PARA_CATEGORIA[hub]
+        pn = norm_polo(polo)
+        if (pn, hub) in CATEGORIA_OVERRIDE:
+            cat = CATEGORIA_OVERRIDE[(pn, hub)]
+            CONTADORES['overrides'] += 1
+            print(f'  override de categoria aplicado: {pn!r} HUB {hub!r} -> {cat!r}')
         hubs[cat] += 1
         tutor = _txt(r['TUTOR CONTRATADO'])
         total = r['TOTAL ALUNOS']
@@ -84,7 +108,7 @@ def gerar(df):
         except (ValueError, TypeError):
             total = None
         reg = OrderedDict([
-            ('polo_norm', norm_polo(polo)),
+            ('polo_norm', pn),
             ('polo_original', polo),
             ('categoria', cat),
             ('status', _txt(r['STATUS'])),
@@ -124,6 +148,7 @@ def main():
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
     print(f"Linhas lidas: {res['lidas']} | escritas: {res['escritas']} | dedups: {res['dups']} | polos: {res['polos']}")
+    print(f"Overrides de categoria aplicados: {CONTADORES['overrides']} | substituicoes de motivo aplicadas: {CONTADORES['substituicoes']}")
     for k, v in sorted(res['hubs'].items()):
         print(f'  {k}: {v}')
     if a.dry_run:
