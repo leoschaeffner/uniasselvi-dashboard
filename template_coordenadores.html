@@ -2834,7 +2834,7 @@ function exportPolosSemGerenc(){
   if(!ordSel){ alert('Selecione uma ordem específica (Ordem 1 a 5) antes de exportar — esse relatório é por ordem.'); return; }
   var grupoId=(document.getElementById('ger-det-cat')||{}).value||'';var grupo=_grupoById(grupoId);
   var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
-  function normPoloExp2(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}
+  function normPoloExp2(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
 
   var dOrdem=(gerDetData||[]).filter(function(r){return r.ordem===ordSel;});
   if(grupo) dOrdem=dOrdem.filter(function(r){return _rowMatchesGrupo(r.categoria,r.subcurso,grupo,subfiltroId);});
@@ -2866,7 +2866,7 @@ function exportDetalhe(){
   var subfiltroId=(document.getElementById('ger-det-subcurso')||{}).value||'';
   var ordSel=(document.getElementById('ger-det-ordem')||{}).value||'';
   function normNomeExp(s){return (s||'').toLowerCase().split('(')[0].trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
-  function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').trim().toLowerCase();}
+  function normPoloExp(p){return (p||'').replace(/^LAP\s*[\-–]\s*/i,'').replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
   var tutoresAtivos=(DB.tutores||[]).filter(t=>!t._anonimo);
   if(grupo)tutoresAtivos=tutoresAtivos.filter(t=>_tutorMatchesGrupo(t,grupo,subfiltroId));
   // PATCH 92: quando NENHUMA ordem específica está selecionada ("Todas
@@ -2905,7 +2905,7 @@ function abrirSemGerenciamento(){
   _renderSemGer(ord,'');
 }
 function _renderSemGer(ord,cat){
-  function normPolo(p){return (p||'').replace(/^LAP\s*[-–]\s*/i,'').trim().toLowerCase();}
+  function normPolo(p){return (p||'').replace(/^LAP\s*[-–]\s*/i,'').replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
   var d=gerDetData||[];
   if(ord) d=d.filter(r=>r.ordem===ord);
   if(cat) d=d.filter(r=>r.categoria===cat);
