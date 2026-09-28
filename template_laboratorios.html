@@ -115,6 +115,13 @@ body.dark .search,body.dark .sel{background:var(--surface)}
 .vinc-kpi .label{color:var(--muted);font-size:10px;margin-top:4px}
 .vinc-body{flex:1;display:flex;min-height:0}
 #vinc-mapa{flex:1.4;min-width:0;background:#0A1F1D;position:relative;}
+/* CARTO dark_all sem API key passou a devolver o placeholder "API KEY REQUIRED"
+   (verificado 28/09/2026 — basemaps.cartocdn.com/dark_all e /rastertiles/dark_all
+   ambos retornam a mesma imagem de erro, 200 OK mas é o aviso, não o tile).
+   Trocamos pro tile padrão do OpenStreetMap (sem key, sem conta) e escurecemos
+   só a camada de tiles via filtro CSS — markers/popups/legenda não são afetados
+   porque o filtro é aplicado no .leaflet-tile-pane, não no mapa inteiro. */
+#vinc-mapa .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.9);}
 .vinc-lateral{flex:1;min-width:320px;max-width:440px;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--card)}
 .vinc-tabs{display:flex;border-bottom:1px solid var(--border)}
 .vinc-tab{flex:1;padding:10px 8px;text-align:center;cursor:pointer;color:var(--muted);font-size:12px;font-weight:700;border-bottom:2px solid transparent;}
@@ -493,8 +500,13 @@ function iniciarVincMapa(){
   try {
     if (typeof L === 'undefined') throw new Error('Leaflet (L) indisponível neste ambiente');
     mapaVinc = L.map('vinc-mapa', { zoomControl: true }).setView([-15.5, -50], 4.4);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap, © CARTO', subdomains: 'abcd', maxZoom: 19,
+    // CARTO dark_all sem API key ficou fora do ar (verificado 28/09/2026: devolve
+    // o placeholder "API KEY REQUIRED — carto.com/basemaps/apikey" em vez do tile,
+    // tanto em /dark_all quanto em /rastertiles/dark_all). Trocado pelo tile padrão
+    // do OpenStreetMap, que não exige key/conta; o visual escuro vem do filtro CSS
+    // aplicado em #vinc-mapa .leaflet-tile-pane (ver <style> acima).
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors', subdomains: 'abc', maxZoom: 19,
     }).addTo(mapaVinc);
     vincCamadaMarcadores = L.layerGroup().addTo(mapaVinc);
     vincCamadaLinhas = L.layerGroup().addTo(mapaVinc);
