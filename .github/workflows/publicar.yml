@@ -46,6 +46,7 @@ jobs:
           URL_VAGAS_RH:   ${{ secrets.URL_VAGAS_RH }}
           URL_OCORRENCIAS: ${{ secrets.URL_OCORRENCIAS }}
           URL_VISTORIA: ${{ secrets.URL_VISTORIA }}
+          URL_REMESSAS: ${{ secrets.URL_REMESSAS }}
         run: |
           mkdir -p planilhas
           python3 - << 'PYEOF'
@@ -128,6 +129,7 @@ jobs:
           baixar('URL_VAGAS_RH',   'planilhas/VAGAS_RH.xlsx',                  'VAGAS_RH',                   False)
           baixar('URL_OCORRENCIAS', 'planilhas/OCORRENCIAS.xlsx',              'OCORRENCIAS',                 False)
           baixar('URL_VISTORIA', 'planilhas/VISTORIA_LAB.xlsx',            'VISTORIA_LAB',                False)
+          baixar('URL_REMESSAS', 'planilhas/REMESSAS_INSUMOS.xlsx',        'REMESSAS_INSUMOS',            False)
           print("[INFO] Downloads concluídos")
           PYEOF
           echo "=== Planilhas ==="
@@ -150,11 +152,14 @@ jobs:
             --exclude='processar.py' --exclude='template_dashboard.html' \
             --exclude='template_coordenadores.html' \
             --exclude='template_gestor.html' \
+            --exclude='template_laboratorios.html' \
             --exclude='*.md' --exclude='*.sh' \
             ./ _site/
           cp saida/dashboard.html      _site/index.html
           cp saida/coordenadores.html  _site/coordenadores.html
           cp saida/gestor.html         _site/gestor.html
+          # laboratorios.html só existe se template_laboratorios.html estiver no repo
+          if [ -f saida/laboratorios.html ]; then cp saida/laboratorios.html _site/laboratorios.html; fi
           cp saida/lookup.json         _site/lookup.json
           echo "=== _site ===" ; ls -lh _site/
 

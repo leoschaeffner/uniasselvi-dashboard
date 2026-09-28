@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow, noarchive"/>
+<title>VinciLab · Laboratórios</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--green:#006B5E;--green-l:#00A88F;--green-dim:rgba(0,107,94,.1);--yellow:#FFD100;--yellow-d:#E5BC00;--yellow-dim:rgba(255,209,0,.12);--teal:#00C9A7;--teal-dim:rgba(0,201,167,.1);--red:#dc2626;--red-dim:rgba(220,38,38,.08);--ok:#16a34a;--ok-dim:rgba(22,163,74,.1);--bg:#f4f6f8;--surface:#fff;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--dim:#9ca3af;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--radius:10px;--font:'Plus Jakarta Sans','Segoe UI',sans-serif;--mono:'Cascadia Code','Consolas',monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh}
+body.dark{--bg:#0f1419;--surface:#1a2028;--card:#1e2530;--border:#2d3748;--text:#e5e7eb;--muted:#9ca3af;--dim:#6b7280;}
+.sidebar{width:240px;min-height:100vh;background:var(--green);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:300;overflow:hidden;}
+.sidebar-brand{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;letter-spacing:1.5px;padding:5px 10px;border-radius:5px;display:inline-block;}
+.sidebar-title{color:#fff;font-size:14px;font-weight:700;margin-top:8px}
+.sidebar-sub{color:rgba(255,255,255,.5);font-size:10px;margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.sidebar-section{margin-bottom:16px}
+.sidebar-section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.35);padding:0 12px;margin-bottom:6px;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.7);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left;}
+.sidebar-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.sidebar-item.active{background:var(--yellow);color:#1a1d23;font-weight:700}
+.sidebar-item .si-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:8px;}
+.sidebar-ts{font-size:10px;color:rgba(255,255,255,.4);font-family:var(--mono)}
+.sidebar-dark{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;margin-left:auto;padding:4px;}
+.main{margin-left:240px;flex:1;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:200;}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text)}
+.topbar-breadcrumb{font-size:12px;color:var(--muted)}
+.container{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+.ph{margin-bottom:20px}.ph-title{font-size:22px;font-weight:800}.ph-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--card);border-radius:var(--radius);padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.kpi.kpi-green::before{background:var(--green)}.kpi.kpi-yellow::before{background:var(--yellow)}
+.kpi.kpi-teal::before{background:var(--teal)}.kpi.kpi-red::before{background:var(--red)}.kpi.kpi-ok::before{background:var(--ok)}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px;}.kpi-detail{font-size:11px;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.card-title{font-size:14px;font-weight:700}.card-badge{font-size:11px;color:var(--muted);font-weight:500}
+.card-body{padding:16px 18px}
+.toolbar{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.search{padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text);font-family:var(--font);min-width:200px;flex:1;max-width:320px;}
+.search:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
+.sel{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text);font-family:var(--font);}
+.tbl-count{font-size:11px;color:var(--muted);margin-left:auto;font-weight:600}
+.tbl-wrap{overflow-x:auto;max-height:420px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--bg);padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;z-index:5;}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,107,94,.02)}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap}
+.badge.ok{background:var(--ok-dim);color:var(--ok)}.badge.pend{background:var(--red-dim);color:var(--red)}
+.badge.parcial{background:var(--yellow-dim);color:#b45309}.badge.info{background:var(--green-dim);color:var(--green)}
+.badge.muted{background:var(--bg);color:var(--muted)}
+.btn-mini{font-size:10px;font-weight:700;padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.btn-mini:hover{border-color:var(--green);color:var(--green)}
+.rank-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.rank-item:last-child{border:none}
+.rank-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-bar-wrap{width:140px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.rank-bar{height:100%;border-radius:4px}.rank-val{font-size:12px;font-weight:700;min-width:60px;text-align:right}
+.empty-state{color:var(--muted);font-size:13px;text-align:center;padding:32px 16px;line-height:1.6}
+.senha-box{background:var(--card);border-radius:16px;padding:40px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.senha-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;letter-spacing:2px;padding:6px 16px;border-radius:6px;display:inline-block;margin-bottom:16px;}
+.senha-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.senha-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.senha-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:var(--font);background:var(--bg);color:var(--text);}
+.senha-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-dim)}
+.senha-btn{width:100%;padding:12px;border:none;border-radius:8px;margin-top:12px;background:var(--green);color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--font);}
+.senha-btn:hover{background:var(--green-l)}
+.senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+.senha-lgpd{font-size:10px;color:var(--dim);margin-top:16px}
+#senha-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green) 0%,#0d2b25 100%);}
+#moria-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#1a1a1f 0%,#000 80%);font-family:Georgia,'Times New Roman',serif;}
+.moria-box{max-width:520px;text-align:center;padding:40px;color:#9a9a9a;}
+.moria-runas{font-size:42px;letter-spacing:18px;color:#5a6e5e;margin-bottom:24px;text-shadow:0 0 18px rgba(90,110,94,.5);}
+.moria-texto{font-size:15px;line-height:1.9;color:#b8b8b8;margin-bottom:8px;}
+.moria-frase{font-size:13px;color:#6e8a72;font-style:italic;margin-top:20px;letter-spacing:1px;}
+.moria-btn{margin-top:32px;background:transparent;border:1px solid #4a4a4a;color:#9a9a9a;padding:10px 28px;border-radius:4px;font-family:var(--font);font-size:12px;cursor:pointer;letter-spacing:1px;}
+.moria-btn:hover{border-color:#6e8a72;color:#cfe0d0;}
+#lgpd-bar{position:fixed;bottom:0;left:240px;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--dim);display:flex;justify-content:space-between;z-index:100;}
+@media(max-width:900px){.sidebar{width:60px}.sidebar .si-label,.sidebar-title,.sidebar-sub,.sidebar-section-label,.sidebar-ts{display:none}.sidebar-brand{padding:12px 8px;text-align:center}.sidebar-item{justify-content:center;padding:10px}.main{margin-left:60px}#lgpd-bar{left:60px}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+body.dark .sidebar{background:#0a1f1c}
+body.dark th{background:var(--surface)}
+body.dark .search,body.dark .sel{background:var(--surface)}
+
+/* ── AVISO DE DEMO (bem visível, repetido no topo de cada seção que usa
+     dado sintético — requisito explícito do Leo, não pode passar batido
+     nem sumir com scroll) ─────────────────────────────────────────────── */
+.demo-banner{background:var(--red);color:#fff;font-weight:700;font-size:12px;padding:9px 18px;text-align:center;position:sticky;top:0;z-index:150;line-height:1.4;}
+.demo-banner b{text-transform:uppercase;letter-spacing:.5px}
+
+/* ── Seções (navegação por abas na sidebar — só uma visível por vez;
+     "Vínculo" tem layout de mapa em tela cheia, as outras 3 são cards
+     dentro do .container padrão, ver relato do frontend-vinci) ────────── */
+.lab-section{display:none}
+.lab-section.ativa{display:block}
+
+/* ── Vínculo de Laboratórios (mapa Leaflet + painel lateral, mecânica
+     adaptada quase literalmente do protótipo
+     vinculo_laboratorios_modelo/site/index.html) ──────────────────────── */
+#sec-vinculo.ativa{display:flex;flex-direction:column;height:calc(100vh - 52px);overflow:hidden}
+.vinc-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.vinc-kpi{background:var(--card);padding:12px 18px}
+.vinc-kpi .num{font-size:1.35rem;font-weight:800;line-height:1.1}
+.vinc-kpi.alerta .num{color:var(--red)}
+.vinc-kpi .label{color:var(--muted);font-size:10px;margin-top:4px}
+.vinc-body{flex:1;display:flex;min-height:0}
+#vinc-mapa{flex:1.4;min-width:0;background:#0A1F1D;position:relative;}
+.vinc-lateral{flex:1;min-width:320px;max-width:440px;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--card)}
+.vinc-tabs{display:flex;border-bottom:1px solid var(--border)}
+.vinc-tab{flex:1;padding:10px 8px;text-align:center;cursor:pointer;color:var(--muted);font-size:12px;font-weight:700;border-bottom:2px solid transparent;}
+.vinc-tab.ativa{color:var(--green);border-bottom-color:var(--green)}
+.vinc-filtros{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.vinc-filtros input,.vinc-filtros select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;font-family:var(--font);}
+.vinc-filtros .linha{display:flex;gap:8px}
+.vinc-filtros .linha>*{flex:1}
+.vinc-toggle{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer;user-select:none;}
+.vinc-toggle input{accent-color:var(--red)}
+.vinc-lista{flex:1;overflow-y:auto;padding:6px}
+.vinc-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;}
+.vinc-item:hover,.vinc-item.sel{background:var(--bg);border-color:var(--border)}
+.vinc-item .topo{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.vinc-item .nome{font-weight:700;font-size:12px}
+.vinc-item .urg{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap}
+.vinc-item .curso{color:var(--muted);font-size:11px;margin-top:2px}
+.vinc-item .stats{display:flex;gap:10px;margin-top:5px;font-size:10px;color:var(--muted)}
+.vinc-item .stats b{color:var(--text)}
+.vinc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.vinc-legenda{background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:11px;display:flex;flex-direction:column;gap:4px;}
+body.dark .vinc-legenda{background:rgba(30,37,48,.95);color:var(--text)}
+.vinc-legenda .linha{display:flex;align-items:center;gap:7px;color:var(--muted)}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="sidebar-logo">VinciLab</div><div class="sidebar-title">Laboratórios</div><div class="sidebar-sub">Equipe de Laboratórios · 2026</div></div>
+  <div class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Seções</div>
+      <button class="sidebar-item active" data-target="vinculo" onclick="navToSection('vinculo')"><span class="si-icon">🗺️</span><span class="si-label">Vínculo de Laboratórios</span></button>
+      <button class="sidebar-item" data-target="pendencias" onclick="navToSection('pendencias')"><span class="si-icon">🧪</span><span class="si-label">Pendências de Implantação</span></button>
+      <button class="sidebar-item" data-target="vistoria" onclick="navToSection('vistoria')"><span class="si-icon">🔬</span><span class="si-label">Vistoria</span></button>
+      <button class="sidebar-item" data-target="remessas" onclick="navToSection('remessas')"><span class="si-icon">📦</span><span class="si-label">Insumos / Remessas</span></button>
+    </div>
+  </div>
+  <div class="sidebar-footer"><span class="sidebar-ts" id="ts-label">—</span><button class="sidebar-dark" onclick="toggleDark()" title="Modo escuro">🌙</button></div>
+</nav>
+<div class="main">
+<div class="topbar">
+  <span class="topbar-title">Portal de Laboratórios</span>
+  <span class="topbar-breadcrumb" id="topbar-breadcrumb">Vínculo de Laboratórios</span>
+  <span id="topbar-ts" style="margin-left:auto;font-size:10px;color:var(--dim);font-family:var(--mono)"></span>
+</div>
+
+<!-- ═══ VÍNCULO DE LABORATÓRIOS (mapa Leaflet, adaptado do protótipo) ═══ -->
+<section id="sec-vinculo" class="lab-section ativa">
+  <div class="demo-banner" id="vinc-demo-banner" style="display:none">⚠️ DADOS DE DEMONSTRAÇÃO — o Vínculo de Laboratórios ainda não tem dado real; isso é o protótipo sintético (<span id="vinc-demo-fonte"></span>).</div>
+  <div id="vinc-empty" style="display:none"><div class="empty-state">Sem dados de Vínculo de Laboratórios disponíveis no momento.</div></div>
+  <div id="vinc-conteudo" style="display:none;flex-direction:column;flex:1;min-height:0">
+    <div class="vinc-kpis" id="vinc-kpis"></div>
+    <div class="vinc-body">
+      <div id="vinc-mapa"></div>
+      <div class="vinc-lateral">
+        <div class="vinc-tabs">
+          <div class="vinc-tab ativa" data-tab="prioridade" id="vinc-tab-prioridade">Priorização</div>
+          <div class="vinc-tab" data-tab="resolvidos" id="vinc-tab-resolvidos">Resolvidos</div>
+        </div>
+        <div class="vinc-filtros">
+          <input type="text" id="vinc-busca" placeholder="Buscar polo ou cidade...">
+          <div class="linha">
+            <select id="vinc-filtro-curso"><option value="">Todos os cursos</option></select>
+            <select id="vinc-filtro-uf"><option value="">Todas as UFs</option></select>
+          </div>
+          <label class="vinc-toggle" id="vinc-wrap-toggle-sem-candidato">
+            <input type="checkbox" id="vinc-toggle-sem-candidato">
+            Só polos sem candidato viável
+          </label>
+          <div style="font-size:10px;color:var(--dim)" id="vinc-meta"></div>
+        </div>
+        <div class="vinc-lista" id="vinc-lista"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PENDÊNCIAS / VISTORIA / REMESSAS — cards no padrão do template_gestor.html ═══ -->
+<div class="container lab-section" id="sec-container-cards">
+  <div class="ph" id="ph-cards">
+    <div class="ph-title" id="ph-title">Pendências de Implantação</div>
+    <div class="ph-sub" id="ph-sub">Laboratórios com pendência de implantação (obras / não apto), planilha mensal.</div>
+  </div>
+
+  <!-- ═══ PENDÊNCIAS DE IMPLANTAÇÃO ═══ -->
+  <section id="sec-pendencias" class="lab-section ativa">
+    <div class="card" id="pend-card">
+      <div class="card-hdr">
+        <div><div class="card-title">🧪 Pendências de Implantação</div><div class="card-badge" id="pend-sub">—</div></div>
+      </div>
+      <div id="pend-empty" style="display:none"><div class="empty-state">Sem dados de pendências de laboratório disponíveis no momento.</div></div>
+      <div id="pend-conteudo" style="display:none">
+        <div class="toolbar">
+          <input class="search" type="text" placeholder="Buscar polo, categoria, empresa, motivo…" oninput="filterPend(this.value)" id="pend-search"/>
+          <span class="tbl-count" id="pend-count">—</span>
+        </div>
+        <div class="tbl-wrap"><table><thead><tr>
+          <th>Polo</th><th>Categoria</th><th>Status</th><th>Motivo</th><th>Empresa</th><th style="text-align:right">Alunos</th><th>Tutor Contratado</th>
+        </tr></thead><tbody id="pend-tbody"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ VISTORIA DE LABORATÓRIO (mesma lógica de dados de DB.laboratorios.vistorias
+       no template_gestor.html — aqui a fonte é DB.vistorias, no topo do payload) ═══ -->
+  <section id="sec-vistoria" class="lab-section">
+    <div class="card" id="vist-card">
+      <div class="card-hdr">
+        <div><div class="card-title">🔬 Vistoria de Laboratório</div><div class="card-badge" id="vist-sub">—</div></div>
+      </div>
+      <div class="card-body" id="vist-empty" style="display:none">
+        <div class="empty-state">Nenhuma vistoria registrada ainda — o formulário de vistoria ainda não está ligado.<br><span style="font-size:11px">(fica disponível assim que o secret <code>URL_VISTORIA</code> for configurado)</span></div>
+      </div>
+      <div id="vist-conteudo" style="display:none">
+        <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+          <div><div class="kpi-label">% Apto</div><div class="kpi-value" id="vist-pct-apto" style="font-size:22px">—</div></div>
+          <div><div class="kpi-label">Aptos / Não Aptos</div><div class="kpi-value" id="vist-aptos-naoaptos" style="font-size:22px">—</div></div>
+          <div><div class="kpi-label">Última Vistoria</div><div class="kpi-value" id="vist-ultima" style="font-size:22px">—</div></div>
+        </div>
+        <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">POR CATEGORIA DE LABORATÓRIO</div>
+        <div class="card-body" id="vist-cat-bars"></div>
+        <div style="padding:0 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">NÃO APTOS RECENTES</div>
+        <div class="toolbar">
+          <input class="search" type="text" placeholder="Buscar polo, categoria, motivo, empresa…" oninput="filterVistNaoApto(this.value)" id="vist-search"/>
+          <span class="tbl-count" id="vist-count">—</span>
+        </div>
+        <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
+          <th>Polo</th><th>Categoria</th><th>Motivo</th><th>Empresa</th><th>Data</th>
+        </tr></thead><tbody id="vist-tbody"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ INSUMOS ENVIADOS / REMESSAS (p10/URL_REMESSAS) ═══ -->
+  <section id="sec-remessas" class="lab-section">
+    <div class="demo-banner" id="rem-demo-banner" style="display:none">⚠️ DADOS DE DEMONSTRAÇÃO — nenhuma planilha de remessas foi configurada ainda (secret <code style="color:#fff">URL_REMESSAS</code> pendente); os envios abaixo são fictícios.</div>
+    <div class="kpi-row" id="rem-kpis"></div>
+    <div class="card" id="rem-card">
+      <div class="card-hdr">
+        <div><div class="card-title">📦 Insumos Enviados</div><div class="card-badge" id="rem-sub">—</div></div>
+      </div>
+      <div id="rem-empty" style="display:none"><div class="empty-state">Sem dados de remessas de insumos disponíveis no momento.</div></div>
+      <div id="rem-conteudo" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border)">
+          <div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">POR STATUS</div><div id="rem-status-bars"></div></div>
+          <div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">POR TRANSPORTADORA</div><div id="rem-transp-bars"></div></div>
+        </div>
+        <div class="toolbar">
+          <input class="search" type="text" placeholder="Buscar polo, item, categoria, código…" oninput="filterRemessas()" id="rem-search"/>
+          <select class="sel" id="rem-filtro-status" onchange="filterRemessas()"><option value="">Todos os status</option></select>
+          <select class="sel" id="rem-filtro-transp" onchange="filterRemessas()"><option value="">Todas as transportadoras</option></select>
+          <select class="sel" id="rem-filtro-cat" onchange="filterRemessas()"><option value="">Todas as categorias</option></select>
+          <span class="tbl-count" id="rem-count">—</span>
+        </div>
+        <div class="tbl-wrap" style="max-height:460px"><table><thead><tr>
+          <th>Polo</th><th>Categoria</th><th>Item</th><th style="text-align:right">Qtd</th><th>Transportadora</th><th>Status</th><th>Envio</th><th>Previsão</th><th>Rastreio</th>
+        </tr></thead><tbody id="rem-tbody"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+</div><!-- /main -->
+
+<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito à equipe de Laboratórios · VinciLab 2026</span><span id="lgpd-ts"></span></div>
+<div id="moria-overlay">
+  <div class="moria-box">
+    <div class="moria-runas">⟁ ⟐ ⟁</div>
+    <div class="moria-texto">As portas de pedra permanecem fechadas.</div>
+    <div class="moria-texto">A senha que ecoou nas sombras não foi reconhecida.</div>
+    <div class="moria-texto">Apenas quem conhece a palavra certa atravessa este limiar.</div>
+    <div class="moria-frase">"Você não passará."</div>
+    <button class="moria-btn" onclick="document.getElementById('moria-overlay').style.display='none';document.getElementById('senha-overlay').style.display='flex';setTimeout(()=>document.getElementById('senha-input').focus(),100);">Tentar novamente</button>
+  </div>
+</div>
+<div id="senha-overlay">
+  <div class="senha-box">
+    <div class="senha-logo">VinciLab</div>
+    <div class="senha-title">Portal de Laboratórios</div>
+    <div class="senha-sub">VinciLab · 2026</div>
+    <input class="senha-input" type="password" id="senha-input" placeholder="Digite a senha de acesso" onkeydown="if(event.key==='Enter')verificarSenha()"/>
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <div class="senha-err" id="senha-err"></div>
+    <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito à equipe de Laboratórios</div>
+  </div>
+</div>
+<script>
+// ── SENHA / DESCRIPTOGRAFIA (mesmo padrão AES-256-GCM dos outros 3 portais,
+//    senha própria — SENHA_LABS em processar.py) ──────────────────────────
+async function _sha256Buf(msg){
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+}
+function _hexToBytes(hex){
+  const bytes = new Uint8Array(hex.length/2);
+  for(let i=0;i<bytes.length;i++) bytes[i] = parseInt(hex.substr(i*2,2),16);
+  return bytes;
+}
+function _bytesToHex(buf){
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function _decifrarDados(cryptoKey){
+  const [ivB64, ctB64] = ENCRYPTED_PAYLOAD.split(':');
+  const iv = Uint8Array.from(atob(ivB64), c=>c.charCodeAt(0));
+  const ct = Uint8Array.from(atob(ctB64), c=>c.charCodeAt(0));
+  const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, cryptoKey, ct);
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+async function verificarSenha(){
+  const val=document.getElementById('senha-input').value.trim();
+  if(!val){document.getElementById('senha-err').textContent='Digite a senha.';return;}
+  try{
+    const chaveBuf = await _sha256Buf(val);
+    const cryptoKey = await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+    DB = await _decifrarDados(cryptoKey);
+    const chaveHex = _bytesToHex(chaveBuf);
+    try{sessionStorage.setItem('uni_auth_key_labs', chaveHex);}catch(e){}
+    document.getElementById('senha-overlay').style.display='none';
+    document.getElementById('senha-input').value='';
+    _iniciarLabs();
+  }catch(e){
+    document.getElementById('senha-err').textContent='Senha incorreta.';
+    document.getElementById('senha-input').value='';
+    document.getElementById('senha-input').focus();
+  }
+}
+async function initSenha(){
+  let chaveHex=null;
+  try{chaveHex=sessionStorage.getItem('uni_auth_key_labs');}catch(e){}
+  if(chaveHex){
+    try{
+      const chaveBuf=_hexToBytes(chaveHex);
+      const cryptoKey=await crypto.subtle.importKey('raw', chaveBuf, {name:'AES-GCM'}, false, ['decrypt']);
+      DB = await _decifrarDados(cryptoKey);
+      const ov=document.getElementById('senha-overlay'); if(ov) ov.style.display='none';
+      _iniciarLabs();
+      return;
+    }catch(e){
+      try{sessionStorage.removeItem('uni_auth_key_labs');}catch(_){}
+    }
+  }
+  setTimeout(()=>{const inp=document.getElementById('senha-input');if(inp)inp.focus();},200);
+}
+
+// ── BLOQUEIO DE INSPEÇÃO (mesmo "teatro de segurança" dos outros 3 portais) ─
+function _ativarMoria(){
+  document.getElementById('senha-overlay').style.display='none';
+  document.getElementById('moria-overlay').style.display='flex';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='F12'){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&!e.shiftKey&&['u','U'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+});
+document.addEventListener('contextmenu',function(e){e.preventDefault();_ativarMoria();});
+
+const ENCRYPTED_PAYLOAD = 'DATA_GOES_HERE';
+let DB;
+
+// ── UTIL ────────────────────────────────────────────────────────────────────
+function esc(s){return(s||'').toString().replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtNum(n){return(n||0).toLocaleString('pt-BR')}
+function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');}
+function initDark(){if(localStorage.getItem('dark')==='1')document.body.classList.add('dark')}
+
+// ── NAVEGAÇÃO ENTRE SEÇÕES (abas na sidebar — só uma visível por vez;
+//    decisão de navegação: "Vínculo" precisa de altura de viewport pro mapa
+//    (não cabe bem rolando junto de cards); as outras 3 são estilo card do
+//    Painel do Gestor dentro do mesmo .container — trocar visibilidade de
+//    <section> é mais simples que 4 páginas separadas e evita duplicar o
+//    esqueleto de login/sidebar 4x) ───────────────────────────────────────
+const TITULOS_SECAO = {
+  vinculo: {breadcrumb:'Vínculo de Laboratórios'},
+  pendencias: {breadcrumb:'Pendências de Implantação', title:'Pendências de Implantação', sub:'Laboratórios com pendência de implantação (obras / não apto), planilha mensal.'},
+  vistoria: {breadcrumb:'Vistoria de Laboratório', title:'Vistoria de Laboratório', sub:'Vistorias registradas em campo pelos multiplicadores (Apto / Não Apto).'},
+  remessas: {breadcrumb:'Insumos / Remessas', title:'Insumos Enviados / Remessas', sub:'Envios de insumos e kits de laboratório, rastreamento por transportadora.'},
+};
+function navToSection(id){
+  document.querySelectorAll('.lab-section').forEach(el => el.classList.remove('ativa'));
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  const btn = document.querySelector('.sidebar-item[data-target="'+id+'"]');
+  if (btn) btn.classList.add('active');
+  const info = TITULOS_SECAO[id] || {};
+  document.getElementById('topbar-breadcrumb').textContent = info.breadcrumb || '';
+  if (id === 'vinculo') {
+    document.getElementById('sec-vinculo').classList.add('ativa');
+    if (mapaVinc) setTimeout(() => { try{ mapaVinc.invalidateSize(); }catch(e){} }, 60);
+  } else {
+    document.getElementById('sec-container-cards').classList.add('ativa');
+    document.getElementById('sec-'+id).classList.add('ativa');
+    const phT = document.getElementById('ph-title'); if (phT && info.title) phT.textContent = info.title;
+    const phS = document.getElementById('ph-sub'); if (phS && info.sub) phS.textContent = info.sub;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VÍNCULO DE LABORATÓRIOS — mapa Leaflet, mecânica adaptada quase
+// literalmente do protótipo vinculo_laboratorios_modelo/site/index.html
+// (flyTo + linhas de candidato, raio de interação, KPIs). Lê DB.vinculo em
+// vez de fazer fetch de um JSON separado; sempre DEMO por enquanto
+// (DB.demo.vinculo=true, labs_demo_vinculo.json sintético no backend).
+// ═══════════════════════════════════════════════════════════════════════
+let mapaVinc = null, vincCamadaMarcadores = null, vincCamadaLinhas = null;
+let vincAbaAtiva = 'prioridade', vincItemSelecionado = null, vincListenersLigados = false;
+const VINC_CORES = { laranja: '#E8A33D', vermelho: '#D6584B', verde: '#2FB68A' };
+
+function renderVinculoSecao(){
+  const v = DB.vinculo;
+  const empty = document.getElementById('vinc-empty');
+  const conteudo = document.getElementById('vinc-conteudo');
+  if (!v || !Array.isArray(v.pendentes)) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = 'flex';
+
+  const demoOn = !!((DB.demo||{}).vinculo);
+  const banner = document.getElementById('vinc-demo-banner');
+  banner.style.display = demoOn ? '' : 'none';
+  if (demoOn) document.getElementById('vinc-demo-fonte').textContent = v.fonte || 'dado sintético';
+
+  document.getElementById('vinc-meta').textContent =
+    `Gerado em ${v.gerado_em||'—'} · ${v.semestre_atual||'—'} vs. ${v.semestre_anterior||'—'} · raio viável: ${v.raio_viavel_km||'—'}km`;
+
+  montarVincKPIs(v);
+  montarVincFiltros(v);
+  iniciarVincMapa();
+  renderizarVincTudo(v);
+
+  if (!vincListenersLigados) {
+    vincListenersLigados = true;
+    document.querySelectorAll('.vinc-tab').forEach(t => t.addEventListener('click', () => {
+      document.querySelectorAll('.vinc-tab').forEach(x => x.classList.remove('ativa'));
+      t.classList.add('ativa');
+      vincAbaAtiva = t.dataset.tab;
+      document.getElementById('vinc-wrap-toggle-sem-candidato').style.display = vincAbaAtiva === 'prioridade' ? 'flex' : 'none';
+      vincItemSelecionado = null;
+      renderizarVincTudo(v);
+    }));
+    ['vinc-busca', 'vinc-filtro-curso', 'vinc-filtro-uf', 'vinc-toggle-sem-candidato'].forEach(id =>
+      document.getElementById(id).addEventListener('input', () => renderizarVincTudo(v))
+    );
+  }
+}
+
+function montarVincKPIs(v){
+  const k = v.kpis || {};
+  const itens = [
+    { num: fmtNum(k.polos_sem_hub||0), label: 'Combinações polo+curso sem HUB', alerta: true },
+    { num: fmtNum(k.matriculas_afetadas||0), label: 'Matrículas afetadas' },
+    { num: fmtNum(k.matriculas_sem_pratica||0), label: '...das quais sem prática realizada' },
+    { num: fmtNum(k.sem_candidato_viavel||0), label: `Sem candidato dentro de ${v.raio_viavel_km||'—'}km`, alerta: true },
+    { num: fmtNum(k.total_hubs_ativos||0), label: `HUBs ativos (${fmtNum(k.total_cursos_com_hub||0)} cursos)` },
+  ];
+  document.getElementById('vinc-kpis').innerHTML = itens.map(i => `
+    <div class="vinc-kpi ${i.alerta ? 'alerta' : ''}">
+      <div class="num">${i.num}</div>
+      <div class="label">${esc(i.label)}</div>
+    </div>`).join('');
+}
+
+function montarVincFiltros(v){
+  const cursoSel = document.getElementById('vinc-filtro-curso');
+  const ufSel = document.getElementById('vinc-filtro-uf');
+  if (cursoSel.dataset.montado) return; // só monta uma vez
+  const cursos = [...new Set((v.pendentes||[]).map(p => p.curso).filter(Boolean))].sort();
+  const ufs = [...new Set((v.pendentes||[]).map(p => p.uf).filter(Boolean))].sort();
+  cursoSel.innerHTML += cursos.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  ufSel.innerHTML += ufs.map(u => `<option value="${esc(u)}">${esc(u)}</option>`).join('');
+  cursoSel.dataset.montado = '1';
+}
+
+function iniciarVincMapa(){
+  if (mapaVinc) return; // já iniciado
+  try {
+    if (typeof L === 'undefined') throw new Error('Leaflet (L) indisponível neste ambiente');
+    mapaVinc = L.map('vinc-mapa', { zoomControl: true }).setView([-15.5, -50], 4.4);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap, © CARTO', subdomains: 'abcd', maxZoom: 19,
+    }).addTo(mapaVinc);
+    vincCamadaMarcadores = L.layerGroup().addTo(mapaVinc);
+    vincCamadaLinhas = L.layerGroup().addTo(mapaVinc);
+
+    const legenda = L.control({ position: 'bottomleft' });
+    legenda.onAdd = () => {
+      const div = L.DomUtil.create('div', 'vinc-legenda');
+      div.innerHTML = `
+        <div class="linha"><span class="vinc-dot" style="background:${VINC_CORES.laranja}"></span>Sem HUB</div>
+        <div class="linha"><span class="vinc-dot" style="background:${VINC_CORES.vermelho}"></span>Sem HUB e sem candidato próximo</div>
+        <div class="linha"><span class="vinc-dot" style="background:${VINC_CORES.verde}"></span>HUB ativo / resolvido</div>`;
+      return div;
+    };
+    legenda.addTo(mapaVinc);
+  } catch (e) {
+    console.warn('[vinculo] mapa Leaflet indisponível:', e.message);
+    const el = document.getElementById('vinc-mapa');
+    if (el) el.innerHTML = '<div class="empty-state" style="padding:40px;color:#cfe0d0">Mapa indisponível neste ambiente (Leaflet não carregou).</div>';
+    mapaVinc = null;
+  }
+}
+
+function vincItensFiltrados(v){
+  const busca = (document.getElementById('vinc-busca').value||'').toLowerCase();
+  const curso = document.getElementById('vinc-filtro-curso').value;
+  const uf = document.getElementById('vinc-filtro-uf').value;
+  const soSemCandidato = document.getElementById('vinc-toggle-sem-candidato').checked;
+
+  const base = vincAbaAtiva === 'prioridade' ? (v.pendentes||[]) : (v.resolvidos||[]);
+
+  return base.filter(p => {
+    if (busca && !(((p.nome_polo||'').toLowerCase().includes(busca)) || ((p.cidade||'').toLowerCase().includes(busca)))) return false;
+    if (curso && p.curso !== curso) return false;
+    if (uf && p.uf !== uf) return false;
+    if (vincAbaAtiva === 'prioridade' && soSemCandidato && p.tem_candidato_viavel) return false;
+    return true;
+  });
+}
+
+function renderizarVincTudo(v){
+  const itens = vincItensFiltrados(v);
+  renderizarVincLista(itens);
+  renderizarVincMapa(itens);
+}
+
+function renderizarVincLista(itens){
+  const container = document.getElementById('vinc-lista');
+  if (itens.length === 0) {
+    container.innerHTML = `<div class="empty-state">Nenhum item encontrado com esses filtros.</div>`;
+    return;
+  }
+  container.innerHTML = itens.map((p, idx) => {
+    if (vincAbaAtiva === 'resolvidos') {
+      return `<div class="vinc-item" data-idx="${idx}">
+        <div class="topo"><span class="nome">${esc(p.nome_polo)}</span></div>
+        <div class="curso">${esc(p.curso)}</div>
+        <div class="stats"><span><b>${fmtNum(p.total_alunos)}</b> matriculados</span></div>
+      </div>`;
+    }
+    const cor = !p.tem_candidato_viavel ? VINC_CORES.vermelho : VINC_CORES.laranja;
+    return `<div class="vinc-item" data-idx="${idx}">
+      <div class="topo">
+        <span class="nome"><span class="vinc-dot" style="background:${cor}"></span>${esc(p.nome_polo)}</span>
+        <span class="urg" style="background:${cor}22;color:${cor}">urgência ${fmtNum(p.urgencia)}</span>
+      </div>
+      <div class="curso">${esc(p.curso)}${p.recorrente ? ' · recorrente' : ''}</div>
+      <div class="stats">
+        <span><b>${fmtNum(p.total_alunos)}</b> matriculados</span>
+        <span><b>${fmtNum(p.alunos_sem_pratica)}</b> sem prática</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.vinc-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx, 10);
+      container.querySelectorAll('.vinc-item').forEach(x => x.classList.remove('sel'));
+      el.classList.add('sel');
+      vincItemSelecionado = itens[idx];
+      destacarVincNoMapa(vincItemSelecionado);
+    });
+  });
+}
+
+// PATCH (frontend-vinci): jsdom não tem layout/canvas de verdade, então
+// L.circleMarker/L.polyline lançam exceção ao tentar criar o renderer SVG
+// (getRenderer -> beforeAdd) mesmo com o mapa "iniciado" com sucesso. Em
+// produção (browser real) isso nunca acontece — mas pra garantir 0 erros
+// fatais em QUALQUER ambiente (inclusive teste), cada função que desenha no
+// mapa é defensiva: falha de desenho vira warning, nunca exceção não pega.
+function renderizarVincMapa(itens){
+  if (!mapaVinc) return;
+  try{
+    vincCamadaMarcadores.clearLayers();
+    vincCamadaLinhas.clearLayers();
+
+    itens.forEach(p => {
+      if (p.lat == null || p.lon == null) return;
+      let cor = VINC_CORES.verde;
+      if (vincAbaAtiva === 'prioridade') cor = !p.tem_candidato_viavel ? VINC_CORES.vermelho : VINC_CORES.laranja;
+      const raio = 4 + Math.sqrt(p.total_alunos||0) * 1.1;
+
+      const marcador = L.circleMarker([p.lat, p.lon], {
+        radius: raio, fillColor: cor, color: cor, weight: 1, fillOpacity: 0.55,
+      }).addTo(vincCamadaMarcadores);
+
+      marcador.bindTooltip(
+        `<b>${esc(p.nome_polo)}</b><br>${esc(p.curso)}<br>${fmtNum(p.total_alunos)} matrículas`,
+        { direction: 'top', offset: [0, -raio] }
+      );
+      marcador.on('click', () => destacarVincNoMapa(p));
+    });
+  }catch(e){
+    console.warn('[vinculo] falha ao desenhar marcadores no mapa:', e.message);
+  }
+}
+
+function destacarVincNoMapa(p){
+  if (!mapaVinc) return;
+  try{
+    vincCamadaLinhas.clearLayers();
+    if (p.lat == null || p.lon == null) return;
+    mapaVinc.flyTo([p.lat, p.lon], 6.5, { duration: 0.6 });
+
+    if (vincAbaAtiva === 'prioridade' && p.candidatos && p.candidatos.length) {
+      const raio = (DB.vinculo||{}).raio_viavel_km || 150;
+      p.candidatos.forEach((c, i) => {
+        if (c.lat == null || c.lon == null) return;
+        const cor = c.km <= raio ? VINC_CORES.verde : VINC_CORES.vermelho;
+        L.polyline([[p.lat, p.lon], [c.lat, c.lon]], {
+          color: cor, weight: i === 0 ? 3 : 1.5, opacity: i === 0 ? 0.9 : 0.45, dashArray: i === 0 ? null : '4 5',
+        }).addTo(vincCamadaLinhas).bindTooltip(`${esc(c.nome_polo)} · ${c.km}km (~${Math.round(c.min)}min)`);
+        L.circleMarker([c.lat, c.lon], { radius: 6, fillColor: VINC_CORES.verde, color: VINC_CORES.verde, weight: 1, fillOpacity: 0.8 })
+          .addTo(vincCamadaLinhas);
+      });
+    }
+  }catch(e){
+    console.warn('[vinculo] falha ao desenhar destaque/linhas no mapa:', e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PENDÊNCIAS DE IMPLANTAÇÃO (labs_pendencias.json via DB.pendencias, mesmo
+// padrão de card/tabela do "Laboratórios — Pendências" do template_gestor.html)
+// ═══════════════════════════════════════════════════════════════════════
+let _pendData = [];
+function renderPendencias(){
+  const pend = DB.pendencias || [];
+  const empty = document.getElementById('pend-empty');
+  const conteudo = document.getElementById('pend-conteudo');
+  if (!pend.length) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('pend-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  document.getElementById('pend-sub').textContent = `${fmtNum(pend.length)} laboratório(s) com pendência de implantação`;
+  _pendData = pend;
+  filterPend('');
+}
+function filterPend(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _pendData;
+  if (q) {
+    d = d.filter(p => ((p.polo_original||p.polo_norm||'') + (p.categoria||'') + (p.empresa||'') + (p.motivo||'')).toLowerCase().includes(q));
+  }
+  document.getElementById('pend-count').textContent = `${d.length} de ${_pendData.length}`;
+  document.getElementById('pend-tbody').innerHTML = d.length
+    ? d.map(p => `<tr>
+        <td>${esc(p.polo_original||p.polo_norm)||'—'}</td>
+        <td style="font-size:11px">${esc(p.categoria)||'—'}</td>
+        <td><span class="badge pend">${esc(p.status)||'—'}</span></td>
+        <td style="font-size:11px">${esc(p.motivo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.empresa)||'—'}</td>
+        <td style="text-align:right">${p.total_alunos != null ? fmtNum(p.total_alunos) : '—'}</td>
+        <td>${p.tutor_contratado == null ? '—' : (p.tutor_contratado ? '<span class="badge ok">Sim</span>' : '<span class="badge pend">Não</span>')}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// VISTORIA DE LABORATÓRIO — réplica quase literal de renderVistoria do
+// template_gestor.html; única mudança real é a fonte: lá é
+// DB.laboratorios.vistorias, aqui é DB.vistorias (raiz de dados_lab).
+// ═══════════════════════════════════════════════════════════════════════
+function _vistAptoCor(pct){
+  if (pct == null) return 'var(--muted)';
+  if (pct >= 0.8) return 'var(--ok)';
+  if (pct >= 0.5) return 'var(--yellow-d)';
+  return 'var(--red)';
+}
+let _vistNaoAptosData = [];
+function renderVistoria(){
+  const vi = DB.vistorias;
+  const empty = document.getElementById('vist-empty');
+  const conteudo = document.getElementById('vist-conteudo');
+  if (!vi || !vi.kpis || !vi.kpis.total) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('vist-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const k = vi.kpis;
+  document.getElementById('vist-sub').textContent =
+    `${fmtNum(k.total)} vistoria(s) · ${fmtNum(k.aptos)} apto(s) · ${fmtNum(k.nao_aptos)} não apto(s)`;
+  const pctAptoEl = document.getElementById('vist-pct-apto');
+  pctAptoEl.textContent = k.pct_apto != null ? (k.pct_apto*100).toFixed(0) + '%' : '—';
+  pctAptoEl.style.color = _vistAptoCor(k.pct_apto);
+  document.getElementById('vist-aptos-naoaptos').textContent = `${fmtNum(k.aptos)} / ${fmtNum(k.nao_aptos)}`;
+  document.getElementById('vist-ultima').textContent = k.ultima_vistoria || '—';
+
+  const porCat = vi.por_categoria || [];
+  document.getElementById('vist-cat-bars').innerHTML = porCat.length
+    ? porCat.map(c => `<div class="rank-item">
+        <div class="rank-name" title="${esc(c.categoria)}">${esc(c.categoria)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${((c.pct_apto||0)*100).toFixed(1)}%;background:${_vistAptoCor(c.pct_apto)}"></div></div>
+        <div class="rank-val">${fmtNum(c.aptos)}/${fmtNum(c.total)}${c.pct_apto!=null ? ` (${(c.pct_apto*100).toFixed(0)}%)` : ''}</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por categoria.</div>';
+
+  _vistNaoAptosData = vi.polos_nao_aptos_recentes || [];
+  filterVistNaoApto('');
+}
+function filterVistNaoApto(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _vistNaoAptosData;
+  if (q) {
+    d = d.filter(p => ((p.polo||'') + (p.categoria||'') + (p.motivo||'') + (p.empresa||'')).toLowerCase().includes(q));
+  }
+  document.getElementById('vist-count').textContent = `${d.length} de ${_vistNaoAptosData.length}`;
+  document.getElementById('vist-tbody').innerHTML = d.length
+    ? d.map(p => `<tr>
+        <td>${esc(p.polo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.categoria)||'—'}</td>
+        <td style="font-size:11px">${esc(p.motivo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.empresa)||'—'}</td>
+        <td>${esc(p.data)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum registro não apto.</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INSUMOS ENVIADOS / REMESSAS (DB.remessas — p10/URL_REMESSAS ou
+// _remessas_demo() quando a planilha não está configurada)
+// ═══════════════════════════════════════════════════════════════════════
+function _remStatusCor(status, statusDerivado){
+  const s = (status||'').toLowerCase();
+  if (s.indexOf('entreg') >= 0) return 'var(--ok)';
+  if (s.indexOf('problema') >= 0) return 'var(--red)';
+  if (s.indexOf('devolv') >= 0) return 'var(--red)';
+  if (s.indexOf('trânsito') >= 0 || s.indexOf('transito') >= 0) return 'var(--yellow-d)';
+  if (s.indexOf('enviado') >= 0) return 'var(--teal)';
+  return 'var(--muted)'; // Preparando / desconhecido
+}
+let _remData = [];
+function renderRemessas(){
+  const rem = DB.remessas;
+  const empty = document.getElementById('rem-empty');
+  const conteudo = document.getElementById('rem-conteudo');
+  const banner = document.getElementById('rem-demo-banner');
+  banner.style.display = ((DB.demo||{}).remessas) ? '' : 'none';
+
+  if (!rem || !Array.isArray(rem.registros)) {
+    document.getElementById('rem-kpis').innerHTML = '';
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('rem-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const k = rem.kpis || {};
+  document.getElementById('rem-sub').textContent = `${fmtNum(k.total)} envio(s) · última atualização: ${k.ultima_atualizacao || '—'}`;
+
+  const kpiDefs = [
+    {label:'Total de Envios', val:k.total, cls:'kpi-green'},
+    {label:'Em Trânsito', val:k.em_transito, cls:'kpi-teal'},
+    {label:'Entregues', val:k.entregues, cls:'kpi-ok'},
+    {label:'Atrasados', val:k.atrasados, cls:'kpi-red'},
+    {label:'Sem Código de Rastreio', val:k.sem_codigo, cls:'kpi-yellow'},
+    {label:'Problemas / Devolvidos', val:(k.problemas||0)+(k.devolvidos||0), cls:'kpi-red'},
+    {label:'Polos Atendidos', val:k.polos_atendidos, cls:'kpi-green'},
+  ];
+  document.getElementById('rem-kpis').innerHTML = kpiDefs.map(d => `
+    <div class="kpi ${d.cls}"><div class="kpi-label">${esc(d.label)}</div><div class="kpi-value">${fmtNum(d.val)}</div></div>
+  `).join('');
+
+  const porStatus = rem.por_status || [];
+  const maxStatus = Math.max(1, ...porStatus.map(s => s.total));
+  document.getElementById('rem-status-bars').innerHTML = porStatus.length
+    ? porStatus.map(s => `<div class="rank-item">
+        <div class="rank-name">${esc(s.status)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(s.total/maxStatus*100).toFixed(1)}%;background:${_remStatusCor(s.status)}"></div></div>
+        <div class="rank-val">${fmtNum(s.total)}</div>
+      </div>`).join('')
+    : '<div class="empty-state">—</div>';
+
+  const porTransp = rem.por_transportadora || [];
+  const maxTransp = Math.max(1, ...porTransp.map(t => t.total));
+  document.getElementById('rem-transp-bars').innerHTML = porTransp.length
+    ? porTransp.map(t => `<div class="rank-item">
+        <div class="rank-name" title="${esc(t.transportadora)}">${esc(t.transportadora)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(t.total/maxTransp*100).toFixed(1)}%;background:var(--green)"></div></div>
+        <div class="rank-val">${fmtNum(t.total)}${t.atrasados ? ` <span style="color:var(--red);font-weight:700">(${fmtNum(t.atrasados)} atr.)</span>` : ''}</div>
+      </div>`).join('')
+    : '<div class="empty-state">—</div>';
+
+  // filtros (montados uma única vez)
+  const selStatus = document.getElementById('rem-filtro-status');
+  if (!selStatus.dataset.montado) {
+    selStatus.innerHTML += porStatus.map(s => `<option value="${esc(s.status)}">${esc(s.status)}</option>`).join('');
+    selStatus.dataset.montado = '1';
+  }
+  const selTransp = document.getElementById('rem-filtro-transp');
+  if (!selTransp.dataset.montado) {
+    selTransp.innerHTML += porTransp.map(t => `<option value="${esc(t.transportadora)}">${esc(t.transportadora)}</option>`).join('');
+    selTransp.dataset.montado = '1';
+  }
+  const selCat = document.getElementById('rem-filtro-cat');
+  if (!selCat.dataset.montado) {
+    const cats = (rem.por_categoria || []).map(c => c.categoria);
+    selCat.innerHTML += cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    selCat.dataset.montado = '1';
+  }
+
+  _remData = rem.registros;
+  filterRemessas();
+}
+function copiarCodigoRastreio(codigo){
+  try{
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(codigo);
+  }catch(e){}
+}
+function filterRemessas(){
+  const q = (document.getElementById('rem-search').value||'').toLowerCase().trim();
+  const status = document.getElementById('rem-filtro-status').value;
+  const transp = document.getElementById('rem-filtro-transp').value;
+  const cat = document.getElementById('rem-filtro-cat').value;
+  let d = _remData;
+  if (q) d = d.filter(r => ((r.polo||'')+(r.item||'')+(r.categoria||'')+(r.codigo_rastreio||'')).toLowerCase().includes(q));
+  if (status) d = d.filter(r => r.status === status);
+  if (transp) d = d.filter(r => r.transportadora === transp);
+  if (cat) d = d.filter(r => r.categoria === cat);
+  document.getElementById('rem-count').textContent = `${d.length} de ${_remData.length}`;
+  document.getElementById('rem-tbody').innerHTML = d.length
+    ? d.map(r => {
+        const cor = _remStatusCor(r.status);
+        let rastreioHtml = '—';
+        if (r.tem_codigo && r.link_rastreio) {
+          rastreioHtml = `<button class="btn-mini" onclick="window.open('${esc(r.link_rastreio)}','_blank')">Rastrear</button>`;
+        } else if (r.tem_codigo) {
+          rastreioHtml = `<span style="font-family:var(--mono);font-size:10px">${esc(r.codigo_rastreio)}</span> <button class="btn-mini" onclick="copiarCodigoRastreio('${esc(r.codigo_rastreio)}')">Copiar</button>`;
+        }
+        return `<tr>
+        <td style="font-size:11px">${esc(r.polo)||'—'}</td>
+        <td style="font-size:11px">${esc(r.categoria)||'—'}</td>
+        <td style="font-size:11px">${esc(r.item)||'—'}</td>
+        <td style="text-align:right">${r.quantidade != null ? fmtNum(r.quantidade)+' '+esc(r.unidade||'') : '—'}</td>
+        <td style="font-size:11px">${esc(r.transportadora)||'—'}</td>
+        <td>
+          <span class="badge" style="background:${cor}20;color:${cor}">${esc(r.status)||'—'}</span>
+          ${r.atrasado ? '<span class="badge pend" style="margin-left:4px">Atrasado</span>' : ''}
+        </td>
+        <td style="font-size:11px">${esc(r.data_envio)||'—'}</td>
+        <td style="font-size:11px">${esc(r.previsao_entrega)||esc(r.data_entrega)||'—'}</td>
+        <td>${rastreioHtml}</td>
+      </tr>`;
+      }).join('')
+    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+}
+
+// ── BOOTSTRAP ─────────────────────────────────────────────────────────────
+function _iniciarLabs(){
+  try{
+    const ts = DB.gerado_em || '—';
+    document.getElementById('ts-label').textContent = 'Gerado: ' + ts;
+    document.getElementById('topbar-ts').textContent = 'Atualizado: ' + ts;
+    const lgts = document.getElementById('lgpd-ts'); if (lgts) lgts.textContent = ts;
+  }catch(e){}
+  renderVinculoSecao();
+  renderPendencias();
+  renderVistoria();
+  renderRemessas();
+  navToSection('vinculo');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initDark();
+  initSenha();
+});
+</script>
+</body>
+</html>

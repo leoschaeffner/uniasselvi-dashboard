@@ -19,6 +19,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from urllib.parse import quote as _rem_quote
 
 # ── Configuração multi-semestre ─────────────────────────────────────────────
 # Lida de config_semestre.json. Fallback hardcoded para 2026/1.
@@ -722,7 +723,61 @@ def verificar_e_localizar():
         else:
             print(f"  [INFO] VISTORIA_LAB.xlsx não encontrada (secret URL_VISTORIA ainda não configurado)")
 
-    return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8, p9
+    # ── PATCH 178: Remessas de Insumos (portal de Laboratórios) — mesmo padrão
+    # opcional do p8/p9. Sem o secret URL_REMESSAS o portal usa remessas DEMO.
+    p10 = achar_arquivo(SCRIPT_DIR, "REMESSAS_INSUMOS.xlsx")
+    if p10 and 'TEMPLATE' in os.path.basename(p10).upper():
+        # _bate() casa por palavra-chave e pegaria REMESSAS_INSUMOS_template.xlsx
+        print(f"  [INFO] {os.path.basename(p10)} é o template (ignorado como fonte)")
+        p10 = None
+    if p10:
+        print(f"  [OK] {os.path.basename(p10)}")
+    else:
+        url_rem = os.environ.get("URL_REMESSAS", "").strip()
+        if url_rem:
+            print("  [Baixando] REMESSAS_INSUMOS.xlsx via URL_REMESSAS...")
+            try:
+                import urllib.request as _urlreq_rem
+                def _build_dl_urls_rem(url):
+                    urls = []
+                    if 'sharepoint.com' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                        m = re.search(r'/([A-Za-z0-9_-]{20,})[?]', url)
+                        if m:
+                            base = re.match(r'(https://[^/]+)', url).group(1)
+                            user = re.search(r'/personal/([^/]+)/', url)
+                            if user:
+                                urls.append(f"{base}/personal/{user.group(1)}/_layouts/15/download.aspx?share={m.group(1)}")
+                    elif '1drv.ms' in url:
+                        sep = '&' if '?' in url else '?'
+                        urls.append(url + sep + 'download=1')
+                    urls.append(url)
+                    return urls
+                dest_rem = os.path.join(pasta_planilhas, "REMESSAS_INSUMOS.xlsx")
+                downloaded_rem = False
+                for url_dl in _build_dl_urls_rem(url_rem):
+                    try:
+                        req = _urlreq_rem.Request(url_dl, headers={
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                        with _urlreq_rem.urlopen(req, timeout=120) as r:
+                            data = r.read()
+                        if len(data) > 2000 and b'<!DOCTYPE' not in data[:500]:
+                            with open(dest_rem, 'wb') as f_out: f_out.write(data)
+                            p10 = dest_rem
+                            print(f"  [OK] REMESSAS_INSUMOS.xlsx ({len(data):,} bytes)")
+                            downloaded_rem = True
+                            break
+                    except Exception as ex:
+                        print(f"  [AVISO] Erro ao baixar Remessas de Insumos: {ex} | URL: {url_dl[:80]}")
+                if not downloaded_rem:
+                    print("  [ERRO] Não foi possível baixar REMESSAS_INSUMOS.xlsx — verifique URL_REMESSAS")
+            except Exception as e:
+                print(f"  [ERRO] Não foi possível baixar Remessas de Insumos: {e}")
+        else:
+            print("  [INFO] REMESSAS_INSUMOS.xlsx não encontrada (secret URL_REMESSAS ainda não configurado)")
+
+    return p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8, p9, p10
 
 
 def ler_excel(path, **kwargs):
@@ -3559,6 +3614,428 @@ def processar_vistoria(p9):
     }
 
 
+# ── Portal de Laboratórios (4º portal): Remessas de Insumos (p10) ──────────
+# Fonte opcional p10/URL_REMESSAS = REMESSAS_INSUMOS.xlsx, mesmo padrão do
+# p8/p9. Aba "Registro" (senão a 1ª aba que não seja "Listas"). Uma linha por
+# remessa de insumos enviada a um polo, com o código de rastreio da
+# transportadora. Colunas de ENTRADA reconhecidas (acento/caixa tolerantes,
+# 1º por igualdade normalizada, 2º por palavra contida):
+#   polo          POLO, POLO DE DESTINO, UNIDADE/POLO   (aceita "Polo/UF — Tutor":
+#                 só o polo é guardado, o tutor é descartado)
+#   categoria     CATEGORIA, CATEGORIA DE LABORATORIO, LABORATORIO
+#   item          ITEM, KIT, ITEM/KIT, ITEM KIT, INSUMO, MATERIAL
+#   quantidade    QUANTIDADE, QTD, QTDE
+#   unidade       UNIDADE, UNIDADE DE MEDIDA, UNIDADE MEDIDA, UN, UND
+#   data_envio    DATA DE ENVIO, DATA ENVIO, ENVIADO EM, DT ENVIO
+#   previsao      PREVISAO DE ENTREGA, PREVISAO ENTREGA, PREVISAO, PRAZO
+#   data_entrega  DATA DE ENTREGA, DATA ENTREGA, ENTREGUE EM, DT ENTREGA
+#   transportadora TRANSPORTADORA, TRANSPORTE, EMPRESA DE TRANSPORTE
+#   codigo        CODIGO DE RASTREIO, CODIGO RASTREIO, RASTREIO, RASTREAMENTO,
+#                 TRACKING
+#   status        STATUS, SITUACAO
+#   observacao    OBSERVACAO, OBSERVACOES, OBS
+# Colunas de PII (DESTINATARIO, TELEFONE, E-MAIL, ENDERECO, CPF, CONTATO...)
+# NUNCA são mapeadas nem lidas: se existirem na planilha, só são contadas no
+# log. (Texto livre de OBSERVACAO é o único campo que o usuário pode "sujar":
+# orientar a não colocar dado pessoal ali.)
+_REM_STATUS = ['Preparando', 'Enviado', 'Em trânsito', 'Entregue', 'Problema', 'Devolvido']
+_REM_STATUS_MAP = {
+    'PREPARANDO': 'Preparando', 'EM PREPARACAO': 'Preparando', 'AGUARDANDO ENVIO': 'Preparando',
+    'ENVIADO': 'Enviado', 'POSTADO': 'Enviado', 'DESPACHADO': 'Enviado',
+    'EM TRANSITO': 'Em trânsito', 'TRANSITO': 'Em trânsito', 'A CAMINHO': 'Em trânsito',
+    'EM ROTA': 'Em trânsito',
+    'ENTREGUE': 'Entregue', 'RECEBIDO': 'Entregue', 'CONCLUIDO': 'Entregue',
+    'PROBLEMA': 'Problema', 'EXTRAVIADO': 'Problema', 'AVARIADO': 'Problema',
+    'DEVOLVIDO': 'Devolvido', 'DEVOLUCAO': 'Devolvido',
+}
+_REM_CAMPOS = {
+    'polo': ['POLO', 'POLO DE DESTINO', 'UNIDADE POLO', 'POLO DESTINO'],
+    'categoria': ['CATEGORIA', 'CATEGORIA DE LABORATORIO', 'CATEGORIA LABORATORIO', 'LABORATORIO'],
+    'item': ['ITEM', 'KIT', 'ITEM KIT', 'INSUMO', 'MATERIAL'],
+    'quantidade': ['QUANTIDADE', 'QTD', 'QTDE'],
+    'unidade': ['UNIDADE', 'UNIDADE DE MEDIDA', 'UNIDADE MEDIDA', 'UN', 'UND'],
+    'data_envio': ['DATA DE ENVIO', 'DATA ENVIO', 'ENVIADO EM', 'DT ENVIO'],
+    'previsao': ['PREVISAO DE ENTREGA', 'PREVISAO ENTREGA', 'PREVISAO', 'PRAZO'],
+    'data_entrega': ['DATA DE ENTREGA', 'DATA ENTREGA', 'ENTREGUE EM', 'DT ENTREGA'],
+    'transportadora': ['TRANSPORTADORA', 'TRANSPORTE', 'EMPRESA DE TRANSPORTE'],
+    'codigo': ['CODIGO DE RASTREIO', 'CODIGO RASTREIO', 'RASTREIO', 'RASTREAMENTO', 'TRACKING'],
+    'status': ['STATUS', 'SITUACAO'],
+    'observacao': ['OBSERVACAO', 'OBSERVACOES', 'OBS'],
+}
+_REM_PII_TOKENS = ('DESTINATARIO', 'TELEFONE', 'CELULAR', 'EMAIL', 'ENDERECO', 'CPF', 'CONTATO', 'RESPONSAVEL')
+_REM_ORDEM_CAMPOS = ['previsao', 'data_entrega', 'data_envio', 'polo', 'categoria', 'item', 'quantidade',
+                     'unidade', 'transportadora', 'codigo', 'status', 'observacao']
+
+
+def _rem_hoje_brt():
+    return datetime.now(timezone(timedelta(hours=-3))).date()
+
+
+def _rem_data(valor, hoje, ref=None, futuro_ok=False):
+    """Data de uma célula de remessa -> date | None. Valor nativo do Excel
+    (datetime/date/Timestamp) vale como está (é uma data de verdade, não
+    texto ambíguo). Texto: ISO (AAAA-MM-DD) é inequívoco; DD/MM vs MM/DD
+    ambíguo é decidido por sanidade, nunca por formato fixo:
+      - envio/entrega (futuro_ok=False): a leitura BR vale se não for data
+        futura, senão tenta a americana (mesmo critério de _ocor_parse_data);
+      - previsão (futuro_ok=True, futuro é legítimo): vale a leitura que cai
+        numa janela plausível [ref, ref+120d] (ref = data de envio, ou
+        hoje-180d se não há envio); BR tem preferência quando as duas servem."""
+    if valor is None:
+        return None
+    try:
+        if pd.isna(valor):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(valor, datetime):
+        return valor.date()
+    if hasattr(valor, 'year') and hasattr(valor, 'month') and not isinstance(valor, str):
+        try:
+            return datetime(valor.year, valor.month, valor.day).date()
+        except Exception:
+            return None
+    if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+        if 20000 <= valor <= 80000:  # serial do Excel guardado como número
+            return (datetime(1899, 12, 30) + timedelta(days=int(valor))).date()
+        return None
+    s = str(valor).strip()
+    if not s or s.lower() in ('nan', 'nat', 'none'):
+        return None
+    m = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$', s)
+    if m:
+        try:
+            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3))).date()
+        except ValueError:
+            return None
+    m = re.match(r'^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2}|\d{4})(?:[ T,].*)?$', s)
+    if not m:
+        return None
+    a, b, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    if y < 100:
+        y += 2000
+    cands = []  # (data, "BR"|"US") válidas, BR primeiro
+    for (dd, mm, tag) in ((a, b, 'BR'), (b, a, 'US')):
+        try:
+            d = datetime(y, mm, dd).date()
+        except ValueError:
+            continue
+        if not any(d == c[0] for c in cands):
+            cands.append((d, tag))
+    if not cands:
+        return None
+    if len(cands) == 1:
+        return cands[0][0]
+    if futuro_ok:
+        lo = ref if ref else hoje - timedelta(days=180)
+        hi = (ref if ref else hoje) + timedelta(days=120)
+        sane = [c for c in cands if lo <= c[0] <= hi]
+    else:
+        sane = [c for c in cands if c[0] <= hoje]
+    return (sane or cands)[0][0]
+
+
+def _carregar_transportadoras():
+    """transportadoras_rastreio.json (versionado, editável): lista de
+    {id, nome, nomes[aliases], url com {codigo}, padrao_codigo}. Nunca faz
+    requisição de rede. Ausente/inválido -> [] (sem links)."""
+    path = os.path.join(SCRIPT_DIR, 'transportadoras_rastreio.json')
+    try:
+        with open(path, encoding='utf-8') as f:
+            lista = json.load(f)
+        return [t for t in lista if isinstance(t, dict) and t.get('id')]
+    except Exception as e:
+        print(f"[{ts()}] AVISO: transportadoras_rastreio.json indisponível ({e}) — remessas sem link de rastreio")
+        return []
+
+
+def _rem_casar_transportadora(texto, transportadoras):
+    n = _vrh_norm(texto)
+    if not n:
+        return None
+    for t in transportadoras:
+        for alias in [t.get('nome', '')] + list(t.get('nomes') or []):
+            an = _vrh_norm(alias)
+            if an and (n == an or f' {an} ' in f' {n} '):
+                return t
+    return None
+
+
+def _rem_codigo(v):
+    """Código de rastreio normalizado: sem espaços, MAIÚSCULO; célula numérica
+    (float do Excel) não vira '123.0'."""
+    t = _ocor_txt(v)
+    if isinstance(v, float) and t and v == int(v):
+        t = str(int(v))
+    return re.sub(r'\s+', '', t).upper()
+
+
+def _rem_int(v):
+    t = _ocor_txt(v).replace(',', '.')
+    if not t:
+        return None
+    try:
+        f = float(t)
+        return int(f) if f == int(f) else f
+    except ValueError:
+        return None
+
+
+def _rem_montar(brutos, hoje, transportadoras):
+    """brutos: lista de dicts com os campos de entrada já lidos (datas como
+    date|None). Deriva status/atraso/link e agrega. Compartilhado entre
+    processar_remessas (dado real) e _remessas_demo."""
+    registros = []
+    for i, b in enumerate(brutos, 1):
+        env, prev, ent = b.get('data_envio'), b.get('previsao'), b.get('data_entrega')
+        st_raw = _ocor_txt(b.get('status'))
+        status = _REM_STATUS_MAP.get(_vrh_norm(st_raw)) if st_raw else None
+        derivado = status is None
+        if derivado:
+            status = 'Entregue' if ent else ('Enviado' if env else 'Preparando')
+        codigo = b.get('codigo') or ''
+        transp_txt = _ocor_txt(b.get('transportadora'))
+        t = _rem_casar_transportadora(transp_txt, transportadoras)
+        link = None
+        formato_ok = None
+        if codigo and t:
+            if t.get('padrao_codigo'):
+                try:
+                    formato_ok = bool(re.fullmatch(t['padrao_codigo'], codigo))
+                except re.error:
+                    formato_ok = None
+            if t.get('url'):
+                link = t["url"].replace("{codigo}", _rem_quote(codigo, safe=""))
+        final = status in ('Entregue', 'Devolvido')
+        atrasado = bool(prev and not final and prev < hoje)
+        registros.append({
+            'id': i,
+            'polo': b.get('polo') or '',
+            'categoria': b.get('categoria') or '',
+            'item': b.get('item') or '',
+            'quantidade': b.get('quantidade'),
+            'unidade': b.get('unidade') or '',
+            'data_envio': env.isoformat() if env else None,
+            'previsao_entrega': prev.isoformat() if prev else None,
+            'data_entrega': ent.isoformat() if ent else None,
+            'transportadora': transp_txt,
+            'transportadora_id': t['id'] if t else None,
+            'codigo_rastreio': codigo,
+            'tem_codigo': bool(codigo),
+            'codigo_formato_ok': formato_ok,
+            'link_rastreio': link,
+            'status': status,
+            'status_derivado': derivado,
+            'observacao': b.get('observacao') or '',
+            'atrasado': atrasado,
+            'dias_desde_envio': max((hoje - env).days, 0) if env else None,
+            'dias_atraso': (hoje - prev).days if atrasado else 0,
+            'dias_ate_entrega': max((ent - env).days, 0) if (ent and env) else None,
+        })
+    # mais recentes primeiro (None por último)
+    _com = sorted([r for r in registros if r['data_envio']], key=lambda r: r['data_envio'], reverse=True)
+    registros = _com + [r for r in registros if not r['data_envio']]
+
+    def _n(st):
+        return sum(1 for r in registros if r['status'] == st)
+    em_andamento = ('Enviado', 'Em trânsito', 'Problema')
+    _datas = [d for r in registros for d in (r['data_envio'], r['data_entrega']) if d]
+    kpis = {
+        'total': len(registros),
+        'preparando': _n('Preparando'), 'enviado': _n('Enviado'), 'em_transito': _n('Em trânsito'),
+        'entregues': _n('Entregue'), 'problemas': _n('Problema'), 'devolvidos': _n('Devolvido'),
+        'atrasados': sum(1 for r in registros if r['atrasado']),
+        # remessa já despachada (Enviado/Em trânsito/Problema) sem código de rastreio
+        'sem_codigo': sum(1 for r in registros if r['status'] in em_andamento and not r['tem_codigo']),
+        # polos distintos com pelo menos 1 remessa registrada (qualquer status)
+        'polos_atendidos': len({_vrh_norm(r['polo']) for r in registros if r['polo']}),
+        'ultima_atualizacao': max(_datas) if _datas else None,
+    }
+    por_status = [{'status': st, 'total': _n(st)} for st in _REM_STATUS]
+    _pc, _pt, _pm = {}, {}, {}
+    for r in registros:
+        c = _pc.setdefault(r['categoria'] or 'Não informada',
+                           {'categoria': r['categoria'] or 'Não informada', 'total': 0, 'entregues': 0, 'atrasados': 0})
+        c['total'] += 1
+        c['entregues'] += r['status'] == 'Entregue'
+        c['atrasados'] += r['atrasado']
+        tn = next((t['nome'] for t in transportadoras if t['id'] == r['transportadora_id']), None) \
+            or r['transportadora'] or 'Não informada'
+        x = _pt.setdefault(tn, {'transportadora': tn, 'total': 0, 'entregues': 0, 'atrasados': 0, 'em_andamento': 0})
+        x['total'] += 1
+        x['entregues'] += r['status'] == 'Entregue'
+        x['atrasados'] += r['atrasado']
+        x['em_andamento'] += r['status'] in em_andamento
+        if r['data_envio']:
+            mes = r['data_envio'][:7]
+            _pm[mes] = _pm.get(mes, 0) + 1
+    return {
+        'registros': registros,
+        'kpis': kpis,
+        'por_status': por_status,
+        'por_categoria': sorted(_pc.values(), key=lambda x: -x['total']),
+        'por_transportadora': sorted(_pt.values(), key=lambda x: -x['total']),
+        'por_mes_envio': [{'mes': m, 'total': _pm[m]} for m in sorted(_pm)],
+    }
+
+
+def processar_remessas(p10, hoje=None, transportadoras=None):
+    """p10 = REMESSAS_INSUMOS.xlsx -> dict (ver _rem_montar) ou None se a
+    planilha não abre. `hoje` (date) e `transportadoras` são injetáveis p/ teste."""
+    print(f"[{ts()}] Lendo Remessas de Insumos...")
+    hoje = hoje or _rem_hoje_brt()
+    if transportadoras is None:
+        transportadoras = _carregar_transportadoras()
+    try:
+        # dtype=object: preserva o tipo nativo da célula (datetime de verdade
+        # vs texto, código numérico sem virar float) — dtype=str perderia isso.
+        abas = pd.read_excel(p10, sheet_name=None, header=0, dtype=object)
+    except Exception as e:
+        print(f"[{ts()}] Remessas: não foi possível abrir a planilha: {e}")
+        return None
+    df = None
+    for nome, _df in abas.items():
+        if _vrh_norm(nome) == _vrh_norm('Registro'):
+            df = _df
+            break
+    if df is None:
+        for nome, _df in abas.items():
+            if _vrh_norm(nome) != _vrh_norm('Listas'):
+                df = _df
+                break
+    brutos = []
+    if df is not None and not df.empty:
+        cols = list(df.columns)
+        ncols = {c: _vrh_norm(c) for c in cols}
+        mapa, usadas = {}, set()
+        # fase 1: igualdade normalizada; fase 2: sinônimo como palavra contida
+        for fase in (1, 2):
+            for campo in _REM_ORDEM_CAMPOS:
+                if campo in mapa:
+                    continue
+                for cand in _REM_CAMPOS[campo]:
+                    cn = _vrh_norm(cand)
+                    achou = next((c for c in cols if c not in usadas and (
+                        ncols[c] == cn if fase == 1 else f' {cn} ' in f' {ncols[c]} ')), None)
+                    if achou is not None:
+                        mapa[campo] = achou
+                        usadas.add(achou)
+                        break
+        faltando = [c for c in _REM_CAMPOS if c not in mapa]
+        if faltando:
+            print(f"[{ts()}] AVISO Remessas: colunas ausentes/não reconhecidas: {', '.join(faltando)}")
+        n_pii = sum(1 for c in cols if any(tok in ncols[c] for tok in _REM_PII_TOKENS))
+        if n_pii:
+            print(f"[{ts()}] Remessas: {n_pii} coluna(s) de contato/destinatário ignoradas (não entram no JSON)")
+        n_exemplo = 0
+        for _, row in df.iterrows():
+            def g(campo):
+                c = mapa.get(campo)
+                return row.get(c) if c is not None else None
+            if all(_ocor_txt(g(c)) == '' for c in mapa):
+                continue  # linha vazia
+            if _vrh_norm(_ocor_txt(g('observacao'))).startswith('EXEMPLO'):
+                n_exemplo += 1
+                continue  # linha de exemplo do template
+            env = _rem_data(g('data_envio'), hoje)
+            brutos.append({
+                'polo': _ocor_parse_polo_tutor(g('polo'))[0],  # tutor descartado
+                'categoria': _ocor_canon(g('categoria'), _VIST_CAT_MAP),
+                'item': _ocor_txt(g('item')),
+                'quantidade': _rem_int(g('quantidade')),
+                'unidade': _ocor_txt(g('unidade')),
+                'data_envio': env,
+                'previsao': _rem_data(g('previsao'), hoje, ref=env, futuro_ok=True),
+                'data_entrega': _rem_data(g('data_entrega'), hoje),
+                'transportadora': _ocor_txt(g('transportadora')),
+                'codigo': _rem_codigo(g('codigo')),
+                'status': _ocor_txt(g('status')),
+                'observacao': _ocor_txt(g('observacao')),
+            })
+        if n_exemplo:
+            print(f"[{ts()}] Remessas: {n_exemplo} linha(s) de EXEMPLO do template ignoradas")
+    res = _rem_montar(brutos, hoje, transportadoras)
+    k = res['kpis']
+    print(f"[{ts()}] Remessas de Insumos: {k['total']} registros ({k['entregues']} entregues, "
+          f"{k['atrasados']} atrasadas, {k['sem_codigo']} sem código, {k['polos_atendidos']} polos)")
+    return res
+
+
+def _remessas_demo(hoje=None):
+    """Remessas FICTÍCIAS p/ o portal de Laboratórios enquanto não há planilha
+    p10 real. Determinística (seed fixo), datas relativas a `hoje` (sempre
+    parecem atuais), ~10% atrasadas, todos os status, códigos DEMO...BR,
+    polos só pelo NOME (contatos_por_polo.json). Cada registro leva demo:true."""
+    import random
+    hoje = hoje or _rem_hoje_brt()
+    rng = random.Random(20260925)
+    try:
+        with open(os.path.join(SCRIPT_DIR, 'contatos_por_polo.json'), encoding='utf-8') as f:
+            polos = sorted(json.load(f).keys())
+    except Exception:
+        polos = []
+    if not polos:
+        polos = ['Blumenau/SC - Exemplo', 'Curitiba/PR - Exemplo', 'Recife/PE - Exemplo']
+    polos = rng.sample(polos, min(40, len(polos)))
+    itens = ['Kit de insumos', 'Reposição de reagentes', 'Kit de EPIs', 'Materiais de consumo']
+    unid = {'Kit de insumos': 'kit', 'Reposição de reagentes': 'caixa', 'Kit de EPIs': 'kit', 'Materiais de consumo': 'un'}
+    transp = ['Correios', 'Correios', 'Jadlog', 'Total Express']
+    d = lambda n: hoje - timedelta(days=n)
+    # (status, quantidade de registros, atrasadas entre eles)
+    plano = [('Preparando', 8, 0), ('Enviado', 12, 2), ('Em trânsito', 18, 4), ('Entregue', 34, 0),
+             ('Problema', 5, 2), ('Devolvido', 3, 0)]
+    brutos, seq = [], 0
+    for st, n, n_atr in plano:
+        for j in range(n):
+            seq += 1
+            atr = j < n_atr
+            cat = rng.choice(_VIST_CATEGORIAS)
+            item = rng.choice(itens)
+            b = {'polo': rng.choice(polos), 'categoria': cat, 'item': f'{item} — {cat}',
+                 'quantidade': rng.randint(1, 6), 'unidade': unid[item],
+                 'transportadora': rng.choice(transp), 'codigo': f'DEMO{seq:06d}BR', 'status': st,
+                 'data_envio': None, 'previsao': None, 'data_entrega': None, 'observacao': ''}
+            if st == 'Preparando':
+                b['previsao'] = hoje + timedelta(days=rng.randint(3, 10))
+                b['codigo'] = ''
+                b['transportadora'] = ''
+            elif st == 'Enviado':
+                if atr:
+                    env = d(rng.randint(12, 25)); b['previsao'] = env + timedelta(days=rng.randint(5, 8))
+                else:
+                    env = d(rng.randint(1, 3)); b['previsao'] = hoje + timedelta(days=rng.randint(2, 6))
+                b['data_envio'] = env
+            elif st == 'Em trânsito':
+                if atr:
+                    env = d(rng.randint(12, 25)); b['previsao'] = env + timedelta(days=rng.randint(5, 8))
+                else:
+                    env = d(rng.randint(2, 8)); b['previsao'] = hoje + timedelta(days=rng.randint(1, 5))
+                b['data_envio'] = env
+            elif st == 'Entregue':
+                env = d(rng.randint(8, 90))
+                b['data_envio'] = env
+                b['previsao'] = env + timedelta(days=rng.randint(5, 8))
+                b['data_entrega'] = env + timedelta(days=rng.randint(3, 9))
+            elif st == 'Problema':
+                if atr:
+                    env = d(rng.randint(12, 25)); b['previsao'] = env + timedelta(days=rng.randint(5, 8))
+                else:
+                    env = d(rng.randint(3, 6)); b['previsao'] = hoje + timedelta(days=rng.randint(0, 3))
+                b['data_envio'] = env
+                b['observacao'] = 'Aguardando retirada na agência (demonstração)'
+            else:  # Devolvido
+                env = d(rng.randint(15, 40))
+                b['data_envio'] = env
+                b['previsao'] = env + timedelta(days=7)
+                b['observacao'] = 'Endereço não localizado (demonstração)'
+            brutos.append(b)
+    rng.shuffle(brutos)
+    res = _rem_montar(brutos, hoje, _carregar_transportadoras())
+    for r in res['registros']:
+        r['demo'] = True
+    return res
+
+
 def _cruzar_vagas_recrutamento(vagas_lotacao, reqs):
     """Anota cada vaga da Lotação com a etapa de recrutamento do req que casar
     por tipo + curso + cidade/polo. Conservador: só grava quando polo E curso
@@ -5536,6 +6013,59 @@ def gerar_html_gestor(dados):
     with open(output, 'w', encoding='utf-8') as f: f.write(html)
     print(f"[{ts()}] Salvo: {output} (Painel do Gestor, senha própria, cifra AES-256-GCM)")
 
+# 4º portal (PATCH 178): laboratorios.html — equipe de laboratórios. Senha
+# própria, SEM link nos outros portais (acesso só por URL direta), mesmo modelo
+# do gestor.html. Recebe um dict PRÓPRIO (dados_lab), nunca o `dados` inteiro
+# (menos PII: sem tutores).
+SENHA_LABS = "labs2026"
+
+
+def montar_dados_lab(dados, remessas_real=None, hoje=None):
+    """Monta o payload do portal de Laboratórios. `remessas_real` = retorno de
+    processar_remessas(p10) ou None -> DEMO (demo.remessas=True). O Vínculo é
+    sempre DEMO por enquanto (labs_demo_vinculo.json, dado sintético)."""
+    hoje = hoje or _rem_hoje_brt()
+    def _json(nome, padrao):
+        try:
+            with open(os.path.join(SCRIPT_DIR, nome), encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[{ts()}] AVISO: {nome} indisponível ({e})")
+            return padrao
+    vinculo = _json('labs_demo_vinculo.json', None)
+    if isinstance(vinculo, dict):
+        vinculo.update({'demo': True, 'recorrencia_real': False, 'fonte': 'protótipo com dados sintéticos'})
+    if remessas_real:
+        remessas, demo_rem = remessas_real, False
+    else:
+        remessas, demo_rem = _remessas_demo(hoje), True
+    return {
+        'gerado_em': (dados or {}).get('gerado_em') or ts(),
+        'demo': {'vinculo': True, 'remessas': demo_rem},
+        'pendencias': _json('labs_pendencias.json', []),
+        'vistorias': ((dados or {}).get('laboratorios') or {}).get('vistorias'),
+        'remessas': remessas,
+        'vinculo': vinculo,
+    }
+
+
+def gerar_html_laboratorios(dados_lab):
+    """Gera saida/laboratorios.html (4º portal, senha SENHA_LABS, AES-256-GCM).
+    Sem template_laboratorios.html: avisa e pula sem erro."""
+    saida = os.path.join(SCRIPT_DIR, "saida")
+    os.makedirs(saida, exist_ok=True)
+    output = os.path.join(saida, "laboratorios.html")
+    tmpl = os.path.join(SCRIPT_DIR, "template_laboratorios.html")
+    if not os.path.isfile(tmpl):
+        print(f"[{ts()}] AVISO: template_laboratorios.html não encontrado -- pulando geração do portal de Laboratórios")
+        return
+    with open(tmpl, encoding='utf-8') as f: html = f.read()
+    payload_cifrado = cifrar_dados(json.dumps(dados_lab, ensure_ascii=False), SENHA_LABS)
+    html = html.replace("'DATA_GOES_HERE'", json.dumps(payload_cifrado))
+    with open(output, 'w', encoding='utf-8') as f: f.write(html)
+    print(f"[{ts()}] Salvo: {output} (portal de Laboratórios, senha própria, cifra AES-256-GCM)")
+
+
 def gerar_html(dados):
     saida = os.path.join(SCRIPT_DIR, "saida")
     os.makedirs(saida, exist_ok=True)
@@ -5587,7 +6117,7 @@ if __name__ == '__main__':
     print()
     print(" Verificando arquivos...")
     print()
-    p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8, p9 = verificar_e_localizar()
+    p1, p2, tmpl, p3, p3b, p4, p5, p6, p7, p8, p9, p10 = verificar_e_localizar()
     if not p1 or not p2 or not os.path.isfile(tmpl):
         print()
         print(" Coloque as planilhas na pasta planilhas\\")
@@ -5711,6 +6241,15 @@ if __name__ == '__main__':
                 dados.setdefault('laboratorios', {})['vistorias'] = _vist
         except Exception as e:
             print(f"[{ts()}] AVISO: Erro ao processar Vistoria de Laboratório: {e}")
+    # PATCH 178: Remessas de Insumos (p10) — só alimenta o portal de
+    # Laboratórios (dados_lab); NÃO entra em `dados` (os outros 3 portais não
+    # mudam). Falha aqui não quebra o pipeline: cai na DEMO.
+    _remessas_real = None
+    if p10:
+        try:
+            _remessas_real = processar_remessas(p10)
+        except Exception as e:
+            print(f"[{ts()}] AVISO: Erro ao processar Remessas de Insumos: {e}")
     # PATCH 89: gera/atualiza a planilha de Acompanhamento de Onboarding —
     # roda sempre (mesmo na primeira vez, quando ainda não existe um p6 pra
     # ler flags antigos) pra garantir que a lista sempre nasce e se mantém
@@ -6417,6 +6956,13 @@ if __name__ == '__main__':
         gerar_html_gestor(dados)
     except Exception as e:
         print(f"[{ts()}] AVISO: Erro ao gerar Painel do Gestor: {e}")
+    try:
+        _dl = montar_dados_lab(dados, _remessas_real)
+        print(f"[{ts()}] Portal de Laboratórios: demo={_dl['demo']} · {len(_dl['pendencias'])} pendências · "
+              f"{len(_dl['remessas']['registros'])} remessas")
+        gerar_html_laboratorios(_dl)
+    except Exception as e:
+        print(f"[{ts()}] AVISO: Erro ao gerar portal de Laboratórios: {e}")
     if '--sem-browser' not in sys.argv:
         print(f"[{ts()}] Abrindo navegador...")
         webbrowser.open(Path(html).as_uri())
