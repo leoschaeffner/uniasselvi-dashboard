@@ -6022,8 +6022,12 @@ SENHA_LABS = "labs2026"
 
 def montar_dados_lab(dados, remessas_real=None, hoje=None):
     """Monta o payload do portal de Laboratórios. `remessas_real` = retorno de
-    processar_remessas(p10) ou None -> DEMO (demo.remessas=True). O Vínculo é
-    sempre DEMO por enquanto (labs_demo_vinculo.json, dado sintético)."""
+    processar_remessas(p10) ou None -> DEMO (demo.remessas=True). O Vínculo usa
+    `vinculo_laboratorios_real.json` (gerado localmente por
+    tests/tools/gerar_vinculo_laboratorios.py a partir das bases de BI reais,
+    NUNCA em runtime aqui) quando esse arquivo existe no repo; senão cai pro
+    protótipo sintético `labs_demo_vinculo.json` (demo.vinculo=True) — mesmo
+    padrão fail-open de fonte opcional do resto do projeto."""
     hoje = hoje or _rem_hoje_brt()
     def _json(nome, padrao):
         try:
@@ -6032,16 +6036,21 @@ def montar_dados_lab(dados, remessas_real=None, hoje=None):
         except Exception as e:
             print(f"[{ts()}] AVISO: {nome} indisponível ({e})")
             return padrao
-    vinculo = _json('labs_demo_vinculo.json', None)
+    vinculo = _json('vinculo_laboratorios_real.json', None)
     if isinstance(vinculo, dict):
-        vinculo.update({'demo': True, 'recorrencia_real': False, 'fonte': 'protótipo com dados sintéticos'})
+        vinculo_demo = False
+    else:
+        vinculo = _json('labs_demo_vinculo.json', None)
+        vinculo_demo = True
+        if isinstance(vinculo, dict):
+            vinculo.update({'demo': True, 'recorrencia_real': False, 'fonte': 'protótipo com dados sintéticos'})
     if remessas_real:
         remessas, demo_rem = remessas_real, False
     else:
         remessas, demo_rem = _remessas_demo(hoje), True
     return {
         'gerado_em': (dados or {}).get('gerado_em') or ts(),
-        'demo': {'vinculo': True, 'remessas': demo_rem},
+        'demo': {'vinculo': vinculo_demo, 'remessas': demo_rem},
         'pendencias': _json('labs_pendencias.json', []),
         'vistorias': ((dados or {}).get('laboratorios') or {}).get('vistorias'),
         'remessas': remessas,
