@@ -1,0 +1,50 @@
+[
+  {
+    "id": "correios",
+    "nome": "Correios",
+    "nomes": [
+      "correios",
+      "sedex",
+      "pac",
+      "ect",
+      "correio",
+      "carta registrada"
+    ],
+    "url": "https://rastreamento.correios.com.br/app/index.php?objetos={codigo}",
+    "padrao_codigo": "^[A-Z]{2}[0-9]{9}[A-Z]{2}$",
+    "_status_url": "A CONFIRMAR: host rastreamento.correios.com.br responde 200, mas o parametro ?objetos= nao foi verificavel sem navegador (pagina e SPA). Se o link nao preencher o codigo sozinho, o painel ainda mostra o codigo com botao copiar."
+  },
+  {
+    "id": "jadlog",
+    "nome": "Jadlog",
+    "nomes": [
+      "jadlog",
+      "jad log"
+    ],
+    "url": "",
+    "padrao_codigo": "",
+    "_exemplo": "Preencha 'url' com a URL publica de rastreio da Jadlog, usando {codigo} onde vai o codigo. URL vazia = sem link (so codigo + copiar). Nao preenchido: URL nao confirmada."
+  },
+  {
+    "id": "total_express",
+    "nome": "Total Express",
+    "nomes": [
+      "total express",
+      "totalexpress",
+      "tex"
+    ],
+    "url": "",
+    "padrao_codigo": "",
+    "_exemplo": "Idem: preencher 'url' quando confirmada. URL vazia = sem link."
+  },
+  {
+    "id": "loggi",
+    "nome": "Loggi",
+    "nomes": [
+      "loggi"
+    ],
+    "url": "",
+    "padrao_codigo": "",
+    "_exemplo": "Idem: preencher 'url' quando confirmada. URL vazia = sem link."
+  }
+]
