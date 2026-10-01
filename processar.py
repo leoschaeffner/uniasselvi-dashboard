@@ -5436,7 +5436,10 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
         is_novo = 'LABORATORIO' in cols_upper and 'NOME_EXPERIMENTO' in cols_upper
         if not is_novo:
             print(f"[{ts()}] {os.path.basename(path)}: formato ANTIGO — todo o arquivo tratado como {fallback_sem}")
-            resultado[fallback_sem] = processar_gerenciamento(path)
+            # PATCH 180: reusa o DataFrame já lido por _ler_arquivo_gerenciamento
+            # (linha ~5431) em vez de reler o arquivo do zero com ler_excel, que
+            # só tenta engines de Excel e falha silenciosamente pra um .csv real.
+            resultado[fallback_sem] = processar_gerenciamento(path, df_g=df)
             continue
         sem_col = next((c for c in df.columns if str(c).upper() == 'SEMESTRE'), None)
         if sem_col:
@@ -5506,9 +5509,17 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
     return resultado
 
 
-def processar_gerenciamento(p3):
-    print(f"[{ts()}] Lendo gerenciamento...")
-    df_g = ler_excel(p3)
+def processar_gerenciamento(p3, df_g=None):
+    # PATCH 180: aceita um DataFrame já lido (df_g) pra reusar a leitura feita
+    # por _ler_arquivo_gerenciamento em processar_gerenciamento_semestres —
+    # essa função já sabe tratar tanto .xlsx quanto .csv (';'/latin-1). Antes,
+    # quando chamada só com o path, relia com ler_excel (só engines de Excel),
+    # o que falhava silenciosamente pra um .csv real em formato ANTIGO (ver
+    # PATCH 180 no histórico). Se vier sem df_g, usa _ler_arquivo_gerenciamento
+    # (não ler_excel puro) pra cobrir o mesmo caso quando chamada isolada.
+    if df_g is None:
+        print(f"[{ts()}] Lendo gerenciamento...")
+        df_g = _ler_arquivo_gerenciamento(p3)
     print(f"[{ts()}] Gerenciamento: {len(df_g)} linhas, {len(df_g.columns)} colunas")
     cols_upper = [str(c).upper() for c in df_g.columns]
     is_novo = 'LABORATORIO' in cols_upper and 'NOME_EXPERIMENTO' in cols_upper
@@ -6763,7 +6774,14 @@ if __name__ == '__main__':
                     oferta['ch_semanal'] = ch; enr += 1
             print(f"[{ts()}] CH enriquecida: {enr}/{len(dados.get('ger_ofertas',[]))} ofertas ({enr_subsequencia} via correspondência por subsequência)")
         except Exception as e:
-            print(f"[{ts()}] AVISO: Erro ao processar gerenciamento: {e}")
+            # PATCH 180: isso zera a aba inteira de Gerenciamento (ger_kpis/
+            # gerenciamento_por_semestre ausentes do DB, cards "Alunos
+            # Agendados" caem no fallback ||0 nos dois templates) sem alarme
+            # visível — um "AVISO" comum já passou desapercebido numa rodada
+            # real (fonte mudou de esquema .xlsx->.csv e o fallback "formato
+            # ANTIGO" relia com ler_excel, que só tenta engines de Excel).
+            # Prefixo mais grave pra ser fácil de grepar em runs futuros.
+            print(f"[{ts()}] [ERRO CRÍTICO] Gerenciamento inteiro ficará ausente do DB (tem_gerenciamento=False): {e}")
             import traceback; traceback.print_exc()
             dados['tem_gerenciamento'] = False
     else:
