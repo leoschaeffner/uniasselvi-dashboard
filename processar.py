@@ -5574,7 +5574,12 @@ def processar_gerenciamento(p3, df_g=None):
     print(f"[{ts()}] Gerenciamento após filtro ativos: {len(df_g)} linhas")
     df_g['_ORDEM_G'] = ''; df_g['_PRATICA_G'] = ''
     if c_lab in df_g.columns:
-        import re
+        # PATCH 183: NÃO importar `re` aqui — isso faz Python tratar `re` como
+        # nome local de TODA a função processar_gerenciamento (shadowing do
+        # `re` importado no topo do módulo). Quando este `if` não executa
+        # (formato ANTIGO sem c_lab), o `re` usado mais abaixo (ex.: linha do
+        # 'tutor': re.sub(...)) quebra com UnboundLocalError. `re` já está
+        # disponível via o `import re` global no topo do processar.py.
         def extrair_ordem(val):
             val = str(val or '')
             m = re.match(r'O\.(\d+):\s*(.*)', val)
