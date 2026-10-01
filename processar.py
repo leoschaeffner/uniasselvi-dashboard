@@ -5546,8 +5546,31 @@ def processar_gerenciamento(p3, df_g=None):
     c_hr_agenda = gcol(df_g, 'HR', 'GERENCIADA') or 'HR_GERENCIADA'
     c_ofex_dtin = gcol(df_g, 'OFEX', 'DTIN') or 'OFEX_DTIN'
     c_ofex_dtfi = gcol(df_g, 'OFEX', 'DTFI') or 'OFEX_DTFI'
+    _total_antes_filtro = len(df_g)
     if c_situ in df_g.columns:
-        df_g = df_g[df_g[c_situ].astype(str).str.strip().str.upper() == 'ATIVO'].copy()
+        _situ_norm = df_g[c_situ].astype(str).str.strip().str.upper()
+        _mask_exato = _situ_norm == 'ATIVO'
+        if int(_mask_exato.sum()) == 0 and _total_antes_filtro > 0:
+            # PATCH 181: filtro exato não casou nada — formato ANTIGO
+            # reaproveitado (df_g já lido, ver PATCH 180) pode trazer SITU
+            # como string composta (ex. "ATIVO - CONFIRMADA") em vez do
+            # literal isolado "ATIVO". Em vez de assumir um formato fixo,
+            # tenta reconhecer "ATIVO" como palavra isolada (\bATIVO\b),
+            # o que já exclui "INATIVO" por não ter fronteira de palavra ali.
+            _mask_contem = _situ_norm.str.contains(r'\bATIVO\b', regex=True, na=False)
+            if int(_mask_contem.sum()) > 0:
+                print(f"[{ts()}] AVISO: filtro exato de SITU=='ATIVO' não casou nenhuma linha; usando correspondência por palavra isolada ('ATIVO') — {int(_mask_contem.sum())} de {_total_antes_filtro} linhas")
+                df_g = df_g[_mask_contem].copy()
+            else:
+                # Zerar TODAS as linhas de um relatório de gerenciamento real
+                # é um resultado absurdo (mesmo princípio de sanidade usado em
+                # _interpretar_data_contratacao) — mantém as linhas sem
+                # filtrar em vez de fazer a aba inteira desaparecer, e avisa
+                # alto o bastante pra alguém conferir os valores reais da
+                # coluna de situação.
+                print(f"[{ts()}] [ERRO CRÍTICO] filtro de SITU=='ATIVO' zerou todas as {_total_antes_filtro} linhas (nem com correspondência por palavra) — mantendo todas as linhas SEM filtrar para não perder o Gerenciamento inteiro. Verifique os valores reais da coluna '{c_situ}'.")
+        else:
+            df_g = df_g[_mask_exato].copy()
     print(f"[{ts()}] Gerenciamento após filtro ativos: {len(df_g)} linhas")
     df_g['_ORDEM_G'] = ''; df_g['_PRATICA_G'] = ''
     if c_lab in df_g.columns:
@@ -5567,9 +5590,17 @@ def processar_gerenciamento(p3, df_g=None):
     # critério corrigido do formato NOVO (ver comentário lá). OFERTAS_CADASTRADAS
     # ou status CONCLUÍDO não confirmam que o gerenciamento foi feito de fato.
     df_g['_GERENCIADO'] = df_g['_TEM_TUTOR'] & df_g['_TEM_AGENDA']
-    df_g['_ALUNOS_MAT'] = pd.to_numeric(df_g.get(c_alunos, 0), errors='coerce').fillna(0).astype(int)
-    df_g['_QTD_ALUN'] = pd.to_numeric(df_g.get(c_qtd_alun, 0), errors='coerce').fillna(0).astype(int)
-    df_g['_CAPA'] = pd.to_numeric(df_g.get(c_capa_exp, 0), errors='coerce').fillna(0).astype(int)
+    # PATCH 181: df_g.get(col, 0) devolve o literal int 0 (não uma Series)
+    # quando a coluna não existe — e esse df_g pode ser um DataFrame
+    # reaproveitado (ver PATCH 180) sem a coluna esperada (formato ANTIGO
+    # real tem só 19 colunas, bem menos que o sintético usado nos testes
+    # antigos). Um int não tem .fillna(), o que quebrava com AttributeError
+    # e derrubava o Gerenciamento inteiro. Usa série de zeros como fallback.
+    def _col_ou_zeros(df, col):
+        return df[col] if (col and col in df.columns) else pd.Series(0, index=df.index)
+    df_g['_ALUNOS_MAT'] = pd.to_numeric(_col_ou_zeros(df_g, c_alunos), errors='coerce').fillna(0).astype(int)
+    df_g['_QTD_ALUN'] = pd.to_numeric(_col_ou_zeros(df_g, c_qtd_alun), errors='coerce').fillna(0).astype(int)
+    df_g['_CAPA'] = pd.to_numeric(_col_ou_zeros(df_g, c_capa_exp), errors='coerce').fillna(0).astype(int)
     total_ofertas = len(df_g); gerenciadas = int(df_g['_GERENCIADO'].sum())
     com_tutor = int(df_g['_TEM_TUTOR'].sum()); sem_tutor = total_ofertas - com_tutor
     # FIX: Alunos Matriculados — deduplicar por polo×categoria (soma bruta conta os mesmos alunos por ordem)
