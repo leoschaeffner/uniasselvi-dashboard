@@ -5439,7 +5439,18 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
             # PATCH 180: reusa o DataFrame já lido por _ler_arquivo_gerenciamento
             # (linha ~5431) em vez de reler o arquivo do zero com ler_excel, que
             # só tenta engines de Excel e falha silenciosamente pra um .csv real.
-            resultado[fallback_sem] = processar_gerenciamento(path, df_g=df)
+            # PATCH 184: isolado por arquivo/semestre — um arquivo com schema
+            # totalmente diferente (ex: CSV de agendamento por aluno, não uma
+            # variação do formato ANTIGO) não pode derrubar os demais arquivos
+            # já processados com sucesso nesta mesma chamada (ver histórico
+            # PR #32/#33/#34 — causa raiz: um try/except só em volta de TODO o
+            # processamento de gerenciamento em processar(), que zerava
+            # tem_gerenciamento global por causa de UM semestre ruim).
+            try:
+                resultado[fallback_sem] = processar_gerenciamento(path, df_g=df)
+            except Exception as e:
+                print(f"[{ts()}] [ERRO CRÍTICO] {os.path.basename(path)} ({fallback_sem}): falhou ao processar formato ANTIGO, semestre ficará AUSENTE do gerenciamento (demais semestres não são afetados): {type(e).__name__}: {e}")
+                import traceback as _tb_ger; _tb_ger.print_exc()
             continue
         sem_col = next((c for c in df.columns if str(c).upper() == 'SEMESTRE'), None)
         if sem_col:
@@ -5505,7 +5516,14 @@ def processar_gerenciamento_semestres(arquivos, controle_tutor_lookup=None):
                     if _cod and _cod.lower() != 'nan':
                         _m_cod.setdefault(_norm_polo_front(_lab), set()).add(_cod)
                 _GER_COD_POR_POLO[sem] = {k: next(iter(v)) for k, v in _m_cod.items() if len(v) == 1}
-            resultado[sem] = _processar_gerenciamento_novo(grp2, sem)
+            # PATCH 184: mesmo isolamento do ramo ANTIGO acima — um semestre
+            # (grupo) ruim no formato NOVO não pode apagar os outros grupos já
+            # resolvidos nesta mesma chamada.
+            try:
+                resultado[sem] = _processar_gerenciamento_novo(grp2, sem)
+            except Exception as e:
+                print(f"[{ts()}] [ERRO CRÍTICO] Gerenciamento {sem} (formato NOVO): falhou ao processar, semestre ficará AUSENTE do gerenciamento (demais semestres não são afetados): {type(e).__name__}: {e}")
+                import traceback as _tb_ger2; _tb_ger2.print_exc()
     return resultado
 
 
@@ -6429,21 +6447,41 @@ if __name__ == '__main__':
                 if _t.get('c') == 'Aviso de Portfólio':
                     _sem_vinculo_ativo_keys_orf.add(_norm_tutor_key_orf(_t.get('n')))
 
+            # PATCH 184: cada loop abaixo processa TODOS os semestres de
+            # ger_por_semestre, mas cada iteração agora é isolada num
+            # try/except PRÓPRIO — se o processamento de UM semestre
+            # específico quebrar (ex: schema incompatível que escapou do
+            # isolamento em processar_gerenciamento_semestres), esse semestre
+            # é removido de ger_por_semestre (fica ausente/vazio, igual a um
+            # semestre sem fonte nenhuma) e os demais seguem normalmente, sem
+            # derrubar tem_gerenciamento globalmente (causa raiz do PR
+            # #32/#33/#34: um try/except só em volta de TODO o bloco de
+            # gerenciamento em processar()).
             if _sem_vinculo_ativo_keys_orf:
                 for _sk in list(ger_por_semestre.keys()):
-                    _antes_orf = len(ger_por_semestre[_sk].get('ger_ofertas', []))
-                    ger_por_semestre[_sk]['ger_ofertas'] = [
-                        o for o in ger_por_semestre[_sk].get('ger_ofertas', [])
-                        if not o.get('tutor') or _norm_tutor_key_orf(o['tutor']) not in _sem_vinculo_ativo_keys_orf
-                    ]
-                    _removidos_orf = _antes_orf - len(ger_por_semestre[_sk]['ger_ofertas'])
-                    if _removidos_orf:
-                        print(f"[{ts()}] {_sk}: {_removidos_orf} linha(s) de tutor sem vínculo ativo removida(s) do gerenciamento (desligado sem vínculo, ou Aviso de Portfólio)")
+                    try:
+                        _antes_orf = len(ger_por_semestre[_sk].get('ger_ofertas', []))
+                        ger_por_semestre[_sk]['ger_ofertas'] = [
+                            o for o in ger_por_semestre[_sk].get('ger_ofertas', [])
+                            if not o.get('tutor') or _norm_tutor_key_orf(o['tutor']) not in _sem_vinculo_ativo_keys_orf
+                        ]
+                        _removidos_orf = _antes_orf - len(ger_por_semestre[_sk]['ger_ofertas'])
+                        if _removidos_orf:
+                            print(f"[{ts()}] {_sk}: {_removidos_orf} linha(s) de tutor sem vínculo ativo removida(s) do gerenciamento (desligado sem vínculo, ou Aviso de Portfólio)")
+                    except Exception as e:
+                        print(f"[{ts()}] [ERRO CRÍTICO] Gerenciamento {_sk}: falhou ao filtrar tutores sem vínculo ativo, semestre REMOVIDO do gerenciamento (demais semestres não são afetados): {type(e).__name__}: {e}")
+                        import traceback as _tb_ger3; _tb_ger3.print_exc()
+                        del ger_por_semestre[_sk]
 
             # PATCH 32: garantir que todo tutor ativo apareça no gerenciamento,
             # mesmo sem nenhuma oferta cadastrada no GIOCONDA pro polo dele
             for _sk in list(ger_por_semestre.keys()):
-                ger_por_semestre[_sk] = _injetar_tutores_sem_oferta(ger_por_semestre[_sk], dados.get('tutores', []))
+                try:
+                    ger_por_semestre[_sk] = _injetar_tutores_sem_oferta(ger_por_semestre[_sk], dados.get('tutores', []))
+                except Exception as e:
+                    print(f"[{ts()}] [ERRO CRÍTICO] Gerenciamento {_sk}: falhou ao injetar tutores sem oferta, semestre REMOVIDO do gerenciamento (demais semestres não são afetados): {type(e).__name__}: {e}")
+                    import traceback as _tb_ger4; _tb_ger4.print_exc()
+                    del ger_por_semestre[_sk]
             # PATCH 97: o GIOCONDA passou a permitir gerenciar qualquer ordem a
             # qualquer momento (antes travava fora do período vigente). Detecta
             # e sinaliza quando uma prática de uma ordem MAIS AVANÇADA foi
@@ -6452,26 +6490,39 @@ if __name__ == '__main__':
             # período oficial da Ordem 2. Não bloqueia nada, só sinaliza pra
             # visualização/auditoria.
             for _sk in list(ger_por_semestre.keys()):
-                _periodos_sk = (ALL_SEMESTRES.get(_sk) or {}).get('periodos', {})
-                ger_por_semestre[_sk]['ger_ofertas'] = _detectar_gerenciamento_fora_ordem(
-                    ger_por_semestre[_sk].get('ger_ofertas', []), _periodos_sk)
-                _anomalias_sk = [o for o in ger_por_semestre[_sk]['ger_ofertas'] if o.get('_anomalia_ordem')]
-                ger_por_semestre[_sk]['ger_anomalias_ordem'] = _anomalias_sk
-                if _anomalias_sk:
-                    print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_sk)} gerenciamento(s) fora do período esperado da ordem")
-                _anomalias_futuras_sk = [o for o in ger_por_semestre[_sk]['ger_ofertas'] if o.get('_anomalia_ordem_futura')]
-                if _anomalias_futuras_sk:
-                    _ords_futuras = sorted(set(o.get('ordem','?') for o in _anomalias_futuras_sk))
-                    print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_futuras_sk)} gerenciamento(s) marcado(s) numa ordem que AINDA NÃO COMEÇOU ({', '.join(_ords_futuras)}) — provável erro de preenchimento de ordem na origem, não gerenciamento real adiantado")
+                try:
+                    _periodos_sk = (ALL_SEMESTRES.get(_sk) or {}).get('periodos', {})
+                    ger_por_semestre[_sk]['ger_ofertas'] = _detectar_gerenciamento_fora_ordem(
+                        ger_por_semestre[_sk].get('ger_ofertas', []), _periodos_sk)
+                    _anomalias_sk = [o for o in ger_por_semestre[_sk]['ger_ofertas'] if o.get('_anomalia_ordem')]
+                    ger_por_semestre[_sk]['ger_anomalias_ordem'] = _anomalias_sk
+                    if _anomalias_sk:
+                        print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_sk)} gerenciamento(s) fora do período esperado da ordem")
+                    _anomalias_futuras_sk = [o for o in ger_por_semestre[_sk]['ger_ofertas'] if o.get('_anomalia_ordem_futura')]
+                    if _anomalias_futuras_sk:
+                        _ords_futuras = sorted(set(o.get('ordem','?') for o in _anomalias_futuras_sk))
+                        print(f"[{ts()}] ⚠️  {_sk}: {len(_anomalias_futuras_sk)} gerenciamento(s) marcado(s) numa ordem que AINDA NÃO COMEÇOU ({', '.join(_ords_futuras)}) — provável erro de preenchimento de ordem na origem, não gerenciamento real adiantado")
+                except Exception as e:
+                    print(f"[{ts()}] [ERRO CRÍTICO] Gerenciamento {_sk}: falhou ao detectar anomalia de ordem, semestre REMOVIDO do gerenciamento (demais semestres não são afetados): {type(e).__name__}: {e}")
+                    import traceback as _tb_ger5; _tb_ger5.print_exc()
+                    del ger_por_semestre[_sk]
             dados['gerenciamento_por_semestre'] = ger_por_semestre
             for _sk, _sv in ger_por_semestre.items():
                 print(f"[{ts()}] Gerenciamento {_sk}: {_sv['ger_kpis']['total_ofertas']} ofertas, {_sv['ger_kpis']['ofertas_gerenciadas']} ger.")
             # dados['ger_*'] no nível raiz = semestre ativo do dashboard (compat
             # com todo o código de enriquecimento abaixo, que sempre operou em
             # cima de um único conjunto de ofertas)
-            ger_dados = ger_por_semestre.get(SEMESTRE_ATUAL) or next(iter(ger_por_semestre.values()), {})
-            dados.update(ger_dados)
-            dados['tem_gerenciamento'] = True
+            # PATCH 184: se TODOS os semestres falharam acima (caso extremo —
+            # normalmente só o semestre com schema incompatível falha),
+            # ger_por_semestre fica vazio; aí sim não há gerenciamento nenhum
+            # pra mostrar, igual ao caso de p3/p3b ausentes.
+            if not ger_por_semestre:
+                print(f"[{ts()}] [ERRO CRÍTICO] Nenhum semestre de gerenciamento processado com sucesso — tem_gerenciamento=False")
+                dados['tem_gerenciamento'] = False
+            else:
+                ger_dados = ger_por_semestre.get(SEMESTRE_ATUAL) or next(iter(ger_por_semestre.values()), {})
+                dados.update(ger_dados)
+                dados['tem_gerenciamento'] = True
 
             # PATCH 176: Engajamento de ALUNOS (% de ofertas de prática
             # gerenciadas), quebrado em 3 visões pro card "Engajamento" do
