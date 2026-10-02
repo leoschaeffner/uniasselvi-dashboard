@@ -1809,6 +1809,7 @@ def processar(p1, p2):
             'exp_tutor_uni_meses': _mec.get('exp_tutor_uni_meses'),
             'whatsapp': str(t.get(col_whats,'') or '') if col_whats else None,
             'chapa': str(t.get(col_chapa,'') or '') if col_chapa else None,
+            'email': str(t.get(col_email,'') or '').strip() if col_email else None,
             '_chave_dbg': chave,  # PATCH 141b: só pra diagnóstico, ver bloco logo abaixo
         })
     if _hist_pre_admissao:
@@ -1826,6 +1827,8 @@ def processar(p1, p2):
             existing['pct'] = round(existing['te'] / existing['tp'] * 100, 1) if existing['tp'] else 0
             if t.get('ch_semanal') and not existing.get('ch_semanal'):
                 existing['ch_semanal'] = t['ch_semanal']
+            if t.get('email') and not existing.get('email'):
+                existing['email'] = t['email']
         else:
             seen[key] = t; tutores_dedup.append(t)
     tutores = tutores_dedup

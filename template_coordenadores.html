@@ -1200,6 +1200,7 @@ function openTutorModal(nome){
   if(t.inicio){const _d=new Date(t.inicio);const _m=Math.round((new Date()-_d)/(1000*60*60*24*30.5));_infos.push('📅 Admissão: <strong>'+t.inicio.split('-').reverse().join('/')+'</strong> ('+(_m/12).toFixed(1)+' anos)');}
   if(t.exp_tutor_uni_meses>0)_infos.push('🕐 Exp. tutoria: <strong>'+t.exp_tutor_uni_meses+' meses</strong>');
   if(_infos.length)perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-top:4px">'+_infos.join(' &nbsp;·&nbsp; ')+'</div>';
+  if(t.email&&t.email!=='None'&&t.email!=='nan')perfilHtml+='<div style="font-size:11px;color:var(--muted);margin-top:4px">📧 <a href="mailto:'+esc(t.email)+'" style="color:var(--teal)">'+esc(t.email)+'</a></div>';
   if(t.chapa&&t.chapa!=='None'&&t.chapa!=='nan')perfilHtml+='<div style="font-size:10px;color:var(--muted);margin-top:5px;border-top:1px solid var(--border);padding-top:6px">🪪 Chapa: '+t.chapa+'</div>';
   if(t.lattes_id||t.lattes_url){const _u=t.lattes_id?'https://lattes.cnpq.br/'+t.lattes_id:(t.lattes_url||'');perfilHtml+='<div style="margin-top:6px"><a href="'+_u+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#1a3a5c;color:#fff;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🔗 Currículo Lattes</a></div>';}
   perfilHtml+='</div>';}}
@@ -4990,6 +4991,7 @@ function exportTutoresAtivosPorCurso(){
     'Tutor': t.n || '',
     'Polo': t.p || '',
     'Categoria/Curso': t.c_exibicao || t.c || '',
+    'E-mail': (t.email && t.email!=='None' && t.email!=='nan') ? t.email : '',
     'Data de Contratação': t.inicio || '',
     'CH Semanal': t.ch_semanal ? t.ch_semanal+'h' : '',
     'Titulação': t.titulacao || '',
