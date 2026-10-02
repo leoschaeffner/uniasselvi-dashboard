@@ -963,7 +963,28 @@ def processar(p1, p2):
     col_chave_lot = next((c for c in df_t.columns if 'CHAVE' in str(c).upper() and 'LOTA' in str(c).upper()
                           and 'CLASSIF' not in str(c).upper()), None)
     if col_chave_lot:
-        df_at['_CHAVE'] = df_at[col_chave_lot].astype(str).str.strip()
+        # BUG 2026-10-02 (investigador-bugs): se a coluna CHAVE LOTAÇÃO vier
+        # 100% vazia (toda a Series NaN) ANTES do cast, `.astype(str)` no
+        # pandas NÃO converte os elementos pra string 'nan' — eles continuam
+        # sendo float('nan') de verdade (comportamento real, confirmado
+        # isoladamente: pd.Series([nan,nan]).astype(str).tolist() devolve
+        # [nan, nan], não strings). Isso fazia TODOS os tutores ativos
+        # compartilharem a MESMA chave-dict `nan` (NaN é identidade única),
+        # contaminando `polo_sem_tutor` com um bucket anônimo gigante que
+        # quebrava mais na frente com TypeError no re.sub (~L1875: "expected
+        # string or bytes-like object, got 'float'"). `.fillna('')` logo após
+        # o cast garante que nunca sobra um float solto; e o fallback abaixo
+        # (POLO+CURSOS) agora é aplicado POR LINHA sempre que a chave de
+        # lotação individual vier vazia/não-confiável — não só quando a
+        # coluna inteira está ausente.
+        _chave_bruta = df_at[col_chave_lot].astype(str).str.strip().fillna('')
+        _chave_fallback_pc = (df_at[col_polo].astype(str).str.strip() +
+                               df_at[col_cur].astype(str).str.strip())
+        _mask_chave_vazia = _chave_bruta.str.lower().isin(['', 'nan', 'none', 'nat'])
+        df_at['_CHAVE'] = _chave_bruta
+        if _mask_chave_vazia.any():
+            df_at.loc[_mask_chave_vazia, '_CHAVE'] = _chave_fallback_pc[_mask_chave_vazia]
+            print(f"[{ts()}] CONTROLE: {int(_mask_chave_vazia.sum())} linha(s) sem CHAVE LOTAÇÃO válida — usando fallback POLO+CURSOS pra essas")
         print(f"[{ts()}] CONTROLE usando coluna '{col_chave_lot}' como chave")
     else:
         df_at['_CHAVE'] = df_at[col_polo].astype(str).str.strip() + df_at[col_cur].astype(str).str.strip()
@@ -1704,6 +1725,13 @@ def processar(p1, p2):
     _hist_pre_admissao = 0
     for _, t in df_at.iterrows():
         chave    = t['_CHAVE']
+        # BUG 2026-10-02: mesma guarda já usada no loop de submissões do
+        # Portfólio (~L1581) — `chave` pode ter virado NaN/float real num
+        # cenário residual (defesa em profundidade; a causa raiz de CHAVE
+        # LOTAÇÃO vazia já é tratada acima, na montagem de `df_at['_CHAVE']`,
+        # mas esse guard evita que QUALQUER chave não-string chegue até
+        # `polo_sem_tutor[chave]` / o re.sub de ~L1875, que não aceita float).
+        chave = str(chave or '')
         # BUG 3 (2026-09-22): mesma guarda de `_interpretar_data_contratacao`
         # (~L784) — célula NaN vira 'nan' literal sem isso.
         _cat_raw_s2 = str(t.get(col_cat, '') or '').strip()
@@ -1809,6 +1837,7 @@ def processar(p1, p2):
             'exp_tutor_uni_meses': _mec.get('exp_tutor_uni_meses'),
             'whatsapp': str(t.get(col_whats,'') or '') if col_whats else None,
             'chapa': str(t.get(col_chapa,'') or '') if col_chapa else None,
+            'email': str(t.get(col_email,'') or '').strip() if col_email else None,
             '_chave_dbg': chave,  # PATCH 141b: só pra diagnóstico, ver bloco logo abaixo
         })
     if _hist_pre_admissao:
@@ -1826,6 +1855,8 @@ def processar(p1, p2):
             existing['pct'] = round(existing['te'] / existing['tp'] * 100, 1) if existing['tp'] else 0
             if t.get('ch_semanal') and not existing.get('ch_semanal'):
                 existing['ch_semanal'] = t['ch_semanal']
+            if t.get('email') and not existing.get('email'):
+                existing['email'] = t['email']
         else:
             seen[key] = t; tutores_dedup.append(t)
     tutores = tutores_dedup
