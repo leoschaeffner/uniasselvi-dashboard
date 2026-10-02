@@ -1604,6 +1604,21 @@ function renderGerenciamento(){
   // TODOS os registros desse nome no CONTROLE, em qualquer polo, concordarem).
   // Se houver ambiguidade real em algum nível, não decide — mantém o subcurso
   // original da oferta (GIOCONDA) em vez de arriscar um palpite errado.
+  // PATCH 69: o Leo confirmou (print em tela + hard refresh) um tutor com
+  // ofertas reais em DUAS categorias/subcursos ao mesmo tempo (ex: Maria
+  // Eugenia Rocha Beirao — ofertas reais geridas tanto em Multi I/Biomedicina
+  // quanto em Multi III/Estética-Cosmética) sumindo da categoria SECUNDÁRIA:
+  // o bloco acima (PATCH 56/58) indexava só por nome(+chapa/polo), sem olhar a
+  // categoria/base da PRÓPRIA linha, e sobrescrevia o subcurso de TODAS as
+  // ofertas do tutor pela especialidade "principal" dele (CONTROLE) — inclusive
+  // nas linhas de uma categoria diferente, onde o subcurso do GIOCONDA já
+  // estava certo e era o único registro daquela categoria. Agora o match
+  // exige que a BASE da categoria da linha (_grupoBaseDaCategoria) bata com a
+  // base da categoria do tutor no CONTROLE (t.c) — só nesse caso a
+  // especialidade "principal" é aplicada. Quando a linha não tem absolutamente
+  // nenhum subcurso próprio (o caso original que o PATCH 32/33 cobria), cai
+  // pro fallback antigo (sem exigir base) pra não deixar de classificar o
+  // tutor nesse caso.
   (function(){
     function _chapaDe(nome){ var m=String(nome||'').match(/\((\d+)\)\s*$/); return m?m[1]:null; }
     function _poloKeySimples(p){
@@ -1611,28 +1626,50 @@ function renderGerenciamento(){
         .normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
     }
     var porNomeChapa={}, porNomePolo={}, porNomePoloAmbiguo={}, porNome={}, porNomeAmbiguo={};
+    var porNomeChapaAny={}, porNomePoloAny={}, porNomePoloAmbiguoAny={}, porNomeAny={}, porNomeAmbiguoAny={};
     (DB.tutores||[]).forEach(function(t){
       if(!t.n) return;
       var sub=_subcursoDeCodigo(t.cursos);
       if(!sub) return;
+      var base=_grupoBaseDaCategoria(t.c)||'';
       var nk=_normTutorKey(t.n);
       var chapa=_chapaDe(t.n);
-      if(chapa) porNomeChapa[nk+'|||'+chapa]=sub;
+      if(chapa){
+        porNomeChapa[nk+'|||'+chapa+'|||'+base]=sub;
+        porNomeChapaAny[nk+'|||'+chapa]=sub;
+      }
       var pk=nk+'|||'+_poloKeySimples(t.p);
-      if(pk in porNomePolo && porNomePolo[pk]!==sub) porNomePoloAmbiguo[pk]=true; else porNomePolo[pk]=sub;
-      if(nk in porNome && porNome[nk]!==sub) porNomeAmbiguo[nk]=true; else porNome[nk]=sub;
+      var pkBase=pk+'|||'+base;
+      if(pkBase in porNomePolo && porNomePolo[pkBase]!==sub) porNomePoloAmbiguo[pkBase]=true; else porNomePolo[pkBase]=sub;
+      if(pk in porNomePoloAny && porNomePoloAny[pk]!==sub) porNomePoloAmbiguoAny[pk]=true; else porNomePoloAny[pk]=sub;
+      var nkBase=nk+'|||'+base;
+      if(nkBase in porNome && porNome[nkBase]!==sub) porNomeAmbiguo[nkBase]=true; else porNome[nkBase]=sub;
+      if(nk in porNomeAny && porNomeAny[nk]!==sub) porNomeAmbiguoAny[nk]=true; else porNomeAny[nk]=sub;
     });
     gerDetData.forEach(function(r){
       if(!r.tutor) return;
       var nk=_normTutorKey(r.tutor);
       var chapa=_chapaDe(r.tutor);
+      var baseRow=_grupoBaseDaCategoria(r.categoria)||'';
       var sub=null;
-      if(chapa && porNomeChapa[nk+'|||'+chapa]){
-        sub=porNomeChapa[nk+'|||'+chapa];
+      if(chapa && porNomeChapa[nk+'|||'+chapa+'|||'+baseRow]){
+        sub=porNomeChapa[nk+'|||'+chapa+'|||'+baseRow];
       }else{
-        var pk=nk+'|||'+_poloKeySimples(r.polo);
-        if(!porNomePoloAmbiguo[pk] && porNomePolo[pk]) sub=porNomePolo[pk];
-        else if(!porNomeAmbiguo[nk] && porNome[nk]) sub=porNome[nk];
+        var pkBase=nk+'|||'+_poloKeySimples(r.polo)+'|||'+baseRow;
+        if(!porNomePoloAmbiguo[pkBase] && porNomePolo[pkBase]) sub=porNomePolo[pkBase];
+        else{
+          var nkBase=nk+'|||'+baseRow;
+          if(!porNomeAmbiguo[nkBase] && porNome[nkBase]) sub=porNome[nkBase];
+        }
+      }
+      if(!sub && !r.subcurso){
+        if(chapa && porNomeChapaAny[nk+'|||'+chapa]){
+          sub=porNomeChapaAny[nk+'|||'+chapa];
+        }else{
+          var pk=nk+'|||'+_poloKeySimples(r.polo);
+          if(!porNomePoloAmbiguoAny[pk] && porNomePoloAny[pk]) sub=porNomePoloAny[pk];
+          else if(!porNomeAmbiguoAny[nk] && porNomeAny[nk]) sub=porNomeAny[nk];
+        }
       }
       if(sub) r.subcurso=sub;
     });
