@@ -2217,6 +2217,24 @@ function filterGerDetalhe(q){
     });
   }
   ['polo','tutor','pct'].forEach(function(c){var el=document.getElementById('gd-ind-'+c);if(el)el.textContent=(_detSortCol===c)?(_detSortAsc?' ▲':' ▼'):'';});
+  // PATCH 182: quando o MESMO tutor aparece em mais de uma linha (categorias/
+  // subcursos reais e simultâneos, ex: Bio-Far + Estética/Cosmética — PATCH
+  // 67), a capacidade por Ordem (capOrdem, mais abaixo) é calculada só a
+  // partir da CH do tutor — o MESMO valor pras duas linhas, porque a CH não
+  // se divide por categoria. Isso fazia a coluna "O.N" repetir o denominador
+  // CHEIO (capacidade da pessoa inteira, ex: 24) em AMBAS as linhas, quando
+  // cada linha deveria mostrar só a fatia dela (ex: 19 pra quem tem 19
+  // ofertas reais de Biomedicina, 5 pra quem tem 5 de Estética). Pré-calcula
+  // aqui o total combinado por pessoa (tutor+polo, usando o nome completo
+  // já com chapa quando existir — mesma chave usada lá embaixo) pra repartir
+  // capOrdem proporcionalmente à fatia real de cada linha. Usa tutorMap (não
+  // 'sorted') pra ficar completo independente de filtro de ordem/status,
+  // igual ao resto da tabela (PATCH 81).
+  var personTotais={};
+  Object.values(tutorMap).forEach(function(tt){
+    var pk=(tt.tutor||'')+'|||'+tt.polo;
+    personTotais[pk]=(personTotais[pk]||0)+tt.totalOfertas;
+  });
   var rows='';
   var _prevPoloTutor='';sorted.forEach(function(t,gi){
     var pct=t.totalOfertas?Math.round(t.totalGer/t.totalOfertas*100):0;
@@ -2273,6 +2291,17 @@ function filterGerDetalhe(q){
       window._tmpChCont=chCont;window._tmpCapOrdem=capOrdem;
     }
     var chCont=window._tmpChCont, capOrdem=window._tmpCapOrdem;
+    // PATCH 182: reparte capOrdem (capacidade da PESSOA inteira, calculada só
+    // pela CH) proporcionalmente à fatia real desta linha dentro do total
+    // combinado da pessoa — ver comentário completo acima, antes de 'var rows'.
+    // Sem isso, duas linhas do mesmo tutor (categorias diferentes) mostravam o
+    // MESMO denominador cheio nas colunas O.1-O.5 (ex: 24/24 nas duas, mesmo
+    // quando uma delas só tem 5 ofertas reais).
+    var _personKey=(t.tutor||'')+'|||'+t.polo;
+    var _personTotal=personTotais[_personKey]||t.totalOfertas;
+    if(capOrdem && _personTotal>0 && t.totalOfertas>0 && _personTotal!==t.totalOfertas){
+      capOrdem=Math.max(1,Math.round(capOrdem*(t.totalOfertas/_personTotal)));
+    }
     var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];var ordCells='';
     ordensExibir.forEach(function(o){var od=t.ordens[o];
       if(!od){
