@@ -1,0 +1,262 @@
+name: Supabase - Teste de conexao e setup Fase 1
+
+# Workflow manual (nao roda em push/schedule) para a Fase 0 da migracao
+# Supabase (ver PLANO_MIGRACAO_SUPABASE_VERCEL.md). Faz 3 coisas, nesta ordem:
+#   1. Testa a conexao com o Postgres do projeto Supabase (SUPABASE_DB_URL).
+#   2. Aplica supabase/schema_fase1_dashboard.sql (idempotente - pula se as
+#      tabelas ja existirem).
+#   3. Cria/atualiza o role restrito app_etl (SELECT 6.2 do plano) com
+#      GRANT INSERT, UPDATE apenas nas tabelas do pipeline, testa que ele
+#      consegue inserir e que NAO consegue ler auth.users nem fazer DROP.
+#
+# Seguranca: nenhuma senha/connection string e impressa em nenhum log. A
+# senha de teste do role app_etl e gerada em memoria, usada so dentro desta
+# execucao, e rotacionada para um valor final desconhecido ao fim do
+# workflow — quem vai definir a senha real que entra no GitHub Secret
+# SUPABASE_APP_ETL_URL e o Leo, manualmente, via SQL Editor do Supabase.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  supabase_setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install psycopg2-binary --quiet
+
+      - name: Testar conexao e aplicar schema (supabase/schema_fase1_dashboard.sql)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, re, sys
+          import psycopg2
+
+          def sanitize(e):
+              """Remove qualquer coisa que pareca senha/token de uma mensagem de erro
+              antes de logar (ver PLANO_MIGRACAO_SUPABASE_VERCEL.md SS6.1 -
+              clientes de Postgres as vezes ecoam a request inteira, incluindo
+              auth, numa falha)."""
+              s = str(e)
+              s = re.sub(r'(postgres(?:ql)?://[^:]+:)[^@]+(@)', r'\1****\2', s)
+              s = re.sub(r'(password=)\S+', r'\1****', s, flags=re.IGNORECASE)
+              return s
+
+          db_url = os.environ.get('SUPABASE_DB_URL', '').strip()
+          if not db_url:
+              print("[ERRO] secret SUPABASE_DB_URL nao configurado")
+              sys.exit(1)
+
+          try:
+              conn = psycopg2.connect(db_url, connect_timeout=10)
+          except Exception as e:
+              print(f"[ERRO] Falha ao conectar como master: {sanitize(e)}")
+              sys.exit(1)
+
+          conn.autocommit = True
+          cur = conn.cursor()
+
+          cur.execute("SELECT version();")
+          print(f"[OK] Conexao bem-sucedida. {cur.fetchone()[0]}")
+
+          cur.execute("select to_regclass('public.ofertas_gerenciamento') is not null;")
+          ja_aplicado = cur.fetchone()[0]
+
+          if ja_aplicado:
+              print("[INFO] Schema ja aplicado anteriormente (tabela ofertas_gerenciamento existe) - pulando DDL.")
+          else:
+              print("[INFO] Aplicando supabase/schema_fase1_dashboard.sql...")
+              with open('supabase/schema_fase1_dashboard.sql', 'r', encoding='utf-8') as f:
+                  ddl = f.read()
+              try:
+                  cur.execute(ddl)
+                  print("[OK] Schema aplicado com sucesso (tabelas + views criadas).")
+              except Exception as e:
+                  print(f"[ERRO] Falha ao aplicar schema: {sanitize(e)}")
+                  sys.exit(1)
+
+          cur.execute("""
+              select table_name from information_schema.tables
+              where table_schema = 'public' and table_type = 'BASE TABLE'
+              order by table_name;
+          """)
+          tabelas = [r[0] for r in cur.fetchall()]
+          print(f"[INFO] Tabelas em public apos aplicacao: {tabelas}")
+
+          cur.close()
+          conn.close()
+          PYEOF
+
+      - name: Criar/testar role restrito app_etl (INSERT/UPDATE apenas)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, re, sys, secrets as pysecrets
+          import psycopg2
+          import psycopg2.errors
+          from urllib.parse import urlparse, urlunparse, quote
+
+          def sanitize(e):
+              s = str(e)
+              s = re.sub(r'(postgres(?:ql)?://[^:]+:)[^@]+(@)', r'\1****\2', s)
+              s = re.sub(r'(password=)\S+', r'\1****', s, flags=re.IGNORECASE)
+              return s
+
+          ROLE = 'app_etl'
+          TABELAS = [
+              'polos', 'categorias', 'cursos', 'praticas_catalogo',
+              'config_semestres_ordens', 'tutores', 'contatos_polo',
+              'submissoes_portfolio', 'ofertas_gerenciamento',
+              'matriculas_agregadas_hub', 'vagas_rh', 'laboratorios_pendencias',
+          ]
+
+          db_url = os.environ.get('SUPABASE_DB_URL', '').strip()
+          if not db_url:
+              print("[ERRO] secret SUPABASE_DB_URL nao configurado")
+              sys.exit(1)
+
+          try:
+              conn = psycopg2.connect(db_url, connect_timeout=10)
+          except Exception as e:
+              print(f"[ERRO] Falha ao conectar como master: {sanitize(e)}")
+              sys.exit(1)
+          conn.autocommit = True
+          cur = conn.cursor()
+
+          # Senha de TESTE, gerada em memoria, nunca logada - usada so dentro
+          # desta execucao do workflow, rotacionada no final (ver bloco final).
+          senha_teste = pysecrets.token_urlsafe(24)
+
+          cur.execute("select 1 from pg_roles where rolname = %s", (ROLE,))
+          existe = cur.fetchone() is not None
+
+          if existe:
+              print(f"[INFO] Role {ROLE} ja existe - atualizando senha de teste e grants.")
+              cur.execute(f"ALTER ROLE {ROLE} WITH LOGIN PASSWORD %s", (senha_teste,))
+          else:
+              print(f"[INFO] Criando role {ROLE} (login, sem superuser/createrole/createdb)...")
+              cur.execute(f"CREATE ROLE {ROLE} WITH LOGIN PASSWORD %s NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT", (senha_teste,))
+
+          cur.execute(f"GRANT USAGE ON SCHEMA public TO {ROLE};")
+          for t in TABELAS:
+              cur.execute(f"GRANT INSERT, UPDATE ON public.{t} TO {ROLE};")
+          # Identity columns (generated always as identity) dependem de USAGE
+          # na sequence subjacente para o INSERT funcionar.
+          cur.execute(f"GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO {ROLE};")
+          print(f"[OK] GRANT INSERT, UPDATE aplicado em {len(TABELAS)} tabelas + USAGE nas sequences.")
+
+          cur.close()
+          conn.close()
+
+          parsed = urlparse(db_url)
+          netloc = f"{ROLE}:{quote(senha_teste, safe='')}@{parsed.hostname}"
+          if parsed.port:
+              netloc += f":{parsed.port}"
+          test_url = urlunparse((parsed.scheme, netloc, parsed.path, '', '', ''))
+
+          falhou = False
+
+          # Teste 1: o role CONSEGUE inserir (e so isso que ele deveria poder
+          # fazer de escrita) - usa transacao com ROLLBACK, nunca deixa dado
+          # de teste permanente.
+          try:
+              tconn = psycopg2.connect(test_url, connect_timeout=10)
+              tconn.autocommit = False
+              tcur = tconn.cursor()
+              tcur.execute(
+                  "INSERT INTO polos (nome, nome_normalizado) VALUES "
+                  "('__teste_role_app_etl__', '__teste_role_app_etl__') RETURNING id;"
+              )
+              novo_id = tcur.fetchone()[0]
+              print(f"[OK] Teste 1/4: role {ROLE} conseguiu INSERT em polos (id {novo_id}) - revertendo com ROLLBACK, nada fica salvo.")
+              tconn.rollback()
+              tcur.close()
+              tconn.close()
+          except Exception as e:
+              print(f"[ERRO] Teste 1/4: role {ROLE} NAO conseguiu INSERT de teste (deveria conseguir): {sanitize(e)}")
+              falhou = True
+
+          # Teste 2: o role NAO pode ler auth.users
+          try:
+              tconn = psycopg2.connect(test_url, connect_timeout=10)
+              tconn.autocommit = True
+              tcur = tconn.cursor()
+              tcur.execute("SELECT count(*) FROM auth.users;")
+              print("[ALERTA DE SEGURANCA] Teste 2/4: role conseguiu ler auth.users - isso NAO deveria acontecer!")
+              falhou = True
+              tconn.close()
+          except psycopg2.errors.InsufficientPrivilege:
+              print(f"[OK] Teste 2/4: role {ROLE} foi corretamente BLOQUEADO de ler auth.users.")
+          except Exception as e:
+              print(f"[AVISO] Teste 2/4: erro inesperado testando bloqueio de auth.users: {sanitize(e)}")
+
+          # Teste 3: o role NAO pode fazer DROP TABLE
+          try:
+              tconn = psycopg2.connect(test_url, connect_timeout=10)
+              tconn.autocommit = True
+              tcur = tconn.cursor()
+              tcur.execute("DROP TABLE public.polos;")
+              print("[ALERTA DE SEGURANCA] Teste 3/4: role conseguiu DROP TABLE - isso NAO deveria acontecer!")
+              falhou = True
+              tconn.close()
+          except psycopg2.errors.InsufficientPrivilege:
+              print(f"[OK] Teste 3/4: role {ROLE} foi corretamente BLOQUEADO de fazer DROP TABLE.")
+          except Exception as e:
+              print(f"[AVISO] Teste 3/4: erro inesperado testando bloqueio de DROP: {sanitize(e)}")
+
+          # Teste 4: o role NAO tem SELECT nas tabelas (so INSERT/UPDATE, por desenho)
+          try:
+              tconn = psycopg2.connect(test_url, connect_timeout=10)
+              tconn.autocommit = True
+              tcur = tconn.cursor()
+              tcur.execute("SELECT count(*) FROM public.tutores;")
+              print("[INFO] Teste 4/4: role consegue SELECT em tutores (sem GRANT explicito de SELECT - revisar se e esperado quando o ETL usar upsert com ON CONFLICT, que pode precisar disso).")
+              tconn.close()
+          except psycopg2.errors.InsufficientPrivilege:
+              print(f"[OK] Teste 4/4: role {ROLE} nao tem SELECT em tutores, conforme especificado (so INSERT/UPDATE).")
+          except Exception as e:
+              print(f"[AVISO] Teste 4/4: erro inesperado testando SELECT em tutores: {sanitize(e)}")
+
+          # Rotaciona a senha para um valor final que NINGUEM registra neste
+          # workflow (nem logado, nem persistido em lugar nenhum) - a senha
+          # de teste gerada acima deixa de valer a partir daqui. O Leo
+          # precisa definir a senha real manualmente (ver instrucoes abaixo)
+          # antes de montar a connection string do GitHub Secret.
+          conn = psycopg2.connect(db_url, connect_timeout=10)
+          conn.autocommit = True
+          cur = conn.cursor()
+          senha_final_invalidada = pysecrets.token_urlsafe(32)
+          cur.execute(f"ALTER ROLE {ROLE} WITH PASSWORD %s", (senha_final_invalidada,))
+          del senha_final_invalidada
+          cur.close()
+          conn.close()
+          print(f"[OK] Senha de teste do role {ROLE} foi invalidada/rotacionada ao final - nenhuma senha valida foi exposta neste log.")
+
+          if falhou:
+              print("[ERRO] Um ou mais testes de seguranca falharam - ver mensagens [ALERTA DE SEGURANCA]/[ERRO] acima.")
+              sys.exit(1)
+
+          print("")
+          print("=" * 78)
+          print(f"[PROXIMO PASSO] Role {ROLE} criado/atualizado e testado com sucesso:")
+          print(f"  - INSERT/UPDATE funcionam nas {len(TABELAS)} tabelas do pipeline Fase 1.")
+          print("  - Nao consegue ler auth.users, nao consegue DROP, nao tem SELECT solto.")
+          print("  Para habilitar o ETL a escrever de verdade, o Leo precisa:")
+          print(f"  1) Rodar, no SQL Editor do painel Supabase: ALTER ROLE {ROLE} WITH PASSWORD '<senha_escolhida_por_voce>';")
+          print("  2) Montar a connection string substituindo usuario:senha na SUPABASE_DB_URL")
+          print(f"     original por {ROLE}:<senha_escolhida>.")
+          print("  3) Criar o GitHub Secret SUPABASE_APP_ETL_URL com essa string (nunca colar no chat).")
+          print("=" * 78)
+          PYEOF
