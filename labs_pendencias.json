@@ -7,14 +7,14 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "CEC",
     "total_alunos": 26,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "aracaju/se - ponto novo",
     "polo_original": "Aracaju/SE - Ponto Novo",
     "categoria": "BIO-FAR (Multidisciplinar I)",
     "status": "Não Apto",
-    "motivo": "VISITA AGENDADA PARA OUTUBRO- POLO EM OBRAS",
+    "motivo": "VISITA AGENDADA PARA Novembro(30 dias obra)- POLO EM OBRAS",
     "empresa": "ALFAMA",
     "total_alunos": 173,
     "tutor_contratado": true
@@ -23,10 +23,10 @@
     "polo_norm": "belo horizonte/mg - shopping estacao bh",
     "polo_original": "Belo Horizonte/MG - Shopping Estação BH",
     "categoria": "",
-    "status": "Não Apto",
+    "status": "Não Implantou",
     "motivo": "Recebeu o lab e não implantou, estão vendo nova sala. No sistema já não consta mais como HUB Multi IV",
     "empresa": "PRÓPRIOS II",
-    "total_alunos": 29,
+    "total_alunos": null,
     "tutor_contratado": false
   },
   {
@@ -43,21 +43,21 @@
     "polo_norm": "brasilia/df - nucleo bandeirante",
     "polo_original": "Brasília/DF - Núcleo Bandeirante",
     "categoria": "NUTRI (Multidisciplinar IV)",
-    "status": "Não Apto",
-    "motivo": "Integrado a outro multi",
+    "status": "APTO",
+    "motivo": "Falta divisória/ espelho no teto/ torneiras...ajustes estão sendo realizados",
     "empresa": "IBRAP",
     "total_alunos": 257,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "camaqua/rs",
     "polo_original": "Camaquã/RS",
     "categoria": "BIO-FAR (Multidisciplinar I)",
     "status": "Não Apto",
-    "motivo": "Precisa ralo abaixo do chuveiro lava-olhos, balanças, estua e mufla instaladas incorretamente",
+    "motivo": "Visita sendo agendada",
     "empresa": "SERVI",
     "total_alunos": 159,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "campinas/sp - abolicao",
@@ -67,7 +67,7 @@
     "motivo": "Integrado a outro Multi, lava-olhos, capela, balanças, estua e mufla instaladas incorretamente",
     "empresa": "LDS",
     "total_alunos": 236,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "campinas/sp - abolicao",
@@ -77,7 +77,7 @@
     "motivo": "Não Implantado- não conseguimos fazer visita para verificar se o lab. Esta montado.",
     "empresa": "LDS",
     "total_alunos": 255,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "campos dos goytacazes/rj",
@@ -107,7 +107,7 @@
     "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
     "empresa": "UNIERGS",
     "total_alunos": 105,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "criciuma/sc",
@@ -117,7 +117,7 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "ESUCRI",
     "total_alunos": 133,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "criciuma/sc",
@@ -126,8 +126,8 @@
     "status": "Não Apto",
     "motivo": "Laboratório não está implantado",
     "empresa": "ESUCRI",
-    "total_alunos": 53,
-    "tutor_contratado": false
+    "total_alunos": 5,
+    "tutor_contratado": true
   },
   {
     "polo_norm": "florianopolis/sc - centro",
@@ -147,7 +147,7 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "MBS",
     "total_alunos": 352,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "foz do iguacu/pr",
@@ -157,17 +157,17 @@
     "motivo": "Chuveiro lava-olhos, capela, balanças, estufa e mufla instaladas incorretamente",
     "empresa": "FUTURA INSTITUTO EDU",
     "total_alunos": 87,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "garanhuns/pe",
     "polo_original": "Garanhuns/PE",
     "categoria": "ENGMAKER",
     "status": "Não Apto",
-    "motivo": "Laboratório não está implantado",
+    "motivo": "Multi II- sala pqna, falta mesa, carrinho, pia assepsia. Engemaker laboratório foi furtado(sem not)",
     "empresa": "FOCO",
-    "total_alunos": 54,
-    "tutor_contratado": false
+    "total_alunos": 9,
+    "tutor_contratado": true
   },
   {
     "polo_norm": "herval d'oeste/sc",
@@ -177,16 +177,16 @@
     "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
     "empresa": "IES VALE",
     "total_alunos": 125,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "ipu/ce",
     "polo_original": "Ipu/CE",
     "categoria": "QUÍMICA E FÍSICA",
-    "status": "Não Apto",
+    "status": "Não Implantou",
     "motivo": "Polo enviou vídeos por e-mail da situação do lab.Sem condições de aplicar a prática. Infra tratando a situação.",
     "empresa": "PRÓPRIOS II",
-    "total_alunos": 22,
+    "total_alunos": null,
     "tutor_contratado": false
   },
   {
@@ -216,8 +216,8 @@
     "status": "Não Apto",
     "motivo": "Laboratório não está implantado",
     "empresa": "CEI",
-    "total_alunos": 11,
-    "tutor_contratado": false
+    "total_alunos": 0,
+    "tutor_contratado": true
   },
   {
     "polo_norm": "itaborai/rj",
@@ -256,8 +256,8 @@
     "status": "Não Apto",
     "motivo": "Laboratório não está implantado",
     "empresa": "CEI",
-    "total_alunos": 11,
-    "tutor_contratado": false
+    "total_alunos": 1,
+    "tutor_contratado": true
   },
   {
     "polo_norm": "luis eduardo magalhaes/ba",
@@ -266,8 +266,8 @@
     "status": "Não Apto",
     "motivo": "Laboratório não está implantado",
     "empresa": "FACULDADE RIACHAO",
-    "total_alunos": 165,
-    "tutor_contratado": false
+    "total_alunos": 4,
+    "tutor_contratado": true
   },
   {
     "polo_norm": "macae/rj",
@@ -284,7 +284,7 @@
     "polo_original": "Macapá/AP",
     "categoria": "BIO-FAR (Multidisciplinar I)",
     "status": "Não Apto",
-    "motivo": "Finalizando implantação/ Chuveiro lava-olhos",
+    "motivo": "Falta instalar chuveiro lava- olhos, delimitar as áreas.",
     "empresa": "CEA",
     "total_alunos": 84,
     "tutor_contratado": true
@@ -317,7 +317,7 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "YNOVA",
     "total_alunos": 109,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "nova iguacu/rj - centro",
@@ -337,7 +337,7 @@
     "motivo": "VISITAMOS EM 14/09 - POLO AINDA NÃO DEFINIU SALA PARA MONTAR O LAB. Todo material do laboratório esta dentro de caixas (tem tratativa de e-mail)",
     "empresa": "CBF",
     "total_alunos": 111,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "nova mutum/mt",
@@ -357,7 +357,7 @@
     "motivo": "FALTA MOBÍLIA- NÃO TEM MESA DENTRO DO LABORATÓRIO E MATERIAIS DE QUÍMICA ESTÃO INTEGRADOS",
     "empresa": "CBF",
     "total_alunos": null,
-    "tutor_contratado": true
+    "tutor_contratado": false
   },
   {
     "polo_norm": "novo hamburgo/rs - centro",
@@ -377,7 +377,7 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "CEOS",
     "total_alunos": 2,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "ponta pora/ms",
@@ -427,7 +427,7 @@
     "motivo": "POLO EM OBRA- PREVISÃO FINAL DE SETEMBRO",
     "empresa": "YNOVA",
     "total_alunos": 125,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "rio de janeiro/rj - campo grande",
@@ -457,7 +457,7 @@
     "motivo": "Está em obra- mudança de endereço",
     "empresa": "MBS",
     "total_alunos": 130,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "rio verde/go",
@@ -477,7 +477,7 @@
     "motivo": "VISITAMOS EM 10/09 - FALTA QUEBRAR PAREDE PARA FAZER TODAS AS INSTALAÇÕES- OBRA COMPLEXA",
     "empresa": "INSTITUTO INFORMA",
     "total_alunos": 64,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "sobral/ce",
@@ -487,7 +487,7 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "CEI",
     "total_alunos": 20,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "telemaco borba/pr",
@@ -497,7 +497,7 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "DIMENSÃO TB",
     "total_alunos": 19,
-    "tutor_contratado": false
+    "tutor_contratado": true
   },
   {
     "polo_norm": "tucuma/pa",
@@ -507,6 +507,6 @@
     "motivo": "Laboratório não está implantado",
     "empresa": "OMEGA",
     "total_alunos": 66,
-    "tutor_contratado": false
+    "tutor_contratado": true
   }
 ]
