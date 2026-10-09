@@ -2300,7 +2300,19 @@ function filterGerDetalhe(q){
     var _personKey=(t.tutor||'')+'|||'+t.polo;
     var _personTotal=personTotais[_personKey]||t.totalOfertas;
     if(capOrdem && _personTotal>0 && t.totalOfertas>0 && _personTotal!==t.totalOfertas){
-      capOrdem=Math.max(1,Math.round(capOrdem*(t.totalOfertas/_personTotal)));
+      var _capOrdemFatiado=Math.max(1,Math.round(capOrdem*(t.totalOfertas/_personTotal)));
+      // PATCH 183: a fatia proporcional acima pode arredondar pra baixo de um
+      // valor menor que as ofertas REALMENTE geridas numa ordem específica
+      // desta mesma linha (ex: categoria com só 2 ofertas, ambas geridas numa
+      // única Ordem — a fatia de capOrdem vira 1, mas 'ger' já é 2, mostrando
+      // o absurdo visual "2/1"). O denominador nunca pode ser menor que a
+      // maior contagem de geridas entre as ordens desta linha — usamos um
+      // piso (maior 'ger' das ordens do grupo) em vez de truncar por ordem
+      // individual pra manter o MESMO capOrdem em todas as colunas da linha
+      // (igual o resto do código já fazia antes do PATCH 182/183).
+      var _maxGerOrdemLinha=0;
+      Object.keys(t.ordens||{}).forEach(function(_ok){var _g=(t.ordens[_ok]||{}).ger||0;if(_g>_maxGerOrdemLinha)_maxGerOrdemLinha=_g;});
+      capOrdem=Math.max(_capOrdemFatiado,_maxGerOrdemLinha);
     }
     var CAT_COM_O5=['ENGMAKER','QUÍMICA E FÍSICA','QUIMICA E FISICA'];var temOrdem5=CAT_COM_O5.some(function(c){return (t.categoria||'').toUpperCase().includes(c);});var ordensExibir=['Ordem 1','Ordem 2','Ordem 3','Ordem 4','Ordem 5'];var ordCells='';
     ordensExibir.forEach(function(o){var od=t.ordens[o];
