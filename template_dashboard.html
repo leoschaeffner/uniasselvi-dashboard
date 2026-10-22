@@ -1342,7 +1342,79 @@ function openTutorModal(nome){
   if(t.real&&t.real.length){html+=`<div class="sec-label">✅ Realizadas (${t.real.length})</div>`;html+=t.real.map(r=>`<div class="prac-item"><div class="prac-icon done">✓</div><div style="flex:1"><div class="prac-name">${typeof r==='object'?r.n:r}</div></div><div class="prac-date">${typeof r==='object'?(r.d||'—'):'—'}</div></div>`).join('');}
   if(t.pend&&t.pend.length){html+=`<div class="sec-label">❌ Pendentes (${t.pend.length})</div>`;const hoje=new Date();const _prazosAtual=_getSemPrazos()||DB.prazos;const ordensInfo=_ordensParaCategoria(t.c).map(o=>{const prazoStr=_prazosAtual[o]||'';const parts=prazoStr.split('/');const prazoDate=parts.length===3?new Date(parts[2],parts[1]-1,parts[0]):null;const vencido=prazoDate?hoje>prazoDate:false;const enviou=((t.por_ordem||t.porOrdem||{})[o]||0)>0;return{nome:o,prazo:prazoStr,prazoDate,vencido,enviou};});const ordensPendentes=ordensInfo.filter(o=>!o.vencido&&!o.enviou);const ordensVencidas=ordensInfo.filter(o=>o.vencido&&!o.enviou);const totalOrdens=ordensPendentes.length||1;const porOrdem=Math.ceil(t.pend.length/totalOrdens);ordensVencidas.forEach(o=>{html+=`<div style="font-size:10px;font-weight:700;color:var(--red);margin:8px 0 4px;padding:4px 8px;background:var(--red-dim);border-radius:4px">⚠️ ${o.nome} — Prazo vencido (${o.prazo})</div>`;});if(ordensPendentes.length>0){ordensPendentes.forEach((o,oi)=>{const start=oi*porOrdem;const end=Math.min(start+porOrdem,t.pend.length);if(start>=t.pend.length)return;const pracs=t.pend.slice(start,end);html+=`<div style="font-size:10px;font-weight:700;color:var(--teal);margin:8px 0 4px;padding:4px 8px;background:var(--teal-dim);border-radius:4px">${o.nome} — Prazo: ${o.prazo}</div>`;html+=pracs.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name">${p}</div></div><div class="prac-date" style="color:var(--muted)">até ${o.prazo}</div></div>`).join('');});}else{html+=t.pend.map(p=>`<div class="prac-item"><div class="prac-icon miss">!</div><div style="flex:1"><div class="prac-name" style="color:var(--red)">${p}</div></div><div class="prac-date" style="color:var(--red)">Atrasado</div></div>`).join('');}}
   if(t.hist&&t.hist.length){html+=`<div class="sec-label">📋 Histórico de Envios</div>`;html+=t.hist.sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,20).map(h=>`<div class="prac-item"><div class="prac-icon done">📄</div><div style="flex:1"><div class="prac-name">${h.p||'—'}</div><div style="font-size:10px;color:var(--muted)">${h.o||'—'} · ${h.a||0} alunos</div></div><div class="prac-date">${h.d||'—'}</div></div>`).join('');}
+  html+=_htmlAgendaTutor(t.n);
   document.getElementById('m-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('show');
+}
+// PATCH 185: agenda de práticas ofertadas pelo tutor (pedido do gestor do Leo,
+// 22/10) — data, dia, horário, ordem e prática de cada oferta do GIOCONDA,
+// direto no "Ver" da tela de Tutores. Vem de GER_DB.ger_ofertas, então segue
+// o seletor de semestre (2026/1, 2026/2 ou Ambos). O nome no GIOCONDA vem com
+// a chapa entre parênteses; _normTutorKey tira a chapa e os acentos (mesma
+// ligação usada na tela de Detalhe). Linhas repetidas da mesma oferta
+// (mesmo polo+prática+data+horário) viram uma só, com o MAX de alunos.
+const _DIAS_SEMANA_JS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+function _agendaDoTutor(nome){
+  if(!DB.tem_gerenciamento) return null;
+  const src=(typeof GER_DB!=='undefined'&&GER_DB)?GER_DB:DB;
+  const k=_normTutorKey(nome);
+  const porChave={};
+  (src.ger_ofertas||[]).forEach(o=>{
+    if(!o.tutor||_normTutorKey(o.tutor)!==k) return;
+    const ch=[o._semOrigem||'',o.polo,o.ordem,o.pratica,o.dt_agenda||'',o.hr_agenda||''].join('|||');
+    const a=porChave[ch];
+    if(!a){porChave[ch]=Object.assign({},o);return;}
+    a.alunos_agend=Math.max(a.alunos_agend||0,o.alunos_agend||0);
+    a.alunos_mat=Math.max(a.alunos_mat||0,o.alunos_mat||0);
+  });
+  const ofs=Object.values(porChave);
+  const comData=ofs.filter(o=>o.dt_agenda).sort((a,b)=>(a.dt_agenda+(a.hr_agenda||'')).localeCompare(b.dt_agenda+(b.hr_agenda||'')));
+  const semData=ofs.filter(o=>!o.dt_agenda).sort((a,b)=>ordemNum(a.ordem)-ordemNum(b.ordem)||(a.pratica||'').localeCompare(b.pratica||''));
+  return {comData,semData};
+}
+function _diaSemanaIso(iso){const d=new Date(iso+'T12:00:00');return isNaN(d)?'—':_DIAS_SEMANA_JS[d.getDay()];}
+function _htmlAgendaTutor(nome){
+  const ag=_agendaDoTutor(nome);
+  if(!ag) return '';
+  window._agendaTutorAtual={nome,ag};
+  const titulo=`<div class="sec-label" style="display:flex;align-items:center;justify-content:space-between">🗓️ Agenda de Práticas Ofertadas (${ag.comData.length})`+
+    (ag.comData.length||ag.semData.length?`<button onclick="exportAgendaTutor()" style="background:var(--teal);color:#fff;border:none;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">Exportar</button>`:'')+`</div>`;
+  if(!ag.comData.length&&!ag.semData.length) return titulo+`<div style="font-size:11px;color:var(--muted);padding:4px 0 10px">Nenhuma prática ofertada encontrada no GIOCONDA para este tutor no semestre selecionado.</div>`;
+  const variosPolos=new Set(ag.comData.concat(ag.semData).map(o=>o.polo)).size>1;
+  const ambos=ag.comData.some(o=>o._semOrigem);
+  const hoje=new Date().toISOString().slice(0,10);
+  const th='padding:5px 6px;font-size:10px;color:var(--muted);text-align:left;font-weight:700;border-bottom:1px solid var(--border)';
+  const td='padding:5px 6px;font-size:11px;border-bottom:1px solid var(--border);vertical-align:top';
+  let h=titulo;
+  if(ag.comData.length){
+    h+=`<div style="overflow-x:auto;margin-bottom:10px"><table style="width:100%;border-collapse:collapse"><thead><tr>`+
+      `<th style="${th}">Data</th><th style="${th}">Dia</th><th style="${th}">Horário</th><th style="${th}">Ordem</th><th style="${th}">Prática</th>`+
+      (variosPolos?`<th style="${th}">Polo</th>`:'')+`<th style="${th};text-align:right" title="Alunos agendados / matriculados na oferta">Agend./Mat.</th></tr></thead><tbody>`+
+      ag.comData.map(o=>{
+        const futura=o.dt_agenda>=hoje;
+        return `<tr style="${futura?'background:var(--teal-dim,rgba(0,150,136,.08))':''}">`+
+          `<td style="${td};white-space:nowrap;font-weight:${futura?700:400}">${o.dt_agenda.split('-').reverse().join('/')}${ambos&&o._semOrigem?` <span style="font-size:9px;color:var(--muted)">${esc(o._semOrigem)}</span>`:''}</td>`+
+          `<td style="${td}">${_diaSemanaIso(o.dt_agenda)}</td>`+
+          `<td style="${td};white-space:nowrap">${esc(o.hr_agenda||'—')}</td>`+
+          `<td style="${td};white-space:nowrap">${esc(o.ordem||'—')}</td>`+
+          `<td style="${td}">${esc(o.pratica||'—')}</td>`+
+          (variosPolos?`<td style="${td}">${esc(o.polo||'—')}</td>`:'')+
+          `<td style="${td};text-align:right;white-space:nowrap">${fmtNum(o.alunos_agend||0)}/${fmtNum(o.alunos_mat||0)}</td></tr>`;
+      }).join('')+`</tbody></table></div>`+
+      `<div style="font-size:10px;color:var(--muted);margin:-4px 0 10px">Linhas destacadas são práticas que ainda vão acontecer. Fonte: relatório de gerenciamento do GIOCONDA.</div>`;
+  }
+  if(ag.semData.length){
+    h+=`<div style="font-size:11px;font-weight:700;margin:6px 0 4px;color:var(--yellow-d)">Ofertas ainda sem data/horário no GIOCONDA (${ag.semData.length})</div>`+
+      ag.semData.map(o=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">${esc(o.ordem||'—')} · ${esc(o.pratica||'—')}${variosPolos?` <span style="color:var(--muted)">· ${esc(o.polo||'')}</span>`:''} <span style="color:var(--muted)">· ${fmtNum(o.alunos_mat||0)} matriculados</span></div>`).join('');
+  }
+  return h;
+}
+function exportAgendaTutor(){
+  const x=window._agendaTutorAtual; if(!x) return;
+  const linhas=x.ag.comData.concat(x.ag.semData).map(o=>({
+    'Tutor':x.nome,'Semestre':o._semOrigem||'','Data':o.dt_agenda?o.dt_agenda.split('-').reverse().join('/'):'',
+    'Dia':o.dt_agenda?_diaSemanaIso(o.dt_agenda):'','Horário':o.hr_agenda||'','Ordem':o.ordem||'','Prática':o.pratica||'',
+    'Polo':o.polo||'','Categoria':o.categoria||'','Alunos agendados':o.alunos_agend||0,'Alunos matriculados':o.alunos_mat||0}));
+  exportCSV(linhas,'agenda_'+_normTutorKey(x.nome).replace(/\s+/g,'_')+'.csv');
 }
 function openPoloModal(nome){
   const tutores=(DB.tutores||[]).filter(t=>t.p===nome);
