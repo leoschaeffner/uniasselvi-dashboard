@@ -1367,10 +1367,38 @@ function _agendaDoTutor(nome){
     a.alunos_mat=Math.max(a.alunos_mat||0,o.alunos_mat||0);
   });
   const ofs=Object.values(porChave);
+  ofs.forEach(o=>{if(o.dt_agenda) o._sitPeriodo=_situacaoPeriodo(o);});
   const comData=ofs.filter(o=>o.dt_agenda).sort((a,b)=>(a.dt_agenda+(a.hr_agenda||'')).localeCompare(b.dt_agenda+(b.hr_agenda||'')));
   const semData=ofs.filter(o=>!o.dt_agenda).sort((a,b)=>ordemNum(a.ordem)-ordemNum(b.ordem)||(a.pratica||'').localeCompare(b.pratica||''));
   return {comData,semData};
 }
+// PATCH 186: período de cada ordem (config_semestre.json → dados_por_semestre[sem].periodos,
+// datas DD/MM/AAAA = fase de PRÁTICA da ordem). Semestre da oferta: _semOrigem (visão
+// "Ambos") ou o semestre selecionado. Situação compara a ordem da prática com a ordem
+// do período em que a data caiu.
+function _periodosDoSemestre(sem){
+  const p=((DB.dados_por_semestre||{})[sem]||{}).periodos||{};
+  const br=s=>{const m=String(s||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:null;};
+  return Object.entries(p).map(([ordem,c])=>({ordem,ini:br(c.inicio),fim:br(c.fim)})).filter(x=>x.ini&&x.fim);
+}
+function _situacaoPeriodo(o){
+  const sem=o._semOrigem||((_SEM_ATUAL&&_SEM_ATUAL!=='Ambos')?_SEM_ATUAL:DB.semestre);
+  const per=_periodosDoSemestre(sem).find(p=>o.dt_agenda>=p.ini&&o.dt_agenda<=p.fim)||null;
+  const nPr=ordemNum(o.ordem), nPer=per?ordemNum(per.ordem):0;
+  let sit;
+  if(!per) sit='sem_periodo';
+  else if(!nPr) sit='sem_ordem';
+  else if(nPr===nPer) sit='ok';
+  else sit=nPr>nPer?'adiantada':'fora';
+  return {per,sem,sit};
+}
+const _BADGE_SIT_PERIODO={
+  ok:{txt:'No período',cor:'var(--green)',bg:'var(--green-dim)'},
+  adiantada:{txt:'Adiantada',cor:'var(--yellow-d)',bg:'var(--yellow-dim)'},
+  fora:{txt:'Fora do período',cor:'var(--red)',bg:'var(--red-dim)'},
+  sem_ordem:{txt:'Sem ordem no GIOCONDA',cor:'var(--muted)',bg:'var(--bg)'},
+  sem_periodo:{txt:'Fora do calendário',cor:'var(--muted)',bg:'var(--bg)'},
+};
 function _diaSemanaIso(iso){const d=new Date(iso+'T12:00:00');return isNaN(d)?'—':_DIAS_SEMANA_JS[d.getDay()];}
 function _htmlAgendaTutor(nome){
   const ag=_agendaDoTutor(nome);
@@ -1386,21 +1414,39 @@ function _htmlAgendaTutor(nome){
   const td='padding:5px 6px;font-size:11px;border-bottom:1px solid var(--border);vertical-align:top';
   let h=titulo;
   if(ag.comData.length){
-    h+=`<div style="overflow-x:auto;margin-bottom:10px"><table style="width:100%;border-collapse:collapse"><thead><tr>`+
-      `<th style="${th}">Data</th><th style="${th}">Dia</th><th style="${th}">Horário</th><th style="${th}">Ordem</th><th style="${th}">Prática</th>`+
-      (variosPolos?`<th style="${th}">Polo</th>`:'')+`<th style="${th};text-align:right" title="Alunos agendados / matriculados na oferta">Agend./Mat.</th></tr></thead><tbody>`+
-      ag.comData.map(o=>{
-        const futura=o.dt_agenda>=hoje;
-        return `<tr style="${futura?'background:var(--teal-dim,rgba(0,150,136,.08))':''}">`+
-          `<td style="${td};white-space:nowrap;font-weight:${futura?700:400}">${o.dt_agenda.split('-').reverse().join('/')}${ambos&&o._semOrigem?` <span style="font-size:9px;color:var(--muted)">${esc(o._semOrigem)}</span>`:''}</td>`+
-          `<td style="${td}">${_diaSemanaIso(o.dt_agenda)}</td>`+
-          `<td style="${td};white-space:nowrap">${esc(o.hr_agenda||'—')}</td>`+
-          `<td style="${td};white-space:nowrap">${esc(o.ordem||'—')}</td>`+
-          `<td style="${td}">${esc(o.pratica||'—')}</td>`+
-          (variosPolos?`<td style="${td}">${esc(o.polo||'—')}</td>`:'')+
-          `<td style="${td};text-align:right;white-space:nowrap">${fmtNum(o.alunos_agend||0)}/${fmtNum(o.alunos_mat||0)}</td></tr>`;
-      }).join('')+`</tbody></table></div>`+
-      `<div style="font-size:10px;color:var(--muted);margin:-4px 0 10px">Linhas destacadas são práticas que ainda vão acontecer. Fonte: relatório de gerenciamento do GIOCONDA.</div>`;
+    // PATCH 186: agrupa pelo PERÍODO da ordem em que a data cai (config_semestre)
+    // e compara com a ordem da própria prática. Resumo no topo + 1 tabela por período.
+    const cont={ok:0,adiantada:0,fora:0,sem_ordem:0,sem_periodo:0};
+    ag.comData.forEach(o=>cont[o._sitPeriodo.sit]++);
+    const naoOk=ag.comData.length-cont.ok;
+    h+=`<div style="font-size:11px;margin:2px 0 8px;padding:7px 10px;border-radius:6px;background:${naoOk?'var(--yellow-dim)':'var(--green-dim)'}">`+
+      `<strong>${cont.ok}</strong> de ${ag.comData.length} práticas aconteceram no período da própria ordem`+
+      (naoOk?` · `+[cont.adiantada&&`<strong>${cont.adiantada}</strong> adiantadas`,cont.fora&&`<strong>${cont.fora}</strong> fora do período`,
+        cont.sem_ordem&&`<strong>${cont.sem_ordem}</strong> sem ordem no GIOCONDA`,cont.sem_periodo&&`<strong>${cont.sem_periodo}</strong> fora do calendário`].filter(Boolean).join(' · '):'')+`</div>`;
+    const grupos={};
+    ag.comData.forEach(o=>{const p=o._sitPeriodo;const k=p.per?String(ordemNum(p.per.ordem)).padStart(2,'0')+'|'+(p.sem||''):'99|'+(p.sem||'');(grupos[k]=grupos[k]||{per:p.per,sem:p.sem,ofs:[]}).ofs.push(o);});
+    const isoBr=s=>s.split('-').reverse().join('/');
+    const cab=`<tr><th style="${th}">Data</th><th style="${th}">Dia</th><th style="${th}">Horário</th><th style="${th}">Prática</th>`+
+      (variosPolos?`<th style="${th}">Polo</th>`:'')+`<th style="${th}">Ordem da prática</th><th style="${th};text-align:right" title="Alunos agendados / matriculados na oferta">Agend./Mat.</th></tr>`;
+    Object.keys(grupos).sort().forEach(k=>{
+      const g=grupos[k];
+      const tituloGrupo=g.per?`Período da ${esc(g.per.ordem)} · ${isoBr(g.per.ini)} a ${isoBr(g.per.fim)}`:'Fora do calendário das ordens';
+      h+=`<div style="font-size:11px;font-weight:700;margin:10px 0 4px;color:var(--teal)">${tituloGrupo}${ambos&&g.sem?` <span style="font-weight:400;color:var(--muted)">(${esc(g.sem)})</span>`:''} <span style="font-weight:400;color:var(--muted)">· ${g.ofs.length} prática${g.ofs.length!==1?'s':''}</span></div>`+
+        `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead>${cab}</thead><tbody>`+
+        g.ofs.map(o=>{
+          const futura=o.dt_agenda>=hoje;
+          const s=_BADGE_SIT_PERIODO[o._sitPeriodo.sit];
+          return `<tr style="${futura?'background:var(--teal-dim,rgba(0,150,136,.08))':''}">`+
+            `<td style="${td};white-space:nowrap;font-weight:${futura?700:400}">${isoBr(o.dt_agenda)}</td>`+
+            `<td style="${td}">${_diaSemanaIso(o.dt_agenda)}</td>`+
+            `<td style="${td};white-space:nowrap">${esc(o.hr_agenda||'—')}</td>`+
+            `<td style="${td}">${esc(o.pratica||'—')}</td>`+
+            (variosPolos?`<td style="${td}">${esc(o.polo||'—')}</td>`:'')+
+            `<td style="${td};white-space:nowrap">${esc(o.ordem||'—')}<br><span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:${s.bg};color:${s.cor}">${s.txt}</span></td>`+
+            `<td style="${td};text-align:right;white-space:nowrap">${fmtNum(o.alunos_agend||0)}/${fmtNum(o.alunos_mat||0)}</td></tr>`;
+        }).join('')+`</tbody></table></div>`;
+    });
+    h+=`<div style="font-size:10px;color:var(--muted);margin:6px 0 10px">Os períodos das ordens vêm do calendário acadêmico do semestre. "Adiantada" = prática de uma ordem posterior à do período; "Fora do período" = prática de uma ordem anterior, feita depois do prazo dela. Linhas destacadas ainda vão acontecer. Fonte: relatório de gerenciamento do GIOCONDA.</div>`;
   }
   if(ag.semData.length){
     h+=`<div style="font-size:11px;font-weight:700;margin:6px 0 4px;color:var(--yellow-d)">Ofertas ainda sem data/horário no GIOCONDA (${ag.semData.length})</div>`+
@@ -1412,7 +1458,9 @@ function exportAgendaTutor(){
   const x=window._agendaTutorAtual; if(!x) return;
   const linhas=x.ag.comData.concat(x.ag.semData).map(o=>({
     'Tutor':x.nome,'Semestre':o._semOrigem||'','Data':o.dt_agenda?o.dt_agenda.split('-').reverse().join('/'):'',
-    'Dia':o.dt_agenda?_diaSemanaIso(o.dt_agenda):'','Horário':o.hr_agenda||'','Ordem':o.ordem||'','Prática':o.pratica||'',
+    'Dia':o.dt_agenda?_diaSemanaIso(o.dt_agenda):'','Horário':o.hr_agenda||'','Ordem':o.ordem||'',
+    'Período (pela data)':o._sitPeriodo&&o._sitPeriodo.per?o._sitPeriodo.per.ordem:'',
+    'Situação':o._sitPeriodo?_BADGE_SIT_PERIODO[o._sitPeriodo.sit].txt:'Sem data','Prática':o.pratica||'',
     'Polo':o.polo||'','Categoria':o.categoria||'','Alunos agendados':o.alunos_agend||0,'Alunos matriculados':o.alunos_mat||0}));
   exportCSV(linhas,'agenda_'+_normTutorKey(x.nome).replace(/\s+/g,'_')+'.csv');
 }
