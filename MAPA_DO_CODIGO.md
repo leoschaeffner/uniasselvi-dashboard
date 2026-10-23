@@ -179,6 +179,7 @@ Planilhas SharePoint/OneDrive  →  processar.py  →  saida/dashboard.html
 | `tutores_comunicacao.json` | Relatório manual de acompanhamento de comunicação com tutores. |
 | `insumos_estudo.json` | Estudo estático "Racional de Insumos por Experimento" (v10_FINAL). **Não é auto-atualizado** — substituir à mão se vier versão nova. NÃO está commitado no momento; a aba fica vazia se ausente. |
 | `config_links.json` | (Local, não commitado) caminhos absolutos das planilhas pra rodar local sem baixar. |
+| `FERRAMENTAS_IA.md` | Catálogo auditado das ferramentas externas de IA adotadas ou avaliadas para o desenvolvimento; define uso, limites, segurança e o que não entra no pipeline. |
 | `snapshot_manifest.json` | Snapshot da rodada anterior (colunas detectadas + contagens) pra detecção de regressão. Gerado/lido pelo próprio `processar.py`. |
 | `.github/workflows/publicar.yml` | Pipeline de build/deploy. |
 | `.claude/agents/*.md` | 10 subagentes especializados (este arquivo é mantido pelo `guia-codigo`). |
