@@ -1332,8 +1332,10 @@ function openTutorModal(nome){
       <div style="font-size:12px;font-weight:700;color:${cor};margin-bottom:6px">${c.atencao?'🚨':'📞'} Acompanhamento de Comunicação</div>
       <div style="font-size:12px;color:var(--ink);margin-bottom:6px">${esc(c.resumo||'')}</div>
       ${c.ultimo_contato?`<div style="font-size:11px;color:var(--muted)">Último contato: <strong>${esc(c.ultimo_contato)}</strong></div>`:''}
-      ${(c.tentativas_contato&&c.tentativas_contato.length)?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Tentativas: ${c.tentativas_contato.join(', ')}</div>`:''}
+      ${(c.tentativas_contato&&c.tentativas_contato.length)?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Tentativas: ${esc(c.tentativas_contato.join(', '))}</div>`:''}
       ${c.observacao?`<div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Obs: ${esc(c.observacao)}</div>`:''}
+      ${(c.desligamento&&c.desligamento!=='Não')?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Desligamento: <strong>${esc(c.desligamento==='Sim'?'Encaminhado':c.desligamento)}</strong></div>`:''}
+      ${(c.multiplicador||c.data_registro)?`<div style="font-size:10px;color:var(--muted);margin-top:6px;border-top:1px solid rgba(0,0,0,.08);padding-top:5px">${c.multiplicador?'Registrado por <strong>'+esc(c.multiplicador)+'</strong>':'Registrado'}${c.data_registro?' em '+esc(c.data_registro):''} · Engajômetro</div>`:''}
     </div>`;
   }
   let html=comunicacaoHtml+perfilHtml+`<div class="kpi-row" style="margin-bottom:14px"><div class="kpi kpi-green"><div class="kpi-label">Previstas</div><div class="kpi-value">${t.tp||'?'}</div></div><div class="kpi kpi-ok"><div class="kpi-label">Realizadas</div><div class="kpi-value">${t.te}</div></div><div class="kpi kpi-red"><div class="kpi-label">Pendentes</div><div class="kpi-value">${(t.pend||[]).length}</div></div></div>`;
