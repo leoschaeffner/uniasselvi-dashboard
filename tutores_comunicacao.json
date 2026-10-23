@@ -1,74 +1,357 @@
 [
-  {
-    "nome": "Maria Sulina Machado",
-    "polo": "Acaraú",
-    "atencao": false,
-    "resumo": "Sem retorno / não responde o WhatsApp desde novembro 2025. Todas as ordens pendentes (apenas um experimento de ordem 3 realizado).",
-    "tentativas_contato": ["28/04", "04/05", "12/05", "22/06"],
-    "ultimo_contato": null,
-    "observacao": "Sem retorno em todas as tentativas listadas."
-  },
-  {
-    "nome": "Tarcilio José Salles",
-    "polo": "Aripuanã",
-    "atencao": false,
-    "resumo": "Avisou que pediria o desligamento no dia 24/04, foi orientado todo passo a passo, mas até então sem retorno. Sem gerenciamento, sem nenhum envio de portfólio.",
-    "tentativas_contato": ["24/04", "28/04", "04/05", "11/05", "22/06"],
-    "ultimo_contato": null,
-    "observacao": "Tutor não dá retorno sobre o desligamento solicitado por ele mesmo."
-  },
-  {
-    "nome": "Gabriella Ribeiro",
-    "polo": "Barra do Garças",
-    "atencao": false,
-    "resumo": "Sem nada gerenciado / sem nenhum envio de portfólio. Enviada mensagem para saber se foi feito de forma manual, sem retorno.",
-    "tentativas_contato": [],
-    "ultimo_contato": "28/10/2025",
-    "observacao": null
-  },
-  {
-    "nome": "Natanael da Silva",
-    "polo": "Viseu/PA",
-    "atencao": true,
-    "resumo": "Sem resposta no WhatsApp / sem gerenciamento / sem envio de portfólios. Em 12/05 informou não ter acesso; foi orientado a passo a passo. Tutor relatou que o polo colocou outra tutora em seu lugar e que ele não atua como tutor — porém continua com vínculo ativo na instituição e não oferta práticas desde junho/2025.",
-    "tentativas_contato": ["12/05"],
-    "ultimo_contato": null,
-    "observacao": "Vínculo ativo mas sem ofertar práticas desde 06/2025 — situação ambígua, polo alega ter outra tutora."
-  },
-  {
-    "nome": "Paula Cristina Fernandes",
-    "polo": "Várzea da Palma",
-    "atencao": false,
-    "resumo": "Sem contato desde fevereiro. Sem nenhum gerenciamento / sem nenhum envio de portfólio. Gerenciamento feito de forma manual.",
-    "tentativas_contato": [],
-    "ultimo_contato": "Fevereiro",
-    "observacao": null
-  },
-  {
-    "nome": "Juliane Alves Ribeiro",
-    "polo": "São Raimundo",
-    "atencao": false,
-    "resumo": "Sem contato, sem retorno, sem gerenciamento. Mensagem enviada para saber se foi feito de forma manual.",
-    "tentativas_contato": ["28/04", "12/05"],
-    "ultimo_contato": "novembro de 2025",
-    "observacao": "Tutora encaminhada para desligamento."
-  },
-  {
-    "nome": "Luíz Felipe Braz Teles",
-    "polo": "Rio Verde",
-    "atencao": false,
-    "resumo": "Sem prática, pois o laboratório estava em reforma. Em 04/05 o tutor informou não ter previsão de finalização da obra.",
-    "tentativas_contato": ["28/04", "04/05"],
-    "ultimo_contato": null,
-    "observacao": "Situação passada para o Elienai."
-  },
-  {
-    "nome": "Kalisson Batista da Silva",
-    "polo": "Juruá-AM",
-    "atencao": true,
-    "resumo": "Nunca foi feito gerenciamento no Gioconda / sem envio de portfólio. Nunca respondeu no WhatsApp.",
-    "tentativas_contato": ["22/06"],
-    "ultimo_contato": null,
-    "observacao": null
-  }
+ {
+  "nome": "Gabriella Ribeiro",
+  "polo": "Barra do Garças/MT",
+  "atencao": false,
+  "resumo": "Sem nada gerenciado / sem nenhum envio de portfólio. Enviada mensagem para saber se foi feito de forma manual, sem retorno.",
+  "tentativas_contato": [],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": null,
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Juliane Alves Ribeiro",
+  "polo": "São Raimundo Nonato/PI",
+  "atencao": false,
+  "resumo": "Sem contato, sem retorno, sem gerenciamento. Mensagem enviada para saber se foi feito de forma manual.",
+  "tentativas_contato": [
+   "28/04",
+   "12/05"
+  ],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": "Tutora encaminhada para desligamento.",
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Kalison Batista Da Silva",
+  "polo": "Juruá/AM",
+  "atencao": true,
+  "resumo": "Nunca foi feito gerenciamento / sem envio de portfólio. Nunca respondeu no WhatsApp.",
+  "tentativas_contato": [
+   "22/06"
+  ],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": null,
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Luíz Felipe Braz Teles",
+  "polo": "Rio Verde/GO",
+  "atencao": false,
+  "resumo": "Sem prática, pois o laboratório estava em reforma. Em 04/05 informou não ter previsão de finalização da obra.",
+  "tentativas_contato": [
+   "28/04",
+   "04/05"
+  ],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": "Situação passada para o Elienai.",
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Maria Sulina Machado",
+  "polo": "Acaraú/CE",
+  "atencao": false,
+  "resumo": "Sem retorno / não responde o WhatsApp desde novembro 2025. Todas as ordens pendentes (apenas um experimento de ordem 3 realizado).",
+  "tentativas_contato": [
+   "28/04",
+   "04/05",
+   "12/05",
+   "22/06"
+  ],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": "Sem retorno em todas as tentativas listadas.",
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Natanael da Silva",
+  "polo": "Viseu/PA",
+  "atencao": true,
+  "resumo": "Sem resposta no WhatsApp / sem gerenciamento / sem envio de portfólios. Em 12/05 informou não ter acesso; foi orientado o passo a passo. Tutor relatou que o polo colocou outra pessoa em seu lugar e que ele não atua como tutor — porém continua com vínculo ativo e não oferta práticas desde junho/2025.",
+  "tentativas_contato": [
+   "12/05"
+  ],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": "Vínculo ativo mas sem ofertar práticas desde 06/2025 — polo alega ter outra tutora.",
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Paula Cristina Fernandes",
+  "polo": "Várzea da Palma/MG",
+  "atencao": false,
+  "resumo": "Sem contato desde fevereiro. Sem nenhum gerenciamento / sem nenhum envio de portfólio. Gerenciamento feito de forma manual.",
+  "tentativas_contato": [],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": null,
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Tarcilio José Salles",
+  "polo": "Aripuanã/MT",
+  "atencao": false,
+  "resumo": "Avisou que pediria o desligamento em 24/04, foi orientado todo o passo a passo, mas até então sem retorno. Sem gerenciamento, sem nenhum envio de portfólio.",
+  "tentativas_contato": [
+   "24/04",
+   "28/04",
+   "04/05",
+   "11/05",
+   "22/06"
+  ],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": "Tutor não dá retorno sobre o desligamento solicitado por ele mesmo.",
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": "Equipe Enfermagem",
+  "data_registro": null
+ },
+ {
+  "nome": "Adriana Felipe Moura",
+  "polo": "Brasília-Cruzeiro Novo",
+  "atencao": true,
+  "resumo": "Tutor não gerenciou as ordens 1,2,3,4,5/ realizei contato pelo suporte watts e relato que não esta gereciando desde a sua contratação 04/08/2025 e que o polo segue sem liberação.",
+  "tentativas_contato": [
+   "1 tentativa"
+  ],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": "Comunicado Elienai/vínculo ativo/ progresso de práticas gerenciadas 0%/enviada ocorrência email 30/06/2026",
+  "categoria": "Fisioterapia",
+  "desligamento": "Pediu desligamento",
+  "multiplicador": "Eneida",
+  "data_registro": null
+ },
+ {
+  "nome": "Thayanna Karen Pires",
+  "polo": "Buriticupu/MA",
+  "atencao": false,
+  "resumo": "Tutora nunca fez Ytilja",
+  "tentativas_contato": [],
+  "ultimo_contato": "16-06-2026",
+  "observacao": null,
+  "categoria": "Enfermagem",
+  "desligamento": "Sim",
+  "multiplicador": null,
+  "data_registro": null
+ },
+ {
+  "nome": "Sandro Bastos De Moura",
+  "polo": "Belém/PA - Nazaré",
+  "atencao": true,
+  "resumo": "Tutor não gerenciou as ordens 1,2,3,4,5 e não responde o Whatssap",
+  "tentativas_contato": [],
+  "ultimo_contato": "10/07/2026 - Elienai",
+  "observacao": "Comunicado Elienai/vínculo ativo/ progresso de práticas gerenciadas 0%",
+  "categoria": "Engenahrias e Licenciaturas",
+  "desligamento": "Sim",
+  "multiplicador": null,
+  "data_registro": null
+ },
+ {
+  "nome": "Veryluska Marques Sousa",
+  "polo": "Palmas/TO",
+  "atencao": true,
+  "resumo": "- Em março sinalizou que o polo estava em reformar e não respondeu mais.",
+  "tentativas_contato": [
+   "4 tentativas"
+  ],
+  "ultimo_contato": "26/03/2026",
+  "observacao": null,
+  "categoria": "Biomedicina e Farmácia",
+  "desligamento": "Sim",
+  "multiplicador": null,
+  "data_registro": null
+ },
+ {
+  "nome": "Katlen Ribeiro Gadelha",
+  "polo": "Belo Horizonte/MG - Barreiro",
+  "atencao": false,
+  "resumo": "Disse que o polo não está pronto e Não responde, não gerenciou nada este ano e não envia portifólios.",
+  "tentativas_contato": [
+   "2 tentativas"
+  ],
+  "ultimo_contato": "23/04/2026",
+  "observacao": null,
+  "categoria": "Biomedicina e Farmácia",
+  "desligamento": "Pediu desligamento",
+  "multiplicador": null,
+  "data_registro": null
+ },
+ {
+  "nome": "Ana Paula Ferreira Nagata",
+  "polo": "Florianópolis/SC - Centro",
+  "atencao": true,
+  "resumo": "Não responde as mensagem de suporte watts desde 21/05/206. Sem gerenciamento de ordem 1 e 2, não envio de portfólios , possui carga horária de 4h.",
+  "tentativas_contato": [
+   "Desde 21/05/20256 até 10/08/2026"
+  ],
+  "ultimo_contato": "05/08/2026 ás 16:06",
+  "observacao": "Situação de atenção desde a supervisão anterior . Tutora visualiza a mensagem de suporte e não responde.",
+  "categoria": "Terapia Ocupacional",
+  "desligamento": null,
+  "multiplicador": "Eneida",
+  "data_registro": "10/08/2026"
+ },
+ {
+  "nome": "Amanda Aparecida Campos Oliveira Nogueira",
+  "polo": "Santa Inês/MA",
+  "atencao": true,
+  "resumo": "Tutor não gerenciou as ordens 1,2,3,4,5/ realizei contato pelo suporte watts, sempre oferecendo ajuda. A tutora respondeu por 2 vezes, que vai enviar no dia seguinte.",
+  "tentativas_contato": [
+   "6 tentativas"
+  ],
+  "ultimo_contato": "10/07/2026",
+  "observacao": "Comunicado Elienai/vínculo ativo/ progresso de práticas gerenciadas 0%",
+  "categoria": "Nutrição",
+  "desligamento": "Sim",
+  "multiplicador": "Cláudia",
+  "data_registro": "10/07/2026"
+ },
+ {
+  "nome": "Tayna Figueira Da Fonseca",
+  "polo": "Rio de Janeiro/RJ - Centro",
+  "atencao": true,
+  "resumo": "Tutora não responde as mensagens de suporte no watts desde as informacoes para envios de portfólios, não gerenciados 2026.1 e 2026.2",
+  "tentativas_contato": [
+   "4 tentativas"
+  ],
+  "ultimo_contato": "10/07/2026",
+  "observacao": "Comunicado na ocorrência/vínculo ativo/gerenciamento 0%",
+  "categoria": "Fisioterapia",
+  "desligamento": "Não",
+  "multiplicador": "Eneida",
+  "data_registro": "17/06/2026"
+ },
+ {
+  "nome": "Elisabete Soares De Santana",
+  "polo": "Recife/PE - Madalena",
+  "atencao": false,
+  "resumo": "Turora não possui CRF ativo e não irá ativar",
+  "tentativas_contato": [],
+  "ultimo_contato": "13/07/2026",
+  "observacao": null,
+  "categoria": "Biomedicina e Farmácia",
+  "desligamento": "Não",
+  "multiplicador": "Leo",
+  "data_registro": null
+ },
+ {
+  "nome": "Luiza Rodrigues De Assis Brito",
+  "polo": "Goiânia/GO - AJrdim Europa",
+  "atencao": false,
+  "resumo": "Fisioterapeuta, solicitou desligamento desde 01/07/2026 enviando por email carta de demissão",
+  "tentativas_contato": [],
+  "ultimo_contato": "01/07/2026",
+  "observacao": "Segue ativa no Vincilab e suport watts",
+  "categoria": "Fisioterapia",
+  "desligamento": "Pediu desligamento",
+  "multiplicador": null,
+  "data_registro": null
+ },
+ {
+  "nome": "Milena Maria Franca De Souza Cavalcanti",
+  "polo": "Feira De Santana/BA - Centro",
+  "atencao": false,
+  "resumo": null,
+  "tentativas_contato": [],
+  "ultimo_contato": "24/07/2026",
+  "observacao": null,
+  "categoria": "Biomedicina e Farmácia",
+  "desligamento": "Pediu desligamento",
+  "multiplicador": null,
+  "data_registro": null
+ },
+ {
+  "nome": "Willame Oliveira Ribeiro Junior",
+  "polo": "Palmas/TO - Plano Diretor Sul",
+  "atencao": true,
+  "resumo": "Desde 31/10/2025 até o presente momento tutor nunca respondeu nenhum contato. Sem gerenciamento também desde 2025 de acordo com Gioconda",
+  "tentativas_contato": [
+   "desde 31/10/2025 até 05/08/2026"
+  ],
+  "ultimo_contato": "nunca respondeu",
+  "observacao": null,
+  "categoria": "Enfermagem",
+  "desligamento": "Não",
+  "multiplicador": "Giselle e Flávia",
+  "data_registro": "05/08/2026"
+ },
+ {
+  "nome": "Flavia Angelica Da Silva",
+  "polo": "Luís Eduardo Magalhães/BA",
+  "atencao": true,
+  "resumo": "Desde de 18/03/2026 até o momento, tutor não dar retorno!",
+  "tentativas_contato": [
+   "06/08/2026"
+  ],
+  "ultimo_contato": "18/03/2026",
+  "observacao": null,
+  "categoria": "Agronomia",
+  "desligamento": "Não",
+  "multiplicador": "Antonio",
+  "data_registro": "06/08/2026"
+ },
+ {
+  "nome": "Fred Mauricio Ferreira Da Conceicao",
+  "polo": "Belém/PA - São Brás",
+  "atencao": true,
+  "resumo": "Desde de 27/04/2026 até o momento, tutor não dar retorno!",
+  "tentativas_contato": [
+   "06/08/2026"
+  ],
+  "ultimo_contato": "27/04/2026",
+  "observacao": null,
+  "categoria": "Engenahrias e Licenciaturas",
+  "desligamento": "Não",
+  "multiplicador": "Antonio",
+  "data_registro": "06/08/2026"
+ },
+ {
+  "nome": "Cristhine Pereira de Sousa",
+  "polo": "Ribeirão Preto/SP",
+  "atencao": true,
+  "resumo": "Desde 12/11/2025 até o presente momento tutor nunca respondeu nenhum contato. Sem gerenciamento também desde 2025 de acordo com Gioconda",
+  "tentativas_contato": [
+   "desde 12/11/2025 até os dias atuais"
+  ],
+  "ultimo_contato": "nunca respondeu",
+  "observacao": null,
+  "categoria": "Enfermagem",
+  "desligamento": null,
+  "multiplicador": "Giselle e Flávia",
+  "data_registro": "14/10/2026"
+ },
+ {
+  "nome": "Carine De Araujo Miranda Tasso",
+  "polo": "Novo Hamburgo",
+  "atencao": true,
+  "resumo": "Tutora se mudou e não quer pedir desligamento, nem ministrar as práticas no polo que foi contratada",
+  "tentativas_contato": [
+   "4 tentativas"
+  ],
+  "ultimo_contato": "18/10",
+  "observacao": null,
+  "categoria": "Biomedicina e Farmácia",
+  "desligamento": "Não",
+  "multiplicador": null,
+  "data_registro": null
+ }
 ]
