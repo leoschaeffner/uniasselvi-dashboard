@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow, noarchive"/>
+<title>VinciLab · Painel do Gestor</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--green:#006B5E;--green-l:#00A88F;--green-dim:rgba(0,107,94,.1);--yellow:#FFD100;--yellow-d:#E5BC00;--yellow-dim:rgba(255,209,0,.12);--teal:#00C9A7;--teal-dim:rgba(0,201,167,.1);--red:#dc2626;--red-dim:rgba(220,38,38,.08);--ok:#16a34a;--ok-dim:rgba(22,163,74,.1);--bg:#f4f6f8;--surface:#fff;--card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;--dim:#9ca3af;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 12px rgba(0,0,0,.08);--radius:10px;--font:'Plus Jakarta Sans','Segoe UI',sans-serif;--mono:'Cascadia Code','Consolas',monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh}
+body.dark{--bg:#0f1419;--surface:#1a2028;--card:#1e2530;--border:#2d3748;--text:#e5e7eb;--muted:#9ca3af;--dim:#6b7280;}
+.sidebar{width:240px;min-height:100vh;background:var(--green);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:300;overflow:hidden;}
+.sidebar-brand{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:12px;letter-spacing:1.5px;padding:5px 10px;border-radius:5px;display:inline-block;}
+.sidebar-title{color:#fff;font-size:14px;font-weight:700;margin-top:8px}
+.sidebar-sub{color:rgba(255,255,255,.5);font-size:10px;margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.sidebar-section{margin-bottom:16px}
+.sidebar-section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.35);padding:0 12px;margin-bottom:6px;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:rgba(255,255,255,.7);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left;}
+.sidebar-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.sidebar-item.active{background:var(--yellow);color:#1a1d23;font-weight:700}
+.sidebar-item .si-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:8px;}
+.sidebar-ts{font-size:10px;color:rgba(255,255,255,.4);font-family:var(--mono)}
+.sidebar-dark{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;margin-left:auto;padding:4px;}
+.main{margin-left:240px;flex:1;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:200;}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text)}
+.topbar-breadcrumb{font-size:12px;color:var(--muted)}
+.container{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+.ph{margin-bottom:20px}.ph-title{font-size:22px;font-weight:800}.ph-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--card);border-radius:var(--radius);padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.kpi.kpi-green::before{background:var(--green)}.kpi.kpi-yellow::before{background:var(--yellow)}
+.kpi.kpi-teal::before{background:var(--teal)}.kpi.kpi-red::before{background:var(--red)}.kpi.kpi-ok::before{background:var(--ok)}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px;}.kpi-detail{font-size:11px;color:var(--muted);margin-top:4px}
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.card-title{font-size:14px;font-weight:700}.card-badge{font-size:11px;color:var(--muted);font-weight:500}
+.card-body{padding:16px 18px}
+.toolbar{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.search{padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);color:var(--text);font-family:var(--font);min-width:200px;flex:1;max-width:320px;}
+.search:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
+.tbl-count{font-size:11px;color:var(--muted);margin-left:auto;font-weight:600}
+.tbl-wrap{overflow-x:auto;max-height:420px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--bg);padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;z-index:5;}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(0,107,94,.02)}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;white-space:nowrap}
+.badge.ok{background:var(--ok-dim);color:var(--ok)}.badge.pend{background:var(--red-dim);color:var(--red)}
+.badge.parcial{background:var(--yellow-dim);color:#b45309}.badge.info{background:var(--green-dim);color:var(--green)}
+.rank-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.rank-item:last-child{border:none}
+.rank-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-bar-wrap{width:140px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.rank-bar{height:100%;border-radius:4px}.rank-val{font-size:12px;font-weight:700;min-width:60px;text-align:right}
+.empty-state{color:var(--muted);font-size:13px;text-align:center;padding:32px 16px;line-height:1.6}
+.senha-box{background:var(--card);border-radius:16px;padding:40px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.senha-logo{background:var(--yellow);color:#1a1d23;font-weight:800;font-size:13px;letter-spacing:2px;padding:6px 16px;border-radius:6px;display:inline-block;margin-bottom:16px;}
+.senha-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.senha-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.senha-input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:8px;font-size:14px;text-align:center;font-family:var(--font);background:var(--bg);color:var(--text);}
+.senha-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-dim)}
+.senha-btn{width:100%;padding:12px;border:none;border-radius:8px;margin-top:12px;background:var(--green);color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--font);}
+.senha-btn:hover{background:var(--green-l)}
+.senha-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+.senha-lgpd{font-size:10px;color:var(--dim);margin-top:16px}
+.senha-box form{margin:0}
+.senha-box .senha-input+.senha-input{margin-top:8px}
+.senha-link{display:inline-block;margin-top:12px;font-size:12px;color:var(--green);text-decoration:none;cursor:pointer}
+.senha-link:hover{text-decoration:underline}
+.senha-acoes{display:flex;gap:8px}
+.btn-sair{margin-left:12px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.btn-sair:hover{border-color:var(--red);color:var(--red)}
+#senha-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green) 0%,#0d2b25 100%);}
+#moria-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#1a1a1f 0%,#000 80%);font-family:Georgia,'Times New Roman',serif;}
+.moria-box{max-width:520px;text-align:center;padding:40px;color:#9a9a9a;}
+.moria-runas{font-size:42px;letter-spacing:18px;color:#5a6e5e;margin-bottom:24px;text-shadow:0 0 18px rgba(90,110,94,.5);}
+.moria-texto{font-size:15px;line-height:1.9;color:#b8b8b8;margin-bottom:8px;}
+.moria-frase{font-size:13px;color:#6e8a72;font-style:italic;margin-top:20px;letter-spacing:1px;}
+.moria-btn{margin-top:32px;background:transparent;border:1px solid #4a4a4a;color:#9a9a9a;padding:10px 28px;border-radius:4px;font-family:var(--font);font-size:12px;cursor:pointer;letter-spacing:1px;}
+.moria-btn:hover{border-color:#6e8a72;color:#cfe0d0;}
+#lgpd-bar{position:fixed;bottom:0;left:240px;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--dim);display:flex;justify-content:space-between;z-index:100;}
+@media(max-width:900px){.sidebar{width:60px}.sidebar .si-label,.sidebar-title,.sidebar-sub,.sidebar-section-label,.sidebar-ts{display:none}.sidebar-brand{padding:12px 8px;text-align:center}.sidebar-item{justify-content:center;padding:10px}.main{margin-left:60px}#lgpd-bar{left:60px}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+body.dark .sidebar{background:#0a1f1c}
+body.dark th{background:var(--surface)}
+body.dark .search{background:var(--surface)}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="sidebar-logo">VinciLab</div><div class="sidebar-title">Painel do Gestor</div><div class="sidebar-sub">Visão executiva · 2026</div></div>
+  <div class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Executivo</div>
+      <button class="sidebar-item active" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span class="si-icon">📌</span><span class="si-label">Visão Geral</span></button>
+    </div>
+  </div>
+  <div class="sidebar-footer"><span class="sidebar-ts" id="ts-label">—</span><button class="sidebar-dark" onclick="toggleDark()" title="Modo escuro">🌙</button></div>
+</nav>
+<div class="main">
+<div class="topbar">
+  <span class="topbar-title">Painel do Gestor</span>
+  <span class="topbar-breadcrumb">Visão Executiva</span>
+  <span id="topbar-ts" style="margin-left:auto;font-size:10px;color:var(--dim);font-family:var(--mono)"></span>
+  <button class="btn-sair" id="btn-sair" onclick="_authSair()" title="Encerrar a sessão">Sair</button>
+</div>
+
+<div class="container">
+  <div class="ph">
+    <div class="ph-title">Painel do Gestor</div>
+    <div class="ph-sub">Recorte executivo — o essencial para decisão: headcount, vagas críticas, ocorrências de campo e laboratórios. Não é o dashboard operacional completo.</div>
+  </div>
+
+  <!-- ═══ KPIs HERDADOS (tutores/vagas/labs — mesmos dados do dashboard/coordenadores) ═══ -->
+  <div class="kpi-row" id="gestor-kpis"></div>
+
+  <!-- ═══ ENGAJAMENTO DE ALUNOS (Taxa de Preenchimento — mesma métrica e
+       fórmula do card "Horários e Engajamento" do template_dashboard.html,
+       #ae-kpis: alunos AGENDADOS / alunos MATRICULADOS, só dentro das ofertas
+       que já têm agenda. Simplificado de propósito — sem quebra por
+       curso/ordem, é só o número grande. PATCH 178) ═══════════════════════ -->
+  <div class="card" id="engaj-card">
+    <div class="card-hdr">
+      <div><div class="card-title">📊 Engajamento de Alunos</div><div class="card-badge" id="engaj-sub">—</div></div>
+    </div>
+    <div class="card-body" id="engaj-empty" style="display:none">
+      <div class="empty-state">Sem dados de agenda disponíveis no momento.</div>
+    </div>
+    <div class="card-body" id="engaj-conteudo" style="display:none">
+      <div>
+        <div class="kpi-label">Taxa de Preenchimento <span title="Dentro das ofertas que já têm agenda registrada: % dos alunos matriculados que conseguiram um horário individual agendado. Mesma métrica do dashboard completo (Gerenciamento → Horários e Engajamento).">ⓘ</span></div>
+        <div class="kpi-value" id="engaj-pct" style="font-size:34px">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="engaj-frac">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ GERENCIAMENTO POR TUTOR (% tutores que gerenciaram ao menos 1
+       oferta, % em treinamento, % com lab em obras — mesma lógica de
+       renderDetPizza/renderDetTreinamento/renderDetObras do dashboard
+       completo, "Gerenciamento → Detalhe de Ofertas": os 3 indicadores usam
+       SEMPRE o mesmo denominador (tutores distintos do recorte), pra não
+       repetir o bug do PATCH 152 (64 vs 57). 3 recortes: acumulado, por
+       curso (top piores + tabela buscável, mesmo padrão do card antigo de
+       Engajamento) e por ordem. PATCH 178 — substitui o card antigo que lia
+       DB.gerenciamento_engajamento (engajamento de OFERTA, conceito
+       diferente — ver #engaj-card acima). ═════════════════════════════════ -->
+  <div class="card" id="gertutor-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🗂️ Gerenciamento (por Tutor)</div><div class="card-badge" id="gertutor-sub">—</div></div>
+    </div>
+    <div class="card-body" id="gertutor-empty" style="display:none">
+      <div class="empty-state">Sem dados de gerenciamento disponíveis no momento.</div>
+    </div>
+    <div id="gertutor-conteudo" style="display:none">
+      <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+        <div><div class="kpi-label">% Tutores Gerenciaram</div><div class="kpi-value" id="gertutor-pct-ger" style="font-size:24px">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px" id="gertutor-frac-ger">—</div></div>
+        <div><div class="kpi-label">% Em Treinamento</div><div class="kpi-value" id="gertutor-pct-treino" style="font-size:24px">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px" id="gertutor-frac-treino">—</div></div>
+        <div><div class="kpi-label">% Lab em Obras</div><div class="kpi-value" id="gertutor-pct-obras" style="font-size:24px">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px" id="gertutor-frac-obras">—</div></div>
+      </div>
+      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">CURSOS QUE PRECISAM DE ATENÇÃO (MENOR % GERENCIARAM)</div>
+      <div class="card-body" style="padding-top:0" id="gertutor-cursos-piores"></div>
+      <div style="padding:0 18px 12px">
+        <span onclick="toggleGerTutorCursos()" id="gertutor-toggle-btn" style="cursor:pointer;font-size:11px;font-weight:700;color:var(--teal);text-decoration:underline">Ver todos os cursos ▾</span>
+      </div>
+      <div id="gertutor-cursos-todos" style="display:none">
+        <div class="toolbar">
+          <input class="search" type="text" placeholder="Buscar curso…" oninput="filterGerTutorCursos(this.value)" id="gertutor-search"/>
+          <span class="tbl-count" id="gertutor-count">—</span>
+        </div>
+        <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
+          <th>Curso</th><th style="text-align:right">Tutores</th><th style="text-align:right">% Gerenciaram</th><th style="text-align:right">% Em Treino</th><th style="text-align:right">% Em Obras</th>
+        </tr></thead><tbody id="gertutor-tbody"></tbody></table></div>
+      </div>
+      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">POR ORDEM</div>
+      <div class="card-body" id="gertutor-ordem-rows"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TURNOVER DE TUTORES (DB.turnover, PATCH 174/175) ════════════════ -->
+  <div class="card" id="turnover-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🔄 Turnover de Tutores</div><div class="card-badge" id="turnover-sub">—</div></div>
+    </div>
+    <div class="card-body" id="turnover-empty" style="display:none">
+      <div class="empty-state">Sem dados de turnover disponíveis no momento.</div>
+    </div>
+    <div id="turnover-conteudo" style="display:none">
+      <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px" id="turnover-blocos"></div>
+      <div style="padding:0 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">CURSOS COM MAIS MOVIMENTO (SEMESTRE)</div>
+      <div class="card-body" id="turnover-cursos"></div>
+    </div>
+  </div>
+
+  <!-- ═══ OCORRÊNCIAS POR MULTIPLICADOR ═══════════════════════════════════ -->
+  <div class="card" id="ocor-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🚨 Ocorrências por Multiplicador</div><div class="card-badge" id="ocor-sub">—</div></div>
+    </div>
+    <div class="card-body" id="ocor-empty" style="display:none">
+      <div class="empty-state">Nenhuma ocorrência registrada ainda — a planilha de multiplicadores ainda não está ligada.<br><span style="font-size:11px">(fica disponível assim que o secret <code>URL_OCORRENCIAS</code> for configurado)</span></div>
+    </div>
+    <div id="ocor-conteudo" style="display:none">
+      <div class="card-body" id="ocor-mult-bars"></div>
+      <div style="padding:0 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">ABERTAS HÁ MAIS DE 7 DIAS</div>
+      <div class="tbl-wrap" style="max-height:280px"><table><thead><tr>
+        <th>Polo</th><th>Multiplicador</th><th>Tipo</th><th>Gravidade</th><th style="text-align:right">Dias aberta</th><th>Status</th>
+      </tr></thead><tbody id="ocor-atraso-tbody"></tbody></table></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 18px">
+        <div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">POR TIPO</div><div id="ocor-tipo-list"></div></div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px">POR GRAVIDADE</div><div id="ocor-grav-list"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LABORATÓRIOS — PENDÊNCIAS ════════════════════════════════════════ -->
+  <div class="card" id="lab-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🧪 Laboratórios — Pendências</div><div class="card-badge" id="lab-sub">—</div></div>
+    </div>
+    <div id="lab-empty" style="display:none"><div class="empty-state">Sem dados de pendências de laboratório disponíveis no momento.</div></div>
+    <div id="lab-conteudo" style="display:none">
+      <div class="toolbar">
+        <input class="search" type="text" placeholder="Buscar polo, categoria, empresa…" oninput="filterLabPend(this.value)" id="lab-search"/>
+        <span class="tbl-count" id="lab-count">—</span>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr>
+        <th>Polo</th><th>Categoria</th><th>Status</th><th>Motivo</th><th>Empresa</th>
+      </tr></thead><tbody id="lab-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ═══ VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA, PATCH 172) ═══════ -->
+  <div class="card" id="vist-card">
+    <div class="card-hdr">
+      <div><div class="card-title">🔬 Vistoria de Laboratório</div><div class="card-badge" id="vist-sub">—</div></div>
+    </div>
+    <div class="card-body" id="vist-empty" style="display:none">
+      <div class="empty-state">Nenhuma vistoria registrada ainda — o formulário de vistoria ainda não está ligado.<br><span style="font-size:11px">(fica disponível assim que o secret <code>URL_VISTORIA</code> for configurado)</span></div>
+    </div>
+    <div id="vist-conteudo" style="display:none">
+      <div class="card-body" style="display:flex;gap:32px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+        <div><div class="kpi-label">% Apto</div><div class="kpi-value" id="vist-pct-apto" style="font-size:22px">—</div></div>
+        <div><div class="kpi-label">Aptos / Não Aptos</div><div class="kpi-value" id="vist-aptos-naoaptos" style="font-size:22px">—</div></div>
+        <div><div class="kpi-label">Última Vistoria</div><div class="kpi-value" id="vist-ultima" style="font-size:22px">—</div></div>
+      </div>
+      <div style="padding:16px 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">POR CATEGORIA DE LABORATÓRIO</div>
+      <div class="card-body" id="vist-cat-bars"></div>
+      <div style="padding:0 18px 4px;font-size:11px;font-weight:700;color:var(--muted)">NÃO APTOS RECENTES</div>
+      <div class="toolbar">
+        <input class="search" type="text" placeholder="Buscar polo, categoria, motivo, empresa…" oninput="filterVistNaoApto(this.value)" id="vist-search"/>
+        <span class="tbl-count" id="vist-count">—</span>
+      </div>
+      <div class="tbl-wrap" style="max-height:320px"><table><thead><tr>
+        <th>Polo</th><th>Categoria</th><th>Motivo</th><th>Empresa</th><th>Data</th>
+      </tr></thead><tbody id="vist-tbody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+</div><!-- /main -->
+
+<div id="lgpd-bar"><span>⚖️ LGPD Art.46 · Uso restrito a gestores autorizados · VinciLab 2026</span><span id="lgpd-ts"></span></div>
+<div id="moria-overlay">
+  <div class="moria-box">
+    <div class="moria-runas">⟁ ⟐ ⟁</div>
+    <div class="moria-texto">As portas de pedra permanecem fechadas.</div>
+    <div class="moria-texto">A senha que ecoou nas sombras não foi reconhecida.</div>
+    <div class="moria-texto">Apenas quem conhece a palavra certa atravessa este limiar.</div>
+    <div class="moria-frase">"Você não passará."</div>
+    <button class="moria-btn" onclick="_fecharMoria()">Tentar novamente</button>
+  </div>
+</div>
+<div id="senha-overlay">
+  <div class="senha-box">
+    <div class="senha-logo">VinciLab</div>
+    <div class="senha-title">Painel do Gestor</div>
+    <div class="senha-sub">VinciLab · 2026</div>
+    <form id="login-form" style="display:none" onsubmit="event.preventDefault();_authEntrar()">
+      <input class="senha-input" type="email" id="login-email" placeholder="E-mail" autocomplete="username"/>
+      <input class="senha-input" type="password" id="login-senha" placeholder="Senha" autocomplete="current-password"/>
+      <button class="senha-btn" type="submit" id="login-btn">Entrar</button>
+      <a class="senha-link" href="#" onclick="event.preventDefault();_authEsqueci()">Esqueci minha senha</a>
+    </form>
+    <form id="nova-senha-form" style="display:none" onsubmit="event.preventDefault();_authSalvarNovaSenha()">
+      <div class="senha-sub" style="margin-bottom:12px">Crie sua nova senha</div>
+      <input class="senha-input" type="password" id="nova-senha" placeholder="Nova senha (mín. 8 caracteres)" autocomplete="new-password"/>
+      <input class="senha-input" type="password" id="nova-senha2" placeholder="Repita a nova senha" autocomplete="new-password"/>
+      <button class="senha-btn" type="submit">Salvar nova senha</button>
+    </form>
+    <div class="senha-sub" id="login-carregando" style="margin-bottom:0">Carregando dados…</div>
+    <div class="senha-acoes" id="login-erro-acoes" style="display:none">
+      <button class="senha-btn" type="button" onclick="_authRecarregar()">Recarregar</button>
+      <button class="senha-btn" type="button" style="background:var(--muted)" onclick="_authSair()">Sair</button>
+    </div>
+    <div class="senha-err" id="senha-err"></div>
+    <div class="senha-lgpd">⚖️ LGPD Art.46 · Acesso restrito a gestores autorizados</div>
+  </div>
+</div>
+<script>
+// ── LOGIN SUPABASE (PATCH 190) ────────────────────────────────────────────────
+// Substitui a senha única + cifra AES: login por e-mail/senha (Supabase Auth),
+// leitura do perfil (tabela perfis, RLS = só a própria linha) e download do
+// payload do portal no Storage (bucket privado "paineis", já segregado por
+// papel/curso). O HTML não contém dado nenhum. Este bloco é IDÊNTICO nos 4
+// templates — só a constante _PORTAL (logo abaixo) muda. Contrato:
+// supabase/CONTRATO_PORTAIS_LOGIN.md.
+const _PORTAL = { id: 'gestor', iniciar: function(perfil){ _iniciarGestor(); } };
+const _SUPABASE_URL = 'https://emrnxysxhpbllwlfyohr.supabase.co';
+const _SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcm54eXN4aHBibGx3bGZ5b2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NjA2NjUsImV4cCI6MjEwNzEzNjY2NX0.RcemvwUDD11g4I4At94TG3zAiCxaC9kiXFm7O3uunT0';
+const _BUCKET_PAINEIS = 'paineis';
+let _sb = null;                 // cliente supabase-js (criado 1 vez)
+let _authPerfil = null;         // {papel, cursos, pacote, ativo} do usuário logado
+let _authEmRecuperacao = false; // veio do link de "Esqueci minha senha"
+let _authCarregou = false;      // portal já iniciou com os dados
+let _authCarregando = false;    // evita carga dupla (login + evento de sessão)
+
+function _authEl(id){ return document.getElementById(id); }
+function _authMsg(txt, ok){
+  const e = _authEl('senha-err'); if (!e) return;
+  e.textContent = txt || '';
+  e.style.color = ok ? 'var(--ok)' : '';
+}
+// modo: 'login' | 'nova-senha' | 'carregando' | 'erro'
+function _authMostrar(modo){
+  const ov = _authEl('senha-overlay'); if (ov) ov.style.display = 'flex';
+  const vis = (id, on) => { const e = _authEl(id); if (e) e.style.display = on ? '' : 'none'; };
+  vis('login-form', modo === 'login');
+  vis('nova-senha-form', modo === 'nova-senha');
+  vis('login-carregando', modo === 'carregando');
+  vis('login-erro-acoes', modo === 'erro');
+  if (modo === 'login') setTimeout(() => { const i = _authEl('login-email'); if (i && !i.value) i.focus(); }, 100);
+  if (modo === 'nova-senha') setTimeout(() => { const i = _authEl('nova-senha'); if (i) i.focus(); }, 100);
+}
+function _authEsconderOverlay(){ const ov = _authEl('senha-overlay'); if (ov) ov.style.display = 'none'; }
+function _authRedirecionar(url){ location.href = url; }
+function _authRecarregar(){ location.reload(); }
+
+function _authCliente(){
+  if (_sb) return _sb;
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+  if (!/^https?:\/\//.test(_SUPABASE_URL)) return null; // marcador não substituído pelo processar.py
+  _sb = window.supabase.createClient(_SUPABASE_URL, _SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  });
+  return _sb;
+}
+
+async function initAuth(){
+  // Restos da senha antiga (chave AES derivada guardada no navegador) — apaga.
+  ['uni_auth_key','uni_auth_key_coord','uni_auth_key_gestor','uni_auth_key_labs'].forEach(k => {
+    try{ localStorage.removeItem(k); }catch(e){}
+    try{ sessionStorage.removeItem(k); }catch(e){}
+  });
+  // Lê o retorno do link de e-mail ANTES de criar o cliente (ele limpa a URL).
+  const hash = location.hash || '', query = location.search || '';
+  if (/type=recovery/.test(hash) || /type=recovery/.test(query)) _authEmRecuperacao = true;
+  const erroLink = /error_description=([^&]+)/.exec(hash) || /error_description=([^&]+)/.exec(query);
+
+  const sb = _authCliente();
+  if (!sb){
+    _authMostrar('login');
+    _authMsg('Não foi possível carregar o módulo de login. Verifique sua conexão e recarregue a página.');
+    return;
+  }
+  sb.auth.onAuthStateChange((evento) => {
+    if (evento === 'PASSWORD_RECOVERY'){
+      _authEmRecuperacao = true;
+      _authMostrar('nova-senha');
+      _authMsg('');
+    }
+  });
+  if (erroLink){
+    _authMostrar('login');
+    _authMsg('Link inválido ou expirado. Peça um novo em "Esqueci minha senha".');
+    return;
+  }
+  let sessao = null;
+  try{
+    const r = await sb.auth.getSession();
+    sessao = r && r.data ? r.data.session : null;
+  }catch(e){ sessao = null; }
+  if (_authEmRecuperacao){ _authMostrar('nova-senha'); return; }
+  if (sessao) await _authPosLogin();
+  else _authMostrar('login');
+}
+
+async function _authEntrar(){
+  const sb = _authCliente();
+  if (!sb){ _authMsg('Módulo de login indisponível. Recarregue a página.'); return; }
+  const email = (_authEl('login-email').value || '').trim();
+  const senhaEl = _authEl('login-senha');
+  const senha = senhaEl.value || '';
+  if (!email || !senha){ _authMsg('Informe e-mail e senha.'); return; }
+  const btn = _authEl('login-btn'); if (btn) btn.disabled = true;
+  _authMsg('');
+  let r;
+  try{ r = await sb.auth.signInWithPassword({ email, password: senha }); }
+  catch(e){ r = { error: e }; }
+  if (btn) btn.disabled = false;
+  if (r.error){
+    const m = String(r.error.message || r.error);
+    _authMsg(/invalid login|invalid credentials/i.test(m) ? 'E-mail ou senha incorretos.' : 'Não foi possível entrar: ' + m);
+    senhaEl.value = '';
+    senhaEl.focus();
+    return;
+  }
+  senhaEl.value = '';
+  await _authPosLogin();
+}
+
+async function _authEsqueci(){
+  const sb = _authCliente();
+  if (!sb){ _authMsg('Módulo de login indisponível. Recarregue a página.'); return; }
+  const email = (_authEl('login-email').value || '').trim();
+  if (!email){ _authMsg('Digite seu e-mail no campo acima e clique de novo em "Esqueci minha senha".'); return; }
+  const redirectTo = location.origin + location.pathname;
+  let r;
+  try{ r = await sb.auth.resetPasswordForEmail(email, { redirectTo }); }
+  catch(e){ r = { error: e }; }
+  if (r.error) _authMsg('Não foi possível enviar o e-mail: ' + (r.error.message || r.error));
+  else _authMsg('Se o e-mail estiver cadastrado, você vai receber um link para criar uma nova senha.', true);
+}
+
+async function _authSalvarNovaSenha(){
+  const sb = _authCliente();
+  if (!sb){ _authMsg('Módulo de login indisponível. Recarregue a página.'); return; }
+  const s1 = _authEl('nova-senha').value || '', s2 = _authEl('nova-senha2').value || '';
+  if (s1.length < 8){ _authMsg('A nova senha precisa ter pelo menos 8 caracteres.'); return; }
+  if (s1 !== s2){ _authMsg('As duas senhas não conferem.'); return; }
+  let r;
+  try{ r = await sb.auth.updateUser({ password: s1 }); }
+  catch(e){ r = { error: e }; }
+  if (r.error){ _authMsg('Não foi possível salvar a nova senha: ' + (r.error.message || r.error)); return; }
+  _authEl('nova-senha').value = ''; _authEl('nova-senha2').value = '';
+  _authEmRecuperacao = false;
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  await _authPosLogin();
+}
+
+// Nega o acesso: mostra a mensagem e encerra a sessão.
+async function _authNegar(msg){
+  try{ const sb = _authCliente(); if (sb) await sb.auth.signOut(); }catch(e){}
+  _authPerfil = null;
+  _authMostrar('login');
+  _authMsg(msg);
+}
+
+// Qual arquivo do bucket este portal baixa pra este perfil (tabela do contrato).
+function _authCaminhoDados(perfil){
+  const papel = perfil.papel;
+  const geral = papel === 'admin' || papel === 'geral';
+  // PATCH 191/192: multiplicador vê SÓ o Dashboard, com os cursos dele (mesmo
+  // pacote filtrado do coordenador); coordenacao = login compartilhado dos
+  // coordenadores, só o portal Coordenadores com todos os cursos (seletor como antes).
+  const pacote = function(){
+    if (!perfil.pacote || !(perfil.cursos || []).length)
+      return { negar: 'Nenhum curso está vinculado ao seu usuário. Fale com o administrador do VinciLab.' };
+    return { caminho: 'coord/' + perfil.pacote + '.json.gz' };
+  };
+  if (_PORTAL.id === 'coordenadores'){
+    if (geral || papel === 'coordenacao') return { caminho: 'geral/coordenadores.json.gz' };
+    if (papel === 'coordenador') return pacote();
+    if (papel === 'multiplicador') return { redirecionar: 'index.html' };
+    return { negar: 'Seu acesso não inclui este portal.' };
+  }
+  if (geral) return { caminho: 'geral/' + _PORTAL.id + '.json.gz' };
+  if (papel === 'multiplicador'){
+    if (_PORTAL.id === 'dashboard') return pacote();
+    return { redirecionar: 'index.html' };
+  }
+  if (papel === 'coordenador' || papel === 'coordenacao') return { redirecionar: 'coordenadores.html' };
+  return { negar: 'Seu acesso não inclui este portal.' };
+}
+
+async function _authGunzipTexto(blob){
+  const cab = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+  if (cab[0] !== 0x1f || cab[1] !== 0x8b) return await blob.text(); // já veio descompactado
+  if (typeof DecompressionStream === 'undefined')
+    throw new Error('este navegador não descompacta gzip — atualize o navegador');
+  return await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).text();
+}
+
+async function _authPosLogin(){
+  if (_authCarregou || _authCarregando) return;
+  _authCarregando = true;
+  try{
+    const sb = _authCliente();
+    _authMostrar('carregando');
+    _authMsg('');
+    let uid = null;
+    try{
+      const r = await sb.auth.getSession();
+      uid = r && r.data && r.data.session && r.data.session.user ? r.data.session.user.id : null;
+    }catch(e){}
+    if (!uid){ _authMostrar('login'); _authMsg('Sessão expirada. Entre de novo.'); return; }
+
+    let perfil = null;
+    try{
+      const r = await sb.from('perfis').select('papel,cursos,pacote,ativo').eq('user_id', uid).single();
+      perfil = r && !r.error ? r.data : null;
+    }catch(e){ perfil = null; }
+    if (!perfil){ await _authNegar('Seu usuário não tem perfil de acesso ao VinciLab. Fale com o administrador.'); return; }
+    if (perfil.ativo !== true){ await _authNegar('Seu acesso ao VinciLab está desativado. Fale com o administrador.'); return; }
+
+    const alvo = _authCaminhoDados(perfil);
+    if (alvo.redirecionar){ _authRedirecionar(alvo.redirecionar); return; }
+    if (alvo.negar){ await _authNegar(alvo.negar); return; }
+
+    let dados;
+    try{
+      const r = await sb.storage.from(_BUCKET_PAINEIS).download(alvo.caminho);
+      if (r.error || !r.data) throw new Error((r.error && (r.error.message || r.error.error)) || 'arquivo não encontrado');
+      dados = JSON.parse(await _authGunzipTexto(r.data));
+    }catch(e){
+      _authMostrar('erro');
+      _authMsg('Não foi possível carregar os dados do painel (' + (e && e.message ? e.message : e) + '). Tente recarregar a página; se persistir, fale com o administrador.');
+      return;
+    }
+    _authPerfil = perfil;
+    DB = dados;
+    _authEsconderOverlay();
+    _authCarregou = true;
+    _PORTAL.iniciar(perfil);
+  } finally {
+    _authCarregando = false;
+  }
+}
+
+async function _authSair(){
+  try{ sessionStorage.removeItem('coord_cursos_selecionados'); }catch(e){}
+  try{ const sb = _authCliente(); if (sb) await sb.auth.signOut(); }catch(e){}
+  _authRecarregar();
+}
+
+// ── BLOQUEIO DE INSPEÇÃO (mesmo "teatro de segurança" dos outros 2 portais) ─
+function _ativarMoria(){
+  document.getElementById('senha-overlay').style.display='none';
+  document.getElementById('moria-overlay').style.display='flex';
+}
+function _fecharMoria(){
+  document.getElementById('moria-overlay').style.display='none';
+  if(!_authCarregou) _authMostrar(_authEmRecuperacao?'nova-senha':'login');
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='F12'){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+  if(e.ctrlKey&&!e.shiftKey&&['u','U'].includes(e.key)){e.preventDefault();_ativarMoria();return;}
+});
+document.addEventListener('contextmenu',function(e){e.preventDefault();_ativarMoria();});
+
+let DB;
+
+// ── UTIL ────────────────────────────────────────────────────────────────────
+function esc(s){return(s||'').toString().replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtNum(n){return(n||0).toLocaleString('pt-BR')}
+function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0');}
+function initDark(){if(localStorage.getItem('dark')==='1')document.body.classList.add('dark')}
+
+// ── KPIs HERDADOS ─────────────────────────────────────────────────────────
+// Não recalcula nada: só lê os mesmos agregados que o dashboard/coordenadores
+// já mostram (DB.kpis, DB.vagas.kpis, DB.laboratorios.pendencias). Se uma
+// fonte não existir (ex: sem Lotação → sem DB.vagas), o card correspondente
+// simplesmente não aparece — não inventa número.
+function renderGestorKPIs(){
+  const k = DB.kpis || {};
+  const vk = (DB.vagas || {}).kpis || {};
+  const pend = ((DB.laboratorios || {}).pendencias) || [];
+  const cards = [];
+  cards.push(`<div class="kpi kpi-green"><div class="kpi-label">Tutores Ativos</div><div class="kpi-value">${fmtNum(k.total)}</div><div class="kpi-detail">${fmtNum(k.enviaram||0)} enviaram portfólio</div></div>`);
+  if (vk.alunos_sem_tutor != null) {
+    cards.push(`<div class="kpi kpi-red"><div class="kpi-label">Alunos sem Tutor</div><div class="kpi-value">${fmtNum(vk.alunos_sem_tutor)}</div><div class="kpi-detail">${fmtNum(vk.polos_sem_tutor||0)} polo(s)</div></div>`);
+  }
+  if (vk.n_criticas != null) {
+    cards.push(`<div class="kpi kpi-yellow"><div class="kpi-label">Vagas Críticas</div><div class="kpi-value">${fmtNum(vk.n_criticas)}</div><div class="kpi-detail">sem tutor, priorizadas por impacto</div></div>`);
+  }
+  if (vk.n_polos_dificeis != null) {
+    cards.push(`<div class="kpi kpi-yellow"><div class="kpi-label">Polos Difíceis</div><div class="kpi-value">${fmtNum(vk.n_polos_dificeis)}</div><div class="kpi-detail">+200 alunos e sem tutor</div></div>`);
+  }
+  cards.push(`<div class="kpi kpi-teal"><div class="kpi-label">Laboratórios com Pendência</div><div class="kpi-value">${fmtNum(pend.length)}</div><div class="kpi-detail">obras / não apto</div></div>`);
+  document.getElementById('gestor-kpis').innerHTML = cards.join('');
+}
+
+// ── ENGAJAMENTO DE ALUNOS (Taxa de Preenchimento) ────────────────────────
+// PATCH 178: mesma métrica/fórmula do template_dashboard.html (#ae-kpis, fn
+// que monta "Taxa de Preenchimento" dentro de "Horários e Engajamento"):
+// alunos AGENDADOS / alunos MATRICULADOS, só dentro das ofertas que JÁ têm
+// agenda registrada (o._getOfertasAgenda filtra por tem_agenda). Reaproveita
+// literalmente a função de dedup do dashboard (_dedupAlunos) — sem ela o
+// número fica inflado. A premissa original (PATCH 48) de que toda linha de um
+// mesmo polo+categoria repetia o mesmo valor era falsa (auditoria 22/09:
+// práticas diferentes no mesmo polo+categoria têm matrículas diferentes e
+// legítimas) — a chave de agrupamento agora inclui o.pratica também, ver
+// comentário completo e correto na função _dedupAlunos do dashboard. Usa
+// DB.ger_ofertas (raiz) — no dashboard isso é "GER_DB", que aponta pro
+// semestre ATIVO por padrão (sem seletor de semestre no Gestor, não faz
+// sentido oferecer "Ambos" aqui); DB.ger_ofertas já É o semestre ativo
+// (dados.update(ger_dados) no processar.py).
+function _dedupAlunosGestor(ofertas, campo){
+  const porGrupo = {};
+  ofertas.forEach(o => {
+    const k = (o._semOrigem||'') + '|||' + (o.polo||'') + '|||' + (o.categoria||'') + '|||' + (o.pratica||'');
+    const v = o[campo] || 0;
+    if (!(k in porGrupo) || v > porGrupo[k]) porGrupo[k] = v;
+  });
+  return Object.values(porGrupo).reduce((s, v) => s + v, 0);
+}
+function renderEngajamentoAlunos(){
+  const ofertas = (DB.ger_ofertas || []).filter(o => o.tem_agenda);
+  const empty = document.getElementById('engaj-empty');
+  const conteudo = document.getElementById('engaj-conteudo');
+  if (!ofertas.length) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('engaj-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const totMat = _dedupAlunosGestor(ofertas, 'alunos_mat');
+  const totAgend = _dedupAlunosGestor(ofertas, 'alunos_agend');
+  const pct = totMat ? Math.round(totAgend / totMat * 1000) / 10 : 0;
+  document.getElementById('engaj-sub').textContent = `${pct}% de preenchimento`;
+  document.getElementById('engaj-pct').textContent = `${pct}%`;
+  document.getElementById('engaj-frac').textContent =
+    `${fmtNum(totAgend)} agendados de ${fmtNum(totMat)} matriculados — dentro das ofertas com agenda`;
+}
+
+// ── GERENCIAMENTO POR TUTOR (% Tutores Gerenciaram / % Em Treinamento /
+// % Lab em Obras) ─────────────────────────────────────────────────────────
+// PATCH 178: substitui o card antigo (PATCH 175/177) que media engajamento
+// de OFERTA (DB.gerenciamento_engajamento) — conceito diferente, mantido
+// só pro card "Engajamento de Alunos" acima não usar. Aqui replica a lógica
+// tutor-a-tutor de renderDetPizza/renderDetTreinamento/renderDetObras do
+// dashboard completo ("Gerenciamento → Detalhe de Ofertas"):
+//  - % Tutores Gerenciaram: de todos os tutores distintos (nome normalizado)
+//    do recorte, quantos têm ao menos 1 oferta com gerenciado=true nesse
+//    recorte (renderDetPizza).
+//  - % Em Treinamento: _estaEmTreinamentoGestor — tutor com DB.tutores[].inicio
+//    há ≤60 dias E que ainda não gerenciou nada no recorte (mesma regra de
+//    _estaEmTreinamento do dashboard, PATCH 134/137).
+//  - % Lab em Obras: tutor com DB.tutores[].lab_pendencia truthy no recorte
+//    (_labPendenciaDoTutorGestor, mesma regra de _labPendenciaDoTutor).
+// Os 3 indicadores usam SEMPRE o MESMO denominador (tutores distintos do
+// recorte) — é crítico, já causou bug antes no dashboard (PATCH 152, "os 3
+// indicadores não batendo, 64 vs 57") quando um deles usava um filtro
+// diferente dos outros dois. Não repete esse erro aqui.
+// 3 recortes:
+//  - acumulado: PATCH 179 (correção do Leo) — só o SEMESTRE ATIVO (o mesmo
+//    DB.ger_ofertas que já alimenta "Engajamento de Alunos"), NÃO soma
+//    2026/1+2026/2. A primeira versão (PATCH 178) somava todos os semestres
+//    de DB.gerenciamento_por_semestre, igual ao 'acumulado' do PATCH 176 --
+//    isso fazia Ordem 4/5 (que ainda não começaram no semestre ativo)
+//    aparecerem com dado de gerenciamento de verdade, vazado do semestre
+//    anterior (onde já tinham acontecido). Tutores cadastrados que ainda não
+//    têm NENHUMA oferta no GIOCONDA continuam fora do denominador (mesmo
+//    espírito do PATCH 32/33 do dashboard, "_semOfertaInjetadosTodos", mas
+//    aqui simplificado: casa pelo código de curso do cadastro
+//    (DB.tutores[].cursos), sem a etapa extra de match difuso por
+//    polo/nome que o dashboard faz — não é necessária aqui porque não há
+//    uma tabela nominal pra duplicar, só o agregado).
+//  - por_curso: PATCH 178 (revisão pós-confirmação do Leo) — NÃO usa mais a
+//    taxonomia de ~27 cursos de DB.gerenciamento_engajamento.por_curso
+//    (CURSOS_NOMES). O Leo confirmou que o exemplo real que ele usa pra
+//    conferir esse card ("Biomedicina/Farmácia/Estética, Ordem 3 ≈ 54%
+//    gerenciaram / 36% obras / 31% treinamento") é o agrupamento AMPLO de 5
+//    grupos que o dashboard já usa em "Gerenciamento → Detalhe de Ofertas"
+//    (GRUPOS_GER/_grupoBaseDaCategoria) — não a lista fina de 27 cursos. Os
+//    27 cursos splitam Biomedicina/Farmácia/Estética em 3 linhas separadas,
+//    esse combo simplesmente não existe nessa taxonomia. Mirror literal de
+//    GRUPOS_GER/_grupoBaseDaCategoria/_rowMatchesGrupo/_tutorMatchesGrupo do
+//    template_dashboard.html (sufixo "Gestor" só pra não colidir de nome —
+//    mesma lógica, sem subfiltro porque aqui sempre queremos "todo o grupo").
+//    Mesmo tratamento visual do card antigo: top piores em destaque + tabela
+//    buscável recolhível pro resto (só que agora com 5 linhas, não ~27).
+//  - por_ordem: só ofertas COM ordem (mesmo critério do backend
+//    _por_ordem_eng) — cadastro-only não entra aqui (não tem ordem).
+var GRUPOS_GER_GESTOR = [
+  {id:'enfermagem', label:'Enfermagem', base:['enfermagem']},
+  {id:'fisio-to', label:'Fisioterapia e Terapia Ocupacional', base:['multi3'],
+    subcursos:['Fisioterapia','Terapia Ocupacional']},
+  {id:'bio-far-est', label:'Biomedicina, Farmácia e Estética/Cosmética', base:['bio-far','multi3']},
+  {id:'nutricao', label:'Nutrição', base:['nutricao']},
+  {id:'exatas', label:'Exatas', base:['exatas']},
+];
+function _semAcentoGestor(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,''); }
+function _grupoBaseDaCategoriaGestor(catStr){
+  var s = _semAcentoGestor(catStr).toUpperCase();
+  var m = s.match(/MULTIDISCIPLINAR\s+(IV|III|II|I)\b/);
+  if (m) {
+    var r = m[1];
+    if (r === 'IV') return 'nutricao';
+    if (r === 'III') return 'multi3';
+    if (r === 'II') return 'enfermagem';
+    if (r === 'I') return 'bio-far';
+  }
+  if (s.indexOf('ENGMAKER') >= 0 || s.indexOf('ENGEMAKER') >= 0 || s.indexOf('QUIMICA') >= 0) return 'exatas';
+  return null;
+}
+var _SUBCURSO_LABEL_GESTOR = {
+  'BFI':'Fisioterapia', 'BTO':'Terapia Ocupacional',
+  'COS-TIP':'Estética e Cosmética', 'TIP-COS':'Estética e Cosmética', 'COS':'Estética e Cosmética',
+  'BBI':'Biomedicina', 'BFR':'Farmácia',
+  'EMF-ISN':'Enfermagem/Instrumentação', 'NTR':'Nutrição'
+};
+function _subcursoDeCodigoGestor(codigo){
+  var raw = (codigo||'').split('|')[0].trim().toUpperCase();
+  return _SUBCURSO_LABEL_GESTOR[raw] || null;
+}
+function _rowMatchesGrupoGestor(catRow, subcursoRow, grupo){
+  if (!grupo) return true;
+  var base = _grupoBaseDaCategoriaGestor(catRow);
+  if (!base || grupo.base.indexOf(base) < 0) return false;
+  if (grupo.id === 'fisio-to' && (!subcursoRow || grupo.subcursos.indexOf(subcursoRow) < 0)) return false;
+  if (grupo.id === 'bio-far-est' && base === 'multi3' && subcursoRow !== 'Estética e Cosmética') return false;
+  return true;
+}
+function _tutorMatchesGrupoGestor(t, grupo){
+  if (!grupo) return true;
+  var catT = t.c || '';
+  var base = _grupoBaseDaCategoriaGestor(catT);
+  if (!base || grupo.base.indexOf(base) < 0) return false;
+  var subT = _subcursoDeCodigoGestor(t.cursos);
+  if (grupo.id === 'fisio-to' && subT && grupo.subcursos.indexOf(subT) < 0) return false;
+  if (grupo.id === 'bio-far-est' && base === 'multi3' && subT && subT !== 'Estética e Cosmética') return false;
+  return true;
+}
+function _grupoDaOfertaGestor(catRow, subcursoRow){
+  return GRUPOS_GER_GESTOR.find(function(g){ return _rowMatchesGrupoGestor(catRow, subcursoRow, g); }) || null;
+}
+function _grupoDoTutorGestor(t){
+  return GRUPOS_GER_GESTOR.find(function(g){ return _tutorMatchesGrupoGestor(t, g); }) || null;
+}
+function _cursoLabelGestor(catRow, subcursoRow){
+  var g = _grupoDaOfertaGestor(catRow, subcursoRow);
+  return g ? g.label : 'Outros';
+}
+function _normTutorKeyGestor(nome){
+  if (!nome) return '__SEM_TUTOR__';
+  let s = String(nome).replace(/\s*\(\d+\)\s*$/, '').trim();
+  s = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return s.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+let _mapaInicioTutorGestor = null, _mapaLabPendenciaGestor = null;
+function _diasDesdeAdmissaoGestor(nomeTutor){
+  if (!nomeTutor) return null;
+  if (!_mapaInicioTutorGestor) {
+    _mapaInicioTutorGestor = {};
+    (DB.tutores||[]).forEach(t => { if (t.inicio) _mapaInicioTutorGestor[_normTutorKeyGestor(t.n)] = t.inicio; });
+  }
+  const inicioStr = _mapaInicioTutorGestor[_normTutorKeyGestor(nomeTutor)];
+  if (!inicioStr) return null;
+  const inicio = new Date(inicioStr + 'T00:00:00');
+  if (isNaN(inicio.getTime())) return null;
+  const dias = Math.round((new Date() - inicio) / (1000*60*60*24));
+  return dias >= 0 ? dias : null;
+}
+function _estaEmTreinamentoGestor(nomeTutor, jaGerenciou){
+  if (jaGerenciou) return false;
+  const dias = _diasDesdeAdmissaoGestor(nomeTutor);
+  return dias !== null && dias <= 60;
+}
+function _labPendenciaDoTutorGestor(nomeTutor){
+  if (!nomeTutor) return null;
+  if (!_mapaLabPendenciaGestor) {
+    _mapaLabPendenciaGestor = {};
+    (DB.tutores||[]).forEach(t => { if (t.lab_pendencia) _mapaLabPendenciaGestor[_normTutorKeyGestor(t.n)] = t.lab_pendencia; });
+  }
+  return _mapaLabPendenciaGestor[_normTutorKeyGestor(nomeTutor)] || null;
+}
+function _todasOfertasGestor(){
+  // PATCH 179: só o semestre ATIVO -- DB.ger_ofertas (raiz) já É esse
+  // recorte, mesma fonte que "Engajamento de Alunos" já usa (ver comentário
+  // ~L394-396). Não soma DB.gerenciamento_por_semestre (isso vazava dado do
+  // semestre anterior pra ordens que ainda não começaram no semestre atual).
+  return DB.ger_ofertas || [];
+}
+function _gerTutorCalc(mapa){
+  const nomes = Object.values(mapa);
+  const total = nomes.length;
+  const ger = nomes.filter(x => x.totalGer > 0).length;
+  const treino = nomes.filter(x => _estaEmTreinamentoGestor(x.nome, x.totalGer > 0)).length;
+  const obras = nomes.filter(x => !!_labPendenciaDoTutorGestor(x.nome)).length;
+  const r1 = n => Math.round(n*10)/10;
+  return {
+    total, gerenciaram: ger, em_treinamento: treino, em_obras: obras,
+    pct_gerenciaram: total ? r1(ger/total*100) : 0,
+    pct_treinamento: total ? r1(treino/total*100) : 0,
+    pct_obras: total ? r1(obras/total*100) : 0,
+  };
+}
+function _gerTutorStats(){
+  const ofertas = _todasOfertasGestor();
+  const geral = {}, porCurso = {}, porOrdem = {};
+  ofertas.forEach(o => {
+    if (!o.tutor) return;
+    const key = _normTutorKeyGestor(o.tutor);
+    const cursoLabel = _cursoLabelGestor(o.categoria, o.subcurso);
+    const ger = !!o.gerenciado;
+
+    if (!geral[key]) geral[key] = {nome:o.tutor, totalGer:0};
+    if (ger) geral[key].totalGer++;
+
+    const pc = porCurso[cursoLabel] || (porCurso[cursoLabel]={});
+    if (!pc[key]) pc[key] = {nome:o.tutor, totalGer:0};
+    if (ger) pc[key].totalGer++;
+
+    if (o.ordem) {
+      const po = porOrdem[o.ordem] || (porOrdem[o.ordem]={});
+      if (!po[key]) po[key] = {nome:o.tutor, totalGer:0};
+      if (ger) po[key].totalGer++;
+    }
+  });
+  // Tutores cadastrados sem NENHUMA oferta no GIOCONDA ainda (ex: recém-
+  // admitidos) — entram no acumulado/por_curso (pelo código de curso do
+  // cadastro), não em por_ordem (cadastro não tem ordem).
+  (DB.tutores||[]).forEach(t => {
+    if (t._anonimo || t.c === 'Aviso de Portfólio' || !t.n || t.n === 'Tutor desligado') return;
+    const key = _normTutorKeyGestor(t.n);
+    if (geral[key]) return;
+    geral[key] = {nome:t.n, totalGer:0};
+    const grupoT = _grupoDoTutorGestor(t);
+    const cursoLabel = grupoT ? grupoT.label : 'Outros';
+    const pc = porCurso[cursoLabel] || (porCurso[cursoLabel]={});
+    if (!pc[key]) pc[key] = {nome:t.n, totalGer:0};
+  });
+
+  const acumulado = _gerTutorCalc(geral);
+  const porCursoArr = Object.keys(porCurso).map(c => {
+    const s = _gerTutorCalc(porCurso[c]); s.curso = c; return s;
+  }).sort((a,b) => a.pct_gerenciaram - b.pct_gerenciaram); // pior primeiro
+  const ordemOrder = {'Ordem 1':1,'Ordem 2':2,'Ordem 3':3,'Ordem 4':4,'Ordem 5':5};
+  const porOrdemArr = Object.keys(porOrdem).map(o => {
+    const s = _gerTutorCalc(porOrdem[o]); s.ordem = o; return s;
+  }).sort((a,b) => (ordemOrder[a.ordem]||9) - (ordemOrder[b.ordem]||9));
+  return {acumulado, por_curso: porCursoArr, por_ordem: porOrdemArr};
+}
+function _gerTutorCor(pct){
+  if (pct == null) return 'var(--muted)';
+  if (pct >= 60) return 'var(--ok)';
+  if (pct >= 30) return 'var(--yellow-d)';
+  return 'var(--red)';
+}
+let _gerTutorCursosData = [];
+function renderGerenciamentoTutor(){
+  const stats = _gerTutorStats();
+  const empty = document.getElementById('gertutor-empty');
+  const conteudo = document.getElementById('gertutor-conteudo');
+  if (!stats.acumulado.total) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('gertutor-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const ac = stats.acumulado;
+  document.getElementById('gertutor-sub').textContent =
+    `${ac.pct_gerenciaram}% dos tutores gerenciaram · ${fmtNum(ac.total)} tutor${ac.total!==1?'es':''}`;
+  document.getElementById('gertutor-pct-ger').textContent = `${ac.pct_gerenciaram}%`;
+  document.getElementById('gertutor-pct-ger').style.color = _gerTutorCor(ac.pct_gerenciaram);
+  document.getElementById('gertutor-frac-ger').textContent = `${fmtNum(ac.gerenciaram)} / ${fmtNum(ac.total)} tutores`;
+  document.getElementById('gertutor-pct-treino').textContent = `${ac.pct_treinamento}%`;
+  document.getElementById('gertutor-pct-treino').style.color = '#f5b400';
+  document.getElementById('gertutor-frac-treino').textContent = `${fmtNum(ac.em_treinamento)} / ${fmtNum(ac.total)} tutores`;
+  document.getElementById('gertutor-pct-obras').textContent = `${ac.pct_obras}%`;
+  document.getElementById('gertutor-pct-obras').style.color = '#b45309';
+  document.getElementById('gertutor-frac-obras').textContent = `${fmtNum(ac.em_obras)} / ${fmtNum(ac.total)} tutores`;
+
+  const porCurso = stats.por_curso; // já vem ordenado por pct_gerenciaram ASC (pior primeiro)
+  const piores = porCurso.slice(0, 6);
+  document.getElementById('gertutor-cursos-piores').innerHTML = piores.length
+    ? piores.map(c => `<div class="rank-item">
+        <div class="rank-name" title="${esc(c.curso)}">${esc(c.curso)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${c.pct_gerenciaram.toFixed(1)}%;background:${_gerTutorCor(c.pct_gerenciaram)}"></div></div>
+        <div class="rank-val">${c.pct_gerenciaram.toFixed(0)}% ger. · ${c.pct_treinamento.toFixed(0)}% treino · ${c.pct_obras.toFixed(0)}% obras</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por curso.</div>';
+
+  _gerTutorCursosData = porCurso;
+  filterGerTutorCursos('');
+
+  const porOrdem = stats.por_ordem;
+  document.getElementById('gertutor-ordem-rows').innerHTML = porOrdem.length
+    ? porOrdem.map(o => `<div class="rank-item">
+        <div class="rank-name">${esc(o.ordem)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${o.pct_gerenciaram.toFixed(1)}%;background:${_gerTutorCor(o.pct_gerenciaram)}"></div></div>
+        <div class="rank-val">${o.pct_gerenciaram.toFixed(0)}% ger. (${fmtNum(o.gerenciaram)}/${fmtNum(o.total)}) · ${o.pct_treinamento.toFixed(0)}% treino · ${o.pct_obras.toFixed(0)}% obras</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por ordem.</div>';
+}
+function toggleGerTutorCursos(){
+  const el = document.getElementById('gertutor-cursos-todos');
+  const btn = document.getElementById('gertutor-toggle-btn');
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : '';
+  btn.textContent = showing ? 'Ver todos os cursos ▾' : 'Ocultar lista completa ▴';
+}
+function filterGerTutorCursos(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _gerTutorCursosData;
+  if (q) d = d.filter(c => (c.curso||'').toLowerCase().includes(q));
+  document.getElementById('gertutor-count').textContent = `${d.length} de ${_gerTutorCursosData.length}`;
+  document.getElementById('gertutor-tbody').innerHTML = d.length
+    ? d.map(c => `<tr>
+        <td>${esc(c.curso)||'—'}</td>
+        <td style="text-align:right">${fmtNum(c.total)}</td>
+        <td style="text-align:right;font-weight:700;color:${_gerTutorCor(c.pct_gerenciaram)}">${c.pct_gerenciaram.toFixed(1)}%</td>
+        <td style="text-align:right">${c.pct_treinamento.toFixed(1)}%</td>
+        <td style="text-align:right">${c.pct_obras.toFixed(1)}%</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+}
+
+// ── TURNOVER DE TUTORES (DB.turnover, PATCH 174) ─────────────────────────
+// Sempre presente (fonte não-opcional) — mas trata ausência defensivamente
+// mesmo assim, mesmo padrão dos outros cards.
+function _turnoverSaldoHtml(c, d){
+  const saldo = c - d;
+  const cor = saldo > 0 ? 'var(--ok)' : (saldo < 0 ? 'var(--red)' : 'var(--muted)');
+  const seta = saldo > 0 ? '▲' : (saldo < 0 ? '▼' : '—');
+  const num = saldo > 0 ? `+${saldo}` : `${saldo}`;
+  return `<span style="color:${cor};font-weight:700">${seta} ${num}</span>`;
+}
+function renderTurnover(){
+  const tv = DB.turnover;
+  const empty = document.getElementById('turnover-empty');
+  const conteudo = document.getElementById('turnover-conteudo');
+  if (!tv || !tv.semana) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('turnover-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const semestre = tv.semestre || {};
+  document.getElementById('turnover-sub').textContent =
+    `${fmtNum(semestre.contratados||0)} contratados / ${fmtNum(semestre.demitidos||0)} demitidos no semestre`;
+  const labels = {semana: 'Semana', mes: 'Mês', semestre: 'Semestre'};
+  document.getElementById('turnover-blocos').innerHTML = ['semana','mes','semestre'].map(chave => {
+    const p = tv[chave] || {};
+    const c = p.contratados||0, d = p.demitidos||0;
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:14px">
+      <div class="kpi-label">${labels[chave]}</div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:8px">${esc(p.inicio_periodo)||'—'} – ${esc(p.fim_periodo)||'—'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <div><div style="font-size:20px;font-weight:800;color:var(--ok)">✓ ${fmtNum(c)}</div><div style="font-size:10px;color:var(--muted)">contratados</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--red)">✗ ${fmtNum(d)}</div><div style="font-size:10px;color:var(--muted)">demitidos</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:13px">Saldo: ${_turnoverSaldoHtml(c, d)}</div>
+    </div>`;
+  }).join('');
+
+  const porCurso = (tv.por_curso || []).slice().sort((a,b) => {
+    const mA = (a.contratados_semestre||0)+(a.demitidos_semestre||0);
+    const mB = (b.contratados_semestre||0)+(b.demitidos_semestre||0);
+    return mB - mA;
+  });
+  const top = porCurso.filter(c => (c.contratados_semestre||0)+(c.demitidos_semestre||0) > 0).slice(0,3);
+  document.getElementById('turnover-cursos').innerHTML = top.length
+    ? top.map(c => `<div class="rank-item">
+        <div class="rank-name" title="${esc(c.curso)}">${esc(c.curso)}</div>
+        <div class="rank-val" style="color:var(--ok)">✓ ${fmtNum(c.contratados_semestre||0)}</div>
+        <div class="rank-val" style="color:var(--red)">✗ ${fmtNum(c.demitidos_semestre||0)}</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem movimento por curso no semestre.</div>';
+}
+
+// ── OCORRÊNCIAS POR MULTIPLICADOR ────────────────────────────────────────
+function _gravCor(g){
+  if (g === 'Alta') return 'var(--red)';
+  if (g === 'Média') return 'var(--yellow-d)';
+  if (g === 'Baixa') return 'var(--ok)';
+  return 'var(--muted)';
+}
+function renderOcorrencias(){
+  const oc = DB.ocorrencias;
+  const empty = document.getElementById('ocor-empty');
+  const conteudo = document.getElementById('ocor-conteudo');
+  if (!oc || !oc.kpis || !oc.kpis.total) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('ocor-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const k = oc.kpis;
+  document.getElementById('ocor-sub').textContent =
+    `${fmtNum(k.total)} registro(s) · ${fmtNum(k.abertas)} aberta(s) · ${fmtNum(k.em_tratativa)} em tratativa · ${fmtNum(k.resolvidas)} resolvida(s)`
+    + (k.tempo_medio_resolucao_dias != null ? ` · tempo médio de resolução: ${k.tempo_medio_resolucao_dias} dia(s)` : '');
+
+  // barras por multiplicador
+  const porMult = oc.por_multiplicador || [];
+  const max = Math.max(1, ...porMult.map(m => m.total));
+  document.getElementById('ocor-mult-bars').innerHTML = porMult.length
+    ? porMult.map(m => `<div class="rank-item">
+        <div class="rank-name" title="${esc(m.multiplicador)}">${esc(m.multiplicador)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(m.total/max*100).toFixed(1)}%;background:var(--green)"></div></div>
+        <div class="rank-val">${fmtNum(m.total)}${m.abertas ? ` <span style="color:var(--red);font-weight:700">(${fmtNum(m.abertas)} aberta${m.abertas!==1?'s':''})</span>` : ''}</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por multiplicador.</div>';
+
+  // tabela de abertas há mais de 7 dias
+  const atrasadas = (oc.registros || [])
+    .filter(r => (r.status === 'Aberta' || r.status === 'Em Tratativa') && r.dias_aberta != null && r.dias_aberta > 7)
+    .sort((a, b) => (b.dias_aberta||0) - (a.dias_aberta||0));
+  document.getElementById('ocor-atraso-tbody').innerHTML = atrasadas.length
+    ? atrasadas.map(r => `<tr>
+        <td>${esc(r.polo)||'—'}</td>
+        <td>${esc(r.multiplicador)||'—'}</td>
+        <td>${esc(r.tipo)||'—'}</td>
+        <td><span class="badge" style="background:${_gravCor(r.gravidade)}20;color:${_gravCor(r.gravidade)}">${esc(r.gravidade)||'—'}</span></td>
+        <td style="text-align:right;font-weight:800;color:var(--red)">${fmtNum(r.dias_aberta)}</td>
+        <td>${esc(r.status)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhuma ocorrência aberta há mais de 7 dias — em dia. ✓</td></tr>';
+
+  // totais por tipo / gravidade
+  const porTipo = oc.por_tipo || [];
+  const maxTipo = Math.max(1, ...porTipo.map(t => t.n));
+  document.getElementById('ocor-tipo-list').innerHTML = porTipo.length
+    ? porTipo.map(t => `<div class="rank-item">
+        <div class="rank-name">${esc(t.tipo)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(t.n/maxTipo*100).toFixed(1)}%;background:var(--teal)"></div></div>
+        <div class="rank-val">${fmtNum(t.n)}</div>
+      </div>`).join('')
+    : '<div class="empty-state">—</div>';
+
+  const porGrav = oc.por_gravidade || [];
+  const maxGrav = Math.max(1, ...porGrav.map(g => g.n));
+  document.getElementById('ocor-grav-list').innerHTML = porGrav.length
+    ? porGrav.map(g => `<div class="rank-item">
+        <div class="rank-name">${esc(g.gravidade)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(g.n/maxGrav*100).toFixed(1)}%;background:${_gravCor(g.gravidade)}"></div></div>
+        <div class="rank-val">${fmtNum(g.n)}</div>
+      </div>`).join('')
+    : '<div class="empty-state">—</div>';
+}
+
+// ── LABORATÓRIOS — PENDÊNCIAS ────────────────────────────────────────────
+let _labPendData = [];
+function renderLaboratorios(){
+  const pend = ((DB.laboratorios || {}).pendencias) || [];
+  const empty = document.getElementById('lab-empty');
+  const conteudo = document.getElementById('lab-conteudo');
+  if (!pend.length) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('lab-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  document.getElementById('lab-sub').textContent = `${fmtNum(pend.length)} laboratório(s) com pendência (obras / não apto)`;
+  _labPendData = pend;
+  filterLabPend('');
+}
+function filterLabPend(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _labPendData;
+  if (q) {
+    d = d.filter(p => ((p.polo_original||p.polo_norm||'') + (p.categoria||'') + (p.empresa||'') + (p.motivo||'')).toLowerCase().includes(q));
+  }
+  document.getElementById('lab-count').textContent = `${d.length} de ${_labPendData.length}`;
+  document.getElementById('lab-tbody').innerHTML = d.length
+    ? d.map(p => `<tr>
+        <td>${esc(p.polo_original||p.polo_norm)||'—'}</td>
+        <td style="font-size:11px">${esc(p.categoria)||'—'}</td>
+        <td><span class="badge pend">${esc(p.status)||'—'}</span></td>
+        <td style="font-size:11px">${esc(p.motivo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.empresa)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+}
+
+// ── VISTORIA DE LABORATÓRIO (p9/URL_VISTORIA, PATCH 172) ────────────
+// Overlay novo ao lado de DB.laboratorios.pendencias (estático) — não mexe
+// nele. Sem o secret configurado, DB.laboratorios.vistorias nem existe;
+// isso é o estado normal hoje, não um erro (mesmo padrão do card Ocorrências).
+function _vistAptoCor(pct){
+  if (pct == null) return 'var(--muted)';
+  if (pct >= 0.8) return 'var(--ok)';
+  if (pct >= 0.5) return 'var(--yellow-d)';
+  return 'var(--red)';
+}
+let _vistNaoAptosData = [];
+function renderVistoria(){
+  const vi = (DB.laboratorios || {}).vistorias;
+  const empty = document.getElementById('vist-empty');
+  const conteudo = document.getElementById('vist-conteudo');
+  if (!vi || !vi.kpis || !vi.kpis.total) {
+    empty.style.display = '';
+    conteudo.style.display = 'none';
+    document.getElementById('vist-sub').textContent = 'Sem dados';
+    return;
+  }
+  empty.style.display = 'none';
+  conteudo.style.display = '';
+  const k = vi.kpis;
+  document.getElementById('vist-sub').textContent =
+    `${fmtNum(k.total)} vistoria(s) · ${fmtNum(k.aptos)} apto(s) · ${fmtNum(k.nao_aptos)} não apto(s)`;
+  const pctAptoEl = document.getElementById('vist-pct-apto');
+  pctAptoEl.textContent = k.pct_apto != null ? (k.pct_apto*100).toFixed(0) + '%' : '—';
+  pctAptoEl.style.color = _vistAptoCor(k.pct_apto);
+  document.getElementById('vist-aptos-naoaptos').textContent = `${fmtNum(k.aptos)} / ${fmtNum(k.nao_aptos)}`;
+  document.getElementById('vist-ultima').textContent = k.ultima_vistoria || '—';
+
+  const porCat = vi.por_categoria || [];
+  document.getElementById('vist-cat-bars').innerHTML = porCat.length
+    ? porCat.map(c => `<div class="rank-item">
+        <div class="rank-name" title="${esc(c.categoria)}">${esc(c.categoria)}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${((c.pct_apto||0)*100).toFixed(1)}%;background:${_vistAptoCor(c.pct_apto)}"></div></div>
+        <div class="rank-val">${fmtNum(c.aptos)}/${fmtNum(c.total)}${c.pct_apto!=null ? ` (${(c.pct_apto*100).toFixed(0)}%)` : ''}</div>
+      </div>`).join('')
+    : '<div class="empty-state">Sem dados por categoria.</div>';
+
+  _vistNaoAptosData = vi.polos_nao_aptos_recentes || [];
+  filterVistNaoApto('');
+}
+function filterVistNaoApto(q){
+  q = (q||'').toLowerCase().trim();
+  let d = _vistNaoAptosData;
+  if (q) {
+    d = d.filter(p => ((p.polo||'') + (p.categoria||'') + (p.motivo||'') + (p.empresa||'')).toLowerCase().includes(q));
+  }
+  document.getElementById('vist-count').textContent = `${d.length} de ${_vistNaoAptosData.length}`;
+  document.getElementById('vist-tbody').innerHTML = d.length
+    ? d.map(p => `<tr>
+        <td>${esc(p.polo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.categoria)||'—'}</td>
+        <td style="font-size:11px">${esc(p.motivo)||'—'}</td>
+        <td style="font-size:11px">${esc(p.empresa)||'—'}</td>
+        <td>${esc(p.data)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Nenhum registro não apto.</td></tr>';
+}
+
+// ── BOOTSTRAP ─────────────────────────────────────────────────────────────
+function _iniciarGestor(){
+  try{
+    const ts = DB.gerado_em || '—';
+    document.getElementById('ts-label').textContent = 'Gerado: ' + ts;
+    document.getElementById('topbar-ts').textContent = 'Atualizado: ' + ts;
+    const lgts = document.getElementById('lgpd-ts'); if (lgts) lgts.textContent = ts;
+  }catch(e){}
+  renderGestorKPIs();
+  renderEngajamentoAlunos();
+  renderGerenciamentoTutor();
+  renderTurnover();
+  renderOcorrencias();
+  renderLaboratorios();
+  renderVistoria();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initDark();
+  initAuth();
+});
+</script>
+</body>
+</html>
